@@ -142,13 +142,58 @@ container as unknown instead of failing. Screenshots in this repo were
 taken against <code>npm run dev</code>. <code>npm run build &amp;&amp; npm run start</code> is the
 built Worker under Miniflare (<code>dist/server/wrangler.json</code>); use it when
 you want the production bundle, not to get Durable Objects.</p>
-<pre><code class="language-bash">npm run seed   # dev must already be up. Fills Kit and Ada through the HTTP API.
-npm run shot   # headless Chrome → assets/docs/*.png. CHROME_BIN overrides the Chrome path.</code></pre>
-<p><code>npm run seed</code> writes any missing <code>GANTREE_DEV_USER</code> or <code>AGENT_BEARERS</code>
-into <code>.dev.vars</code> and then tells you to restart dev so the Worker reloads
-them. <code>npm run shot</code> opens <code>/chat</code> as the loopback dev user. A member
-picker needs that variable unset and <code>GANTREE_SHOT_AS_MEMBER=1</code> (seed
-writes the member cookie).</p>
+<h3 id="chat-with-a-real-agent-locally">Chat with a real agent locally</h3>
+<p>No Docker, no deploy. The Worker from <code>npm run dev</code> is the room; the Go
+harness runs as a plain process on your machine and dials it the same
+way the container would.</p>
+<pre><code class="language-bash"># .dev.vars, in addition to the above:
+#   GANTREE_DEV_USER=118212345678901234567:you@example.com   # the runner signs in through the dev door
+#   LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+#   LLM_API_KEY=...
+#   LLM_MODEL=gemini-3.8-flash
+npm run dev                      # terminal 1
+# create an agent at http://127.0.0.1:3000/agents/new — the keys step is
+# optional now: blank fields use the house LLM_* from .dev.vars
+npm run agent -- kit             # terminal 2 (builds harness/bin/gantry on first run; needs Go)
+# open http://127.0.0.1:3000/chat/kit</code></pre>
+<p><code>npm run agent</code> reads <code>.dev.vars</code>, fetches the room bearer
+(<code>GET /api/agents/:slug/bearer</code>, admin on loopback dev only), adds the
+dev user to the room if missing, and supervises <code>gantry run</code> with
+<code>CHANNEL=chat SNAPSHOT=true</code> pointed at <code>ws://127.0.0.1:3000/ws/&lt;slug&gt;</code>.
+The Agent DO then sends the config frame exactly as in production:
+persona, MCP manifest, secrets, and presigned snapshot URLs. Memory,
+self-notes, cron, aims, and the snapshot restore/publish loop are the
+real ones; state lives in <code>local/run/&lt;slug&gt;/</code> (git-ignored) and the
+snapshot in the local R2 bucket, so stopping and restarting the runner
+restores the brain. With no slug it runs every agent on the board;
+<code>--build</code> forces a rebuild; <code>--base=</code> points at another origin.</p>
+<p>House keys: <code>LLM_BASE_URL</code>, <code>LLM_API_KEY</code>, <code>LLM_MODEL</code>, and
+<code>BRAVE_SEARCH_API_KEY</code> in the Worker env are laid under every agent&#39;s
+own secrets in the config frame — an agent that sets its own wins. The
+browser only ever sees the key names (<code>GET /api/tools</code> → <code>house</code>). This
+is the same in production: set them with <code>wrangler secret put</code> and new
+agents need no keys of their own.</p>
+<p>MCP plugins are found on <code>PATH</code>; <code>harness/bin</code> is prepended, so drop
+binaries there (the catalog in <a href="mcp.html">mcp.md</a>). Missing plugins are
+skipped as <code>no_binary</code>, not fatal. The container flavour of the same loop is <code>celld</code> below: it runs
+the real harness image with Docker or Podman and the same <code>.dev.vars</code>.</p>
+<pre><code class="language-bash">npm run seed -- --vars   # writes .dev.vars.shot from .dev.vars (placeholder identity)
+npm run dev:shot         # the same dev server, reading .dev.vars.shot
+npm run seed             # fills Kit and Ada through the HTTP API
+npm run shot             # headless Chrome → assets/docs/*.png. CHROME_BIN overrides the Chrome path.</code></pre>
+<p>Pictures never carry a real account. <code>npm run seed</code> derives
+<code>.dev.vars.shot</code> (git-ignored) from your <code>.dev.vars</code>: every secret is
+copied, but <code>GANTREE_DEV_USER</code> and <code>GANTREE_ADMINS</code> become the
+placeholder <code>100000000000000000001:dev@example.com</code> and <code>GANTREE_ALLOW</code>
+is emptied. <code>npm run dev:shot</code> is <code>CLOUDFLARE_ENV=shot</code>, which makes the
+Cloudflare Vite plugin read that file instead of <code>.dev.vars</code>; your real
+<code>.dev.vars</code> stays as it is for the Google walk. Seed refuses to run
+against a server signed in as anyone but the placeholder, and tells you
+to restart with <code>dev:shot</code> whenever it mints bearers. Shots wear the Neon
+theme by default; <code>GANTREE_SHOT_THEME=&lt;id&gt;</code> picks another. <code>npm run shot</code>
+opens <code>/chat</code> as the dev user. A member picker needs
+<code>GANTREE_SHOT_AS_MEMBER=1</code> against a server whose <code>.dev.vars.shot</code> has
+no <code>GANTREE_DEV_USER</code> (seed writes the member cookie).</p>
 <p><img src="../assets/docs/login.png" alt="Sign-in page with Continue with Google"></p>
 <hr>
 <h2 id="cloudflare">Cloudflare</h2>
