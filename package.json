@@ -22,34 +22,34 @@
     "coverage:harness": "scripts/coverage-harness.sh harness coverage"
   },
   "dependencies": {
-    "jose": "^6.1.0",
-    "react": "latest",
-    "react-dom": "latest",
+    "@vinext/cloudflare": "^1.1.0",
+    "jose": "^6.2.12",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "react-server-dom-webpack": "^19.3.0",
-    "vinext": "^1.1.0",
-    "@vinext/cloudflare": "latest"
+    "vinext": "^1.1.0"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1",
-    "@cloudflare/workers-types": "latest",
+    "@cloudflare/vite-plugin": "^1.63.1",
+    "@cloudflare/workers-types": "^5.20261010.1",
     "@eslint/js": "^10.0.1",
     "@stylistic/eslint-plugin": "^5.10.0",
-    "@tailwindcss/postcss": "latest",
+    "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/react": "^16.3.3",
-    "@types/node": "latest",
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "@vitejs/plugin-rsc": "^0.5.36",
     "@vitest/coverage-v8": "^5.0.3",
     "eslint": "^10.12.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "jsdom": "^30.1.2",
-    "tailwindcss": "latest",
-    "typescript": "latest",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^6.0.3",
     "typescript-eslint": "^8.71.1",
     "vite": "^8.3.4",
     "vitest": "^5.0.3",
-    "wrangler": "latest"
+    "wrangler": "^4.149.0"
   }
 }
