@@ -19,7 +19,8 @@ This is the side-by-side successor to
 [gantry-pendant](https://github.com/shotah/gantry-pendant), and
 [ai-gantry](https://github.com/shotah/ai-gantry). Those keep serving the
 household until cutover. The plan, the auth model, and the phases live in
-[docs/new_gantree_proposal.md](https://github.com/shotah/gantree/blob/main/docs/new_gantree_proposal.md).
+[docs/proposal.md](docs/proposal.md); the diagrams in
+[docs/architecture.md](docs/architecture.md).
 
 ## Reliability
 
