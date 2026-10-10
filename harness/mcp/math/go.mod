@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/bcicen/go-units v1.0.5
-	github.com/expr-lang/expr v1.17.6
+	github.com/expr-lang/expr v1.17.7
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 )
 
