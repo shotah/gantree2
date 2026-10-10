@@ -1,0 +1,26 @@
+# deps / caches
+node_modules/
+coverage
+*.tsbuildinfo
+.eslintcache
+
+# env — never commit a Google client secret or an allowlist
+.env
+.env.*
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
+# Vinext / Vite / Wrangler
+.next
+next-env.d.ts
+/dist/
+.vinext/
+.vite/
+.wrangler/
+.cloudflare/
+vite.config.ts.timestamp-*
+worker-configuration.d.ts
+
+# celld
+.celld/

@@ -1,0 +1,30 @@
+import react from "@vitejs/plugin-react";
+import { resolve } from "node:path";
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  plugins: [react()],
+  oxc: {
+    jsx: { runtime: "automatic" },
+  },
+  resolve: {
+    alias: {
+      "@": resolve(import.meta.dirname),
+    },
+  },
+  test: {
+    include: ["test/**/*.test.ts", "test/**/*.test.tsx"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "json-summary"],
+      reportsDirectory: "coverage",
+      include: ["lib/**/*.ts", "edge/**/*.ts"],
+      thresholds: {
+        lines: 60,
+        statements: 60,
+        functions: 60,
+        branches: 60,
+      },
+    },
+  },
+});

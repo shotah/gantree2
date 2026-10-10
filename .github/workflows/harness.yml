@@ -1,0 +1,91 @@
+name: harness
+
+# Go harness + every baked-in MCP plugin under harness/mcp/*. One merged
+# coverage number, one badge. Skips cleanly until Phase 3 lands harness/go.mod.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "harness/**"
+      - "scripts/coverage-harness.sh"
+      - "scripts/badge.mjs"
+      - ".github/workflows/harness.yml"
+  pull_request:
+    paths:
+      - "harness/**"
+      - "scripts/coverage-harness.sh"
+      - "scripts/badge.mjs"
+      - ".github/workflows/harness.yml"
+
+permissions:
+  contents: write
+
+env:
+  # Floor for the merged harness + plugins number. Raise, never lower.
+  HARNESS_COVERAGE_MIN: "60"
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: gh-pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Harness present?
+        id: present
+        run: |
+          if [ -f harness/go.mod ]; then echo "yes=true" >> "$GITHUB_OUTPUT"; else echo "yes=false" >> "$GITHUB_OUTPUT"; echo "no harness/go.mod yet — skipping"; fi
+
+      - uses: actions/setup-go@v5
+        if: steps.present.outputs.yes == 'true'
+        with:
+          go-version-file: harness/go.mod
+          cache-dependency-path: |
+            harness/go.sum
+            harness/mcp/*/go.sum
+
+      - name: Vet (harness + plugins)
+        if: steps.present.outputs.yes == 'true'
+        run: |
+          for mod in harness harness/mcp/*/; do
+            [ -f "$mod/go.mod" ] || continue
+            (cd "$mod" && go vet ./...)
+          done
+
+      - name: Test + merged coverage
+        if: steps.present.outputs.yes == 'true'
+        run: |
+          chmod +x scripts/coverage-harness.sh
+          scripts/coverage-harness.sh harness coverage
+
+      - uses: actions/setup-node@v7
+        if: steps.present.outputs.yes == 'true'
+        with:
+          node-version: "22"
+
+      - name: Upload coverage artifact
+        if: steps.present.outputs.yes == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-harness
+          path: |
+            coverage/harness.out
+            coverage/harness-func.txt
+
+      - name: Harness coverage badge
+        if: steps.present.outputs.yes == 'true' && github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: node scripts/badge.mjs gofunc coverage/harness-func.txt badges/harness-coverage.svg "harness coverage"
+
+      - name: Publish badge to gh-pages
+        if: steps.present.outputs.yes == 'true' && github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x scripts/publish-pages.sh
+          scripts/publish-pages.sh "chore: harness coverage badge [skip ci]" \
+            badges/harness-coverage.svg:badges/harness-coverage.svg

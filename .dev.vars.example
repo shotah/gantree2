@@ -1,0 +1,19 @@
+# Copy to .dev.vars for `npm run dev`, or point celld at it with CELLD_VARS_FILE.
+# Never commit .dev.vars.
+
+# GCP → APIs & Services → Credentials → OAuth client ID → Web application.
+# Authorized redirect URI for local dev: http://127.0.0.1:3000/api/auth/callback/google
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+# 32+ random bytes. `openssl rand -base64 48`
+SESSION_SECRET=
+
+# Who may be here. Comma or whitespace separated.
+# Forms: 118212345678901234567 | 118212345678901234567:ada@example.com | ada@example.com
+# GANTREE_ADMINS must not be empty. Env entries are a floor: always present, locked in the UI.
+GANTREE_ADMINS=you@example.com
+GANTREE_ALLOW=
+
+# Optional. Fakes a signed-in user on 127.0.0.1 / localhost only. Refused on any other host.
+# GANTREE_DEV_USER=118212345678901234567:you@example.com

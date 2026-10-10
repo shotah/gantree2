@@ -1,0 +1,55 @@
+{
+  "name": "gantree",
+  "version": "0.2.0",
+  "private": true,
+  "description": "gantree — one repo, one door, one product. Settings, chat (PWA), and the harness, on Cloudflare or celld.",
+  "engines": {
+    "node": ">=22"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev --host 127.0.0.1 --port 3000",
+    "build": "vite build",
+    "start": "wrangler dev --config dist/server/wrangler.json",
+    "deploy": "npm run build && vinext-cloudflare deploy --config dist/server/wrangler.json",
+    "deploy:home": "npm run build && celld deploy --config dist/server/wrangler.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "badge": "node scripts/badge.mjs vitest coverage/coverage-summary.json badges/coverage.svg",
+    "coverage:harness": "scripts/coverage-harness.sh harness coverage"
+  },
+  "dependencies": {
+    "jose": "^6.1.0",
+    "react": "latest",
+    "react-dom": "latest",
+    "react-server-dom-webpack": "^19.3.0",
+    "vinext": "^1.1.0",
+    "@vinext/cloudflare": "latest"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1",
+    "@cloudflare/workers-types": "latest",
+    "@eslint/js": "^10.0.1",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "@tailwindcss/postcss": "latest",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "@vitejs/plugin-react": "^6.1.2",
+    "@vitejs/plugin-rsc": "^0.5.36",
+    "@vitest/coverage-v8": "^5.0.3",
+    "eslint": "^10.12.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "jsdom": "^30.1.2",
+    "tailwindcss": "latest",
+    "typescript": "latest",
+    "typescript-eslint": "^8.71.1",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.3",
+    "wrangler": "latest"
+  }
+}

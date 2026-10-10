@@ -1,0 +1,55 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# contents:write — push badges/coverage.svg to gh-pages on main.
+permissions:
+  contents: write
+
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    # Serialize gh-pages writers across workflows (harness.yml shares the group).
+    concurrency:
+      group: gh-pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      # Thresholds live in vitest.config.ts; a drop below them fails here.
+      - run: npm run test:coverage
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-app
+          path: coverage/coverage-summary.json
+
+      - name: Coverage badge
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: node scripts/badge.mjs vitest coverage/coverage-summary.json badges/coverage.svg
+
+      # gh-pages hosts:
+      #   badges/coverage.svg          → README "coverage" badge (this job)
+      #   badges/harness-coverage.svg  → README "harness coverage" badge (harness.yml)
+      # Pages source: branch gh-pages / (root). Enable once in Settings → Pages.
+      - name: Publish badge to gh-pages
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x scripts/publish-pages.sh
+          scripts/publish-pages.sh "chore: app coverage badge [skip ci]" \
+            badges/coverage.svg:badges/coverage.svg
