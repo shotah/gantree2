@@ -1359,12 +1359,29 @@ describe("PhoneShell", () => {
       ws.deliver(JSON.stringify({ kind: "backdrop", rev: 42 }));
     });
     fireEvent.click(screen.getByRole("button", { name: "settings" }));
-    const toggle = screen.getByLabelText<HTMLInputElement>("Backdrop");
+    const toggle = screen.getByLabelText<HTMLInputElement>("Let Kit style the chat");
     expect(toggle.checked).toBe(false);
     expect(fetches.some((u) => u.includes("/api/chat/backdrop"))).toBe(false);
     fireEvent.click(toggle);
     expect(window.localStorage.getItem("gantree.backdrop")).toBe("on");
+    expect(window.localStorage.getItem("gantree.followTheme")).toBe("on");
     await waitFor(() => expect(fetches.some((u) => u.includes("/api/chat/backdrop?slug=kit&v=42"))).toBe(true));
+    expect(screen.queryByLabelText("Backdrop")).toBeNull();
+    expect(screen.queryByLabelText("Follow the agent's mood")).toBeNull();
+  });
+
+  it("pins this chat as the landing page through a cookie", async () => {
+    document.cookie = "gantree.landing=; Path=/; Max-Age=0";
+    await connectSpike();
+    fireEvent.click(screen.getByRole("button", { name: "settings" }));
+    const toggle = screen.getByLabelText<HTMLInputElement>("Open this chat on entry");
+    expect(toggle.checked).toBe(false);
+    fireEvent.click(toggle);
+    expect(document.cookie).toContain("gantree.landing=chat%3Akit");
+    expect(toggle.checked).toBe(true);
+    fireEvent.click(toggle);
+    expect(document.cookie).not.toContain("gantree.landing=chat");
+    expect(toggle.checked).toBe(false);
   });
 
   it("paints Kit's room theme from the notice without a bubble", async () => {
@@ -1390,7 +1407,7 @@ describe("PhoneShell", () => {
     expect(window.localStorage.getItem("gantree.roomTheme")).toBeNull();
   });
 
-  it("keeps your pick when Follow the agent's mood is off", async () => {
+  it("keeps your pick when Let Kit style the chat is off", async () => {
     window.localStorage.setItem("gantree.followTheme", "off");
     window.localStorage.setItem("gantree.theme", "paper");
     document.documentElement.setAttribute("data-theme", "paper");
@@ -1399,7 +1416,7 @@ describe("PhoneShell", () => {
       ws.open();
     });
     fireEvent.click(screen.getByRole("button", { name: "settings" }));
-    const toggle = screen.getByLabelText<HTMLInputElement>("Follow the agent's mood");
+    const toggle = screen.getByLabelText<HTMLInputElement>("Let Kit style the chat");
     expect(toggle.checked).toBe(false);
     act(() => {
       ws.deliver(JSON.stringify({ kind: "theme", theme: "siren" }));
@@ -1408,7 +1425,11 @@ describe("PhoneShell", () => {
     expect(window.localStorage.getItem("gantree.roomTheme")).toBe("siren");
     fireEvent.click(toggle);
     expect(window.localStorage.getItem("gantree.followTheme")).toBe("on");
+    expect(window.localStorage.getItem("gantree.backdrop")).toBe("on");
     expect(document.documentElement.getAttribute("data-theme")).toBe("siren");
+    fireEvent.click(toggle);
+    expect(window.localStorage.getItem("gantree.followTheme")).toBe("off");
+    expect(window.localStorage.getItem("gantree.backdrop")).toBe("off");
   });
 
   it("picking a theme in settings stops following Kit", async () => {
@@ -1421,13 +1442,13 @@ describe("PhoneShell", () => {
     });
     expect(document.documentElement.getAttribute("data-theme")).toBe("siren");
     fireEvent.click(screen.getByRole("button", { name: "settings" }));
-    expect(screen.getByLabelText<HTMLInputElement>("Follow the agent's mood").checked).toBe(true);
+    expect(screen.getByLabelText<HTMLInputElement>("Let Kit style the chat").checked).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "color theme" }));
     fireEvent.click(screen.getByRole("option", { name: "Flare" }));
     expect(document.documentElement.getAttribute("data-theme")).toBe("flare");
     expect(window.localStorage.getItem("gantree.theme")).toBe("flare");
     expect(window.localStorage.getItem("gantree.followTheme")).toBe("off");
-    expect(screen.getByLabelText<HTMLInputElement>("Follow the agent's mood").checked).toBe(false);
+    expect(screen.getByLabelText<HTMLInputElement>("Let Kit style the chat").checked).toBe(false);
   });
 
   it("swallows a junk theme id instead of painting a bubble", async () => {

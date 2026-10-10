@@ -1,4 +1,4 @@
-package pendant
+package chat
 
 import (
 	"bytes"
@@ -17,10 +17,10 @@ import (
 // IMAGE_BYTES_MAX refuses the whole frame (caption included), so we shrink
 // or drop the picture and keep the text.
 const (
-	pendantImageMax       = 1
-	pendantImageBytesMax  = 1_500_000
-	pendantJPEGBytesMax   = ((pendantImageBytesMax - 32) / 4) * 3 // 1_124_976
-	pendantJPEGDataPrefix = "data:image/jpeg;base64,"
+	chatImageMax       = 1
+	chatImageBytesMax  = 1_500_000
+	chatJPEGBytesMax   = ((chatImageBytesMax - 32) / 4) * 3 // 1_124_976
+	chatJPEGDataPrefix = "data:image/jpeg;base64,"
 )
 
 func replyFrames(kind, userID, id, text string, extra ...string) []outboundFrame {
@@ -31,7 +31,7 @@ func replyFrames(kind, userID, id, text string, extra ...string) []outboundFrame
 	}
 	first := outboundFrame{Kind: kind, UserID: userID, ID: id, Text: rest}
 	if len(imgs) > 0 {
-		n := pendantImageMax
+		n := chatImageMax
 		if n > len(imgs) {
 			n = len(imgs)
 		}
@@ -70,7 +70,7 @@ func fitPendantPhoto(u string) (string, bool) {
 	if !strings.HasPrefix(u, "data:image/") {
 		return "", false
 	}
-	if len(u) <= pendantImageBytesMax {
+	if len(u) <= chatImageBytesMax {
 		return u, true
 	}
 	raw, _, _, err := channel.DecodeDataURL(u)
@@ -81,8 +81,8 @@ func fitPendantPhoto(u string) (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	out := pendantJPEGDataPrefix + base64.StdEncoding.EncodeToString(jpg)
-	if len(out) > pendantImageBytesMax {
+	out := chatJPEGDataPrefix + base64.StdEncoding.EncodeToString(jpg)
+	if len(out) > chatImageBytesMax {
 		return "", false
 	}
 	return out, true
@@ -98,9 +98,9 @@ func jpegUnderBudget(raw []byte) ([]byte, error) {
 		if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: q}); err != nil {
 			return nil, err
 		}
-		if buf.Len() <= pendantJPEGBytesMax {
+		if buf.Len() <= chatJPEGBytesMax {
 			return buf.Bytes(), nil
 		}
 	}
-	return nil, fmt.Errorf("pendant: photo exceeds mailbox budget")
+	return nil, fmt.Errorf("chat: photo exceeds mailbox budget")
 }

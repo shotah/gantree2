@@ -31,3 +31,13 @@ VAPID_SUBJECT=mailto:you@example.com
 
 # Optional. Room bearers for agents not yet created through settings: slug:token,slug:token.
 # AGENT_BEARERS=kit:replace-me
+
+# Optional house keys. Every agent gets these in its config frame unless it
+# sets its own (lib/agents/house.ts); the agent's key wins. With all three LLM
+# values set, "New agent" skips the keys step and `npm run agent -- <slug>`
+# can run a real harness against `npm run dev` (docs/install.md → Chat with
+# a real agent locally). Any OpenAI-compatible endpoint works.
+# LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+# LLM_API_KEY=
+# LLM_MODEL=gemini-3.8-flash
+# BRAVE_SEARCH_API_KEY=

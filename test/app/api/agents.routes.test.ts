@@ -19,6 +19,7 @@ import { GET as readConfig } from "@/app/api/agents/[slug]/config/route";
 import { GET as readStatus } from "@/app/api/agents/[slug]/status/route";
 import { GET as readLog } from "@/app/api/agents/[slug]/log/route";
 import { GET as readUsers } from "@/app/api/agents/[slug]/users/route";
+import { GET as readBearer } from "@/app/api/agents/[slug]/bearer/route";
 import { GET as readSnap } from "@/app/api/agents/[slug]/snapshot/[file]/route";
 import { GET as readSamples } from "@/app/api/samples/route";
 
@@ -97,6 +98,17 @@ describe("agent routes", () => {
     expect((await readUsers(admin("/api/agents/kit/users"), slug)).status).toBe(200);
     expect((await readSamples(admin("/api/samples"))).status).toBe(200);
     expect((await removeAgent(admin("/api/agents/kit", "DELETE"), slug)).status).toBe(204);
+  });
+
+  it("hands the room bearer to an admin only on the loopback dev door", async () => {
+    const slug = { params: Promise.resolve({ slug: "kit" }) };
+    expect((await readBearer(admin("/api/agents/kit/bearer"), slug)).status).toBe(404);
+    door.env.GANTREE_DEV_USER = `${ADA}:ada@example.com`;
+    expect((await readBearer(admin("/api/agents/kit/bearer"), slug)).status).toBe(404);
+    const local = new Request("http://127.0.0.1:3000/api/agents/kit/bearer", { headers: admin("/x").headers });
+    const res = await readBearer(local, slug);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ bearer: "room-secret" });
   });
 
   it("answers a signed snapshot without a session", async () => {

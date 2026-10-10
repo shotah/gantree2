@@ -106,6 +106,7 @@ import {
   parseConfig,
   startedEnvFor,
 } from "@/lib/agents/config";
+import { houseEnv, houseKeys } from "@/lib/agents/house";
 import { archiveLatest, signedSnapshotUrls, SNAPSHOT_TTL_MS } from "@/lib/agents/snapshot";
 import {
   applyHarnessFrame,
@@ -1020,8 +1021,9 @@ export class Agent extends DurableObject<AgentEnv> {
 
   private async configHttp(request: Request): Promise<Response> {
     const loaded = await this.loadConfig();
+    const house = houseKeys(this.env);
     if (request.method === "GET") {
-      return Response.json(configView(loaded.config, loaded.startedEnv));
+      return Response.json(configView(loaded.config, loaded.startedEnv, house));
     }
     if (request.method === "PATCH") {
       let raw: unknown;
@@ -1037,7 +1039,7 @@ export class Agent extends DurableObject<AgentEnv> {
       if (applied.changed) {
         await this.ctx.storage.put(CONFIG_STORE_KEY, applied.config);
       }
-      return Response.json(configView(applied.config, loaded.startedEnv));
+      return Response.json(configView(applied.config, loaded.startedEnv, house));
     }
     if (request.method === "POST") {
       let raw: unknown;
@@ -1051,7 +1053,7 @@ export class Agent extends DurableObject<AgentEnv> {
       }
       const started = startedEnvFor(loaded.config);
       await this.ctx.storage.put(CONFIG_STARTED_KEY, started);
-      return Response.json(configView(loaded.config, started));
+      return Response.json(configView(loaded.config, started, house));
     }
     return new Response("method", { status: 405 });
   }
@@ -1110,7 +1112,7 @@ export class Agent extends DurableObject<AgentEnv> {
           urls = signed;
         }
       }
-      ws.send(configFrame(config, urls));
+      ws.send(configFrame(config, urls, houseEnv(this.env)));
     } catch {
       // the harness redials
     }

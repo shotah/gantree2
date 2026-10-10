@@ -1,4 +1,4 @@
-package pendant
+package chat
 
 import (
 	"bytes"
@@ -637,7 +637,7 @@ func TestDispatch_LogsMailboxError(t *testing.T) {
 		t.Fatal("mailbox error must not start a turn")
 	}
 	out := logs.String()
-	if !strings.Contains(out, "pendant mailbox error") || !strings.Contains(out, "rate") || !strings.Contains(out, "r1") {
+	if !strings.Contains(out, "chat mailbox error") || !strings.Contains(out, "rate") || !strings.Contains(out, "r1") {
 		t.Fatalf("log = %q", out)
 	}
 	select {

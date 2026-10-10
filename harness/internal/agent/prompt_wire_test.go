@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/shotah/ai-gantry/internal/agent"
-	"github.com/shotah/ai-gantry/internal/channel/pendant"
+	"github.com/shotah/ai-gantry/internal/channel/chat"
 	"github.com/shotah/ai-gantry/internal/provider"
 )
 
@@ -46,11 +46,11 @@ func TestPendantInbound_WireBody(t *testing.T) {
 			}))
 			t.Cleanup(srv.Close)
 
-			raw, err := os.ReadFile(filepath.Join("testdata", "pendant", "inbound_geo.json"))
+			raw, err := os.ReadFile(filepath.Join("testdata", "chat", "inbound_geo.json"))
 			if err != nil {
 				t.Fatal(err)
 			}
-			msg, ok, err := pendant.InboundTurn(raw)
+			msg, ok, err := chat.InboundTurn(raw)
 			if err != nil || !ok {
 				t.Fatalf("ok=%v err=%v", ok, err)
 			}
@@ -71,7 +71,7 @@ func TestPendantInbound_WireBody(t *testing.T) {
 			if _, err := a.Handle(context.Background(), msg); err != nil {
 				t.Fatal(err)
 			}
-			assertGolden(t, filepath.Join("testdata", "pendant", tc.want), body.format())
+			assertGolden(t, filepath.Join("testdata", "chat", tc.want), body.format())
 		})
 	}
 }

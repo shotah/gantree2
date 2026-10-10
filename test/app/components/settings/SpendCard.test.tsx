@@ -15,6 +15,14 @@ afterEach(() => {
   localStorage.clear();
 });
 
+function spendBar(name: string): HTMLElement {
+  const bar = screen.getByRole("listitem", { name }).querySelector("[aria-hidden]");
+  if (!(bar instanceof HTMLElement)) {
+    throw new Error(`missing spend bar for ${name}`);
+  }
+  return bar;
+}
+
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 }
@@ -46,6 +54,22 @@ describe("SpendCard", () => {
     expect(kit.textContent).toContain("2.00k completion");
     expect(kit.textContent).toContain("$0.04");
     expect(kit.textContent).toContain("1 turn");
+    const totals = screen.getByRole("group", { name: "Spend totals" });
+    expect(totals.className).toContain("flex");
+    expect(totals.textContent).toContain("8.00k");
+    expect(totals.textContent).toContain("prompt");
+    expect(totals.textContent).toContain("2.00k");
+    expect(totals.textContent).toContain("completion");
+    expect(totals.textContent).toContain("turns");
+    expect(totals.textContent).toContain("$0.04");
+    expect(screen.getByText("cost").className).not.toContain("text-ok");
+    const cost = totals.querySelector(".text-ok");
+    expect(cost?.textContent).toBe("$0.04");
+    expect(cost?.className).toContain("text-ok");
+    expect(spendBar("kit").style.width).toBe("100%");
+    expect(spendBar("kit").className).toContain("from-accent");
+    expect(screen.getByRole("button", { name: "Today" }).className).toContain("bg-accent");
+    expect(screen.getByRole("button", { name: "Today" }).className).toContain("text-canvas");
     expect(screen.queryByRole("listitem", { name: "ada" })).toBeNull();
     expect(screen.queryByText(/424\.2k/)).toBeNull();
 
@@ -58,6 +82,10 @@ describe("SpendCard", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "30d" }));
     expect(screen.getByRole("button", { name: "30d" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "30d" }).className).toContain("bg-accent");
+    expect(screen.getByRole("button", { name: "Today" }).className).not.toContain("bg-accent");
+    expect(spendBar("kit").style.width).toBe("100%");
+    expect(spendBar("ada").style.width).toBe("50%");
     expect(screen.getByRole("listitem", { name: "ada" }).textContent).toContain("5.00k prompt");
     expect(screen.getByRole("listitem", { name: "ada" }).textContent).toContain("2 turns");
     expect(screen.queryByText(/424\.2k/)).toBeNull();

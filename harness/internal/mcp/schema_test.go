@@ -25,7 +25,7 @@ func TestEstimateSchemaBudget_ByServer(t *testing.T) {
 		{Name: "garmin__sleep_get", Description: "sleep", Parameters: map[string]any{"type": "object"}},
 		{Name: "garmin__get_weight", Description: "weight", Parameters: map[string]any{"type": "object"}},
 		{Name: "memory_store", Description: "store", Parameters: map[string]any{"type": "object"}},
-		{Name: "cast__devices_list", Description: "discover", Parameters: map[string]any{"type": "object"}},
+		{Name: "maps__geocode", Description: "discover", Parameters: map[string]any{"type": "object"}},
 	}
 	got := mcp.EstimateSchemaBudget(defs)
 	if got.Tools != 4 {
@@ -38,7 +38,7 @@ func TestEstimateSchemaBudget_ByServer(t *testing.T) {
 	for _, s := range got.ByServer {
 		by[s.Server] = s
 	}
-	if by["garmin"].Tools != 2 || by["cast"].Tools != 1 || by["builtin"].Tools != 1 {
+	if by["garmin"].Tools != 2 || by["maps"].Tools != 1 || by["builtin"].Tools != 1 {
 		t.Fatalf("by server = %#v", got.ByServer)
 	}
 	// Heavier servers first (garmin has two tools).

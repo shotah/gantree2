@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SettingsMenu } from "@/app/components/chat/SettingsMenu";
 
@@ -112,7 +112,7 @@ describe("SettingsMenu", () => {
     expect(screen.queryByRole("link", { name: "All agents" })).toBeNull();
   });
 
-  it("hides both rows from a member, and from an operator on someone else's agent", async () => {
+  it("hides both rows from a member, and from an operator on someone else's agent, but always offers Settings", async () => {
     window.history.pushState({}, "", "/chat/kit");
     render(<SettingsMenu><span>inside</span></SettingsMenu>);
     fireEvent.click(screen.getByRole("button", { name: "settings" }));
@@ -120,6 +120,8 @@ describe("SettingsMenu", () => {
     await waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalled());
     expect(screen.queryByRole("link", { name: "Manage kit" })).toBeNull();
     expect(screen.queryByRole("link", { name: "All agents" })).toBeNull();
+    const nav = await screen.findByRole("navigation", { name: "Console" });
+    expect(within(nav).getByRole("link", { name: "Settings" }).getAttribute("href")).toBe("/settings");
 
     cleanup();
     vi.stubGlobal("fetch", vi.fn(async () => Response.json({

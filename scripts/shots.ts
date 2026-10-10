@@ -4,8 +4,19 @@
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { knownTheme, type ThemeId } from "../lib/theme/catalog.ts";
 
 export const REPO_ROOT = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
+
+/**
+ * Shots wear a mood theme, not the Boom default, so the README shows the
+ * colour. `GANTREE_SHOT_THEME` overrides; a spec can pin its own.
+ */
+export const DEFAULT_SHOT_THEME: ThemeId = "neon";
+
+/** Browser keys, spelled out so Node can run this file without the `@/` alias. `test/scripts/shot.test.ts` pins them. */
+export const SHOT_THEME_KEY = "gantree.theme";
+export const SHOT_FOLLOW_KEY = "gantree.followTheme";
 
 /** Flatpak Chrome on the dev box. `CHROME_BIN` overrides it. */
 export const DEFAULT_CHROME = "/var/lib/flatpak/app/com.google.Chrome/current/active/files/extra/chrome";
@@ -32,6 +43,7 @@ export type ShotSpec = {
   open?: readonly string[];
   full?: boolean;
   waitMs?: number;
+  theme?: ThemeId;
 };
 
 export const SHOTS = {
@@ -80,4 +92,16 @@ export function parseShotArgs(argv: readonly string[]): { base: string; names: S
 
 export function memberCookieFile(): string {
   return join(tmpdir(), MEMBER_COOKIE_NAME);
+}
+
+export function shotTheme(spec: ShotSpec, env: { GANTREE_SHOT_THEME?: string } = {}): ThemeId {
+  return spec.theme ?? knownTheme(env.GANTREE_SHOT_THEME) ?? DEFAULT_SHOT_THEME;
+}
+
+/**
+ * Runs before any page script (`Page.addScriptToEvaluateOnNewDocument`):
+ * the human's pick is `id`, and the room's theme does not override it.
+ */
+export function themeSeedScript(id: ThemeId): string {
+  return `try{localStorage.setItem(${JSON.stringify(SHOT_THEME_KEY)},${JSON.stringify(id)});localStorage.setItem(${JSON.stringify(SHOT_FOLLOW_KEY)},"off")}catch(e){}`;
 }

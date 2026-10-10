@@ -93,7 +93,7 @@ func TestHandle_CachedLocationOnLaterTurn(t *testing.T) {
 }
 
 func TestHandle_PendantGPSLeadsClockFooterOnUserTurn(t *testing.T) {
-	sid := "pendant:kit:loc-footer"
+	sid := "chat:kit:loc-footer"
 	hist := newMemHistory()
 	fc := &fakeCompleter{fn: func(req provider.Request) (*provider.Result, error) {
 		user := lastPromptUser(req.Messages)

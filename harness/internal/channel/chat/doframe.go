@@ -1,4 +1,4 @@
-package pendant
+package chat
 
 import (
 	"encoding/json"
@@ -128,7 +128,7 @@ func DecodeConfig(raw []byte) (ConfigFrame, error) {
 		return ConfigFrame{}, err
 	}
 	if f.Kind != KindConfig {
-		return ConfigFrame{}, fmt.Errorf("pendant: want kind %s, got %q", KindConfig, f.Kind)
+		return ConfigFrame{}, fmt.Errorf("chat: want kind %s, got %q", KindConfig, f.Kind)
 	}
 	return f, nil
 }
@@ -152,7 +152,7 @@ func DecodeStatus(raw []byte) (StatusFrame, error) {
 		return StatusFrame{}, err
 	}
 	if f.Kind != KindStatus {
-		return StatusFrame{}, fmt.Errorf("pendant: want kind %s, got %q", KindStatus, f.Kind)
+		return StatusFrame{}, fmt.Errorf("chat: want kind %s, got %q", KindStatus, f.Kind)
 	}
 	if f.Published == nil {
 		f.Published = []string{}
@@ -176,7 +176,7 @@ func DecodePerf(raw []byte) (PerfFrame, error) {
 		return PerfFrame{}, err
 	}
 	if f.Kind != KindPerf {
-		return PerfFrame{}, fmt.Errorf("pendant: want kind %s, got %q", KindPerf, f.Kind)
+		return PerfFrame{}, fmt.Errorf("chat: want kind %s, got %q", KindPerf, f.Kind)
 	}
 	return f, nil
 }
@@ -196,7 +196,7 @@ func DecodeLog(raw []byte) (LogFrame, error) {
 		return LogFrame{}, err
 	}
 	if f.Kind != KindLog {
-		return LogFrame{}, fmt.Errorf("pendant: want kind %s, got %q", KindLog, f.Kind)
+		return LogFrame{}, fmt.Errorf("chat: want kind %s, got %q", KindLog, f.Kind)
 	}
 	return f, nil
 }
@@ -214,7 +214,7 @@ func DecodeSnapshot(raw []byte) (SnapshotFrame, error) {
 		return SnapshotFrame{}, err
 	}
 	if f.Kind != KindSnapshot {
-		return SnapshotFrame{}, fmt.Errorf("pendant: want kind %s, got %q", KindSnapshot, f.Kind)
+		return SnapshotFrame{}, fmt.Errorf("chat: want kind %s, got %q", KindSnapshot, f.Kind)
 	}
 	return f, nil
 }

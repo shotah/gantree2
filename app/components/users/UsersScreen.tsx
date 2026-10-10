@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ThemeSelect } from "@/app/components/shared/ThemeSelect";
+import { cardClass, chipClass, PageHeader } from "@/app/components/shared/PageHeader";
 import { USERS_URL, api, userUrl } from "@/app/lib/api";
 import { formatEntry } from "@/lib/door/allowlist";
 import type { AuditEvent } from "@/lib/door/settingsStore";
@@ -15,6 +15,13 @@ const ROLE_BLURB: Record<Role, string> = {
   admin: "Users, settings, and every agent.",
   operator: "The agents listed on their row.",
   member: "Sign in, and chat where an agent allows them.",
+};
+
+/** Chip colours plus the solid bar for that role. One map for every role mark. */
+const ROLE_TONE: Record<Role, { tone: string; bar: string }> = {
+  admin: { tone: "text-ok border-ok/40 bg-ok/10", bar: "bg-ok" },
+  operator: { tone: "text-info border-info/40 bg-info/10", bar: "bg-info" },
+  member: { tone: "text-mark border-accent-line bg-accent-soft", bar: "bg-mark" },
 };
 
 const COPY: Record<string, string> = {
@@ -36,6 +43,17 @@ const VERB: Record<string, string> = {
   "user.remove": "removed",
 };
 
+const fieldClass = "rounded-xl border border-line bg-canvas px-3 py-2 text-sm text-body outline-none focus-visible:border-accent-line focus-visible:ring-2 focus-visible:ring-accent/40";
+const primaryClass = "rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-canvas hover:bg-accent-hover disabled:opacity-50";
+const saveClass = "rounded-xl bg-accent px-3 py-1.5 text-xs font-semibold text-canvas hover:bg-accent-hover disabled:opacity-50";
+const quietClass = "rounded-xl border border-line bg-canvas px-3 py-1.5 text-xs font-medium text-body hover:bg-track disabled:opacity-50";
+const ghostClass = "rounded-xl border border-line px-3 py-1.5 text-xs text-dim hover:bg-track disabled:opacity-50";
+const dangerClass = "rounded-xl border border-danger-line bg-danger-soft px-3 py-1.5 text-xs font-medium text-danger disabled:opacity-50";
+
+export function roleTone(role: Role): string {
+  return ROLE_TONE[role].tone;
+}
+
 function message(code: string): string {
   return COPY[code] ?? code;
 }
@@ -46,6 +64,12 @@ function isRole(value: string): value is Role {
 
 function agentTokens(raw: string): string[] {
   return raw.split(/[\s,]+/).map((part) => part.trim().toLowerCase()).filter(Boolean);
+}
+
+/** The avatar letter: the email's, so a `sub:email` row does not read as a digit. */
+export function initial(entry: { email: string | null }, label: string): string {
+  const char = (entry.email ?? label).trim().charAt(0);
+  return char ? char.toUpperCase() : "?";
 }
 
 async function errorCode(res: Response): Promise<string> {
@@ -82,6 +106,41 @@ function summary(event: AuditEvent): string {
   }
 }
 
+function LockGlyph() {
+  return (
+    <svg aria-hidden viewBox="0 0 16 16" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="1.6">
+      <rect x="3.25" y="7" width="9.5" height="6.25" rx="1.2" />
+      <path d="M5.25 7V5.25a2.75 2.75 0 0 1 5.5 0V7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function RoleGlyph({ role }: { role: Role }) {
+  const pen = "h-4 w-4";
+  if (role === "admin") {
+    return (
+      <svg aria-hidden viewBox="0 0 24 24" className={pen} fill="none" stroke="currentColor" strokeWidth="1.8">
+        <path strokeLinejoin="round" d="M12 3.5 19 6.2v5.4c0 4.2-2.9 7.2-7 8.9-4.1-1.7-7-4.7-7-8.9V6.2L12 3.5Z" />
+      </svg>
+    );
+  }
+  if (role === "operator") {
+    return (
+      <svg aria-hidden viewBox="0 0 24 24" className={pen} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+        <path d="M4 8h10M18 8h2M4 16h2M10 16h10" />
+        <circle cx="16" cy="8" r="2" />
+        <circle cx="8" cy="16" r="2" />
+      </svg>
+    );
+  }
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" className={pen} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <circle cx="12" cy="8.5" r="3" />
+      <path strokeLinecap="round" d="M6.5 19.5c.7-3 2.9-4.5 5.5-4.5s4.8 1.5 5.5 4.5" />
+    </svg>
+  );
+}
+
 function RoleSelect({ id, value, onChange, disabled }: { id: string; value: Role; onChange: (role: Role) => void; disabled: boolean }) {
   return (
     <select
@@ -93,7 +152,7 @@ function RoleSelect({ id, value, onChange, disabled }: { id: string; value: Role
           onChange(e.target.value);
         }
       }}
-      className="rounded border border-line bg-canvas px-2 py-1.5 text-sm text-body"
+      className={fieldClass}
     >
       {ROLES.map((role) => <option key={role} value={role}>{role}</option>)}
     </select>
@@ -228,35 +287,47 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-10">
-      <header className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <a href="/" className="text-sm text-muted hover:text-body">gantree</a>
-          <h1 className="text-2xl font-semibold text-fg">Users</h1>
-          <p className="text-sm text-muted">Who may sign in, and as what. Environment rows stay locked.</p>
-        </div>
-        <div className="w-40 shrink-0">
-          <ThemeSelect />
-        </div>
-      </header>
+      <PageHeader
+        title="Users"
+        blurb="Who may sign in, and as what. Environment rows stay locked."
+        nav={[
+          { href: "/agents", label: "Agents" },
+          { href: "/settings", label: "Settings" },
+        ]}
+      />
 
-      <ul className="grid gap-3 text-sm sm:grid-cols-3" aria-label="Roles">
+      <ul className="grid gap-3 sm:grid-cols-3" aria-label="Roles">
         {ROLES.map((item) => (
-          <li key={item} className="rounded border border-line px-3 py-2">
-            <p className="font-medium text-fg">{item}</p>
-            <p className="mt-1 text-xs text-dim">{ROLE_BLURB[item]}</p>
+          <li key={item} className={`${cardClass} relative overflow-hidden`}>
+            <span aria-hidden className={`pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full opacity-30 blur-2xl ${ROLE_TONE[item].bar}`} />
+            <span aria-hidden className={`absolute inset-x-0 top-0 h-1.5 ${ROLE_TONE[item].bar}`} />
+            <div className="relative">
+              <div className="flex items-center gap-2.5">
+                <span aria-hidden className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl border ${roleTone(item)}`}>
+                  <RoleGlyph role={item} />
+                </span>
+                <span className={`${chipClass} ${roleTone(item)}`}>{item}</span>
+              </div>
+              <p className="mt-3 text-xs leading-relaxed text-dim">{ROLE_BLURB[item]}</p>
+            </div>
           </li>
         ))}
       </ul>
 
       {error
-        ? <p role="alert" className="rounded border border-danger-line bg-danger-soft px-3 py-2 text-sm text-danger">{message(error)}</p>
+        ? <p role="alert" className="rounded-2xl border border-danger-line bg-danger-soft px-4 py-3 text-sm text-danger">{message(error)}</p>
         : null}
       {notice
-        ? <p role="status" className="text-sm text-body">{notice}</p>
+        ? <p role="status" className="rounded-2xl border border-ok/40 bg-ok/10 px-4 py-3 text-sm font-medium text-ok">{notice}</p>
         : null}
 
       {phase === "loading"
-        ? <p className="text-sm text-muted">Loading users.</p>
+        ? (
+            <p className={`${cardClass} flex items-center gap-2 text-sm text-muted`}>
+              <span aria-hidden className="h-2 w-2 animate-pulse rounded-full bg-accent" />
+              Loading users.
+            </p>
+          )
         : null}
 
       {phase === "denied"
@@ -266,7 +337,7 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
               <>
                 <form
                   aria-label="Add a user"
-                  className="flex flex-col gap-3 rounded border border-line bg-panel px-4 py-4"
+                  className={`${cardClass} flex flex-col gap-3`}
                   onSubmit={(e) => {
                     e.preventDefault();
                     const saved = entry.trim();
@@ -280,6 +351,7 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                     );
                   }}
                 >
+                  <h2 className="text-sm font-semibold text-fg">Add someone</h2>
                   <div className="flex flex-col gap-1">
                     <label htmlFor="user-entry" className="text-xs text-muted">Email or sub:email</label>
                     <input
@@ -289,7 +361,7 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                       spellCheck={false}
                       placeholder="bob@example.com"
                       onChange={(e) => setEntry(e.target.value)}
-                      className="rounded border border-line bg-canvas px-3 py-1.5 text-sm text-body"
+                      className={fieldClass}
                     />
                   </div>
                   <div className="flex flex-wrap items-end gap-3">
@@ -308,7 +380,7 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                               spellCheck={false}
                               placeholder="kit, ada"
                               onChange={(e) => setAgents(e.target.value)}
-                              className="rounded border border-line bg-canvas px-3 py-1.5 text-sm text-body"
+                              className={fieldClass}
                             />
                           </div>
                         )
@@ -316,29 +388,42 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                     <button
                       type="submit"
                       disabled={busy || entry.trim().length === 0}
-                      className="rounded bg-accent px-4 py-2 text-sm font-medium text-canvas hover:bg-accent-hover disabled:opacity-50"
+                      className={primaryClass}
                     >
                       Add user
                     </button>
                   </div>
                 </form>
 
-                <ul className="space-y-2" aria-label="Users">
+                <ul className="space-y-3" aria-label="Users">
                   {users.map((user) => {
                     const label = formatEntry(user.entry);
                     const open = editing === label;
                     return (
-                      <li key={label} aria-label={label} className="rounded border border-line px-3 py-3 text-sm">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="min-w-0">
-                            <span className="break-all font-medium text-fg">{label}</span>
-                            <span className="ml-2 text-xs text-dim">{user.role}</span>
-                            {user.locked
-                              ? <span className="ml-2 text-xs text-dim">locked</span>
-                              : null}
-                            {user.agents.length > 0
-                              ? <span className="ml-2 text-xs text-mark">{user.agents.join(", ")}</span>
-                              : null}
+                      <li key={label} aria-label={label} className={`${cardClass} relative overflow-hidden text-sm`}>
+                        <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${ROLE_TONE[user.role].bar}`} />
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="flex min-w-0 flex-1 items-start gap-3">
+                            <span aria-hidden className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-accent to-mark text-sm font-bold text-canvas">
+                              {initial(user.entry, label)}
+                            </span>
+                            <div className="min-w-0">
+                              <span className="break-all font-medium text-fg">{label}</span>
+                              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                                <span className={`${chipClass} ${roleTone(user.role)}`}>{user.role}</span>
+                                {user.locked
+                                  ? (
+                                      <span className={`${chipClass} border-line text-dim`}>
+                                        <LockGlyph />
+                                        locked
+                                      </span>
+                                    )
+                                  : null}
+                                {user.agents.map((slug, index) => (
+                                  <span key={`${slug}-${index}`} className={`${chipClass} border-accent-line bg-accent-soft text-mark`}>{slug}</span>
+                                ))}
+                              </div>
+                            </div>
                           </div>
                           {user.locked
                             ? null
@@ -357,7 +442,7 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                                             setEditAgents(user.agents.join(", "));
                                             setConfirming(null);
                                           }}
-                                          className="rounded border border-line px-2 py-1 text-xs text-body hover:bg-track disabled:opacity-50"
+                                          className={quietClass}
                                         >
                                           Edit
                                         </button>
@@ -370,7 +455,7 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                                             aria-label={`Confirm remove ${label}`}
                                             disabled={busy}
                                             onClick={() => void remove(label)}
-                                            className="rounded border border-danger-line px-2 py-1 text-xs text-danger disabled:opacity-50"
+                                            className={dangerClass}
                                           >
                                             Confirm remove
                                           </button>
@@ -379,7 +464,7 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                                             aria-label={`Cancel remove ${label}`}
                                             disabled={busy}
                                             onClick={() => setConfirming(null)}
-                                            className="rounded border border-line px-2 py-1 text-xs text-dim disabled:opacity-50"
+                                            className={ghostClass}
                                           >
                                             Cancel
                                           </button>
@@ -394,7 +479,7 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                                             setConfirming(label);
                                             setEditing(null);
                                           }}
-                                          className="rounded border border-line px-2 py-1 text-xs text-body hover:bg-track disabled:opacity-50"
+                                          className={quietClass}
                                         >
                                           Remove
                                         </button>
@@ -404,7 +489,7 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                         </div>
                         {open
                           ? (
-                              <div className="mt-3 flex flex-wrap items-end gap-2">
+                              <div className="mt-4 flex flex-wrap items-end gap-3 border-t border-line pt-4">
                                 <div className="flex flex-col gap-1">
                                   <label htmlFor={`role-${label}`} className="text-xs text-muted">Role for {label}</label>
                                   <RoleSelect id={`role-${label}`} value={editRole} disabled={busy} onChange={setEditRole} />
@@ -419,7 +504,7 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                                           autoComplete="off"
                                           spellCheck={false}
                                           onChange={(e) => setEditAgents(e.target.value)}
-                                          className="rounded border border-line bg-canvas px-3 py-1.5 text-sm text-body"
+                                          className={fieldClass}
                                         />
                                       </div>
                                     )
@@ -432,7 +517,7 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                                     { entry: label, role: editRole, agents: editRole === "operator" ? agentTokens(editAgents) : [] },
                                     label,
                                   )}
-                                  className="rounded border border-accent-line bg-accent-soft px-3 py-1.5 text-xs font-medium text-fg disabled:opacity-50"
+                                  className={saveClass}
                                 >
                                   Save
                                 </button>
@@ -441,7 +526,7 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                                   aria-label={`Cancel ${label}`}
                                   disabled={busy}
                                   onClick={() => setEditing(null)}
-                                  className="rounded border border-line px-2 py-1 text-xs text-dim disabled:opacity-50"
+                                  className={ghostClass}
                                 >
                                   Cancel
                                 </button>
@@ -453,17 +538,21 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                   })}
                 </ul>
 
-                <section aria-label="Audit" className="space-y-2">
-                  <h2 className="text-sm font-medium text-fg">Audit</h2>
+                <section aria-label="Audit" className={cardClass}>
+                  <h2 className="text-sm font-semibold text-fg">Audit</h2>
                   {audit.length === 0
-                    ? <p className="text-xs text-dim">No changes yet.</p>
+                    ? <p className="mt-3 text-xs text-dim">No changes yet.</p>
                     : (
-                        <ol className="space-y-1 text-xs text-body">
-                          {audit.map((event) => (
-                            <li key={event.id} className="flex flex-wrap gap-x-2 break-all">
-                              <time dateTime={stamp(event.at)?.toISOString()} className="text-dim">{formatWhen(event.at)}</time>
-                              <span className="text-muted">{event.who}</span>
-                              <span>{summary(event)}</span>
+                        <ol className="mt-4 text-xs text-body">
+                          {audit.map((event, index) => (
+                            <li key={event.id} className="relative flex gap-3 pb-4 last:pb-0">
+                              <span aria-hidden className={`absolute left-[3px] top-1 w-px bg-line ${index === audit.length - 1 ? "h-2" : "bottom-0"}`} />
+                              <span aria-hidden className="relative z-10 mt-0.5 h-2 w-2 shrink-0 rounded-full bg-accent" />
+                              <div className="flex min-w-0 flex-wrap gap-x-2 break-all">
+                                <time dateTime={stamp(event.at)?.toISOString()} className="text-dim">{formatWhen(event.at)}</time>
+                                <span className="text-muted">{event.who}</span>
+                                <span>{summary(event)}</span>
+                              </div>
                             </li>
                           ))}
                         </ol>

@@ -53,6 +53,16 @@ body {
   min-height: 100dvh;
 }
 
+/* Settings pages sit on a soft two-tone glow so the canvas is never flat. Chat paints its own backdrop. */
+body:not(:has([data-shot="phone"])):not(:has([data-shot="agent"])) {
+  background-image:
+    radial-gradient(60rem 36rem at 12% -10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%),
+    radial-gradient(48rem 30rem at 100% 0%, color-mix(in srgb, var(--info) 12%, transparent), transparent 60%),
+    radial-gradient(40rem 28rem at 50% 110%, color-mix(in srgb, var(--mark) 8%, transparent), transparent 60%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
 /* Phone: inputs never trigger iOS zoom, targets are thumb-sized. */
 @media (max-width: 639px) {
   input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]),

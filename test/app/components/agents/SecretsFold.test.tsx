@@ -70,6 +70,13 @@ describe("SecretsFold", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add key" }));
     expect(await screen.findByText("MAPS_KEY")).toBeTruthy();
     expect(screen.queryByDisplayValue("secret")).toBeNull();
+
+    // Typing a name that is already on the list turns the button into a replace.
+    expect(screen.getByRole("form", { name: "Add or replace a key" })).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Key"), { target: { value: "LLM_API_KEY" } });
+    expect(screen.getByRole("button", { name: "Replace key" })).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Key"), { target: { value: "NEW_ONE" } });
+    expect(screen.getByRole("button", { name: "Add key" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Remove LLM_API_KEY" }));
     await vi.waitFor(() => expect(seen.some((view) => view.envKeys.length === 0)).toBe(true));
   });
@@ -80,6 +87,13 @@ describe("SecretsFold", () => {
     expect(screen.getByText("Keys changed. Recreate the container so they take effect.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Recreate to apply keys" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Add key" })).toBeNull();
+  });
+
+  it("names the house keys the server supplies, without a remove button", () => {
+    render(<SecretsFold slug="kit" config={config({ recreate: true, envKeys: [], house: ["LLM_MODEL", "LLM_API_KEY"] })} canMutate client={vi.fn()} onConfig={vi.fn()} />);
+    expect(screen.getByRole("note").textContent).toContain("From the server: LLM_MODEL, LLM_API_KEY.");
+    expect(screen.queryByRole("button", { name: "Remove LLM_MODEL" })).toBeNull();
+    expect(screen.getByText("No keys yet.")).toBeTruthy();
   });
 
   it("reports a failed write", async () => {

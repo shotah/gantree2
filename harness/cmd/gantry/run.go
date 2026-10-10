@@ -14,8 +14,8 @@ import (
 	"github.com/shotah/ai-gantry/internal/agent"
 	"github.com/shotah/ai-gantry/internal/aims"
 	"github.com/shotah/ai-gantry/internal/channel"
+	"github.com/shotah/ai-gantry/internal/channel/chat"
 	"github.com/shotah/ai-gantry/internal/channel/discord"
-	"github.com/shotah/ai-gantry/internal/channel/pendant"
 	"github.com/shotah/ai-gantry/internal/channel/slack"
 	"github.com/shotah/ai-gantry/internal/channel/stdio"
 	"github.com/shotah/ai-gantry/internal/channel/telegram"
@@ -46,9 +46,9 @@ func run() int {
 	}
 
 	logger, errFwd := newLogger(cfg.LogLevel, cfg.TelegramErrorReporting)
-	var bridge *pendant.LogBridge
+	var bridge *chat.LogBridge
 	if cfg.Snapshot {
-		bridge = pendant.NewLogBridge(logger.Handler(), time.Second)
+		bridge = chat.NewLogBridge(logger.Handler(), time.Second)
 		logger = slog.New(bridge)
 	}
 	slog.SetDefault(logger)
@@ -462,7 +462,7 @@ func run() int {
 		return 1
 	}
 	mouth = ch
-	if p, ok := ch.(*pendant.Channel); ok && (boot != nil || bridge != nil) {
+	if p, ok := ch.(*chat.Channel); ok && (boot != nil || bridge != nil) {
 		wireDO(p, boot, bridge, mcpHost)
 	}
 	if room, ok := ch.(agent.RoomSource); ok {
@@ -599,7 +599,7 @@ func newChannel(cfg *config.Config, logger *slog.Logger, board func(context.Cont
 			StreamReplies: cfg.StreamReplies,
 		})
 	case config.ChannelChat, config.ChannelPendant:
-		return pendant.New(pendant.Config{
+		return chat.New(chat.Config{
 			MailboxURL:    cfg.PendantMailboxURL,
 			Bearer:        cfg.PendantBearer,
 			AllowedUsers:  cfg.PendantAllowedUsers,

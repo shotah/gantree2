@@ -1,4 +1,4 @@
-package pendant
+package chat
 
 import (
 	"context"
@@ -32,7 +32,7 @@ func (c *Channel) scheduleReaction(ctx context.Context, cn conn, handle channel.
 			Text:      channel.FormatReaction(set, target),
 		}
 		if err := c.runTurn(ctx, cn, handle, msg, ""); err != nil {
-			c.log.Warn("pendant reaction turn failed", "err", err, "session_id", msg.SessionID)
+			c.log.Warn("chat reaction turn failed", "err", err, "session_id", msg.SessionID)
 		}
 	})
 }

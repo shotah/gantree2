@@ -44,7 +44,7 @@ func ToolDefs() []provider.ToolDef {
 				"type": "object",
 				"properties": map[string]any{
 					"kind":    map[string]any{"type": "string", "description": "fact|preference|person|episode|insight"},
-					"subject": map[string]any{"type": "string", "description": "short topic key, e.g. chris, aim/training, skill/gmail"},
+					"subject": map[string]any{"type": "string", "description": "short topic key, e.g. ada, aim/training, skill/gmail"},
 					"content": map[string]any{"type": "string", "description": "one atomic statement"},
 				},
 				"required": []string{"kind", "subject", "content"},

@@ -108,9 +108,9 @@ command = "mcp-go-math"
 download_url = "https://gitlab.example/pkg/math_{os}_{arch}.tar.gz"
 
 [[server]]
-name = "cast"
-command = "mcp-beam"
-download_url = "https://cdn.example/mcp-beam.tar.gz"
+name = "image"
+command = "image-generation-mcp"
+download_url = "https://cdn.example/image-generation-mcp.tar.gz"
 `
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
@@ -129,7 +129,7 @@ download_url = "https://cdn.example/mcp-beam.tar.gz"
 	if plans[0].URL != "https://gitlab.example/pkg/math_linux_arm64.tar.gz" {
 		t.Fatalf("math url=%q", plans[0].URL)
 	}
-	if plans[1].Command != "mcp-beam" {
+	if plans[1].Command != "image-generation-mcp" {
 		t.Fatalf("%+v", plans[1])
 	}
 	if len(mcp.Commands(m)) != 3 {

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/shotah/ai-gantry/internal/channel"
-	"github.com/shotah/ai-gantry/internal/channel/pendant"
+	"github.com/shotah/ai-gantry/internal/channel/chat"
 	"github.com/shotah/ai-gantry/internal/config"
 	"github.com/shotah/ai-gantry/internal/mcp"
 	"github.com/shotah/ai-gantry/internal/snapshot"
@@ -16,7 +16,7 @@ import (
 // doBoot is the Agent DO bridge for one process. Nil unless SNAPSHOT=true.
 type doBoot struct {
 	snap *snapshot.Runner
-	sock pendant.Socket
+	sock chat.Socket
 }
 
 // prepareSnapshot reads a config frame (chat channel only), writes persona and
@@ -33,7 +33,7 @@ func prepareSnapshot(cfg *config.Config, logger *slog.Logger) (*doBoot, error) {
 	put := snapshot.URLs{DB: cfg.SnapshotPutDB, Self: cfg.SnapshotPutSelf}
 	if config.IsChatChannel(cfg.Channel) {
 		hctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		sock, frame, err := pendant.Handshake(hctx, cfg.PendantMailboxURL, cfg.PendantBearer)
+		sock, frame, err := chat.Handshake(hctx, cfg.PendantMailboxURL, cfg.PendantBearer)
 		cancel()
 		if err != nil {
 			logger.Warn("snapshot: no config frame; continuing", "err", err)
@@ -81,7 +81,7 @@ func prepareSnapshot(cfg *config.Config, logger *slog.Logger) (*doBoot, error) {
 	return boot, nil
 }
 
-func applyConfigFrame(cfg *config.Config, frame pendant.ConfigFrame) error {
+func applyConfigFrame(cfg *config.Config, frame chat.ConfigFrame) error {
 	if len(frame.Env) > 0 {
 		prevInterval := cfg.SnapshotInterval
 		prevSnap := cfg.Snapshot
@@ -103,18 +103,18 @@ func applyConfigFrame(cfg *config.Config, frame pendant.ConfigFrame) error {
 	return snapshot.Place(cfg.MCPManifest, frame.MCP)
 }
 
-func statusFrame(host *mcp.Host) pendant.StatusFrame {
-	f := pendant.StatusFrame{
-		Kind:      pendant.KindStatus,
+func statusFrame(host *mcp.Host) chat.StatusFrame {
+	f := chat.StatusFrame{
+		Kind:      chat.KindStatus,
 		Published: []string{},
-		Skipped:   []pendant.SkippedMCP{},
+		Skipped:   []chat.SkippedMCP{},
 	}
 	if host == nil {
 		return f
 	}
 	for _, s := range host.ServerHealth() {
 		if s.State == mcp.ServerSkipped {
-			f.Skipped = append(f.Skipped, pendant.SkippedMCP{
+			f.Skipped = append(f.Skipped, chat.SkippedMCP{
 				Name:   s.Name,
 				Reason: string(s.Reason),
 			})
@@ -125,7 +125,7 @@ func statusFrame(host *mcp.Host) pendant.StatusFrame {
 	return f
 }
 
-func wireDO(p *pendant.Channel, boot *doBoot, bridge *pendant.LogBridge, host *mcp.Host) {
+func wireDO(p *chat.Channel, boot *doBoot, bridge *chat.LogBridge, host *mcp.Host) {
 	if p == nil {
 		return
 	}
@@ -134,10 +134,10 @@ func wireDO(p *pendant.Channel, boot *doBoot, bridge *pendant.LogBridge, host *m
 		boot.sock = nil
 	}
 	if boot != nil && boot.snap != nil {
-		p.SetOnConfig(func(frame pendant.ConfigFrame) {
+		p.SetOnConfig(func(frame chat.ConfigFrame) {
 			boot.snap.SetPut(snapshot.URLs{DB: frame.Put.DB, Self: frame.Put.Self})
 		})
-		p.SetStatus(func() pendant.StatusFrame { return statusFrame(host) })
+		p.SetStatus(func() chat.StatusFrame { return statusFrame(host) })
 	}
 	if bridge != nil {
 		bridge.SetSend(func(raw []byte) {
@@ -182,8 +182,8 @@ func sendSnapshotFrame(logger *slog.Logger, mouth channel.Channel, res snapshot.
 		return
 	}
 	logger.Info("snapshot put", "stamp", res.Stamp, "bytes", res.Bytes)
-	raw, err := pendant.EncodeSnapshot(pendant.SnapshotFrame{
-		Kind:  pendant.KindSnapshot,
+	raw, err := chat.EncodeSnapshot(chat.SnapshotFrame{
+		Kind:  chat.KindSnapshot,
 		Stamp: res.Stamp,
 		Bytes: res.Bytes,
 	})
@@ -191,7 +191,7 @@ func sendSnapshotFrame(logger *slog.Logger, mouth channel.Channel, res snapshot.
 		logger.Warn("snapshot frame encode failed", "err", err)
 		return
 	}
-	p, ok := mouth.(*pendant.Channel)
+	p, ok := mouth.(*chat.Channel)
 	if !ok || p == nil {
 		return
 	}

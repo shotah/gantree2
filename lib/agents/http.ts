@@ -24,13 +24,15 @@ import { fetchRoomBearer } from "@/lib/chat/bearer";
 import { randomToken } from "@/lib/door/google";
 import { agentStub } from "@/lib/chat/location";
 import { fromStub } from "@/lib/chat/slugRoute";
-import { principalFromHeaders, type Principal } from "@/lib/door/gate";
+import { devIdentity, principalFromHeaders, type Principal } from "@/lib/door/gate";
 import { json } from "@/lib/door/http";
 import type { SampleQuery, SampleRow } from "@/lib/door/settingsStore";
 import { canRunAgent } from "@/lib/door/users";
 
 export type AgentsHttpEnv = AgentsEnv & {
   LOCATION_HINT?: string;
+  /** Read by `getAgentBearer` only: the bearer route exists where the gate honours this. */
+  GANTREE_DEV_USER?: string;
 };
 
 const SETTINGS_NAME = "settings";
@@ -297,6 +299,39 @@ export async function deleteAgent(req: Request, env: AgentsHttpEnv, slugRaw: str
     return json({ error: outcome.error }, status);
   }
   return new Response(null, { status: 204 });
+}
+
+/**
+ * `GET /api/agents/:slug/bearer` → `{ bearer }`. The room token a harness
+ * dials with, for `npm run agent` to run one on the dev box. Admin, and only
+ * where `GANTREE_DEV_USER` is honoured (set, and the request is loopback);
+ * anywhere else the route is a 404, the same as a path that does not exist.
+ */
+export async function getAgentBearer(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
+  if (!devIdentity({ GANTREE_DEV_USER: env.GANTREE_DEV_USER }, new URL(req.url))) {
+    return json({ error: "not_found" }, 404);
+  }
+  const who = authorize(req);
+  if (isResponse(who)) {
+    return who;
+  }
+  const admin = requireAdmin(who);
+  if (admin) {
+    return admin;
+  }
+  const slug = slugOr400(slugRaw);
+  if (slug instanceof Response) {
+    return slug;
+  }
+  const stub = agentStub(env, slug);
+  if (!stub) {
+    return json({ error: "agent_unavailable" }, 503);
+  }
+  const bearer = await fetchRoomBearer(stub);
+  if (!bearer) {
+    return json({ error: "not_found" }, 404);
+  }
+  return json({ bearer });
 }
 
 export async function getAgentConfig(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {

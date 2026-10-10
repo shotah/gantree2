@@ -27,12 +27,12 @@ func TestConsolidator_ExtractsAndMarks(t *testing.T) {
 	}
 	defer func() { _ = b.Close() }()
 
-	ep, err := b.Store(ctx, memory.KindEpisode, "chris", "likes quiet mornings")
+	ep, err := b.Store(ctx, memory.KindEpisode, "ada", "likes quiet mornings")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	fc := &consolidateCompleter{body: `[{"kind":"preference","subject":"chris","content":"likes quiet mornings","supersedes":[]}]`}
+	fc := &consolidateCompleter{body: `[{"kind":"preference","subject":"ada","content":"likes quiet mornings","supersedes":[]}]`}
 	c := &memory.Consolidator{
 		Store:     b,
 		Completer: fc,
@@ -73,7 +73,7 @@ func TestConsolidator_ParseFailDoesNotMark(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = b.Close() })
-	ep, err := b.Store(ctx, memory.KindEpisode, "chris", "keep me")
+	ep, err := b.Store(ctx, memory.KindEpisode, "ada", "keep me")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +99,7 @@ func TestConsolidator_EmptyReplyDoesNotMark(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = b.Close() })
-	if _, err := b.Store(ctx, memory.KindEpisode, "chris", "empty reply case"); err != nil {
+	if _, err := b.Store(ctx, memory.KindEpisode, "ada", "empty reply case"); err != nil {
 		t.Fatal(err)
 	}
 	c := &memory.Consolidator{
@@ -121,7 +121,7 @@ func TestConsolidator_ExplicitEmptyArrayMarks(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = b.Close() })
-	if _, err := b.Store(ctx, memory.KindEpisode, "chris", "chitchat only"); err != nil {
+	if _, err := b.Store(ctx, memory.KindEpisode, "ada", "chitchat only"); err != nil {
 		t.Fatal(err)
 	}
 	c := &memory.Consolidator{
@@ -143,7 +143,7 @@ func TestConsolidator_QuarantinesAfterMaxFailures(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = b.Close() })
-	ep, err := b.Store(ctx, memory.KindEpisode, "chris", "poison")
+	ep, err := b.Store(ctx, memory.KindEpisode, "ada", "poison")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,15 +181,15 @@ func TestConsolidator_SupersedesOnlyBatchIDs(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = b.Close() })
-	keep, err := b.Store(ctx, memory.KindFact, "chris", "keep this fact")
+	keep, err := b.Store(ctx, memory.KindFact, "ada", "keep this fact")
 	if err != nil {
 		t.Fatal(err)
 	}
-	ep, err := b.Store(ctx, memory.KindEpisode, "chris", "new note")
+	ep, err := b.Store(ctx, memory.KindEpisode, "ada", "new note")
 	if err != nil {
 		t.Fatal(err)
 	}
-	body := `[{"kind":"fact","subject":"chris","content":"new note","supersedes":[` +
+	body := `[{"kind":"fact","subject":"ada","content":"new note","supersedes":[` +
 		strconv.FormatInt(keep.ID, 10) + `,` + strconv.FormatInt(ep.ID, 10) + `]}]`
 	c := &memory.Consolidator{
 		Store:     b,
@@ -231,11 +231,11 @@ func TestConsolidator_StartAndFencedJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = b.Close() })
-	if _, err := b.Store(ctx, memory.KindEpisode, "chris", "walks at dawn"); err != nil {
+	if _, err := b.Store(ctx, memory.KindEpisode, "ada", "walks at dawn"); err != nil {
 		t.Fatal(err)
 	}
 
-	fc := &consolidateCompleter{body: "```json\n[{\"kind\":\"fact\",\"subject\":\"chris\",\"content\":\"walks at dawn\",\"supersedes\":[]}]\n```"}
+	fc := &consolidateCompleter{body: "```json\n[{\"kind\":\"fact\",\"subject\":\"ada\",\"content\":\"walks at dawn\",\"supersedes\":[]}]\n```"}
 	c := &memory.Consolidator{
 		Store:     b,
 		Completer: fc,

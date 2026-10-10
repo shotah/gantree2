@@ -62,7 +62,21 @@ Legend: `[ ]` open · `[x]` done · **D** a decision, not code
 - [ ] `npm run build && npm run start` (Miniflare) — same walk on the
       built Worker.
 - [ ] Second Google account → `not_allowed`. `GANTREE_DEV_USER` on
-      loopback → in; same var on a LAN IP → refused.
+      loopback → in; same var on a LAN IP → refused. (`/login` now shows
+      a "Continue as <dev user> · loopback dev" door exactly when the
+      gate would honour the variable — `app/lib/login.ts` `devDoor`.)
+- [x] Real agent against `npm run dev` without Docker, 2026-10-10:
+      `LLM_*` house keys in `.dev.vars` (`lib/agents/house.ts`, laid
+      under each agent's env in the config frame; names only reach the
+      browser), `npm run agent -- <slug>` (`scripts/agent.ts`) supervises
+      `harness/bin/gantry run` with `CHANNEL=chat SNAPSHOT=true`; bearer
+      from `GET /api/agents/:slug/bearer` (admin, loopback dev). Walked:
+      new agent with no keys → reply in 2.5 s, SIGINT → `snapshot put`
+      → restart → `snapshot restored files=2`. Chat channel now closes
+      its socket on ctx cancel so SIGTERM returns (`chat.go serve`).
+      Still open: `config.Load()` requires `LLM_*` before the config
+      frame, so the container path (Cloudflare / celld) exits at boot
+      unless the image env carries them; defer that check in Go.
 - [ ] Fix what breaks. Nothing below starts until this is green.
 
 ## 2. Finish the door (Phase 1)
@@ -115,8 +129,8 @@ Source `repos/gantry-pendant`. Copy, re-path, rename storage keys to
 - [x] Agent create mints the room bearer on the DO (`X-Chat-Op:
       bearer`), so a new agent's `config` frame carries signed snapshot
       URLs from birth. `AGENT_BEARERS` env stays as the override.
-- [ ] Harness memory id is still `pendant:<slug>:<sub>` on the Go side;
-      the Worker does not mint it. Flip with the folder rename in §5.
+- [x] Harness memory id is still `pendant:<slug>:<sub>` on the Go side;
+      the Worker does not mint it. Flip with the folder rename in §5. Done 2026-10-10.
 - [ ] Walk: harness dials `/ws/kit?role=agent` with a bearer; phone
       chats at `/chat/kit`; theme follows; push arrives.
 
@@ -225,9 +239,9 @@ container.ts` and `lib/agents/mcpToml.ts` are replaced, not re-shaped.
       `CHANNEL=chat` ≡ `pendant`. Empty allowlist is valid under the
       chat channel with `SNAPSHOT=true` (the room admits; no `allow`
       frame published). `harness/.env.example` on the new names.
-- [ ] Rename the folder `internal/channel/pendant` → `internal/channel/
+- [x] Rename the folder `internal/channel/pendant` → `internal/channel/
       chat`, flip the memory id to `chat:<slug>:<sub>`, update eval
-      fixtures together; one PR.
+      fixtures together; one PR. Done 2026-10-10.
 - [ ] Eval fixtures + `mcp.toml` → `harness/internal/agent/testdata/eval/`;
       `tools_from` builds the sibling plugin, no release fetch.
       `eval.yml` turns real.
@@ -274,10 +288,10 @@ each `naming_test.go`) so the eval fixtures keep matching.
       proven (§5); the GHCR push has not run yet.
 - [x] `scripts/coverage-harness.sh` end to end: 68.2 % with fifteen,
       **69.4 %** with eleven; floor raised to 69.
-- [ ] Seeds pruned of `youtube-*`. Harness internals still carry
+- [x] Seeds pruned of `youtube-*`. Harness internals still carry
       `youtube` / `cast` / `boards` strings in test fixtures
       (`internal/mcp/*_test.go`, `internal/agent/spinup_notes.go`,
-      `channel/pendant`). Harmless; prune with the folder rename PR.
+      `channel/pendant`). Harmless; prune with the folder rename PR. Done 2026-10-10. mcp fixtures now name feeds, maps, image, and math; no youtube strings remained; chat-channel boards are aims/todo snapshots, not the plugin.
 - [ ] Naming debt: burn down the allowlists in `google` and `garmin`
       with aliases in the eval fixtures, one plugin per PR.
 - [ ] Garmin coverage 33 % → 60 % before `HARNESS_COVERAGE_MIN` rises.
@@ -354,6 +368,60 @@ on the banner only.
       picker needs `GANTREE_DEV_USER` unset and `GANTREE_SHOT_AS_MEMBER=1`.
       Local `npm run dev` serves the Durable Objects; containers stay
       off and the dashboard shows unknown.
+      **2026-10-10:** pictures never carry a real account. `npm run seed`
+      derives `.dev.vars.shot` from `.dev.vars` (secrets kept; dev user,
+      admins, and `VAPID_SUBJECT` forced to `dev@example.com`); the
+      server is `npm run dev:shot` (`CLOUDFLARE_ENV=shot`); seed refuses
+      any other signed-in principal. Shots wear Neon
+      (`GANTREE_SHOT_THEME` overrides). The owner's real sub/email were
+      also scrubbed from two committed fixtures.
+- [x] **Console restyle (2026-10-10).** The settings screens were flat
+      Boom boxes; nobody would install from them. Now: `TreeMark`
+      (inline mark, tree in `currentColor`, orange in the accent) and
+      `PageHeader` (hero band with brand, crumb, nav pills, theme
+      picker) in `app/components/shared/`; a canvas glow in
+      `globals.css`; login as a hero card with a Google button and a
+      loopback-only dev door; a 15-tile `ThemeGallery` on `/settings`;
+      avatar discs, role chips, stat tiles, status pills, spend bars,
+      a step rail on the wizard, a timeline on audit. All on the theme
+      tokens — every theme still works. Boom stays the default; the
+      README shots are Neon. Open: the chat screen itself (`PhoneShell`)
+      was not touched; the Cab shot the owner likes has a backdrop and
+      an agent avatar, which the web chat also supports but the seed
+      does not set.
+- [x] **Tool keys in place (2026-10-10).** Before, replacing a tool's
+      key meant knowing its env name and re-adding it under Keys. Now
+      the Tools fold renders each ticked tool's `needs` as password
+      fields under it, chipped `set` / `missing`, with a per-tool
+      "Save keys" that PATCHes only the keys typed into (same `env`
+      merge, no new API). The "Recreate to apply keys" banner shows on
+      Tools as well as Keys, through `recreateForKeys` in
+      `agentsHttp`. Keys stays for names the catalog does not know;
+      its form is "Add or replace a key" and the button flips to
+      "Replace key" when the name is already set.
+- [x] **Way back out of chat, and chat as the front door (2026-10-10).**
+      The gear drawer's Console nav now lists Settings for every role
+      (Manage / All agents stay admin- and operator-gated), drawn as
+      buttons. A `gantree.landing` cookie (`chat` or `chat:<slug>`)
+      makes `/` land in chat for staff: Settings → Entry has "Open
+      chat on entry"; the chat drawer has "Open this chat on entry",
+      which pins that room. `landingPref` / `landingCookie` in
+      `lib/door/landing.ts`; `app/page.tsx` reads the cookie header.
+      Members already landed in chat, so the Entry fold is staff only.
+- [x] **One switch for agent styling (2026-10-10).** "Follow the
+      agent's mood" and "Backdrop" are one checkbox, "Let Kit style the
+      chat", driving both prefs. Both were already default on; picking
+      a theme by hand still switches it off, and the box turns both on
+      again. Storage keys are unchanged.
+- [x] **Settings in folds, collapse all (2026-10-10).** `/settings`
+      uses the agents `Fold`: Appearance, Entry, Who can be here
+      (shut), Spend. `FoldGroup` + `FoldAllButton` in `Fold.tsx` give
+      the agent page and Settings one header button that shuts every
+      fold, then offers Open all; folds keep their own state and obey
+      the pulse through context. Folds remember: `FoldGroup id` names
+      the page and each fold stores open/shut by title in
+      `gantree.folds.<id>` (`app/lib/folds.ts`), restored in a layout
+      effect so nothing flashes open on refresh.
 - [ ] Apps repo shots are not this checkout: cab/helm on emulators, and
       the stolen-phone paragraph's three pictures, live in
       `gantree2-apps`.

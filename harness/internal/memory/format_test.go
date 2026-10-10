@@ -14,7 +14,7 @@ func TestFormatHydration_StampsLocalDate(t *testing.T) {
 	created := time.Date(2026, time.August, 10, 21, 0, 0, 0, loc) // Mon evening PT
 	got := memory.FormatHydration([]memory.Entry{{
 		Kind:      memory.KindEpisode,
-		Subject:   "chris",
+		Subject:   "ada",
 		Content:   "skipped gym while traveling",
 		CreatedAt: created.UTC(),
 	}}, loc)

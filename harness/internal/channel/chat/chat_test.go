@@ -1,4 +1,4 @@
-package pendant
+package chat
 
 import (
 	"bytes"
@@ -315,6 +315,39 @@ func TestPush_DialsWhenIdle(t *testing.T) {
 	}
 	if out.Kind != "push" || out.UserID != "1182" {
 		t.Fatalf("%+v", out)
+	}
+}
+
+func TestRun_StopsOnContextWhileBlockedInRead(t *testing.T) {
+	ch, err := New(Config{
+		MailboxURL:   "wss://x.workers.dev/ws/kit",
+		Bearer:       "tok",
+		AllowedUsers: []string{"1182"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Unbuffered reads: ReadMessage blocks until Close, like a quiet room.
+	fc := &fakeConn{reads: make(chan []byte), writes: make(chan []byte, 16)}
+	ch.dial = func(context.Context, string, http.Header) (conn, error) { return fc, nil }
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		done <- ch.Run(ctx, func(context.Context, channel.Message) (string, error) {
+			return "", nil
+		})
+	}()
+	// allow is the last boot frame here (no status fn): after it serve is blocked in ReadMessage.
+	for recvOutbound(t, fc.writes).Kind != "allow" {
+	}
+	cancel()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Run did not return after cancel; the read loop is not closed on ctx.Done")
 	}
 }
 
@@ -653,7 +686,7 @@ func TestServe_PublishesCatalog(t *testing.T) {
 	if frames[1].Users[1].Sub != "" || frames[1].Users[1].Email != "bob@example.com" {
 		t.Fatalf("users[1] %+v", frames[1].Users[1])
 	}
-	if !strings.Contains(logs.String(), "pendant allow sent") {
+	if !strings.Contains(logs.String(), "chat allow sent") {
 		t.Fatalf("log = %s", logs.String())
 	}
 }

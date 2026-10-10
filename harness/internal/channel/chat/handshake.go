@@ -1,4 +1,4 @@
-package pendant
+package chat
 
 import (
 	"context"
@@ -53,7 +53,7 @@ func Handshake(ctx context.Context, mailbox, bearer string) (Socket, ConfigFrame
 		_, raw, err := cn.ReadMessage()
 		if err != nil {
 			_ = cn.Close()
-			return nil, ConfigFrame{}, fmt.Errorf("pendant: config frame: %w", err)
+			return nil, ConfigFrame{}, fmt.Errorf("chat: config frame: %w", err)
 		}
 		kind, err := KindOf(raw)
 		if err != nil || kind != KindConfig {

@@ -1,3 +1,4 @@
+import type { HouseEnv } from "@/lib/agents/house";
 import type { DirectoryKv } from "./directory";
 
 /** Worker bindings the room reads. `AGENT` is one Durable Object per slug. */
@@ -15,7 +16,7 @@ export type ChatAuthEnv = {
   GANTREE_ALLOW?: string;
 };
 
-export type AgentEnv = ChatAuthEnv & {
+export type AgentEnv = ChatAuthEnv & HouseEnv & {
   AGENT?: DurableObjectNamespace;
   SETTINGS?: DurableObjectNamespace;
   /** One Harness (container) Durable Object per slug. */

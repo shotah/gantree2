@@ -21,8 +21,9 @@ describe("config", () => {
       updatedAt: 4,
     });
     const view = configView(parseConfig({ env: { B: "2", A: "1" }, mcp: "", persona: "", updatedAt: null }), null);
-    expect(view).toEqual({ envKeys: ["A", "B"], mcp: "", persona: "", updatedAt: null, recreate: false });
+    expect(view).toEqual({ envKeys: ["A", "B"], house: [], mcp: "", persona: "", updatedAt: null, recreate: false });
     expect(JSON.stringify(view)).not.toContain("sekrit");
+    expect(configView(emptyConfig(), null, ["LLM_MODEL"]).house).toEqual(["LLM_MODEL"]);
   });
 
   it("patches env with null deletes, leaves omitted fields, and bumps updatedAt only on change", () => {
@@ -83,5 +84,14 @@ describe("config", () => {
     expect(frame.restore.gantry_db).toBe("https://r2.example/db");
     expect(frame.restore.self_md).toBeUndefined();
     expect(frame.put).toEqual({});
+  });
+
+  it("lays the house floor under the agent env; the agent's own key wins", () => {
+    const frame = JSON.parse(configFrame(
+      { env: { LLM_MODEL: "mine" }, mcp: "", persona: "", updatedAt: 1 },
+      { restore: { gantry_db: "", self_md: "" }, put: { gantry_db: "", self_md: "" } },
+      { LLM_MODEL: "house", LLM_API_KEY: "house-key" },
+    )) as { env: Record<string, string> };
+    expect(frame.env).toEqual({ LLM_MODEL: "mine", LLM_API_KEY: "house-key" });
   });
 });

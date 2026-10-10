@@ -18,7 +18,8 @@
  *   PUT    /api/agents/:slug/users  { users: RoomUser[] } → same          canRun
  *   GET    /api/agents/:slug/container      → ContainerInfo               canRun
  *   POST   /api/agents/:slug/container  ContainerAction → ContainerInfo   canRun
- *   GET    /api/tools                       → { tools: ToolEntry[] }      any signed-in
+ *   GET    /api/agents/:slug/bearer         → { bearer }                  admin, loopback dev only (`npm run agent`)
+ *   GET    /api/tools                       → { tools: ToolEntry[], house: string[] }  any signed-in
  *   GET    /api/samples?agent=&since=       → { samples: SampleRow[] }    canRun (admin: all when no agent)
  *
  * Snapshot — no cookie; the harness does a bare GET / PUT on a URL the Agent
@@ -32,6 +33,7 @@
  */
 import type { RoomUser } from "@/lib/chat/allow";
 import type { SampleRow } from "@/lib/door/settingsStore";
+import type { HouseEnv } from "./house";
 
 export type { RoomUser, SampleRow };
 
@@ -99,6 +101,8 @@ export type AgentConfig = {
 /** `GET /api/agents/:slug/config` — env values redacted to their key names. */
 export type AgentConfigView = {
   envKeys: string[];
+  /** Key names the Worker env supplies to every agent (`lib/agents/house.ts`). An agent's own key wins. */
+  house: string[];
   mcp: string;
   persona: string;
   updatedAt: number | null;
@@ -156,7 +160,7 @@ export type Grant = {
 };
 
 /** Bindings the agents layer reads. Additive to `AgentEnv` / `DoorEnv`. */
-export type AgentsEnv = {
+export type AgentsEnv = HouseEnv & {
   SETTINGS?: DurableObjectNamespace;
   AGENT?: DurableObjectNamespace;
   HARNESS?: DurableObjectNamespace;

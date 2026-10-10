@@ -1,15 +1,28 @@
 /** @vitest-environment jsdom */
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ToolsFold, grantFor, missingNeeds, withGrant } from "@/app/components/agents/ToolsFold";
+import {
+  draftId,
+  envPatchFor,
+  grantFor,
+  KEY_PLACEHOLDER_MISSING,
+  KEY_PLACEHOLDER_SET,
+  missingNeeds,
+  ToolsFold,
+  withGrant,
+} from "@/app/components/agents/ToolsFold";
 import { tomlFromGrants } from "@/lib/agents/mcpToml";
 import type { ApiClient } from "@/app/lib/agentsHttp";
-import { CAST, MAPS, config, json, inputOf, textBody } from "./fixtures";
+import type { AgentConfigView, ToolEntry } from "@/lib/agents/types";
+import { CAST, MAPS, config, json, href, inputOf, textBody } from "./fixtures";
 
 afterEach(() => {
   cleanup();
 });
+
+const GOOGLE: ToolEntry = { id: "google", binary: "google-bin", needs: ["G_ID", "G_SECRET"], oauth: true, homeOnly: false };
 
 describe("tool grants", () => {
   it("toggles a grant and names missing keys", () => {
@@ -21,26 +34,56 @@ describe("tool grants", () => {
     expect(missingNeeds([{ name: "x", command: "c", env: ["Z"] }], [], [])).toEqual(["x needs Z"]);
     expect(missingNeeds([{ name: "x", command: "c" }], [], [])).toEqual([]);
   });
+
+  it("builds an env patch from only the keys that were typed", () => {
+    expect(envPatchFor(GOOGLE, {})).toEqual({});
+    expect(envPatchFor(GOOGLE, { [draftId("google", "G_SECRET")]: "s3" })).toEqual({ G_SECRET: "s3" });
+    expect(envPatchFor(GOOGLE, { [draftId("google", "G_ID")]: "id", [draftId("google", "G_SECRET")]: "" })).toEqual({ G_ID: "id" });
+    expect(envPatchFor(GOOGLE, { [draftId("maps", "G_ID")]: "other tool's draft" })).toEqual({});
+  });
 });
+
+function Harness({ client, tools, start, canMutate = true, seen }: {
+  client: ApiClient;
+  tools: ToolEntry[];
+  start: AgentConfigView;
+  canMutate?: boolean;
+  seen?: AgentConfigView[];
+}) {
+  const [view, setView] = useState(start);
+  return (
+    <ToolsFold
+      slug="kit"
+      config={view}
+      tools={tools}
+      canMutate={canMutate}
+      client={client}
+      onConfig={(next) => {
+        seen?.push(next);
+        setView(next);
+      }}
+    />
+  );
+}
 
 describe("ToolsFold", () => {
   it("patches mcp when a tool is ticked and unticked, and nags for a missing key", async () => {
-    const onMcp = vi.fn();
     const sent: string[] = [];
     const client: ApiClient = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
       await Promise.resolve();
       const body = JSON.parse(textBody(init?.body)) as { mcp: string };
       sent.push(body.mcp);
-      return json(200, config({ mcp: body.mcp }));
+      return json(200, config({ mcp: body.mcp, envKeys: [] }));
     });
-    render(<ToolsFold slug="kit" mcp="" envKeys={[]} tools={[MAPS, CAST]} canMutate client={client} onMcp={onMcp} />);
+    render(<Harness client={client} tools={[MAPS, CAST]} start={config({ envKeys: [] })} />);
     fireEvent.click(screen.getByRole("button", { name: "Tools" }));
     expect(screen.getByText("Home")).toBeTruthy();
     expect(screen.getByText("Sign in from chat before this publishes.")).toBeTruthy();
+    expect(screen.queryByRole("form", { name: "Keys for maps" })).toBeNull();
     const box = inputOf(screen.getByRole("checkbox", { name: "maps" }));
     fireEvent.click(box);
     expect(await screen.findByText("maps needs MAPS_KEY")).toBeTruthy();
-    await vi.waitFor(() => expect(onMcp).toHaveBeenCalled());
+    await vi.waitFor(() => expect(sent).toHaveLength(1));
     expect(sent[0]).toBe(tomlFromGrants([grantFor(MAPS)], ""));
     await vi.waitFor(() => expect(box.disabled).toBe(false));
     fireEvent.click(box);
@@ -48,16 +91,82 @@ describe("ToolsFold", () => {
     expect(sent[1]).toBe(tomlFromGrants([], ""));
   });
 
-  it("rolls the tick back when the patch fails and disables looking-only sessions", async () => {
+  it("shows a tool's keys under it when on: missing gets a field, set gets a replace field", async () => {
+    const seen: AgentConfigView[] = [];
+    const patches: Record<string, string>[] = [];
+    const client: ApiClient = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      await Promise.resolve();
+      const body = JSON.parse(textBody(init?.body)) as { env: Record<string, string> };
+      patches.push(body.env);
+      return json(200, config({ mcp: tomlFromGrants([grantFor(GOOGLE)], ""), envKeys: ["LLM_API_KEY", "G_ID", ...Object.keys(body.env)], recreate: true }));
+    });
+    const start = config({ mcp: tomlFromGrants([grantFor(GOOGLE)], ""), envKeys: ["LLM_API_KEY", "G_ID"] });
+    render(<Harness client={client} tools={[GOOGLE]} start={start} seen={seen} />);
+    fireEvent.click(screen.getByRole("button", { name: "Tools" }));
+    expect(screen.getByText("google needs G_SECRET")).toBeTruthy();
+
+    const form = screen.getByRole("form", { name: "Keys for google" });
+    const id = within(form).getByLabelText<HTMLInputElement>(/G_ID/);
+    const secret = within(form).getByLabelText<HTMLInputElement>(/G_SECRET/);
+    expect(id.type).toBe("password");
+    expect(id.placeholder).toBe(KEY_PLACEHOLDER_SET);
+    expect(secret.placeholder).toBe(KEY_PLACEHOLDER_MISSING);
+    expect(within(form).getByText("set")).toBeTruthy();
+    expect(within(form).getByText("missing")).toBeTruthy();
+
+    const save = within(form).getByRole<HTMLButtonElement>("button", { name: "Save keys for google" });
+    expect(save.disabled).toBe(true);
+    fireEvent.change(secret, { target: { value: "shh" } });
+    expect(save.disabled).toBe(false);
+    fireEvent.click(save);
+    await vi.waitFor(() => expect(patches).toEqual([{ G_SECRET: "shh" }]));
+    await vi.waitFor(() => expect(seen).toHaveLength(1));
+    expect(screen.queryByText("google needs G_SECRET")).toBeNull();
+    expect(secret.value).toBe("");
+    expect(secret.placeholder).toBe(KEY_PLACEHOLDER_SET);
+    expect(screen.queryByDisplayValue("shh")).toBeNull();
+    expect(screen.getByText("Keys changed. Recreate the container so they take effect.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Recreate to apply keys" })).toBeTruthy();
+  });
+
+  it("recreates from the banner and reloads the config", async () => {
+    const seen: AgentConfigView[] = [];
+    const calls: string[] = [];
+    const client: ApiClient = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      await Promise.resolve();
+      calls.push(`${init?.method ?? "GET"} ${href(input)}`);
+      if ((init?.method ?? "GET") === "POST") {
+        return json(200, { state: "running", since: 1, lastError: null, image: null });
+      }
+      return json(200, config({ recreate: false }));
+    });
+    render(<Harness client={client} tools={[MAPS]} start={config({ recreate: true })} seen={seen} />);
+    fireEvent.click(screen.getByRole("button", { name: "Tools" }));
+    fireEvent.click(screen.getByRole("button", { name: "Recreate to apply keys" }));
+    await vi.waitFor(() => expect(seen).toHaveLength(1));
+    expect(calls[0]).toContain("POST ");
+    expect(calls[0]).toContain("/container");
+    expect(calls[1]).toContain("GET ");
+    expect(screen.queryByText("Keys changed. Recreate the container so they take effect.")).toBeNull();
+  });
+
+  it("rolls the tick back when the patch fails, and looking-only sessions get read-only fields", async () => {
     const client: ApiClient = vi.fn(() => Promise.resolve(json(500, { error: "bad_json" })));
-    const { rerender } = render(<ToolsFold slug="kit" mcp="" envKeys={["MAPS_KEY"]} tools={[MAPS]} canMutate client={client} onMcp={vi.fn()} />);
+    const { unmount } = render(<Harness client={client} tools={[MAPS]} start={config({ envKeys: ["MAPS_KEY"] })} />);
     fireEvent.click(screen.getByRole("button", { name: "Tools" }));
     const box = inputOf(screen.getByRole("checkbox", { name: "maps" }));
     fireEvent.click(box);
     expect((await screen.findByRole("alert")).textContent).toContain("That request was not valid JSON.");
     await vi.waitFor(() => expect(box.checked).toBe(false));
+    unmount();
 
-    rerender(<ToolsFold slug="kit" mcp="" envKeys={[]} tools={[MAPS]} canMutate={false} client={vi.fn()} onMcp={vi.fn()} />);
-    expect((inputOf(screen.getByRole("checkbox", { name: "maps" }))).disabled).toBe(true);
+    const on = config({ mcp: tomlFromGrants([grantFor(MAPS)], ""), envKeys: [], recreate: true });
+    render(<Harness client={vi.fn()} tools={[MAPS]} start={on} canMutate={false} />);
+    fireEvent.click(screen.getByRole("button", { name: "Tools" }));
+    expect(inputOf(screen.getByRole("checkbox", { name: "maps" })).disabled).toBe(true);
+    const form = screen.getByRole("form", { name: "Keys for maps" });
+    expect(within(form).getByLabelText<HTMLInputElement>(/MAPS_KEY/).disabled).toBe(true);
+    expect(within(form).queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Recreate to apply keys" })).toBeNull();
   });
 });

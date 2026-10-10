@@ -9,12 +9,18 @@
  * Writes assets/docs/<name>.png. Desktop shots are 1440×900. Phone shots
  * (/chat/kit, /chat) are 390×844 at deviceScaleFactor 3.
  *
+ * The server is `npm run dev:shot` (CLOUDFLARE_ENV=shot → .dev.vars.shot,
+ * written by `npm run seed`), so the signed-in user is always the
+ * placeholder dev@example.com, never a real account. Every shot wears
+ * a mood theme (Neon; GANTREE_SHOT_THEME overrides).
+ *
  * /login is taken signed out: a fresh Chrome profile, cookies cleared.
  * The other pages are whoever the dev server signs in (GANTREE_DEV_USER
  * on loopback). /chat is the picker. A member with several agents is
  * seeded as sam@example.com; the loopback dev user wins over that
  * cookie, so the picker shot is the dev user unless you restart the
- * server with GANTREE_DEV_USER unset and GANTREE_SHOT_AS_MEMBER=1.
+ * server with GANTREE_DEV_USER unset in .dev.vars.shot and
+ * GANTREE_SHOT_AS_MEMBER=1.
  * The member cookie, when seed could mint one, is in the OS temp dir
  * as gantree2-member-cookie.
  */
@@ -33,6 +39,8 @@ import {
   memberCookieFile,
   parseShotArgs,
   shotFile,
+  shotTheme,
+  themeSeedScript,
   viewportFor,
 } from "./shots.ts";
 
@@ -178,10 +186,17 @@ async function shoot(base, names) {
       throw new Error(`timeout waiting for ${text} body=${body}`);
     }
 
+    let themeScript = null;
     for (const name of names) {
       const spec = SHOTS[name];
       const view = viewportFor(Boolean(spec.phone));
       await cdp.send("Emulation.setDeviceMetricsOverride", view);
+      if (themeScript) {
+        await cdp.send("Page.removeScriptToEvaluateOnNewDocument", { identifier: themeScript });
+      }
+      themeScript = (await cdp.send("Page.addScriptToEvaluateOnNewDocument", {
+        source: themeSeedScript(shotTheme(spec, process.env)),
+      })).identifier;
       if (spec.signedOut) {
         await cdp.send("Network.clearBrowserCookies");
       }

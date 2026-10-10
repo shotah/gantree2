@@ -28,7 +28,7 @@ func TestStore_RollingSummaryOnTrim(t *testing.T) {
 	t.Cleanup(func() { _ = store.Close() })
 	var hookedPrior, hookedNext string
 	store.WithSummarizer(&session.LLMSummarizer{Completer: &foldCompleter{
-		body: "Facts: chris likes espresso\nVoice: gag: \"that gull had a mortgage\"",
+		body: "Facts: ada likes espresso\nVoice: gag: \"that gull had a mortgage\"",
 	}})
 	store.WithFoldHook(func(prior, next string) {
 		hookedPrior, hookedNext = prior, next
@@ -78,7 +78,7 @@ func TestLedgerParts(t *testing.T) {
 }
 
 func TestLLMSummarizer_FoldKeepsVoice(t *testing.T) {
-	fc := &foldCompleter{body: "Facts: Chris likes espresso.\nVoice: gag: \"that gull had a mortgage.\""}
+	fc := &foldCompleter{body: "Facts: Ada likes espresso.\nVoice: gag: \"that gull had a mortgage.\""}
 	sum := &session.LLMSummarizer{Completer: fc}
 	got, err := sum.Fold(context.Background(), "prior", []session.Message{
 		{Role: session.RoleUser, Content: "remember the seagull?"},
@@ -121,7 +121,7 @@ func TestVoiceDelta_NewJokeOnly(t *testing.T) {
 
 func TestLLMSummarizer_PreservesPriorVoiceWhenModelDropsIt(t *testing.T) {
 	prior := "Facts: likes espresso\nVoice: dry; gag: \"that gull had a mortgage\""
-	fc := &foldCompleter{body: "Chris asked about Tuesday calendar."}
+	fc := &foldCompleter{body: "Ada asked about Tuesday calendar."}
 	sum := &session.LLMSummarizer{Completer: fc}
 	got, err := sum.Fold(context.Background(), prior, []session.Message{
 		{Role: session.RoleUser, Content: "what's Tuesday?"},

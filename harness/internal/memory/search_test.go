@@ -14,7 +14,7 @@ func TestBuiltin_searchLike(t *testing.T) {
 	t.Cleanup(func() { _ = b.Close() })
 
 	ctx := context.Background()
-	if _, err := b.Store(ctx, KindFact, "chris", "likes quiet mornings"); err != nil {
+	if _, err := b.Store(ctx, KindFact, "ada", "likes quiet mornings"); err != nil {
 		t.Fatal(err)
 	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)

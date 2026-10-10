@@ -68,16 +68,69 @@ taken against `npm run dev`. `npm run build && npm run start` is the
 built Worker under Miniflare (`dist/server/wrangler.json`); use it when
 you want the production bundle, not to get Durable Objects.
 
+### Chat with a real agent locally
+
+No Docker, no deploy. The Worker from `npm run dev` is the room; the Go
+harness runs as a plain process on your machine and dials it the same
+way the container would.
+
 ```bash
-npm run seed   # dev must already be up. Fills Kit and Ada through the HTTP API.
-npm run shot   # headless Chrome → assets/docs/*.png. CHROME_BIN overrides the Chrome path.
+# .dev.vars, in addition to the above:
+#   GANTREE_DEV_USER=118212345678901234567:you@example.com   # the runner signs in through the dev door
+#   LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+#   LLM_API_KEY=...
+#   LLM_MODEL=gemini-3.8-flash
+npm run dev                      # terminal 1
+# create an agent at http://127.0.0.1:3000/agents/new — the keys step is
+# optional now: blank fields use the house LLM_* from .dev.vars
+npm run agent -- kit             # terminal 2 (builds harness/bin/gantry on first run; needs Go)
+# open http://127.0.0.1:3000/chat/kit
 ```
 
-`npm run seed` writes any missing `GANTREE_DEV_USER` or `AGENT_BEARERS`
-into `.dev.vars` and then tells you to restart dev so the Worker reloads
-them. `npm run shot` opens `/chat` as the loopback dev user. A member
-picker needs that variable unset and `GANTREE_SHOT_AS_MEMBER=1` (seed
-writes the member cookie).
+`npm run agent` reads `.dev.vars`, fetches the room bearer
+(`GET /api/agents/:slug/bearer`, admin on loopback dev only), adds the
+dev user to the room if missing, and supervises `gantry run` with
+`CHANNEL=chat SNAPSHOT=true` pointed at `ws://127.0.0.1:3000/ws/<slug>`.
+The Agent DO then sends the config frame exactly as in production:
+persona, MCP manifest, secrets, and presigned snapshot URLs. Memory,
+self-notes, cron, aims, and the snapshot restore/publish loop are the
+real ones; state lives in `local/run/<slug>/` (git-ignored) and the
+snapshot in the local R2 bucket, so stopping and restarting the runner
+restores the brain. With no slug it runs every agent on the board;
+`--build` forces a rebuild; `--base=` points at another origin.
+
+House keys: `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, and
+`BRAVE_SEARCH_API_KEY` in the Worker env are laid under every agent's
+own secrets in the config frame — an agent that sets its own wins. The
+browser only ever sees the key names (`GET /api/tools` → `house`). This
+is the same in production: set them with `wrangler secret put` and new
+agents need no keys of their own.
+
+MCP plugins are found on `PATH`; `harness/bin` is prepended, so drop
+binaries there (the catalog in [mcp.md](mcp.md)). Missing plugins are
+skipped as `no_binary`, not fatal. The container flavour of the same loop is `celld` below: it runs
+the real harness image with Docker or Podman and the same `.dev.vars`.
+
+```bash
+npm run seed -- --vars   # writes .dev.vars.shot from .dev.vars (placeholder identity)
+npm run dev:shot         # the same dev server, reading .dev.vars.shot
+npm run seed             # fills Kit and Ada through the HTTP API
+npm run shot             # headless Chrome → assets/docs/*.png. CHROME_BIN overrides the Chrome path.
+```
+
+Pictures never carry a real account. `npm run seed` derives
+`.dev.vars.shot` (git-ignored) from your `.dev.vars`: every secret is
+copied, but `GANTREE_DEV_USER` and `GANTREE_ADMINS` become the
+placeholder `100000000000000000001:dev@example.com` and `GANTREE_ALLOW`
+is emptied. `npm run dev:shot` is `CLOUDFLARE_ENV=shot`, which makes the
+Cloudflare Vite plugin read that file instead of `.dev.vars`; your real
+`.dev.vars` stays as it is for the Google walk. Seed refuses to run
+against a server signed in as anyone but the placeholder, and tells you
+to restart with `dev:shot` whenever it mints bearers. Shots wear the Neon
+theme by default; `GANTREE_SHOT_THEME=<id>` picks another. `npm run shot`
+opens `/chat` as the dev user. A member picker needs
+`GANTREE_SHOT_AS_MEMBER=1` against a server whose `.dev.vars.shot` has
+no `GANTREE_DEV_USER` (seed writes the member cookie).
 
 ![Sign-in page with Continue with Google](../assets/docs/login.png)
 

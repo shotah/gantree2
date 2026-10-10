@@ -25,8 +25,16 @@ describe("ProfileCard", () => {
     }));
     render(<ProfileCard client={client} />);
     expect(await screen.findByText("ada@example.com")).toBeTruthy();
-    expect(screen.getByText("operator")).toBeTruthy();
-    expect(screen.getByText("kit, ada")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Profile" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "gantree home" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Settings" }).getAttribute("href")).toBe("/settings");
+    expect(screen.getByRole("link", { name: "Agents" }).getAttribute("href")).toBe("/agents");
+    expect(screen.getByText("operator").className).toContain("text-info");
+    expect(screen.getByText("A")).toBeTruthy();
+    const account = screen.getByRole("region", { name: "Account" });
+    expect(account.querySelector("[data-tree-mark]")).toBeNull();
+    expect(screen.getByRole("link", { name: "Kit" }).getAttribute("href")).toBe("/chat/kit");
+    expect(screen.getByRole("link", { name: "Ada" }).getAttribute("href")).toBe("/chat/ada");
     expect(screen.getByText("118200000000000000001").className).toContain("font-mono");
     fireEvent.click(screen.getByRole("button", { name: "Copy sub" }));
     expect(write).toHaveBeenCalledWith("118200000000000000001");
@@ -35,6 +43,7 @@ describe("ProfileCard", () => {
     const form = screen.getByRole("button", { name: "Log out" }).closest("form");
     expect(form?.getAttribute("action")).toBe("/api/auth/logout");
     expect(form?.getAttribute("method")).toBe("post");
+    expect(screen.getByRole("button", { name: "Log out" }).className).toContain("rounded-xl");
   });
 
   it("shows None and a dash when email and agents are missing", async () => {
@@ -42,7 +51,8 @@ describe("ProfileCard", () => {
     render(<ProfileCard client={client} />);
     expect(await screen.findByText("—")).toBeTruthy();
     expect(screen.getByText("None")).toBeTruthy();
-    expect(screen.getByText("member")).toBeTruthy();
+    expect(screen.getByText("member").className).toContain("text-mark");
+    expect(screen.getByRole("region", { name: "Account" }).querySelector("[data-tree-mark]")).toBeTruthy();
   });
 
   it("stays quiet when the clipboard refuses", async () => {
@@ -50,7 +60,8 @@ describe("ProfileCard", () => {
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: write } });
     const client: ApiClient = vi.fn(async () => json({ sub: "1182", email: "ada@example.com", role: "admin", agents: ["kit"] }));
     render(<ProfileCard client={client} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Copy sub" }));
+    expect((await screen.findByText("admin")).className).toContain("text-ok");
+    fireEvent.click(screen.getByRole("button", { name: "Copy sub" }));
     expect(write).toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Copy sub" }).textContent).toBe("Copy");
   });

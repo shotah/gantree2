@@ -59,7 +59,7 @@ describe("cookie headers", () => {
     expect(prod).toContain("HttpOnly");
     expect(prod).toContain("SameSite=Lax");
     expect(cookieHeader("x", "v", new URL("http://127.0.0.1:3000/"), 60)).not.toContain("Secure");
-    expect(cookieHeader("x", "v", new URL("http://192.168.1.5:3000/"), 60)).toContain("Secure");
+    expect(cookieHeader("x", "v", new URL("http://203.0.113.5:3000/"), 60)).toContain("Secure");
     expect(clearCookieHeader("x", new URL("https://gantree.example/"))).toContain("Max-Age=0");
   });
 });

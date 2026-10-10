@@ -20,7 +20,7 @@ func TestBuiltin_StoreRecallForget(t *testing.T) {
 	}
 	defer func() { _ = b.Close() }()
 
-	e, err := b.Store(ctx, memory.KindPreference, "chris", "coaching tone, no fluff")
+	e, err := b.Store(ctx, memory.KindPreference, "ada", "coaching tone, no fluff")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,11 +132,11 @@ func TestBuiltin_ConsolidationDedupes(t *testing.T) {
 	}
 	defer func() { _ = b.Close() }()
 
-	ep1, err := b.Store(ctx, memory.KindEpisode, "chris", "likes espresso")
+	ep1, err := b.Store(ctx, memory.KindEpisode, "ada", "likes espresso")
 	if err != nil {
 		t.Fatal(err)
 	}
-	ep2, err := b.Store(ctx, memory.KindEpisode, "chris", "drinks espresso every morning")
+	ep2, err := b.Store(ctx, memory.KindEpisode, "ada", "drinks espresso every morning")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +149,7 @@ func TestBuiltin_ConsolidationDedupes(t *testing.T) {
 		t.Fatalf("episodes = %d", len(list))
 	}
 
-	neu, err := b.StoreConsolidated(ctx, memory.KindPreference, "chris", "drinks espresso every morning")
+	neu, err := b.StoreConsolidated(ctx, memory.KindPreference, "ada", "drinks espresso every morning")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,11 +227,11 @@ func TestBuiltin_StoreSupersedesSameSubject(t *testing.T) {
 		t.Fatalf("ResolvePin should walk to live row, got ok=%v %#v", ok, pin)
 	}
 
-	ep1, err := b.Store(ctx, memory.KindEpisode, "chris", "note one")
+	ep1, err := b.Store(ctx, memory.KindEpisode, "ada", "note one")
 	if err != nil {
 		t.Fatal(err)
 	}
-	ep2, err := b.Store(ctx, memory.KindEpisode, "chris", "note two")
+	ep2, err := b.Store(ctx, memory.KindEpisode, "ada", "note two")
 	if err != nil {
 		t.Fatal(err)
 	}

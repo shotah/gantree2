@@ -11,12 +11,12 @@ import (
 func TestFormatServerHealth_OmitsSkippedAndListsIdle(t *testing.T) {
 	now := time.Date(2026, 8, 16, 20, 0, 0, 0, time.UTC)
 	got := mcp.FormatServerHealth([]mcp.ServerStatus{
-		{Name: "cast", State: mcp.ServerSkipped, Note: "no such file"},
+		{Name: "feeds", State: mcp.ServerSkipped, Note: "no such file"},
 		{Name: "garmin", State: mcp.ServerError, At: now.Add(-4 * time.Minute), Tool: "garmin__sleep_get", Note: "401 unauthorized"},
 		{Name: "google", State: mcp.ServerOK, At: now.Add(-2 * time.Minute), Tool: "google__calendar_events_list"},
 		{Name: "math", State: mcp.ServerIdle},
 	}, now)
-	if strings.Contains(got, "cast") || strings.Contains(got, "skipped") {
+	if strings.Contains(got, "feeds") || strings.Contains(got, "skipped") {
 		t.Fatalf("prompt listed a skipped server: %q", got)
 	}
 	for _, want := range []string{
@@ -33,7 +33,7 @@ func TestFormatServerHealth_OmitsSkippedAndListsIdle(t *testing.T) {
 
 func TestFormatServerHealthLine_Skipped(t *testing.T) {
 	got := mcp.FormatServerHealthLine(mcp.ServerStatus{
-		Name:   "cast",
+		Name:   "feeds",
 		State:  mcp.ServerSkipped,
 		Reason: mcp.ReasonNoBinary,
 		Note:   "executable not found",
@@ -42,7 +42,7 @@ func TestFormatServerHealthLine_Skipped(t *testing.T) {
 		t.Fatalf("%q", got)
 	}
 	legacy := mcp.FormatServerHealthLine(mcp.ServerStatus{
-		Name:  "cast",
+		Name:  "feeds",
 		State: mcp.ServerSkipped,
 		Note:  "executable not found",
 	}, time.Now())

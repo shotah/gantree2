@@ -164,7 +164,7 @@ LIMIT 50;
 SELECT m.id, m.kind, m.subject, m.content
 FROM memory_fts
 JOIN memory m ON m.id = memory_fts.rowid
-WHERE memory_fts MATCH '"chris" OR "climbing"'
+WHERE memory_fts MATCH '"ada" OR "climbing"'
   AND m.superseded_by IS NULL;
 
 DELETE FROM memory WHERE id = 42;

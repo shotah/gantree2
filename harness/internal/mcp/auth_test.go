@@ -24,8 +24,8 @@ func TestServerSpec_AuthCmd(t *testing.T) {
 		t.Fatalf("got cmd=%q args=%v ok=%v", cmd, args, ok)
 	}
 
-	if (mcp.ServerSpec{Name: "cast", Command: "mcp-beam"}).AuthConfigured() {
-		t.Fatal("cast should have no auth")
+	if (mcp.ServerSpec{Name: "math", Command: "mcp-go-math"}).AuthConfigured() {
+		t.Fatal("math should have no auth")
 	}
 }
 
@@ -48,8 +48,8 @@ args = ["mcp"]
 auth_args = ["login"]
 
 [[server]]
-name = "cast"
-command = "mcp-beam"
+name = "feeds"
+command = "feeds-mcp"
 `
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)

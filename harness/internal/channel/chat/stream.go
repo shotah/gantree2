@@ -1,4 +1,4 @@
-package pendant
+package chat
 
 import (
 	"context"

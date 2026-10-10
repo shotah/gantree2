@@ -134,7 +134,7 @@ func TestMakeHandler_AllowlistAndReply(t *testing.T) {
 			ID:   7,
 			Text: " hi ",
 			Chat: models.Chat{ID: 99, Type: "private"},
-			From: &models.User{ID: 42, Username: "chris"},
+			From: &models.User{ID: 42, Username: "ada"},
 		},
 	})
 
@@ -327,7 +327,7 @@ func TestMakeHandler_PhotoInboundAndSendPhotoReply(t *testing.T) {
 				{FileID: "pic", Width: 100, Height: 100, FileSize: 100},
 			},
 			Chat: models.Chat{ID: 99, Type: "private"},
-			From: &models.User{ID: 42, Username: "chris"},
+			From: &models.User{ID: 42, Username: "ada"},
 		},
 	})
 
@@ -389,7 +389,7 @@ func TestMakeHandler_MCPPhotoSink(t *testing.T) {
 			ID:   8,
 			Text: "draw a red bike",
 			Chat: models.Chat{ID: 99, Type: "private"},
-			From: &models.User{ID: 42, Username: "chris"},
+			From: &models.User{ID: 42, Username: "ada"},
 		},
 	})
 

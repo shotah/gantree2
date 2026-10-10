@@ -59,9 +59,9 @@ func TestParseToolCallText(t *testing.T) {
 		name: "fn-style braced kwargs",
 		content: `{google__calendar_list_events(time_min="2026-07-29T00:00:00-07:00", ` +
 			`time_max="2026-07-30T00:00:00-07:00", calendar_id="primary", ` +
-			`user_google_email="christopherblodgett@gmail.com")}`,
+			`user_google_email="owner@example.com")}`,
 		wantName: "google__calendar_list_events",
-		wantArgs: "christopherblodgett@gmail.com",
+		wantArgs: "owner@example.com",
 	}, {
 		name:     "fn-style without braces",
 		content:  `Calling garmin__sleep_get(date="2026-07-29") now.`,
@@ -122,7 +122,7 @@ func TestParseToolCallText_Rejects(t *testing.T) {
 
 func TestParseToolCallTextHinted_ArgsOnlyFromPriorTurn(t *testing.T) {
 	content := "```json\n" +
-		`{"calendar_id":"primary","time_max":"2026-07-30T00:00:00-07:00","time_min":"2026-07-29T00:00:00-07:00","user_google_email":"christopherblodgett@gmail.com"}` +
+		`{"calendar_id":"primary","time_max":"2026-07-30T00:00:00-07:00","time_min":"2026-07-29T00:00:00-07:00","user_google_email":"owner@example.com"}` +
 		"\n```"
 	call, ok := provider.ParseToolCallTextHinted(content, []string{"google__calendar_list_events"})
 	if !ok {
@@ -131,7 +131,7 @@ func TestParseToolCallTextHinted_ArgsOnlyFromPriorTurn(t *testing.T) {
 	if call.Name != "google__calendar_list_events" {
 		t.Fatalf("name = %q", call.Name)
 	}
-	if !strings.Contains(call.Arguments, "christopherblodgett@gmail.com") {
+	if !strings.Contains(call.Arguments, "owner@example.com") {
 		t.Fatalf("arguments = %q", call.Arguments)
 	}
 }

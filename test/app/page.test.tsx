@@ -126,4 +126,15 @@ describe("home router", () => {
     signIn("member", []);
     expect(await destination()).toBe("/chat");
   });
+
+  it("honours the landing cookie for staff", async () => {
+    state.rows[`sub:${SUB}`] = JSON.stringify(["kit"]);
+    signIn("admin", []);
+    headerState.current.set("cookie", "gantree.landing=chat");
+    expect(await destination()).toBe("/chat/kit");
+    headerState.current.set("cookie", "gantree.session=x; gantree.landing=chat%3Aada");
+    expect(await destination()).toBe("/chat/ada");
+    headerState.current.set("cookie", "gantree.landing=nope");
+    expect(await destination()).toBe("/agents");
+  });
 });

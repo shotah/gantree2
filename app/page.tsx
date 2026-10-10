@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { roomsFor } from "@/lib/chat/membership";
 import { principalFromHeaders, type Principal } from "@/lib/door/gate";
-import { agentUnion, landing } from "@/lib/door/landing";
+import { agentUnion, landing, landingPref } from "@/lib/door/landing";
 import { doorEnv } from "@/lib/door/runtime";
 
 /** Never a static shell: the principal is on this request's headers. */
@@ -25,11 +25,12 @@ async function chatAgents(who: Principal): Promise<string[]> {
   }
 }
 
-/** `/` is a router. Middleware already sent a missing session to /login. */
+/** `/` is a router. Middleware already sent a missing session to /login. A landing cookie can pick chat over the console. */
 export default async function Home() {
-  const who = principalFromHeaders(await headers());
+  const incoming = await headers();
+  const who = principalFromHeaders(incoming);
   if (!who) {
     redirect("/login");
   }
-  redirect(landing({ role: who.role, agents: await chatAgents(who) }));
+  redirect(landing({ role: who.role, agents: await chatAgents(who) }, landingPref(incoming.get("cookie"))));
 }

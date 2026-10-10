@@ -472,7 +472,7 @@ func TestAgent_Handle_MemoryHydration(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = mem.Close() }()
-	if _, err := mem.Store(ctx, memory.KindPreference, "chris", "coaching tone"); err != nil {
+	if _, err := mem.Store(ctx, memory.KindPreference, "ada", "coaching tone"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -491,7 +491,7 @@ func TestAgent_Handle_MemoryHydration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := a.Handle(ctx, channel.Message{SessionID: "s", Text: "hello chris"}); err != nil {
+	if _, err := a.Handle(ctx, channel.Message{SessionID: "s", Text: "hello ada"}); err != nil {
 		t.Fatal(err)
 	}
 	if len(last.Messages) < 4 {
@@ -510,7 +510,7 @@ func TestAgent_Handle_MemoryHydration(t *testing.T) {
 	if last.Messages[n-1].Role != provider.RoleSystem || !strings.HasPrefix(last.Messages[n-1].Content, "[harness]") {
 		t.Fatalf("want [harness] clock last, got %q %q", last.Messages[n-1].Role, last.Messages[n-1].Content)
 	}
-	if last.Messages[n-2].Role != provider.RoleUser || last.Messages[n-2].Content != "hello chris" {
+	if last.Messages[n-2].Role != provider.RoleUser || last.Messages[n-2].Content != "hello ada" {
 		t.Fatalf("want RoleUser speech, got %q %q", last.Messages[n-2].Role, last.Messages[n-2].Content)
 	}
 	if !strings.Contains(last.Messages[n-3].Content, "[memory]") {
@@ -1598,7 +1598,7 @@ func TestAgent_Handle_UsesUserMarkdownTimezone(t *testing.T) {
 		return &provider.Result{Content: "ok"}, nil
 	}}
 	a, err := agent.New(agent.Options{
-		Persona:   "- **Timezone:** America/Los_Angeles\n- **Name:** Chris",
+		Persona:   "- **Timezone:** America/Los_Angeles\n- **Name:** Ada",
 		Completer: fc,
 		Sessions:  newMemHistory(),
 		Model:     "m",
@@ -1808,7 +1808,7 @@ func TestAgent_MemStats(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = store.Close() })
 	ctx := context.Background()
-	if _, err := store.Store(ctx, memory.KindFact, "name", "chris"); err != nil {
+	if _, err := store.Store(ctx, memory.KindFact, "name", "ada"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := store.Store(ctx, memory.KindPreference, "coffee", "black"); err != nil {
@@ -1856,7 +1856,7 @@ func TestAgent_MemStats(t *testing.T) {
 
 func TestAgent_Tokens(t *testing.T) {
 	hist := newMemHistory()
-	hist.setSummary("s", "Facts: chris likes espresso\nVoice: gag: \"gull\"")
+	hist.setSummary("s", "Facts: ada likes espresso\nVoice: gag: \"gull\"")
 	if err := hist.Append(context.Background(), "s",
 		session.Message{Role: session.RoleUser, Content: "hi"},
 		session.Message{Role: session.RoleAssistant, Content: "hello"},

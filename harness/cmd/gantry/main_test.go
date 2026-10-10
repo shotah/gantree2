@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shotah/ai-gantry/internal/channel/pendant"
+	"github.com/shotah/ai-gantry/internal/channel/chat"
 	"github.com/shotah/ai-gantry/internal/channel/stdio"
 	"github.com/shotah/ai-gantry/internal/config"
 	"github.com/shotah/ai-gantry/internal/doctor"
@@ -184,7 +184,7 @@ func TestNewChannel(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, ok := ch.(*pendant.Channel); !ok {
+	if _, ok := ch.(*chat.Channel); !ok {
 		t.Fatalf("CHANNEL=pendant got %T", ch)
 	}
 
@@ -197,7 +197,7 @@ func TestNewChannel(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, ok := ch.(*pendant.Channel); !ok {
+	if _, ok := ch.(*chat.Channel); !ok {
 		t.Fatalf("CHANNEL=chat got %T", ch)
 	}
 
@@ -218,7 +218,7 @@ func TestNewChannel(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, ok := ch.(*pendant.Channel); !ok {
+	if _, ok := ch.(*chat.Channel); !ok {
 		t.Fatalf("SNAPSHOT chat got %T", ch)
 	}
 

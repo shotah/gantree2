@@ -3,6 +3,7 @@ import { openRegistry, type AgentCreateBody } from "@/lib/agents/registry";
 import {
   deleteAgent,
   getAgent,
+  getAgentBearer,
   getAgentConfig,
   getAgentLog,
   getAgents,
@@ -221,6 +222,25 @@ describe("agents http", () => {
     container.act.mockRejectedValueOnce(new Error("nope"));
     expect((await deleteAgent(asRole("admin", "/api/agents/kit", [], "DELETE"), env, "kit")).status).toBe(503);
     expect(await agents.get("kit")).not.toBeNull();
+  });
+
+  it("hands the room bearer only to an admin on the loopback dev door", async () => {
+    const { env } = world();
+    const dev: AgentsHttpEnv = { ...env, GANTREE_DEV_USER: `${ADA}:ada@example.com` };
+    const local = (role: "admin" | "operator", agents: string[] = []) => new Request("http://127.0.0.1:3000/api/agents/kit/bearer", {
+      headers: asRole(role, "/x", agents).headers,
+    });
+    // No dev user, or not loopback: the route does not exist.
+    expect((await getAgentBearer(asRole("admin", "/api/agents/kit/bearer"), env, "kit")).status).toBe(404);
+    expect((await getAgentBearer(asRole("admin", "/api/agents/kit/bearer"), dev, "kit")).status).toBe(404);
+    expect((await getAgentBearer(new Request("http://203.0.113.9:3000/api/agents/kit/bearer", { headers: asRole("admin", "/x").headers }), dev, "kit")).status).toBe(404);
+    // Loopback dev: admin only, slug grammar, then the DO row.
+    expect((await getAgentBearer(local("operator", ["kit"]), dev, "kit")).status).toBe(403);
+    expect((await getAgentBearer(local("admin"), dev, "Bad_Slug")).status).toBe(400);
+    const res = await getAgentBearer(local("admin"), dev, "kit");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ bearer: "room-secret" });
+    expect((await getAgentBearer(local("admin"), { ...dev, AGENT: undefined }, "kit")).status).toBe(503);
   });
 
   it("reads one card and proxies config, status, log, and users", async () => {

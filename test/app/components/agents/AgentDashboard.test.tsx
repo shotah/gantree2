@@ -8,6 +8,7 @@ import { CONTAINER, MAPS, card, config, json, session, href, buttonOf, textBody 
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 function dashClient(options?: { role?: "admin" | "operator"; canMutate?: boolean; status?: number; failOnce?: boolean }): ApiClient {
@@ -65,11 +66,36 @@ describe("AgentDashboard", () => {
     expect(screen.getByRole("link", { name: "Open chat" }).getAttribute("href")).toBe("/chat/kit");
     expect(screen.getByRole("link", { name: "Agents" }).getAttribute("href")).toBe("/agents");
     expect(screen.getByText("maps")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "gantree home" }).getAttribute("href")).toBe("/");
+    expect(screen.getByText("home").className).toContain("bg-accent-soft");
+    expect(screen.getByRole("link", { name: "Open chat" }).className).toContain("rounded-xl");
+    expect(screen.getByRole("region", { name: "Status" }).className).toContain("rounded-2xl");
+    const zone = screen.getByRole("region", { name: "Danger zone" });
+    expect(zone.className).toContain("border-danger-line");
+    expect(zone.className).toContain("bg-danger-soft/40");
 
     fireEvent.click(screen.getByRole("button", { name: "stop container" }));
     expect(await screen.findByText("stopped")).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Persona" }));
+    // One header button shuts every fold on the page, wherever its state lives, then offers to open them again.
+    const foldHeads = () => ["Status", "Persona", "Keys", "Tools", "Who can chat", "Log"].map((name) => screen.getByRole("button", { name }));
+    expect(screen.getByRole("button", { name: "Status" }).getAttribute("aria-expanded")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "Collapse all" }));
+    for (const head of foldHeads()) {
+      expect(head.getAttribute("aria-expanded")).toBe("false");
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Open all" }));
+    for (const head of foldHeads()) {
+      expect(head.getAttribute("aria-expanded")).toBe("true");
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Collapse all" }));
+    expect(screen.getByRole("button", { name: "Persona" }).getAttribute("aria-expanded")).toBe("false");
+
+    const persona = screen.getByRole("button", { name: "Persona" });
+    expect(persona.querySelector("[aria-hidden]")?.className).not.toContain("rotate-180");
+    fireEvent.click(persona);
+    expect(persona.getAttribute("aria-expanded")).toBe("true");
+    expect(persona.querySelector("[aria-hidden]")?.className).toContain("rotate-180");
     fireEvent.change(screen.getByLabelText("Persona text"), { target: { value: "Be sharp." } });
     fireEvent.click(screen.getByRole("button", { name: "Save persona" }));
     expect(await screen.findByText("Saved.")).toBeTruthy();

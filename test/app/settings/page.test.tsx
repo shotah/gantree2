@@ -21,6 +21,6 @@ describe("settings page", () => {
     render(<SettingsPage />);
     expect(metadata.title).toBe("Settings — gantree");
     expect(await screen.findByRole("heading", { name: "Settings" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Appearance" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Appearance" })).toBeTruthy();
   });
 });

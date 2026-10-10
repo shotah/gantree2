@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { cardClass } from "@/app/components/shared/PageHeader";
 import { api } from "@/app/lib/api";
 import {
   browserSpendRate,
@@ -26,14 +27,34 @@ const WINDOW_LABEL: Record<SpendWindow, string> = {
   "30d": "30d",
 };
 
+function barWidth(part: number, peak: number): string {
+  if (peak <= 0) {
+    return "0%";
+  }
+  return `${(part / peak) * 100}%`;
+}
+
+function TotalTile({ label, value, money = false }: { label: string; value: string; money?: boolean }) {
+  return (
+    <div className={`min-w-[5.5rem] flex-1 overflow-hidden rounded-xl bg-canvas/50 px-3 py-2 ${money ? "border border-ok/40" : "border border-line"}`}>
+      <p className={`truncate text-lg font-semibold tabular-nums ${money ? "text-ok" : "text-fg"}`}>{value}</p>
+      <p className="truncate text-[11px] text-muted">{label}</p>
+    </div>
+  );
+}
+
 export function SpendCard({
   agents,
   client = api,
+  framed = true,
 }: {
   /** `null` loads every agent (admin). A list loads those slugs. */
   agents: readonly string[] | null;
   client?: ApiClient;
+  /** `false` drops the card frame and landmark so a parent fold can supply them. */
+  framed?: boolean;
 }) {
+  const Root = framed ? "section" : "div";
   const scope = agents === null ? "all" : agents.filter(Boolean).join("\0");
   const [window, setWindow] = useState<SpendWindow>("today");
   const [samples, setSamples] = useState<SampleRow[]>([]);
@@ -96,6 +117,7 @@ export function SpendCard({
 
   const rate = parseSpendRate(rateText);
   const rollup = useMemo(() => rollupSamples(samples, window, rate), [samples, window, rate]);
+  const peak = rollup.agents.reduce((max, row) => Math.max(max, row.prompt + row.completion), 0);
 
   function onRate(raw: string) {
     setRateText(raw);
@@ -112,21 +134,24 @@ export function SpendCard({
   const idle = agents !== null && agents.filter(Boolean).length === 0;
 
   return (
-    <section aria-label="Spend" className="rounded border border-line bg-panel px-4 py-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <h2 className="text-sm font-medium text-fg">Spend</h2>
-        <div className="flex flex-wrap gap-1" role="group" aria-label="Spend window">
-          {SPEND_WINDOWS.map((item) => (
-            <button
-              key={item}
-              type="button"
-              aria-pressed={window === item}
-              onClick={() => setWindow(item)}
-              className={`rounded border px-2 py-0.5 text-xs ${window === item ? "border-accent-line text-accent-hover" : "border-line text-dim hover:text-body"}`}
-            >
-              {WINDOW_LABEL[item]}
-            </button>
-          ))}
+    <Root aria-label={framed ? "Spend" : undefined} className={framed ? cardClass : undefined}>
+      <div className={`flex flex-wrap items-start gap-3 ${framed ? "justify-between" : "justify-end"}`}>
+        {framed ? <h2 className="text-sm font-medium text-fg">Spend</h2> : null}
+        <div className="inline-flex gap-0.5 rounded-full bg-track p-0.5" role="group" aria-label="Spend window">
+          {SPEND_WINDOWS.map((item) => {
+            const on = window === item;
+            return (
+              <button
+                key={item}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setWindow(item)}
+                className={`rounded-full px-3 py-1 text-xs font-medium ${on ? "bg-accent text-canvas" : "text-dim hover:text-body"}`}
+              >
+                {WINDOW_LABEL[item]}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -140,7 +165,7 @@ export function SpendCard({
           value={rateText}
           placeholder="2.50"
           onChange={(e) => onRate(e.target.value)}
-          className="w-32 rounded border border-line bg-canvas px-3 py-1.5 text-sm text-body"
+          className="w-32 rounded-xl border border-line bg-canvas px-3 py-1.5 text-sm text-body"
         />
       </label>
       <p className="mt-1 text-[11px] text-dim">One rate for prompt and completion. It stays in this browser.</p>
@@ -154,7 +179,7 @@ export function SpendCard({
         : null}
 
       {error
-        ? <p role="alert" className="mt-3 rounded border border-danger-line bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+        ? <p role="alert" className="mt-3 rounded-xl border border-danger-line bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
         : null}
 
       {phase === "ready" && !idle && !error && rollup.agents.length === 0
@@ -164,13 +189,17 @@ export function SpendCard({
       {phase === "ready" && !error && rollup.agents.length > 0
         ? (
             <>
-              <p className="mt-3 text-sm tabular-nums text-body">
-                {fmtTokens(rollup.prompt)} prompt · {fmtTokens(rollup.completion)} completion · {rollup.turns} {rollup.turns === 1 ? "turn" : "turns"}
-                {rollup.usd != null ? <span className="text-ok"> · {fmtUsd(rollup.usd)}</span> : null}
-              </p>
+              <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Spend totals">
+                <TotalTile label="prompt" value={fmtTokens(rollup.prompt)} />
+                <TotalTile label="completion" value={fmtTokens(rollup.completion)} />
+                <TotalTile label="turns" value={String(rollup.turns)} />
+                {rollup.usd != null
+                  ? <TotalTile label="cost" value={fmtUsd(rollup.usd)} money />
+                  : null}
+              </div>
               <ul className="mt-3 space-y-2" aria-label="Spend by agent">
                 {rollup.agents.map((row) => (
-                  <li key={row.agent} aria-label={row.agent} className="rounded border border-line px-3 py-2 text-sm">
+                  <li key={row.agent} aria-label={row.agent} className="rounded-xl border border-line bg-canvas/40 px-3 py-2 text-sm">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <span className="font-medium text-fg">{displaySlug(row.agent)}</span>
                       <span className="tabular-nums text-body">
@@ -179,12 +208,19 @@ export function SpendCard({
                       </span>
                     </div>
                     <p className="text-[11px] text-dim">{row.turns} {row.turns === 1 ? "turn" : "turns"}</p>
+                    <div className="mt-2 h-1 overflow-hidden rounded-full bg-track">
+                      <div
+                        aria-hidden
+                        className="h-full rounded-full bg-gradient-to-r from-accent to-mark"
+                        style={{ width: barWidth(row.prompt + row.completion, peak) }}
+                      />
+                    </div>
                   </li>
                 ))}
               </ul>
             </>
           )
         : null}
-    </section>
+    </Root>
   );
 }

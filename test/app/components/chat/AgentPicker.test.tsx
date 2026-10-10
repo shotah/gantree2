@@ -27,6 +27,9 @@ describe("AgentPicker", () => {
     const kit = screen.getByRole("link", { name: "Kit" });
     expect(ada.getAttribute("href")).toBe("/chat/ada");
     expect(kit.getAttribute("href")).toBe("/chat/kit");
+    expect(ada.querySelector("[aria-hidden]")?.textContent).toBe("A");
+    expect(ada.textContent).toContain("ada");
+    expect(screen.getByRole("link", { name: "gantree home" }).querySelector("svg[data-tree-mark]")).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Manage agents" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Log out" })).toBeNull();
     expect(client).toHaveBeenCalledWith("/api/auth/me");

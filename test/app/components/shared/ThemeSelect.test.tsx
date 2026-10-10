@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ThemeSelect } from "@/app/components/shared/ThemeSelect";
+import { LIST_WIDTH_CLASS, ThemeSelect } from "@/app/components/shared/ThemeSelect";
 import { THEME_KEY } from "@/app/lib/theme";
 
 afterEach(() => {
@@ -27,6 +27,24 @@ const MOOD_LABELS = [
 ];
 
 describe("ThemeSelect", () => {
+  it("opens a list wider than its trigger, hung from the start edge or the end edge", () => {
+    const { unmount } = render(<ThemeSelect />);
+    fireEvent.click(screen.getByRole("button", { name: "color theme" }));
+    const list = screen.getByRole("listbox");
+    expect(list.className).toContain(LIST_WIDTH_CLASS);
+    expect(list.className).not.toContain("inset-x-0");
+    expect(list.className).toContain("left-0");
+    expect(list.getAttribute("data-align")).toBe("start");
+    unmount();
+
+    render(<ThemeSelect align="end" />);
+    fireEvent.click(screen.getByRole("button", { name: "color theme" }));
+    const right = screen.getByRole("listbox");
+    expect(right.className).toContain("right-0");
+    expect(right.className).not.toContain("left-0");
+    expect(right.getAttribute("data-align")).toBe("end");
+  });
+
   it("groups fifteen themes into Plain and Moods, and tags the agent's row while following", () => {
     const onHumanPick = vi.fn();
     render(<ThemeSelect onHumanPick={onHumanPick} roomTheme="siren" followTheme agentName="Kit" />);

@@ -73,6 +73,20 @@ describe("AgentsBoard", () => {
     expect(screen.getByRole("link", { name: "Users" }).getAttribute("href")).toBe("/users");
     expect(screen.getByRole("link", { name: "Settings" }).getAttribute("href")).toBe("/settings");
     expect(screen.getByRole("link", { name: "New agent" }).getAttribute("href")).toBe("/agents/new");
+    expect(screen.getByRole("heading", { name: "Agents" })).toBeTruthy();
+    expect(screen.getByRole("navigation", { name: "Board" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "gantree home" }).getAttribute("href")).toBe("/");
+    expect(screen.getByRole("list", { name: "Agents" }).className).toContain("lg:grid-cols-3");
+    const avatar = kitCard.querySelector(".from-accent");
+    expect(avatar?.textContent).toBe("K");
+    expect(avatar?.className).toContain("to-mark");
+    expect(within(kitCard).getByText("connected").closest("p")?.className).toContain("bg-ok/15");
+    expect(within(adaCard).getByText("disconnected").closest("p")?.className).toContain("bg-track");
+    expect(within(kitCard).getByText("home").className).toContain("bg-accent-soft");
+    expect(within(kitCard).getByText("Container").className).toContain("uppercase");
+    expect(within(adaCard).getByText("1 tool skipped").className).toContain("bg-danger-soft");
+    expect(within(kitCard).getByRole("link", { name: "Open chat" }).className).toContain("rounded-xl");
+    expect(within(kitCard).getByRole("link", { name: "Manage" }).className).toContain("border-line");
   });
 
   it("offers an admin an empty-state create link and an operator a plain sentence", async () => {

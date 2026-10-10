@@ -77,6 +77,7 @@ export function card(over: Partial<AgentCard> = {}): AgentCard {
 export function config(over: Partial<AgentConfigView> = {}): AgentConfigView {
   return {
     envKeys: ["LLM_API_KEY"],
+    house: [],
     mcp: "",
     persona: "Be brief.",
     updatedAt: 1,

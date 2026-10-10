@@ -9,6 +9,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev --host 127.0.0.1 --port 3000",
+    "dev:shot": "CLOUDFLARE_ENV=shot vite dev --host 127.0.0.1 --port 3000",
     "build": "vite build",
     "start": "wrangler dev --config dist/server/wrangler.json",
     "deploy": "npm run build && vinext-cloudflare deploy --config dist/server/wrangler.json",
@@ -23,6 +24,7 @@
     "eval": "make -C harness integration-test",
     "icons": "node scripts/icons.ts",
     "seed": "node scripts/seed.ts",
+    "agent": "node scripts/agent.ts",
     "shot": "node scripts/shot.mjs",
     "theme:export": "node scripts/theme-export.ts",
     "pages": "node scripts/pages.mjs"

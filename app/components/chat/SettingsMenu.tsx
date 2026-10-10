@@ -145,10 +145,16 @@ export function SettingsMenu({ children }: { children: ReactNode }) {
                 <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
                   {rows.length > 0
                     ? (
-                        <nav aria-label="Agents" className="mb-3 flex flex-col border-b border-line pb-2">
+                        <nav aria-label="Console" className="mb-3 flex flex-col gap-1.5 border-b border-line pb-3">
+                          <span className="text-xs text-muted">Console</span>
                           {rows.map((row) => (
-                            <a key={row.href} href={row.href} className="rounded px-1 py-1.5 text-sm text-fg hover:bg-track">
+                            <a
+                              key={row.href}
+                              href={row.href}
+                              className="flex items-center justify-between rounded-xl border border-line bg-canvas/60 px-3 py-2 text-sm text-fg hover:border-accent-line hover:text-mark"
+                            >
                               {row.label}
+                              <span aria-hidden className="text-dim">→</span>
                             </a>
                           ))}
                         </nav>

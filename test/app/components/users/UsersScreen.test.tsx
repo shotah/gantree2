@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { UsersScreen, type ApiClient } from "@/app/components/users/UsersScreen";
+import { initial, roleTone, UsersScreen, type ApiClient } from "@/app/components/users/UsersScreen";
 import type { AuditEvent } from "@/lib/door/settingsStore";
 import type { UserRow } from "@/lib/door/users";
 
@@ -48,6 +48,22 @@ function json(status: number, body: unknown): Response {
 function clientWith(payload: { users: UserRow[]; audit: AuditEvent[] }): ApiClient {
   return vi.fn(async () => json(200, payload));
 }
+
+describe("initial", () => {
+  it("takes the email's first letter, never the sub's digit", () => {
+    expect(initial({ email: "sam@example.com" }, "100000000000000000002:sam@example.com")).toBe("S");
+    expect(initial({ email: null }, "bob@example.com")).toBe("B");
+    expect(initial({ email: null }, " ")).toBe("?");
+  });
+});
+
+describe("roleTone", () => {
+  it("maps each role to its colour classes", () => {
+    expect(roleTone("admin")).toBe("text-ok border-ok/40 bg-ok/10");
+    expect(roleTone("operator")).toBe("text-info border-info/40 bg-info/10");
+    expect(roleTone("member")).toBe("text-mark border-accent-line bg-accent-soft");
+  });
+});
 
 describe("UsersScreen", () => {
   it("lists locked env rows beside stored rows and the audit", async () => {
@@ -169,5 +185,58 @@ describe("UsersScreen", () => {
     fireEvent.click(screen.getByRole("button", { name: "Remove bob@example.com" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm remove bob@example.com" }));
     expect((await screen.findByRole("alert")).textContent).toContain("Could not reach users. Try again.");
+  });
+
+  it("paints the hero, role chips, avatars, and an audit timeline", async () => {
+    const client = clientWith({ users: [ADA, BOB], audit: [AUDIT] });
+    render(<UsersScreen client={client} />);
+
+    expect(screen.getByRole("heading", { name: "Users" })).toBeTruthy();
+    expect(screen.getByText("Who may sign in, and as what. Environment rows stay locked.")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "gantree home" }).getAttribute("href")).toBe("/");
+    expect(screen.getByRole("link", { name: "Agents" }).getAttribute("href")).toBe("/agents");
+    expect(screen.getByRole("link", { name: "Settings" }).getAttribute("href")).toBe("/settings");
+
+    const roles = screen.getByRole("list", { name: "Roles" });
+    expect(within(roles).getByText("admin").className).toContain(roleTone("admin"));
+    expect(within(roles).getByText("operator").className).toContain(roleTone("operator"));
+    expect(within(roles).getByText("member").className).toContain(roleTone("member"));
+    expect(roles.querySelector(".bg-ok")).toBeTruthy();
+    expect(roles.querySelector(".bg-info")).toBeTruthy();
+    expect(roles.querySelector(".bg-mark")).toBeTruthy();
+
+    const ada = await screen.findByRole("listitem", { name: "ada@example.com" });
+    const adaInitial = within(ada).getByText("A", { selector: "span" });
+    expect(adaInitial.className).toContain("rounded-xl");
+    expect(adaInitial.className).toContain("from-accent");
+    expect(adaInitial.className).toContain("to-mark");
+    expect(adaInitial.className).toContain("text-canvas");
+    expect(adaInitial.className).toContain("font-bold");
+    expect(within(ada).getByText("admin").className).toContain(roleTone("admin"));
+    const locked = within(ada).getByText("locked");
+    expect(locked.className).toContain("text-dim");
+    expect(locked.className).toContain("border-line");
+    expect(locked.querySelector("[aria-hidden]")).toBeTruthy();
+
+    const bob = screen.getByRole("listitem", { name: "bob@example.com" });
+    expect(within(bob).getByText("operator").className).toContain(roleTone("operator"));
+    expect(within(bob).getByText("kit").className).toContain("text-mark");
+
+    const form = screen.getByRole("form", { name: "Add a user" });
+    expect(within(form).getByRole("heading", { name: "Add someone" })).toBeTruthy();
+    expect(within(form).getByLabelText("Email or sub:email").className).toContain("rounded-xl");
+    const add = within(form).getByRole("button", { name: "Add user" });
+    expect(add.className).toContain("rounded-xl");
+    expect(add.className).toContain("bg-accent");
+    expect(add.className).toContain("text-canvas");
+    expect(add.className).toContain("font-semibold");
+
+    const audit = screen.getByRole("region", { name: "Audit" });
+    const when = audit.querySelector("time");
+    expect(when?.getAttribute("dateTime")).toBe("2026-10-10T16:05:00.000Z");
+    expect(when?.textContent).toBe("2026-10-10 16:05");
+    expect(within(audit).getByText("118212345678901234567").tagName).toBe("SPAN");
+    expect(audit.querySelector("ol .rounded-full.bg-accent")).toBeTruthy();
+    expect(audit.querySelector("ol .w-px.bg-line")).toBeTruthy();
   });
 });

@@ -20,8 +20,15 @@ describe("getTools", () => {
       expect(res.status).toBe(200);
       expect(res.headers.get("content-type")).toContain("application/json");
       expect(res.headers.get("cache-control")).toBe("no-store");
-      expect(await res.json()).toEqual({ tools: toolCatalog() });
+      expect(await res.json()).toEqual({ tools: toolCatalog(), house: [] });
     }
+  });
+
+  it("names the house keys the Worker env supplies, never their values", async () => {
+    const res = getTools(request("member"), { LLM_MODEL: "gemini", LLM_API_KEY: " sekrit ", LLM_BASE_URL: "" });
+    const body = await res.json<{ house: string[] }>();
+    expect(body.house).toEqual(["LLM_API_KEY", "LLM_MODEL"]);
+    expect(JSON.stringify(body)).not.toContain("sekrit");
   });
 
   it("401s when the principal headers are missing or nonsense", async () => {

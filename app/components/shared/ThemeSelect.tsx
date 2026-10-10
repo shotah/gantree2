@@ -51,11 +51,15 @@ function ThemeOption({
   );
 }
 
+/** The open list is wider than the trigger so paired mood rows never truncate. */
+export const LIST_WIDTH_CLASS = "w-60";
+
 export function ThemeSelect({
   onHumanPick,
   roomTheme = null,
   followTheme = false,
   agentName = "Agent",
+  align = "start",
 }: {
   onHumanPick?: () => void;
   /** Room id, so the row the agent picked can wear a tag while the human is following. */
@@ -63,6 +67,8 @@ export function ThemeSelect({
   followTheme?: boolean;
   /** Label on that tag. */
   agentName?: string;
+  /** Which edge of the trigger the wider list hangs from. `end` for pickers on the right of a header. */
+  align?: "start" | "end";
 }) {
   const [id, setId] = useState<ThemeId>(DEFAULT_THEME);
   const [open, setOpen] = useState(false);
@@ -157,7 +163,8 @@ export function ThemeSelect({
             <span
               id={listId}
               role="listbox"
-              className="absolute inset-x-0 z-50 mt-1 max-h-72 overflow-y-auto rounded border border-line bg-panel py-1 shadow-lg"
+              data-align={align}
+              className={`absolute z-50 mt-1 max-h-72 ${LIST_WIDTH_CLASS} max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border border-line bg-panel py-1 shadow-lg ${align === "end" ? "right-0" : "left-0"}`}
             >
               <span role="group" aria-label="Plain" className="block">
                 <span className="block px-2.5 pt-1 text-[10px] font-medium uppercase tracking-wide text-dim">Plain</span>

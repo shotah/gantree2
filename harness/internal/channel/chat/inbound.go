@@ -1,4 +1,4 @@
-package pendant
+package chat
 
 import (
 	"encoding/json"
@@ -96,16 +96,16 @@ func todoFrame(items []memory.TodoItem) outboundFrame {
 func ParseEntry(raw string) (Entry, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
-		return Entry{}, fmt.Errorf("pendant: empty allowlist entry")
+		return Entry{}, fmt.Errorf("chat: empty allowlist entry")
 	}
 	if i := strings.IndexByte(raw, ':'); i >= 0 {
 		sub := strings.TrimSpace(raw[:i])
 		email := strings.ToLower(strings.TrimSpace(raw[i+1:]))
 		if !isDigits(sub) {
-			return Entry{}, fmt.Errorf("pendant: invalid allowlist entry %q", raw)
+			return Entry{}, fmt.Errorf("chat: invalid allowlist entry %q", raw)
 		}
 		if email != "" && !isEmail(email) {
-			return Entry{}, fmt.Errorf("pendant: invalid allowlist entry %q", raw)
+			return Entry{}, fmt.Errorf("chat: invalid allowlist entry %q", raw)
 		}
 		return Entry{Sub: sub, Email: email}, nil
 	}
@@ -116,7 +116,7 @@ func ParseEntry(raw string) (Entry, error) {
 	if isEmail(email) {
 		return Entry{Email: email}, nil
 	}
-	return Entry{}, fmt.Errorf("pendant: invalid allowlist entry %q", raw)
+	return Entry{}, fmt.Errorf("chat: invalid allowlist entry %q", raw)
 }
 
 // ParseAllowlist splits comma/whitespace, parses each token, and dedupes by
@@ -140,7 +140,7 @@ func parseAllowlist(raw []string, allowEmpty bool) ([]Entry, error) {
 		}
 	}
 	if len(entries) == 0 && !allowEmpty {
-		return nil, fmt.Errorf("pendant: allowlist is empty (set CHAT_ALLOWED_USERS)")
+		return nil, fmt.Errorf("chat: allowlist is empty (set CHAT_ALLOWED_USERS)")
 	}
 	return entries, nil
 }

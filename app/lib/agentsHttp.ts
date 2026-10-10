@@ -206,11 +206,15 @@ function asUsers(body: unknown): RoomUser[] {
   return body.users as RoomUser[];
 }
 
-function asTools(body: unknown): ToolEntry[] {
+/** `GET /api/tools`: the baked catalog plus the key names the Worker env supplies to every agent. */
+export type ToolsPage = { tools: ToolEntry[]; house: string[] };
+
+function asTools(body: unknown): ToolsPage {
   if (!isRecord(body) || !Array.isArray(body.tools)) {
     bad();
   }
-  return body.tools as ToolEntry[];
+  const house = Array.isArray(body.house) ? body.house.filter((key): key is string => typeof key === "string") : [];
+  return { tools: body.tools as ToolEntry[], house };
 }
 
 function asSession(body: unknown): Session {
@@ -281,6 +285,16 @@ export async function actContainer(
   return asContainer(await send(client, containerUrl(slug), jsonInit("POST", { action } satisfies ContainerAction)));
 }
 
-export async function listTools(client: ApiClient = api): Promise<ToolEntry[]> {
+/** Recreate the container so changed keys reach the harness, then read the config back (`recreate` clears). */
+export async function recreateForKeys(slug: string, client: ApiClient = api): Promise<AgentConfigView> {
+  await actContainer(slug, "recreate", client);
+  return getConfig(slug, client);
+}
+
+export async function toolsPage(client: ApiClient = api): Promise<ToolsPage> {
   return asTools(await send(client, TOOLS_URL, { method: "GET" }));
+}
+
+export async function listTools(client: ApiClient = api): Promise<ToolEntry[]> {
+  return (await toolsPage(client)).tools;
 }

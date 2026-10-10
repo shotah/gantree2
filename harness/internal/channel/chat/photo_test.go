@@ -1,4 +1,4 @@
-package pendant
+package chat
 
 import (
 	"strings"
@@ -42,7 +42,7 @@ func TestReplyFrames_Empty(t *testing.T) {
 }
 
 func TestFitPendantPhoto_DropsOversizeJunk(t *testing.T) {
-	u := "data:image/png;base64," + strings.Repeat("A", pendantImageBytesMax)
+	u := "data:image/png;base64," + strings.Repeat("A", chatImageBytesMax)
 	if _, ok := fitPendantPhoto(u); ok {
 		t.Fatal("oversize junk must drop (mailbox would refuse the whole frame)")
 	}

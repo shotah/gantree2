@@ -38,9 +38,10 @@ export function needsRecreate(env: Record<string, string>, startedEnv: string | 
   return startedEnv !== canonicalEnv(env);
 }
 
-export function configView(config: AgentConfig, startedEnv: string | null): AgentConfigView {
+export function configView(config: AgentConfig, startedEnv: string | null, house: readonly string[] = []): AgentConfigView {
   return {
     envKeys: Object.keys(config.env).sort(),
+    house: [...house],
     mcp: config.mcp,
     persona: config.persona,
     updatedAt: config.updatedAt,
@@ -170,11 +171,18 @@ function presentUrls(urls: SnapshotUrls): Record<string, string> {
   return out;
 }
 
-/** DO → harness. Carries env values. Never fan this out to phones. */
-export function configFrame(config: AgentConfig, urls: { restore: SnapshotUrls; put: SnapshotUrls }): string {
+/**
+ * DO → harness. Carries env values — the house floor under the agent's own,
+ * so a blank `LLM_*` on the agent falls through. Never fan this out to phones.
+ */
+export function configFrame(
+  config: AgentConfig,
+  urls: { restore: SnapshotUrls; put: SnapshotUrls },
+  house: Record<string, string> = {},
+): string {
   return JSON.stringify({
     kind: "config",
-    env: config.env,
+    env: { ...house, ...config.env },
     mcp: config.mcp,
     persona: config.persona,
     restore: presentUrls(urls.restore),

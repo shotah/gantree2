@@ -28,6 +28,9 @@ import {
   personaFor,
   phoneSocketUrl,
   roomUsersFor,
+  shotVars,
+  SHOT_ENV,
+  SHOT_VARS_FILE,
   shouldSendLogs,
   upsertAssignment,
   usersCall,
@@ -75,7 +78,7 @@ describe("seed args and dev vars", () => {
   });
 
   it("admins the real dev user, not the placeholder, and leaves a covering sub:email alone", () => {
-    const owner = "106136115872460439292:owner@example.com";
+    const owner = "118200000000000000009:owner@example.com";
     const covered = ensureShotVars(`GANTREE_DEV_USER=${owner}\nGANTREE_ADMINS=${owner}\nAGENT_BEARERS=kit:a,ada:b\n`, "kit:x,ada:y");
     expect(covered.added).toEqual([]);
     expect(parseDevVars(covered.text).get("GANTREE_ADMINS")).toBe(owner);
@@ -87,6 +90,39 @@ describe("seed args and dev vars", () => {
     expect(missing.added).toEqual(["GANTREE_ADMINS"]);
     expect(parseDevVars(missing.text).get("GANTREE_ADMINS")).toBe("boss@example.com,owner@example.com");
     expect(missing.text).not.toContain(DEV_EMAIL);
+  });
+
+  it("derives .dev.vars.shot with the placeholder as the only identity, keeping secrets and prior bearers", () => {
+    const real = [
+      "# real box",
+      "GOOGLE_CLIENT_ID=abc.apps.googleusercontent.com",
+      "SESSION_SECRET=s3cret",
+      "GANTREE_ADMINS=118200000000000000009:owner@example.com,boss@example.com",
+      "GANTREE_ALLOW=friend@example.com",
+      "GANTREE_DEV_USER=118200000000000000009:owner@example.com",
+      "VAPID_SUBJECT=mailto:owner@example.com",
+      "AGENT_BEARERS=kit:real1,ada:real2",
+    ].join("\n");
+    const fresh = shotVars(real);
+    const vars = parseDevVars(fresh);
+    expect(vars.get("GOOGLE_CLIENT_ID")).toBe("abc.apps.googleusercontent.com");
+    expect(vars.get("SESSION_SECRET")).toBe("s3cret");
+    expect(vars.get("GANTREE_DEV_USER")).toBe(DEV_USER);
+    expect(vars.get("GANTREE_ADMINS")).toBe(DEV_USER);
+    expect(vars.get("GANTREE_ALLOW")).toBe("");
+    expect(vars.get("AGENT_BEARERS")).toBe("kit:real1,ada:real2");
+    expect(vars.get("VAPID_SUBJECT")).toBe(`mailto:${DEV_EMAIL}`);
+    expect(parseDevVars(shotVars("SESSION_SECRET=x\n")).has("VAPID_SUBJECT")).toBe(false);
+    expect(fresh).not.toContain("owner@example.com");
+    expect(fresh).not.toContain("118200000000000000009");
+    expect(fresh).not.toContain("friend@example.com");
+    expect(fresh.endsWith("\n")).toBe(true);
+
+    const rerun = shotVars(real, "AGENT_BEARERS=kit:shot1,ada:shot2\n");
+    expect(parseDevVars(rerun).get("AGENT_BEARERS")).toBe("kit:shot1,ada:shot2");
+    expect(shotVars(real, "")).toBe(fresh);
+    expect(shotVars("")).toContain(`GANTREE_DEV_USER=${DEV_USER}`);
+    expect(SHOT_VARS_FILE).toBe(`.dev.vars.${SHOT_ENV}`);
   });
 
   it("fills only a missing bearer slug", () => {

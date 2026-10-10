@@ -1,21 +1,25 @@
 "use client";
 
 import { useEffect, useState, type SubmitEvent } from "react";
-import { ThemeSelect } from "@/app/components/shared/ThemeSelect";
+import { PageHeader, cardClass } from "@/app/components/shared/PageHeader";
 import {
   agentsMessage,
   codeOf,
   createAgent,
-  listTools,
   patchConfig,
+  toolsPage,
   type ApiClient,
 } from "@/app/lib/agentsHttp";
 import { api } from "@/app/lib/api";
+import { llmCovered } from "@/lib/agents/house";
 import { tomlFromGrants } from "@/lib/agents/mcpToml";
 import { AGENT_SLUG, type AgentCreate, type Grant, type ToolEntry } from "@/lib/agents/types";
 import { assignHref } from "./follow";
 import { alertClass, inputClass, labelClass, mainClass, primaryClass, quietClass } from "./Fold";
 import { PERSONA_TEMPLATE } from "./personaTemplate";
+
+const STEPS = ["Name", "Persona", "Keys", "Tools"] as const;
+const panelClass = `${cardClass} flex flex-col gap-4`;
 
 export function parseTagList(raw: string): string[] {
   const out: string[] = [];
@@ -30,6 +34,41 @@ export function parseTagList(raw: string): string[] {
 
 function needId(tool: string, key: string): string {
   return `${tool}:${key}`;
+}
+
+function discClass(n: number, step: number): string {
+  if (n === step) {
+    return "bg-accent text-canvas";
+  }
+  if (n < step) {
+    return "bg-ok/20 text-ok";
+  }
+  return "bg-track text-dim";
+}
+
+function StepRail({ step }: { step: number }) {
+  return (
+    <ol aria-label="Steps" className="flex items-center">
+      {STEPS.map((label, index) => {
+        const n = index + 1;
+        const last = n === STEPS.length;
+        return (
+          <li key={label} className={last ? "flex min-w-0 items-center" : "flex min-w-0 flex-1 items-center"}>
+            <span
+              aria-current={n === step ? "step" : undefined}
+              className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-semibold ${discClass(n, step)}`}
+            >
+              {n}
+            </span>
+            <span className={`ml-2 truncate text-xs font-medium ${n === step ? "text-fg" : "text-dim"}`}>{label}</span>
+            {last
+              ? null
+              : <span aria-hidden className="mx-3 h-px min-w-3 flex-1 bg-line" />}
+          </li>
+        );
+      })}
+    </ol>
+  );
 }
 
 export function NewAgent({
@@ -52,6 +91,7 @@ export function NewAgent({
   const [extras, setExtras] = useState<{ id: number; key: string; value: string }[]>([]);
   const [nextExtra, setNextExtra] = useState(1);
   const [tools, setTools] = useState<ToolEntry[] | null>(null);
+  const [house, setHouse] = useState<string[]>([]);
   const [toolsError, setToolsError] = useState<string | null>(null);
   const [picked, setPicked] = useState<Record<string, boolean>>({});
   const [needs, setNeeds] = useState<Record<string, string>>({});
@@ -61,9 +101,10 @@ export function NewAgent({
 
   useEffect(() => {
     let dead = false;
-    void listTools(client).then((rows) => {
+    void toolsPage(client).then((page) => {
       if (!dead) {
-        setTools(rows);
+        setTools(page.tools);
+        setHouse(page.house);
         setToolsError(null);
       }
     }).catch((err: unknown) => {
@@ -78,7 +119,8 @@ export function NewAgent({
 
   const slugOk = AGENT_SLUG.test(slug);
   const nameOk = name.trim().length > 0;
-  const keysOk = baseUrl.trim().length > 0 && apiKey.trim().length > 0 && model.trim().length > 0;
+  const typedLlm: Record<string, string> = { LLM_BASE_URL: baseUrl.trim(), LLM_API_KEY: apiKey.trim(), LLM_MODEL: model.trim() };
+  const keysOk = llmCovered(Object.keys(typedLlm).filter((key) => typedLlm[key]), house);
   const visible = (tools ?? []).filter((tool) => home || !tool.homeOnly);
   const nextDisabled = busy || (step === 1 && (!slugOk || !nameOk)) || (step === 3 && !keysOk);
 
@@ -93,11 +135,13 @@ export function NewAgent({
   }
 
   function collectEnv(): Record<string, string> | null {
-    const env: Record<string, string> = {
-      LLM_BASE_URL: baseUrl.trim(),
-      LLM_API_KEY: apiKey.trim(),
-      LLM_MODEL: model.trim(),
-    };
+    // A blank LLM_* is not stored: the house value falls through in the config frame.
+    const env: Record<string, string> = {};
+    for (const [key, value] of Object.entries(typedLlm)) {
+      if (value) {
+        env[key] = value;
+      }
+    }
     for (const row of extras) {
       const key = row.key.trim();
       if (key) {
@@ -168,20 +212,14 @@ export function NewAgent({
     void create();
   }
 
-  const titles = ["Name", "Persona", "Keys", "Tools"];
-
   return (
     <main className={mainClass}>
-      <header className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <a href="/agents" className="text-sm text-muted hover:text-body">Agents</a>
-          <h1 className="text-2xl font-semibold text-fg">New agent</h1>
-          <p className="text-sm text-muted">Step {step} of 4 — {titles[step - 1]}</p>
-        </div>
-        <div className="w-40 shrink-0">
-          <ThemeSelect />
-        </div>
-      </header>
+      <PageHeader
+        crumb={{ href: "/agents", label: "Agents" }}
+        title="New agent"
+        blurb={`Step ${step} of 4 — ${STEPS[step - 1]}`}
+      />
+      <StepRail step={step} />
 
       {error ? <p role="alert" className={alertClass}>{agentsMessage(error)}</p> : null}
       {toolsError && step === 4 ? <p role="alert" className={alertClass}>{agentsMessage(toolsError)}</p> : null}
@@ -189,7 +227,7 @@ export function NewAgent({
       <form aria-label="New agent" className="flex flex-col gap-4" onSubmit={onSubmit}>
         {step === 1
           ? (
-              <>
+              <div className={panelClass}>
                 <div className="flex flex-col gap-1">
                   <label htmlFor="agent-slug" className={labelClass}>Slug</label>
                   <input
@@ -230,40 +268,49 @@ export function NewAgent({
                     className={inputClass}
                   />
                 </div>
-              </>
+              </div>
             )
           : null}
 
         {step === 2
           ? (
-              <div className="flex flex-col gap-1">
-                <label htmlFor="agent-persona" className={labelClass}>Persona</label>
-                <textarea
-                  id="agent-persona"
-                  value={persona}
-                  rows={16}
-                  onChange={(e) => setPersona(e.target.value)}
-                  className={`${inputClass} min-h-64 font-mono text-xs`}
-                />
+              <div className={panelClass}>
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="agent-persona" className={labelClass}>Persona</label>
+                  <textarea
+                    id="agent-persona"
+                    value={persona}
+                    rows={16}
+                    onChange={(e) => setPersona(e.target.value)}
+                    className={`${inputClass} min-h-64 font-mono text-xs`}
+                  />
+                </div>
               </div>
             )
           : null}
 
         {step === 3
           ? (
-              <>
+              <div className={panelClass}>
                 <p className="text-xs text-dim">Write-only. The agent stores them; this form will not show them again.</p>
+                {house.length > 0
+                  ? (
+                      <p role="note" className="text-xs text-dim">
+                        House keys on the server: {house.join(", ")}. Leave a field blank to use the house value.
+                      </p>
+                    )
+                  : null}
                 <div className="flex flex-col gap-1">
                   <label htmlFor="llm-base" className={labelClass}>LLM_BASE_URL</label>
-                  <input id="llm-base" value={baseUrl} autoComplete="off" spellCheck={false} onChange={(e) => setBaseUrl(e.target.value)} className={inputClass} />
+                  <input id="llm-base" value={baseUrl} autoComplete="off" spellCheck={false} placeholder={house.includes("LLM_BASE_URL") ? "house" : undefined} onChange={(e) => setBaseUrl(e.target.value)} className={inputClass} />
                 </div>
                 <div className="flex flex-col gap-1">
                   <label htmlFor="llm-key" className={labelClass}>LLM_API_KEY</label>
-                  <input id="llm-key" type="password" value={apiKey} autoComplete="new-password" spellCheck={false} onChange={(e) => setApiKey(e.target.value)} className={inputClass} />
+                  <input id="llm-key" type="password" value={apiKey} autoComplete="new-password" spellCheck={false} placeholder={house.includes("LLM_API_KEY") ? "house" : undefined} onChange={(e) => setApiKey(e.target.value)} className={inputClass} />
                 </div>
                 <div className="flex flex-col gap-1">
                   <label htmlFor="llm-model" className={labelClass}>LLM_MODEL</label>
-                  <input id="llm-model" value={model} autoComplete="off" spellCheck={false} onChange={(e) => setModel(e.target.value)} className={inputClass} />
+                  <input id="llm-model" value={model} autoComplete="off" spellCheck={false} placeholder={house.includes("LLM_MODEL") ? "house" : undefined} onChange={(e) => setModel(e.target.value)} className={inputClass} />
                 </div>
                 {extras.map((row) => (
                   <div key={row.id} className="flex flex-wrap items-end gap-2">
@@ -309,19 +356,19 @@ export function NewAgent({
                 >
                   Add a key
                 </button>
-              </>
+              </div>
             )
           : null}
 
         {step === 4
           ? (
-              <div className="flex flex-col gap-3">
+              <div className={panelClass}>
                 {tools === null && !toolsError ? <p className="text-sm text-muted">Loading tools.</p> : null}
                 {tools !== null && visible.length === 0 ? <p className="text-sm text-muted">No tools to show.</p> : null}
                 {visible.map((tool) => {
                   const on = Boolean(picked[tool.id]);
                   return (
-                    <div key={tool.id} className="rounded border border-line px-3 py-3">
+                    <div key={tool.id} className="rounded-xl border border-line bg-canvas/50 px-3 py-3">
                       <label className="flex items-center gap-2 text-sm text-fg">
                         <input
                           type="checkbox"

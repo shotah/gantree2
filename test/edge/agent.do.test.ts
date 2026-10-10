@@ -1051,6 +1051,26 @@ describe("Agent harness ops", () => {
     expect((await drifted.json<{ recreate: boolean }>()).recreate).toBe(true);
   });
 
+  it("lays the house LLM keys under the agent env on the config frame and names them on the view", async () => {
+    installPairs();
+    const { state, box, crane } = room({ LLM_MODEL: "house-model", LLM_API_KEY: "house-key", LLM_BASE_URL: " " });
+    await state.storage.put("slug", "kit");
+    await state.storage.put(CONFIG_STORE_KEY, { env: { LLM_MODEL: "mine" }, mcp: "", persona: "be brief", updatedAt: 5 });
+    crane.close();
+    const res = await box.fetch(new Request("https://gantree.test/ws/kit?role=crane", {
+      headers: { Upgrade: "websocket", "X-Chat-Role": "crane", "X-Chat-Slug": "kit", "X-Chat-Rate": "bearer:kit" },
+    }));
+    expect(res.status).toBe(101);
+    const fresh = state.getWebSockets("role:crane").find((socket) => socket.sent.some((line) => line.includes("\"kind\":\"config\"")));
+    const first = JSON.parse(fresh?.sent[0] ?? "{}") as { env?: Record<string, string> };
+    expect(first.env).toEqual({ LLM_MODEL: "mine", LLM_API_KEY: "house-key" });
+
+    const view = await box.fetch(new Request("https://agent/config", { headers: { "X-Chat-Op": "config" } }));
+    const body = await view.text();
+    expect(JSON.parse(body)).toMatchObject({ envKeys: ["LLM_MODEL"], house: ["LLM_API_KEY", "LLM_MODEL"] });
+    expect(body).not.toContain("house-key");
+  });
+
   it("does not reset perf when a second crane socket opens, and marks the room down when the last one closes", async () => {
     installPairs();
     const { state, box, crane } = room();

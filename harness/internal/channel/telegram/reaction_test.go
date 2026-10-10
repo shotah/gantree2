@@ -48,7 +48,7 @@ func TestMakeHandler_ReactTokenSetsReaction(t *testing.T) {
 			ID:   7,
 			Text: "thanks!",
 			Chat: models.Chat{ID: 99, Type: "private"},
-			From: &models.User{ID: 42, Username: "chris"},
+			From: &models.User{ID: 42, Username: "ada"},
 		},
 	})
 	if api.count("setMessageReaction") != 1 {
@@ -81,7 +81,7 @@ func TestMakeHandler_ReactRefusedFallsBackToText(t *testing.T) {
 			ID:   7,
 			Text: "thanks!",
 			Chat: models.Chat{ID: 99, Type: "private"},
-			From: &models.User{ID: 42, Username: "chris"},
+			From: &models.User{ID: 42, Username: "ada"},
 		},
 	})
 	waitSendMessage(t, api, 1)
@@ -111,7 +111,7 @@ func TestMakeHandler_ReactionTurnHasNoSink(t *testing.T) {
 		MessageReaction: &models.MessageReactionUpdated{
 			Chat:        models.Chat{ID: 99, Type: "private"},
 			MessageID:   7,
-			User:        &models.User{ID: 42, Username: "chris"},
+			User:        &models.User{ID: 42, Username: "ada"},
 			NewReaction: []models.ReactionType{emojiReaction("👍")},
 		},
 	})
@@ -160,7 +160,7 @@ func TestMakeHandler_ReactionSettlesBeforePipe(t *testing.T) {
 		MessageReaction: &models.MessageReactionUpdated{
 			Chat:        models.Chat{ID: 99, Type: "private"},
 			MessageID:   7,
-			User:        &models.User{ID: 42, Username: "chris"},
+			User:        &models.User{ID: 42, Username: "ada"},
 			NewReaction: []models.ReactionType{emojiReaction("👍")},
 		},
 	})

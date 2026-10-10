@@ -45,6 +45,24 @@ describe("LoginDoor", () => {
     ]));
     expect(door?.className.split(/\s+/)).not.toContain("min-h-dvh");
     expect(screen.queryByText(/Add to Home Screen/)).toBeNull();
+    expect(container.querySelector("img")).toBeNull();
+    expect(container.querySelector("[data-tree-mark]")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Your agents. Your tools. One door." })).toBeTruthy();
+    expect(screen.getByText("Agents you run")).toBeTruthy();
+    expect(screen.getByText("Eleven tools")).toBeTruthy();
+    expect(screen.getByText("On Cloudflare or at home")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "color theme" })).toBeTruthy();
+    expect(link.className.split(/\s+/)).toEqual(expect.arrayContaining([
+      "w-full",
+      "rounded-xl",
+      "bg-accent",
+      "text-canvas",
+      "hover:bg-accent-hover",
+    ]));
+    expect(link.querySelector("svg")).toBeTruthy();
+    const card = container.querySelector("section");
+    expect(card?.className).toContain("from-accent-soft");
+    expect(card?.className).toContain("rounded-2xl");
   });
 
   it("tells iPhone Safari to sign in before Add to Home Screen", async () => {
@@ -72,5 +90,6 @@ describe("LoginDoor", () => {
     expect(await screen.findByText(/Signed in as ada@example.com/)).toBeTruthy();
     expect(screen.getByText(/Agents: kit/)).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Continue with Google" })).toBeNull();
+    expect(screen.getByRole("img", { name: "gantree" })).toBeTruthy();
   });
 });

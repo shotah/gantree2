@@ -60,7 +60,7 @@ func TestAgent_NewDistillsSelfNotes(t *testing.T) {
 	}}
 	notes := &fakeSelfNotes{content: "# SELF.md — Who You Are Becoming\n- dry humor"}
 	hist := newMemHistory()
-	hist.setSummary("s", "Facts: chris likes espresso\nVoice: gag: \"that gull had a mortgage\"")
+	hist.setSummary("s", "Facts: ada likes espresso\nVoice: gag: \"that gull had a mortgage\"")
 	seedHistory(t, hist, "s", 3) // 6 messages = distill threshold
 	a, err := agent.New(agent.Options{
 		Completer: fc,
@@ -160,7 +160,7 @@ func TestAgent_NewParksFactsInMemory(t *testing.T) {
 	t.Cleanup(func() { _ = store.Close() })
 
 	hist := newMemHistory()
-	hist.setSummary("chat", "Facts: chris likes espresso\nVoice: gag: \"that gull had a mortgage\"")
+	hist.setSummary("chat", "Facts: ada likes espresso\nVoice: gag: \"that gull had a mortgage\"")
 	a, err := agent.New(agent.Options{
 		Completer: &fakeCompleter{},
 		Sessions:  hist,

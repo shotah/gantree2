@@ -2,12 +2,16 @@
 /**
  * Photographable household, through the HTTP API (not the database).
  *
+ *   npm run dev:shot                # the dev server on .dev.vars.shot
  *   npm run seed
- *   npm run seed -- --vars          # write missing .dev.vars keys, then stop
+ *   npm run seed -- --vars          # write .dev.vars.shot, then stop
  *   npm run seed -- --base=http://127.0.0.1:3000
  *
- * Needs `npm run dev` on loopback with GANTREE_DEV_USER set. The dev user
- * is signed in on 127.0.0.1 with no Google round-trip. Status, perf, and
+ * Needs `npm run dev:shot` on loopback. That server reads `.dev.vars.shot`,
+ * which seed derives from `.dev.vars`: same secrets, but the dev user and
+ * the only admin are the placeholder `dev@example.com`, so no real account
+ * is ever in a picture. The dev user is signed in on 127.0.0.1 with no
+ * Google round-trip. Status, perf, and
  * log land on the agent socket (`/ws/<slug>?role=agent`) after the config
  * frame; chat lines use the phone socket. Re-running is safe: create
  * treats 409 as already there, room lists are replaced, log lines are
@@ -33,6 +37,31 @@ export const REPO_ROOT = join(fileURLToPath(new URL(".", import.meta.url)), ".."
 export const DEV_SUB = "100000000000000000001";
 export const DEV_EMAIL = "dev@example.com";
 export const DEV_USER = `${DEV_SUB}:${DEV_EMAIL}`;
+
+/** `CLOUDFLARE_ENV` for the photographable server; it reads `.dev.vars.shot`. */
+export const SHOT_ENV = "shot";
+export const SHOT_VARS_FILE = `.dev.vars.${SHOT_ENV}`;
+
+/**
+ * `.dev.vars.shot` from `.dev.vars`: every key carried, the identity keys
+ * forced to the placeholder so a real sub or email never reaches a shot.
+ * Bearers already minted into the previous shot file win over `.dev.vars`,
+ * so a re-run does not rotate them under a running server.
+ */
+export function shotVars(real: string, previousShot = ""): string {
+  let next = real.length === 0 || real.endsWith("\n") ? real : `${real}\n`;
+  next = upsertAssignment(next, "GANTREE_DEV_USER", DEV_USER);
+  next = upsertAssignment(next, "GANTREE_ADMINS", DEV_USER);
+  next = upsertAssignment(next, "GANTREE_ALLOW", "");
+  if (parseDevVars(next).has("VAPID_SUBJECT")) {
+    next = upsertAssignment(next, "VAPID_SUBJECT", `mailto:${DEV_EMAIL}`);
+  }
+  const kept = parseDevVars(previousShot).get("AGENT_BEARERS")?.trim() ?? "";
+  if (kept) {
+    next = upsertAssignment(next, "AGENT_BEARERS", kept);
+  }
+  return next;
+}
 
 /** Second principal: a member on both rooms, so /chat can show the picker. */
 export const MEMBER_SUB = "100000000000000000002";
@@ -580,6 +609,9 @@ export async function seedRunning(base: string, vars: Map<string, string>): Prom
   if (!dev) {
     throw new Error("signed-in user has no sub and email");
   }
+  if (dev.sub !== DEV_SUB) {
+    throw new Error(`signed in as ${dev.email}, not ${DEV_EMAIL}: start the server with npm run dev:shot`);
+  }
   const member = await call(base, memberCall());
   if (member.status !== 200) {
     throw new Error(`POST /api/users → ${member.status} ${errorCode(member.body)}`);
@@ -614,8 +646,8 @@ export async function seedRunning(base: string, vars: Map<string, string>): Prom
   }
 }
 
-function varsPath(): string {
-  return join(REPO_ROOT, ".dev.vars");
+function readIf(path: string): string {
+  return existsSync(path) ? readFileSync(path, "utf8") : "";
 }
 
 export async function main(argv: readonly string[]): Promise<void> {
@@ -624,18 +656,19 @@ export async function main(argv: readonly string[]): Promise<void> {
     process.stdout.write("npm run seed [-- --vars] [-- --base=http://127.0.0.1:3000]\n");
     return;
   }
-  const path = varsPath();
-  const before = existsSync(path) ? readFileSync(path, "utf8") : "";
-  const ensured = ensureShotVars(before, freshBearerLine());
-  if (ensured.added.length > 0) {
-    writeFileSync(path, ensured.text);
-    process.stdout.write(`updated .dev.vars keys: ${ensured.added.join(", ")}\n`);
+  const shotPath = join(REPO_ROOT, SHOT_VARS_FILE);
+  const before = readIf(shotPath);
+  const derived = shotVars(readIf(join(REPO_ROOT, ".dev.vars")), before);
+  const ensured = ensureShotVars(derived, freshBearerLine());
+  if (ensured.text !== before) {
+    writeFileSync(shotPath, ensured.text, { mode: 0o600 });
+    process.stdout.write(`wrote ${SHOT_VARS_FILE}${ensured.added.length > 0 ? ` (new keys: ${ensured.added.join(", ")})` : ""}\n`);
   }
   if (args.varsOnly) {
     return;
   }
-  if (ensured.added.includes("GANTREE_DEV_USER") || ensured.added.includes("AGENT_BEARERS")) {
-    throw new Error("restart the dev server so it reloads .dev.vars, then run seed again");
+  if (before.length === 0 || ensured.added.includes("AGENT_BEARERS")) {
+    throw new Error(`restart the dev server with npm run dev:shot so it reads ${SHOT_VARS_FILE}, then run seed again`);
   }
   await seedRunning(args.base, parseDevVars(ensured.text));
 }

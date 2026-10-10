@@ -1,16 +1,23 @@
 import { describe, expect, it } from "vitest";
+import { FOLLOW_THEME_PREF_KEY } from "@/app/lib/prefs";
+import { THEME_KEY } from "@/app/lib/theme";
 import { SESSION_COOKIE as DOOR_COOKIE } from "@/lib/door/session";
 import { MEMBER_COOKIE_NAME as SEED_COOKIE_FILE } from "@/scripts/seed";
 import {
   DEFAULT_CHROME,
+  DEFAULT_SHOT_THEME,
   DESKTOP,
   MEMBER_COOKIE_NAME,
   PHONE,
   SESSION_COOKIE,
+  SHOT_FOLLOW_KEY,
+  SHOT_THEME_KEY,
   SHOTS,
   chromeBin,
   parseShotArgs,
   shotFile,
+  shotTheme,
+  themeSeedScript,
   viewportFor,
 } from "@/scripts/shots";
 
@@ -64,5 +71,22 @@ describe("shot table", () => {
   it("shares the session cookie name and the member cookie file name", () => {
     expect(SESSION_COOKIE).toBe(DOOR_COOKIE);
     expect(MEMBER_COOKIE_NAME).toBe(SEED_COOKIE_FILE);
+  });
+
+  it("shoots in a mood theme: neon by default, env or spec override, unknown ignored", () => {
+    expect(DEFAULT_SHOT_THEME).toBe("neon");
+    expect(shotTheme(SHOTS.login)).toBe("neon");
+    expect(shotTheme(SHOTS.login, { GANTREE_SHOT_THEME: "marquee" })).toBe("marquee");
+    expect(shotTheme(SHOTS.login, { GANTREE_SHOT_THEME: "plaid" })).toBe("neon");
+    expect(shotTheme({ path: "/", text: "x", theme: "boom" }, { GANTREE_SHOT_THEME: "marquee" })).toBe("boom");
+  });
+
+  it("seeds the browser with the human's pick and turns room follow off", () => {
+    expect(SHOT_THEME_KEY).toBe(THEME_KEY);
+    expect(SHOT_FOLLOW_KEY).toBe(FOLLOW_THEME_PREF_KEY);
+    const script = themeSeedScript("neon");
+    expect(script).toContain('localStorage.setItem("gantree.theme","neon")');
+    expect(script).toContain('localStorage.setItem("gantree.followTheme","off")');
+    expect(script.startsWith("try{")).toBe(true);
   });
 });

@@ -13,14 +13,14 @@ import (
 	"github.com/shotah/ai-gantry/internal/agent"
 	"github.com/shotah/ai-gantry/internal/aims"
 	"github.com/shotah/ai-gantry/internal/channel"
-	"github.com/shotah/ai-gantry/internal/channel/pendant"
+	"github.com/shotah/ai-gantry/internal/channel/chat"
 	"github.com/shotah/ai-gantry/internal/cron"
 	"github.com/shotah/ai-gantry/internal/memory"
 	"github.com/shotah/ai-gantry/internal/provider"
 	"github.com/shotah/ai-gantry/internal/session"
 )
 
-// Frozen Pacific noon so testdata/pendant/*.txt is a readable Completer dump,
+// Frozen Pacific noon so testdata/chat/*.txt is a readable Completer dump,
 // not a moving NOW. Production still uses time.Now.
 //
 // These dumps omit memory hydration, MCP health, wait notes, and tool
@@ -32,7 +32,7 @@ import (
 // completer_fullboard_harness.txt. A pocket hold-to-talk turn ([surface]
 // browser + [input] spoken): completer_spoken.txt.
 // volatileByGolden pins chars/4 of the re-evaluated suffix (the turn plus
-// the harness block) for the minimal pendant goldens. A new tag fails here.
+// the harness block) for the minimal chat goldens. A new tag fails here.
 var volatileByGolden = map[string]int{
 	"completer_nogeo.txt": 221,
 	"completer_geo.txt":   245,
@@ -79,11 +79,11 @@ func TestPendantInbound_CompleterPayload(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			raw, err := os.ReadFile(filepath.Join("testdata", "pendant", tc.inbound))
+			raw, err := os.ReadFile(filepath.Join("testdata", "chat", tc.inbound))
 			if err != nil {
 				t.Fatal(err)
 			}
-			msg, ok, err := pendant.InboundTurn(raw)
+			msg, ok, err := chat.InboundTurn(raw)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -114,7 +114,7 @@ func TestPendantInbound_CompleterPayload(t *testing.T) {
 				t.Fatal(err)
 			}
 			got := formatCompleterRequest(captured)
-			assertGolden(t, filepath.Join("testdata", "pendant", tc.want), got)
+			assertGolden(t, filepath.Join("testdata", "chat", tc.want), got)
 			if want, ok := volatileByGolden[tc.want]; ok {
 				if vol := agent.VolatileEstTokens(captured.Messages); vol != want {
 					t.Fatalf("volatile_est_tokens=%d, golden %s pins %d", vol, tc.want, want)
@@ -122,7 +122,7 @@ func TestPendantInbound_CompleterPayload(t *testing.T) {
 			}
 			gemini := captured
 			gemini.Messages = provider.WireMessages("gemini-3.6-flash", captured.Messages)
-			assertGolden(t, filepath.Join("testdata", "pendant", strings.TrimSuffix(tc.want, ".txt")+"_gemini_wire.txt"), formatCompleterRequest(gemini))
+			assertGolden(t, filepath.Join("testdata", "chat", strings.TrimSuffix(tc.want, ".txt")+"_gemini_wire.txt"), formatCompleterRequest(gemini))
 		})
 	}
 }
@@ -155,11 +155,11 @@ func TestPendantInbound_CompleterPayloadHorizon(t *testing.T) {
 	if _, err := mem.Store(ctx, memory.KindFact, "waiting/dentist", "book cleaning"); err != nil {
 		t.Fatal(err)
 	}
-	raw, err := os.ReadFile(filepath.Join("testdata", "pendant", "inbound_geo.json"))
+	raw, err := os.ReadFile(filepath.Join("testdata", "chat", "inbound_geo.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg, ok, err := pendant.InboundTurn(raw)
+	msg, ok, err := chat.InboundTurn(raw)
 	if err != nil || !ok {
 		t.Fatalf("ok=%v err=%v", ok, err)
 	}
@@ -186,7 +186,7 @@ func TestPendantInbound_CompleterPayloadHorizon(t *testing.T) {
 	if _, err := a.Handle(ctx, msg); err != nil {
 		t.Fatal(err)
 	}
-	assertGolden(t, filepath.Join("testdata", "pendant", "completer_horizon_harness.txt"), promptHarnessClock(captured.Messages)+"\n")
+	assertGolden(t, filepath.Join("testdata", "chat", "completer_horizon_harness.txt"), promptHarnessClock(captured.Messages)+"\n")
 }
 
 // roomAt is the pendant mouth's cached look for the full-board golden.
@@ -228,11 +228,11 @@ func TestPendantInbound_CompleterPayloadFullBoard(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	raw, err := os.ReadFile(filepath.Join("testdata", "pendant", "inbound_cab_auto.json"))
+	raw, err := os.ReadFile(filepath.Join("testdata", "chat", "inbound_cab_auto.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg, ok, err := pendant.InboundTurn(raw)
+	msg, ok, err := chat.InboundTurn(raw)
 	if err != nil || !ok {
 		t.Fatalf("ok=%v err=%v", ok, err)
 	}
@@ -292,7 +292,7 @@ func TestPendantInbound_CompleterPayloadFullBoard(t *testing.T) {
 	if _, err := a.Handle(ctx, msg); err != nil {
 		t.Fatal(err)
 	}
-	assertGolden(t, filepath.Join("testdata", "pendant", "completer_fullboard_harness.txt"), promptHarnessClock(captured.Messages)+"\n")
+	assertGolden(t, filepath.Join("testdata", "chat", "completer_fullboard_harness.txt"), promptHarnessClock(captured.Messages)+"\n")
 	if vol := agent.VolatileEstTokens(captured.Messages); vol != volatileFullBoard {
 		t.Fatalf("volatile_est_tokens=%d, full board pins %d", vol, volatileFullBoard)
 	}
@@ -506,7 +506,7 @@ func harnessHeader(clock string) string {
 	return clock
 }
 
-// updateGoldens rewrites testdata/pendant/*.txt from the current run:
+// updateGoldens rewrites testdata/chat/*.txt from the current run:
 // go test ./internal/agent/ -run Payload -update. Read the diff before
 // trusting it — the golden is the contract.
 var updateGoldens = flag.Bool("update", false, "rewrite Completer payload goldens")

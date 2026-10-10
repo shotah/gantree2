@@ -62,6 +62,7 @@ import {
 import { applyFont, fontFromQuery } from "@/app/lib/font";
 import { RELEASE } from "@/app/lib/release";
 import { applyTheme, cacheRoomTheme, cachedRoomTheme, paintTheme, parseTheme, THEME_KEY, themeFromQuery, type ThemeId } from "@/app/lib/theme";
+import { landingCookie, landingPref, type LandingPref } from "@/lib/door/landing";
 import { browserWakeLock, releaseScreenWake, type WakeLockSentinel } from "@/app/lib/wake";
 import { authDeniedFromQuery, authRetryFromQuery } from "@/app/lib/install";
 import { loginHref } from "@/app/lib/login";
@@ -187,6 +188,7 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
   const [avatarRev, setAvatarRev] = useState(0);
   const [backdropRev, setBackdropRev] = useState(0);
   const [backdropOn, setBackdropOn] = useState(true);
+  const [landing, setLanding] = useState<LandingPref>(null);
   const [followTheme, setFollowTheme] = useState(true);
   const [roomTheme, setRoomTheme] = useState<ThemeId | null>(null);
   const [faceHint, setFaceHint] = useState("");
@@ -392,6 +394,7 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
     }
     setPhotoSize(browserPhotoSizePref());
     setBackdropOn(browserBackdropPref());
+    setLanding(landingPref(document.cookie));
     const follow = browserFollowThemePref();
     followThemeRef.current = follow;
     setFollowTheme(follow);
@@ -1172,35 +1175,41 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
     setPhotoSize(next);
   }
 
-  function toggleBackdrop() {
-    setBackdropOn((on) => {
-      const next = !on;
-      saveBackdropPref(next);
-      return next;
-    });
-  }
-
   function pickHumanTheme() {
     saveFollowThemePref(false);
     followThemeRef.current = false;
     setFollowTheme(false);
   }
 
-  function toggleFollowTheme() {
-    setFollowTheme((on) => {
-      const next = !on;
-      saveFollowThemePref(next);
-      followThemeRef.current = next;
-      if (next) {
-        const room = cachedRoomTheme();
-        if (room) {
-          paintTheme(room);
-        }
-      } else {
-        applyTheme(parseTheme(document.documentElement.getAttribute("data-theme")));
+  function setFollow(next: boolean) {
+    saveFollowThemePref(next);
+    followThemeRef.current = next;
+    setFollowTheme(next);
+    if (next) {
+      const room = cachedRoomTheme();
+      if (room) {
+        paintTheme(room);
       }
-      return next;
-    });
+    } else {
+      applyTheme(parseTheme(document.documentElement.getAttribute("data-theme")));
+    }
+  }
+
+  /** Settings → Open this chat on entry: `/` comes straight here instead of the console or the picker. */
+  const landHere = landing?.slug === roomSlug;
+  function toggleLandHere() {
+    const next: LandingPref = landHere ? null : { slug: roomSlug };
+    document.cookie = landingCookie(next);
+    setLanding(next);
+  }
+
+  /** One switch for both agent-driven looks: the room theme and the backdrop. Off = your theme on a plain canvas. */
+  const agentStyle = followTheme && backdropOn;
+  function toggleAgentStyle() {
+    const next = !agentStyle;
+    saveBackdropPref(next);
+    setBackdropOn(next);
+    setFollow(next);
   }
 
   /**
@@ -1518,10 +1527,10 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
                 ? (
                     <div className="flex flex-col gap-1">
                       <label className="flex items-center gap-2 text-xs text-muted">
-                        <input type="checkbox" checked={followTheme} onChange={toggleFollowTheme} />
-                        Follow the agent&apos;s mood
+                        <input type="checkbox" checked={agentStyle} onChange={toggleAgentStyle} />
+                        {`Let ${title} style the chat`}
                       </label>
-                      <p className="text-[11px] text-dim">{`When on, ${title} picks the color theme. Off keeps the one you pick.`}</p>
+                      <p className="text-[11px] text-dim">{`${title} picks the color theme and can paint a wallpaper behind the thread. Off keeps your theme on a plain canvas.`}</p>
                     </div>
                   )
                 : null}
@@ -1548,14 +1557,14 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
                     />
                   )
                 : null}
-              {phone
+              {phone && me
                 ? (
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-1 border-t border-line pt-2">
                       <label className="flex items-center gap-2 text-xs text-muted">
-                        <input type="checkbox" checked={backdropOn} onChange={toggleBackdrop} />
-                        Backdrop
+                        <input type="checkbox" checked={landHere} onChange={toggleLandHere} />
+                        Open this chat on entry
                       </label>
-                      <p className="text-[11px] text-dim">{`${title} can paint a wallpaper behind the thread. Off keeps the theme.`}</p>
+                      <p className="text-[11px] text-dim">Visiting gantree lands here instead of the console. Settings can turn it off too.</p>
                     </div>
                   )
                 : null}
