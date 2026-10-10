@@ -1,11 +1,9 @@
 import { acceptJpeg } from "@/lib/avatar/jpeg";
 import {
   admitRoom,
-  blobRequestPath,
   conditionalHeaders,
   readJpegUpload,
   slugFromRequest,
-  type BlobRequestOpts,
   type RoomEnv,
   type UploadResult,
 } from "@/lib/avatar/http";
@@ -13,10 +11,7 @@ import { fromStub } from "@/lib/chat/slugRoute";
 import type { UserStore } from "@/lib/door/users";
 import { BACKDROP_MAX_BYTES, BACKDROP_TOO_LARGE } from "./store";
 
-/** `/api/chat/backdrop?slug=kit&v=<rev>` — relative, for same-origin fetch. */
-export function backdropRequestPath(opts: BlobRequestOpts): string {
-  return blobRequestPath("/api/chat/backdrop", opts);
-}
+export { backdropRequestPath } from "./path";
 
 export async function readBackdropUpload(req: Request): Promise<UploadResult> {
   return readJpegUpload(req, { maxBytes: BACKDROP_MAX_BYTES, tooLarge: BACKDROP_TOO_LARGE });

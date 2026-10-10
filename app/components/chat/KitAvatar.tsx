@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { copyImageElement, downloadImage, uploadAvatarFile } from "@/app/lib/avatar";
 import { blobCacheKey, useBlobUrl } from "@/app/lib/blobUrl";
-import { avatarRequestPath } from "@/lib/avatar/http";
+import { avatarRequestPath } from "@/lib/avatar/path";
 import { displaySlug } from "@/lib/avatar/store";
 
 const FALLBACK = "/icon.svg";

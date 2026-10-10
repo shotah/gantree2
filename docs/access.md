@@ -22,6 +22,12 @@ Bob can operate Kit and never message her. Ada can message Kit from
 her phone and never see settings. Both sign in at the same `/login`.
 There is no second door and no passphrase.
 
+![Sign-in page with Continue with Google](../assets/docs/login.png)
+
+![Users page with an admin row and a member row](../assets/docs/users.png)
+
+![Phone screen listing Ada and Kit](../assets/docs/chat.png)
+
 ```text
             Google sign-in  →  gantree_session {sub, email}
                                      │

@@ -77,7 +77,7 @@ export function UsersFold({
                 const label = labelOf(user);
                 return (
                   <li key={label} className="flex items-center justify-between gap-2 text-sm">
-                    <span>
+                    <span className="min-w-0 break-all">
                       <span className="text-fg">{label}</span>
                       {user.email && user.sub ? <span className="ml-2 text-xs text-dim">{user.sub}</span> : null}
                     </span>

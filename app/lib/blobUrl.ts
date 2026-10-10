@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { blobEtag } from "@/lib/avatar/http";
+import { blobEtag } from "@/lib/chat/blob";
 import { kvDel, kvGet, kvSet } from "./kv";
 
 /** What the last 200 left on the device: bytes plus the rev that names them. */

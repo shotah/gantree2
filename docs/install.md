@@ -56,11 +56,30 @@ Sign in. You are admin. A second Google account gets `not_allowed`
 until you add it on `/users`.
 
 Without a Google client: `GANTREE_DEV_USER=118212345678901234567:you@example.com`
-in `.dev.vars` fakes a session on loopback only. It still has to be in
-`GANTREE_ADMINS` or `GANTREE_ALLOW`. Details:
+in `.dev.vars` fakes a session on loopback only. The sub is 10–32 digits.
+It still has to be in `GANTREE_ADMINS` or `GANTREE_ALLOW`. Details:
 [access.md](access.md#dev-without-google).
 
-Built Worker under Miniflare: `npm run build && npm run start`.
+`npm run dev` is Vite on `127.0.0.1:3000`. It serves the Durable Objects.
+Containers need Docker, which local dev does not assume: `wrangler.jsonc`
+sets `dev.enable_containers` to false, and the agent page shows the
+container as unknown instead of failing. Screenshots in this repo were
+taken against `npm run dev`. `npm run build && npm run start` is the
+built Worker under Miniflare (`dist/server/wrangler.json`); use it when
+you want the production bundle, not to get Durable Objects.
+
+```bash
+npm run seed   # dev must already be up. Fills Kit and Ada through the HTTP API.
+npm run shot   # headless Chrome → assets/docs/*.png. CHROME_BIN overrides the Chrome path.
+```
+
+`npm run seed` writes any missing `GANTREE_DEV_USER` or `AGENT_BEARERS`
+into `.dev.vars` and then tells you to restart dev so the Worker reloads
+them. `npm run shot` opens `/chat` as the loopback dev user. A member
+picker needs that variable unset and `GANTREE_SHOT_AS_MEMBER=1` (seed
+writes the member cookie).
+
+![Sign-in page with Continue with Google](../assets/docs/login.png)
 
 ---
 
@@ -185,6 +204,13 @@ every MCP server in `harness/mcp.lock` baked into `/opt/mcp`.
 `ghcr.io/shotah/gantree-harness:<sha>`. `wrangler deploy` builds the
 same Dockerfile into the account's container registry. **Recreate**
 picks up a newly deployed image.
+
+Build it yourself with any Docker-API engine: `cd harness && docker
+build -t gantree-harness:local .` (~70 s warm). Rootless podman is
+enough — `systemctl --user enable --now podman.socket` and
+`DOCKER_HOST=unix:///run/user/$UID/podman/podman.sock` make the
+`docker` CLI talk to it; no daemon, no root. Smoke:
+`docker run --rm gantree-harness:local version`.
 
 ---
 

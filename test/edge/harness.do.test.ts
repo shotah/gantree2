@@ -145,6 +145,25 @@ describe("harnessProcessEnv", () => {
 });
 
 describe("Harness", () => {
+  it("reports unknown when the container runtime throws", async () => {
+    const storage = new FakeStorage();
+    const container = new FakeContainer();
+    let live = false;
+    Object.defineProperty(container, "running", {
+      get() {
+        if (live) {
+          throw new Error("no docker");
+        }
+        return false;
+      },
+    });
+    const { harness } = await boot("kit", storage, container);
+    live = true;
+    const info = await read(await harness.fetch(op("info")));
+    expect(info).toEqual({ state: "unknown", since: null, lastError: null, image: null });
+    expect(storage.rows.has("container-info")).toBe(false);
+  });
+
   it("reports stopped until start, and probes port 8080 with a 2h sleep", async () => {
     const { harness } = await boot();
     expect(harness.defaultPort).toBe(HARNESS_PORT);

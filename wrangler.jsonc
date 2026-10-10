@@ -9,6 +9,9 @@
     "not_found_handling": "none",
     "binding": "ASSETS"
   },
+  // Local `vite dev` has no Docker. Containers stay on for deploy;
+  // the dashboard treats a missing runtime as unknown.
+  "dev": { "enable_containers": false },
   "containers": [
     {
       "class_name": "Harness",

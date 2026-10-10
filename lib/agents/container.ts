@@ -23,8 +23,10 @@ export async function containerInfo(env: AgentsEnv, slug: string): Promise<Conta
   }
   try {
     return await harnessOp(env, slug, "info");
-  } catch (error) {
-    return failed(errorText(error));
+  } catch {
+    // No Docker locally: the Harness class cannot be constructed. The board
+    // shows unknown instead of a failed container.
+    return UNKNOWN_CONTAINER;
   }
 }
 

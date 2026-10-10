@@ -22,6 +22,8 @@
     "coverage:harness": "scripts/coverage-harness.sh harness coverage",
     "eval": "make -C harness integration-test",
     "icons": "node scripts/icons.ts",
+    "seed": "node scripts/seed.ts",
+    "shot": "node scripts/shot.mjs",
     "theme:export": "node scripts/theme-export.ts",
     "pages": "node scripts/pages.mjs"
   },

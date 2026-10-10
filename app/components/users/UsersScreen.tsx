@@ -331,7 +331,7 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                       <li key={label} aria-label={label} className="rounded border border-line px-3 py-3 text-sm">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div className="min-w-0">
-                            <span className="font-medium text-fg">{label}</span>
+                            <span className="break-all font-medium text-fg">{label}</span>
                             <span className="ml-2 text-xs text-dim">{user.role}</span>
                             {user.locked
                               ? <span className="ml-2 text-xs text-dim">locked</span>
@@ -349,6 +349,7 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                                     : (
                                         <button
                                           type="button"
+                                          aria-label={`Edit ${label}`}
                                           disabled={busy}
                                           onClick={() => {
                                             setEditing(label);
@@ -358,7 +359,7 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                                           }}
                                           className="rounded border border-line px-2 py-1 text-xs text-body hover:bg-track disabled:opacity-50"
                                         >
-                                          Edit {label}
+                                          Edit
                                         </button>
                                       )}
                                   {confirming === label
@@ -366,25 +367,28 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                                         <>
                                           <button
                                             type="button"
+                                            aria-label={`Confirm remove ${label}`}
                                             disabled={busy}
                                             onClick={() => void remove(label)}
                                             className="rounded border border-danger-line px-2 py-1 text-xs text-danger disabled:opacity-50"
                                           >
-                                            Confirm remove {label}
+                                            Confirm remove
                                           </button>
                                           <button
                                             type="button"
+                                            aria-label={`Cancel remove ${label}`}
                                             disabled={busy}
                                             onClick={() => setConfirming(null)}
                                             className="rounded border border-line px-2 py-1 text-xs text-dim disabled:opacity-50"
                                           >
-                                            Cancel remove {label}
+                                            Cancel
                                           </button>
                                         </>
                                       )
                                     : (
                                         <button
                                           type="button"
+                                          aria-label={`Remove ${label}`}
                                           disabled={busy}
                                           onClick={() => {
                                             setConfirming(label);
@@ -392,7 +396,7 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                                           }}
                                           className="rounded border border-line px-2 py-1 text-xs text-body hover:bg-track disabled:opacity-50"
                                         >
-                                          Remove {label}
+                                          Remove
                                         </button>
                                       )}
                                 </div>
@@ -422,6 +426,7 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                                   : null}
                                 <button
                                   type="button"
+                                  aria-label={`Save ${label}`}
                                   disabled={busy}
                                   onClick={() => void submit(
                                     { entry: label, role: editRole, agents: editRole === "operator" ? agentTokens(editAgents) : [] },
@@ -429,15 +434,16 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                                   )}
                                   className="rounded border border-accent-line bg-accent-soft px-3 py-1.5 text-xs font-medium text-fg disabled:opacity-50"
                                 >
-                                  Save {label}
+                                  Save
                                 </button>
                                 <button
                                   type="button"
+                                  aria-label={`Cancel ${label}`}
                                   disabled={busy}
                                   onClick={() => setEditing(null)}
                                   className="rounded border border-line px-2 py-1 text-xs text-dim disabled:opacity-50"
                                 >
-                                  Cancel {label}
+                                  Cancel
                                 </button>
                               </div>
                             )
@@ -454,7 +460,7 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                     : (
                         <ol className="space-y-1 text-xs text-body">
                           {audit.map((event) => (
-                            <li key={event.id} className="flex flex-wrap gap-x-2">
+                            <li key={event.id} className="flex flex-wrap gap-x-2 break-all">
                               <time dateTime={stamp(event.at)?.toISOString()} className="text-dim">{formatWhen(event.at)}</time>
                               <span className="text-muted">{event.who}</span>
                               <span>{summary(event)}</span>

@@ -1,5 +1,5 @@
 import { acceptJpeg } from "@/lib/avatar/jpeg";
-import { avatarRequestPath } from "@/lib/avatar/http";
+import { avatarRequestPath } from "@/lib/avatar/path";
 import { jpegFromFile } from "./jpegFromFile";
 
 const DOWNLOAD_EXT: Record<string, string> = {

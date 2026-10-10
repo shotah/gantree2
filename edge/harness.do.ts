@@ -182,13 +182,29 @@ export class Harness extends Container<AgentEnv> {
     if (stored && isInfo(stored)) {
       return stored;
     }
-    const running = this.ctx.container?.running === true;
+    const running = this.containerRunning();
+    if (running === null) {
+      return { state: "unknown", since: null, lastError: null, image: null };
+    }
     return {
       state: running ? "running" : "stopped",
       since: null,
       lastError: null,
       image: null,
     };
+  }
+
+  /**
+   * Local dev has the binding and no Docker. A throwing container runtime is
+   * "unknown", not a failed start — and it is not stored, so a later probe
+   * can still see a real container.
+   */
+  private containerRunning(): boolean | null {
+    try {
+      return this.ctx.container?.running === true;
+    } catch {
+      return null;
+    }
   }
 
   private async save(info: ContainerInfo): Promise<ContainerInfo> {

@@ -71,6 +71,23 @@ The door is Google sign-in plus an allowlist. `GANTREE_ADMINS` and
 from GitHub Actions variables, at home via `CELLD_VARS_FILE`. More people
 are added on **Users** once you are in. No passphrases, no second login.
 
+## Screenshots
+
+`npm run seed` fills the running app through its HTTP API. `npm run shot`
+writes the PNGs below with headless Chrome (`CHROME_BIN` overrides the
+flatpak path). Phone frames are 390×844.
+
+![Agents page listing Kit and Ada, container unknown](assets/docs/agents.png)
+
+![Kit dashboard with status, who can chat, and the log](assets/docs/agents-kit.png)
+
+![Phone chat with Kit about a walk from the ferry building](assets/docs/chat-kit.png)
+
+Also in `assets/docs/`: [sign-in](assets/docs/login.png),
+[new agent](assets/docs/agents-new.png), [users](assets/docs/users.png),
+[settings](assets/docs/settings.png), [profile](assets/docs/profile.png),
+[chat picker](assets/docs/chat.png).
+
 | | |
 | --- | --- |
 | `npm run build` | Vite + Vinext → `dist/` |

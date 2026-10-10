@@ -49,7 +49,17 @@ export default tseslint.config(
   },
   {
     files: ["scripts/**/*.mjs"],
-    languageOptions: { globals: { process: "readonly", console: "readonly" } },
+    languageOptions: {
+      globals: {
+        process: "readonly",
+        console: "readonly",
+        fetch: "readonly",
+        WebSocket: "readonly",
+        URL: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+      },
+    },
   },
   {
     // Service worker: a classic script in a ServiceWorkerGlobalScope.

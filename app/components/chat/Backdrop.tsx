@@ -1,7 +1,7 @@
 "use client";
 
 import { blobCacheKey, useBlobUrl } from "@/app/lib/blobUrl";
-import { backdropRequestPath } from "@/lib/backdrop/http";
+import { backdropRequestPath } from "@/lib/backdrop/path";
 
 /**
  * Kit's wallpaper behind the thread. Absolute inside a `relative` parent;

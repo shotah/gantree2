@@ -73,12 +73,10 @@ describe("resolveOrigin", () => {
 });
 
 describe("containerInfo", () => {
-  it("is unknown without a binding and never throws", async () => {
+  it("is unknown without a binding and when the harness cannot be built", async () => {
     await expect(containerInfo({}, "kit")).resolves.toBe(UNKNOWN_CONTAINER);
     const { env } = namespace({ throwOn: "harness" });
-    const info = await containerInfo(env, "kit");
-    expect(info.state).toBe("failed");
-    expect(info.lastError).toBe("harness down");
+    await expect(containerInfo(env, "kit")).resolves.toBe(UNKNOWN_CONTAINER);
   });
 
   it("returns the harness body", async () => {

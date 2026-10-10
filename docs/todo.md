@@ -12,9 +12,9 @@ catalog, `/settings`, `/profile`, spend (§4), the harness under
 tree mark and every icon rasterised from it (§7). `worker/index.ts`
 exports `Settings`, `Agent`, `Harness`. 1013 Vitest tests, type-aware
 ESLint clean, `tsc` clean, the Worker builds. **Still not run locally
-with a real Google client** — §1 is the next thing a human does; the
-Dockerfile has never been built. A box is done when a stranger can do
-the walk with this repo alone.
+with a real Google client** — §1 is the next thing a human does. The
+harness image builds locally (podman). A box is done when a stranger
+can do the walk with this repo alone.
 
 Legend: `[ ]` open · `[x]` done · **D** a decision, not code
 
@@ -202,8 +202,15 @@ container.ts` and `lib/agents/mcpToml.ts` are replaced, not re-shaped.
       `security.md` is written for the first option.
 - [x] `harness/Dockerfile`: static `gantry` + `scripts/build-mcp.sh`
       (globs `mcp/*/go.mod` → `/opt/mcp/<id>/`, runs `host-manifest`
-      when present). **Not yet `docker build` anywhere** — first run is
-      a CI job in §8.
+      when present). **Built 2026-10-10** on the dev box with rootless
+      podman behind the Docker CLI: 70 s, 328 MB, `gantry version`
+      runs as `nonroot`, all eleven plugins under `/opt/mcp/<id>/`.
+- [ ] Image debt from that build: `build-mcp.sh` ships each plugin
+      twice (`/opt/mcp/<id>/<id>` and `/export/bin/<id>` plus the old
+      module name, e.g. `feeds` and `feeds-mcp`) — ~2× the bytes; keep
+      one path. `google-health` and `rentals` have no `host-manifest`
+      subcommand, so no shape ships for them (the Tools grid falls back
+      to `mcp.lock`); add the subcommand or accept.
 - [x] `harness.yml` real: vet, `-race ×3` on the harness (one local
       run flaked `flushed 0` in `doslog_test.go`; not reproduced in 7
       more; the dev box has no cgo), merged coverage, badge.
@@ -263,8 +270,8 @@ each `naming_test.go`) so the eval fixtures keep matching.
 - [x] `harness/mcp.lock` with every row (`id ./mcp/<id> module binary needs`).
 - [x] Dockerfile builds them all (`scripts/build-mcp.sh` globs
       `mcp/*/go.mod`); `harness-image.yml` builds the image, runs
-      `gantry version` inside it, pushes to GHCR on `main`. **Not yet
-      run** — first push is the proof.
+      `gantry version` inside it, pushes to GHCR on `main`. Local build
+      proven (§5); the GHCR push has not run yet.
 - [x] `scripts/coverage-harness.sh` end to end: 68.2 % with fifteen,
       **69.4 %** with eleven; floor raised to 69.
 - [ ] Seeds pruned of `youtube-*`. Harness internals still carry
@@ -282,25 +289,25 @@ each `naming_test.go`) so the eval fixtures keep matching.
 New name is the old name; the mark is new: **a tree**. Fresh look; the
 shipping-yard art is gone, not restyled.
 
-**D — The mark (2026-10-10, revised the same day).** A tree that is
-also the gantry, drawn as a **silhouette in the White Tree of Gondor
-family**: one filled compound path, flared trunk, a central leader and
-rising branches that arc upward and end in round leaf caps, no two
-mirrored; one long lower bough reaches out **level** — that is the
-hoist — with a hairline string and a small **apple** in the accent
-hanging from it. The tree is the harness, the bough is the hoist, the
-apple is what it hands you. No ground line, no canopy blob, no leaves
-drawn one by one, no stars, no text in the mark. First cut (a disc on
-a post) was rejected: "a ball and a yoyo". Judged only from rasters at
-512/64/32/16 — at 16 it has to read as a tree plus a warm dot.
-Palette from `lib/theme/catalog.ts`: ink in the theme foreground,
-apple in the accent. Monochrome variant (`currentColor`) for favicons
-and the Paper theme. Wordmark `gantree` lowercase beside it on the
-banner only.
+**D — The mark (2026-10-10, settled the same day).** A bare tree with
+roots — the owner's traced silhouette, **`assets/tree.svg`** (one black
+path, SVG 1.0, 1264×1280 pt) — recoloured to the theme foreground and
+scaled into the 64-box, with a hairline string and a small **apple** in
+the accent hanging from the right bough. The tree is the harness, the
+bough is the hoist, the apple is what it hands you. No ground line, no
+text in the mark. Two generated attempts were rejected first: a disc on
+a post ("a ball and a yoyo") and a Gondor-style ribbon tree whose tips
+read as hooks. `tree.svg` is the source of truth; `assets/logo.svg`
+embeds it, `npm run icons` rasterises everything else. Palette from
+`lib/theme/catalog.ts`. Monochrome variant (`currentColor`) for
+favicons and the Paper theme. Wordmark `gantree` lowercase beside it
+on the banner only.
 
 - [x] `assets/logo.svg` (mark), `assets/logo-mono.svg`; `assets/banner.svg`
-      + `assets/banner.png` (mark + wordmark + "a few people, a few
-      agents, one door"), Boom canvas on the PNG. Banner text is DejaVu
+      + `assets/banner.png` (mark + wordmark + "assistants you run — on
+      Cloudflare or at home."; the first line, "a few people, a few
+      agents, one door", read as a ceiling and went), Boom canvas on
+      the PNG. Banner text is DejaVu
       Sans from the box's font dir — `scripts/icons.ts` `FONT_FILES`
       must grow a fallback before CI regenerates it.
 - [x] `app/icon.svg`, `public/icon.svg`, `app/favicon.ico` (mono, Paper
@@ -318,7 +325,8 @@ banner only.
       from this repo's root). Wiring them into cab/helm is that repo's
       todo.
 - [ ] Owner's eye on the mark at 16 px on a real home screen before it
-      ships; the branch tips still lean toward hooks at 512.
+      ships (the traced tree is fine detail; the favicon may want the
+      trunk thickened).
 - [x] Docs site (`site/`, `scripts/pages.mjs`, `pages.yml`) — home,
       docs, `oauth-catch/`, `privacy/`, Mermaid client-side; additive
       beside the badges on `gh-pages`. **Enable Pages once** (Settings →
@@ -329,18 +337,24 @@ banner only.
       on the consent screen. Plugin defaults (`*_OAUTH_REDIRECT_URI` in
       `harness/mcp/{google,strava,google-health}`) still say
       `shotah.github.io/ai-gantry/oauth-catch/` — flip them.
-- [ ] Screenshots — §4 has landed, the pages exist; this is next:
-      port `scripts/shot.mjs` (headless Chrome over CDP, no puppeteer;
-      flatpak Chrome path on the dev box) with a shot table for `/login`,
-      `/agents`, `/agents/kit`, `/agents/new`, `/users`, `/settings`,
-      `/chat/kit` phone, `/chat` picker phone. Seed through the API, not
-      the DB: `scripts/seed.ts` signs in as `GANTREE_DEV_USER` on
-      loopback and creates Kit + Ada with persona, grants, two room
-      users, and fake `status`/`perf`/`log` so the dashboard has
-      something to show. Output `assets/docs/*.png`; README, install.md,
-      access.md and `site/home.html` reference them. Then the apps repo
-      shoots cab/helm on emulators and the stolen-phone paragraph gets
-      its three pictures.
+- [x] Screenshots — `scripts/seed.ts` and `scripts/shot.mjs`
+      (`npm run seed`, `npm run shot`). Headless Chrome over CDP.
+      `CHROME_BIN` overrides the flatpak path. Seed signs in as
+      `GANTREE_DEV_USER` on loopback and creates Kit and Ada (persona,
+      maps + google grants, two room users, fake status/perf/log, three
+      Kit chat lines) through the HTTP API and the agent WebSocket.
+      Shots in `assets/docs/`: `login.png`, `agents.png`,
+      `agents-kit.png`, `agents-new.png`, `users.png`, `settings.png`,
+      `profile.png`, `chat-kit.png` (phone), `chat.png` (phone picker).
+      README, install.md, access.md, and `site/home.html` reference
+      them. `/chat` was shot as the loopback dev admin (on both rooms,
+      so the picker lists Kit and Ada and shows Manage agents). A member
+      picker needs `GANTREE_DEV_USER` unset and `GANTREE_SHOT_AS_MEMBER=1`.
+      Local `npm run dev` serves the Durable Objects; containers stay
+      off and the dashboard shows unknown.
+- [ ] Apps repo shots are not this checkout: cab/helm on emulators, and
+      the stolen-phone paragraph's three pictures, live in
+      `gantree2-apps`.
 - [ ] Cab and helm: store listing text (in `gantree2-apps`).
 - [ ] GHCR image name `gantree-harness`; Docker Hub description if we
       keep publishing there.
