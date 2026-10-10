@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="420" viewBox="0 0 1280 420" role="img" aria-label="feeds-mcp  list items from an RSS, Atom, or JSON Feed URL">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#15202b"/>
+      <stop offset="55%" stop-color="#1c2a38"/>
+      <stop offset="100%" stop-color="#243746"/>
+    </linearGradient>
+    <linearGradient id="arc" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#e8a317"/>
+      <stop offset="100%" stop-color="#f0b429"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3a4f60"/>
+      <stop offset="100%" stop-color="#2a3a48"/>
+    </linearGradient>
+    <linearGradient id="rail" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#5f7386"/>
+      <stop offset="50%" stop-color="#a8bbc9"/>
+      <stop offset="100%" stop-color="#5f7386"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="22%" cy="58%" r="32%">
+      <stop offset="0%" stop-color="#f0b429" stop-opacity="0.32"/>
+      <stop offset="100%" stop-color="#f0b429" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#8fa3b4" stroke-opacity="0.08" stroke-width="1"/>
+    </pattern>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="420" fill="url(#sky)"/>
+  <rect width="1280" height="420" fill="url(#grid)"/>
+  <ellipse cx="280" cy="250" rx="260" ry="150" fill="url(#glow)"/>
+
+  <!-- Wordmark -->
+  <g transform="translate(120,28)">
+    <text x="0" y="42" fill="#f4f7fa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="54" font-weight="700" letter-spacing="-1">feeds-mcp</text>
+    <text x="2" y="68" fill="#e8a317" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18" letter-spacing="2">TWO TOOLS · NO AUTH · STDIO</text>
+  </g>
+
+  <!-- RSS emitter -->
+  <g transform="translate(168,168)" filter="url(#soft)">
+    <circle cx="36" cy="132" r="16" fill="url(#arc)"/>
+    <path d="M8 92 A 76 76 0 0 1 84 168" fill="none" stroke="url(#arc)" stroke-width="14" stroke-linecap="round"/>
+    <path d="M8 44 A 124 124 0 0 1 132 168" fill="none" stroke="url(#arc)" stroke-width="14" stroke-linecap="round" opacity="0.72"/>
+    <path d="M8 0 A 168 168 0 0 1 176 168" fill="none" stroke="url(#arc)" stroke-width="12" stroke-linecap="round" opacity="0.4"/>
+  </g>
+
+  <!-- Flow rail -->
+  <g filter="url(#soft)">
+    <rect x="380" y="248" width="780" height="14" rx="4" fill="url(#rail)"/>
+    <rect x="392" y="251" width="756" height="4" rx="2" fill="#eef4f8" opacity="0.45"/>
+  </g>
+
+  <!-- Watch cursor (first poll seeds; later ticks only wake on new ids) -->
+  <g transform="translate(718,196)">
+    <line x1="0" y1="8" x2="0" y2="92" stroke="#f0b429" stroke-width="3" stroke-dasharray="5 4"/>
+    <rect x="-38" y="-6" width="76" height="22" rx="4" fill="#3a4f60" stroke="#f0b429" stroke-width="1.5"/>
+    <text x="0" y="10" text-anchor="middle" fill="#f0b429" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11" font-weight="700">cursor</text>
+  </g>
+
+  <!-- Item cards on the rail -->
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" filter="url(#soft)">
+    <g transform="translate(400,206)">
+      <rect width="150" height="56" rx="6" fill="url(#card)" stroke="#6f8799"/>
+      <text x="14" y="24" fill="#6f8799" font-size="11">id=guid-1</text>
+      <text x="14" y="44" fill="#c9d7e3" font-size="13" font-weight="700">seen</text>
+    </g>
+    <g transform="translate(562,206)">
+      <rect width="150" height="56" rx="6" fill="url(#card)" stroke="#6f8799"/>
+      <text x="14" y="24" fill="#6f8799" font-size="11">id=atom-2</text>
+      <text x="14" y="44" fill="#c9d7e3" font-size="13" font-weight="700">seen</text>
+    </g>
+    <g transform="translate(764,198)">
+      <rect width="168" height="64" rx="6" fill="#3f5870" stroke="#f0b429" stroke-width="2"/>
+      <text x="14" y="26" fill="#e8a317" font-size="11">id=jf-3</text>
+      <text x="14" y="48" fill="#f4f7fa" font-size="14" font-weight="700">new item</text>
+    </g>
+    <g transform="translate(948,206)" opacity="0.85">
+      <rect width="168" height="56" rx="6" fill="url(#card)" stroke="#6f8799" stroke-dasharray="5 4"/>
+      <text x="14" y="24" fill="#6f8799" font-size="11">id=&</text>
+      <text x="14" y="44" fill="#9fb3c5" font-size="13">next tick</text>
+    </g>
+  </g>
+
+  <!-- Format chips -->
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="700">
+    <g transform="translate(400,338)">
+      <rect width="72" height="28" rx="6" fill="#3a4f60" stroke="#6f8799"/>
+      <text x="36" y="19" text-anchor="middle" fill="#c9d7e3">RSS</text>
+    </g>
+    <g transform="translate(484,338)">
+      <rect width="80" height="28" rx="6" fill="#3a4f60" stroke="#6f8799"/>
+      <text x="40" y="19" text-anchor="middle" fill="#c9d7e3">Atom</text>
+    </g>
+    <g transform="translate(576,338)">
+      <rect width="118" height="28" rx="6" fill="#3a4f60" stroke="#6f8799"/>
+      <text x="59" y="19" text-anchor="middle" fill="#c9d7e3">JSON Feed</text>
+    </g>
+    <g transform="translate(760,338)">
+      <rect width="132" height="28" rx="6" fill="#3f5870" stroke="#f0b429"/>
+      <text x="66" y="19" text-anchor="middle" fill="#f4f7fa">items_list</text>
+    </g>
+    <g transform="translate(904,338)">
+      <rect width="168" height="28" rx="6" fill="#3f5870" stroke="#f0b429"/>
+      <text x="84" y="19" text-anchor="middle" fill="#f4f7fa">source_resolve</text>
+    </g>
+  </g>
+</svg>

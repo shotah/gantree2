@@ -1,0 +1,32 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage
+coverage.out
+coverage.txt
+/badges/
+/bin/
+/dist/
+
+# Dependency directories
+/vendor/
+
+# IDE
+.idea
+.vscode/*
+!.vscode/settings.json
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local secrets — never commit
+.env
+.env.*
+!.env.example

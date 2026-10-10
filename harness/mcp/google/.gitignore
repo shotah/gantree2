@@ -1,0 +1,42 @@
+# Built binaries
+/bin/
+/google-mcp
+/google-mcp.exe
+/google-workspace-mcp-go
+/google-workspace-mcp-go.exe
+
+# Credentials and secrets
+.env
+client_secret.json
+.credentials/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test / coverage artifacts
+*.test
+*.out
+coverage
+coverage.out
+coverage.txt
+coverage.html
+*.coverprofile
+
+# Local badge output (CI publishes to gh-pages)
+/badges/
+
+# Dev artifacts
+prd.json
+tasks/
+archive/
+
+# Claude Code
+.claude/

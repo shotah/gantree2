@@ -1,0 +1,81 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        form:
+            per-page:
+                - "20"
+            start:
+                - "0"
+        headers:
+            Accept:
+                - application/json
+            Accept-Language:
+                - en-US,en;q=0.9
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-Android-5.23
+            X-App-Ver:
+                - "10861"
+            X-Garmin-Client-Platform:
+                - Android
+            X-Garmin-Paired-App-Version:
+                - "10861"
+            X-Garmin-User-Agent:
+                - com.garmin.android.apps.connectmobile/5.23; ; Google/sdk_gphone64_arm64/google; Android/33; Dalvik/2.1.0
+            X-Gcexperience:
+                - GC5
+            X-Lang:
+                - en
+        url: https://connectapi.garmin.com/gcs-golfcommunity/api/v2/scorecard/summary?per-page=20&start=0
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"pageNumber":1,"rowsPerPage":20,"totalRows":0}'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, max-age=0, must-revalidate
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bc7c61db3e2537-SEA
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 23:18:22 GMT
+            Expires:
+                - "0"
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=N30KE0YCqVN9MaA9LW4HgvOXMxzTPzPxjRCkQXOKJ5uaLRHAHZGEPcx3I0iHfClJQxkoqxV8Pd2yPiPOQ5mAsAnG%2FsHH5BJ6BI1STPlZ%2BPlILmuGn8vboG%2FJi0km8WKLPvIX%2BvCgbA%3D%3D"}]}'
+            Server:
+                - cloudflare
+            Strict-Transport-Security:
+                - max-age=31536000 ; includeSubDomains
+            Vary:
+                - Accept-Encoding
+            X-Content-Type-Options:
+                - nosniff
+            X-Frame-Options:
+                - DENY
+            X-Xss-Protection:
+                - "0"
+        status: 200 OK
+        code: 200
+        duration: 439.0564ms

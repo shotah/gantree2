@@ -45,6 +45,19 @@ npm run eval              # live-model behavior eval; the release gate (docs/eva
 Plugins live and die by [docs/mcp-naming.md](docs/mcp-naming.md): a
 renamed tool fails the eval before any model call.
 
+## Docs
+
+Site: [shotah.github.io/gantree2](https://shotah.github.io/gantree2)
+(`npm run pages`). Same files under [`docs/`](docs/):
+
+| Running it | The agent | The rules |
+| --- | --- | --- |
+| [install](docs/install.md) · [access](docs/access.md) · [security](docs/security.md) · [troubleshooting](docs/troubleshooting.md) | [persona](docs/persona.md) · [channels](docs/channels.md) · [cron](docs/cron.md) · [reactions](docs/reactions.md) · [planner-siblings](docs/planner-siblings.md) · [auth (connecting accounts)](docs/auth.md) | [architecture](docs/architecture.md) · [contract](docs/contract.md) · [mcp](docs/mcp.md) · [custom-mcp](docs/custom-mcp.md) · [mcp-naming](docs/mcp-naming.md) · [evals](docs/eval_setup.md) · [evaluation fable](docs/evaluation_fable.md) · [persona doc goals](docs/persona_doc_goals.md) |
+
+Plan and backlog: [proposal](docs/proposal.md) · [todo](docs/todo.md).
+Contributing: [CONTRIBUTING.md](CONTRIBUTING.md). Reporting a hole:
+[SECURITY.md](SECURITY.md).
+
 ## Run it
 
 ```sh

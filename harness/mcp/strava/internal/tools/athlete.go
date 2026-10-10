@@ -1,0 +1,112 @@
+package tools
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
+	"github.com/shotah/go-strava-mcp/internal/strava"
+)
+
+var getAthleteTool = mcp.NewTool("athlete_get",
+	mcp.WithDescription(`Retrieves the authenticated athlete's profile information.
+
+**OAuth Scope**: Requires profile:read_all for detailed representation.
+
+Returns comprehensive profile data including:
+- Name and username
+- Location (city, state, country)
+- Profile pictures (avatar, profile medium, profile)
+- Account type (premium/summit status)
+- Account creation and update dates
+- Weight (if profile:read_all scope)
+- Basic settings and preferences
+
+Use this to:
+- Get the athlete's ID for other API calls
+- Display profile information
+- Check account status
+- Personalize responses with the athlete's name ("Hi Sarah!")
+
+This is useful when you need to reference the athlete by name or understand their account status.`),
+)
+
+var getAthleteStatsTool = mcp.NewTool("athlete_get_stats",
+	mcp.WithDescription(`Retrieves comprehensive statistics about an athlete's activities.
+
+**OAuth Scope**: Requires profile:read_all. Can only retrieve stats for the authenticated athlete.
+
+**Performance Coaching Value**: Essential for understanding training volume, trends, and progress over different time periods.
+
+Returns activity totals broken down by:
+- **Recent** (last 4 weeks)
+- **Year-to-date** (current calendar year)
+- **All-time** (entire Strava history)
+
+For each period, provides data for three activity types:
+- **Running**: Distance, time, elevation, count
+- **Cycling**: Distance, time, elevation, count
+- **Swimming**: Distance, time, count
+
+Statistics include:
+- Total distance (meters)
+- Total moving time (seconds)
+- Total elevation gain (meters)
+- Activity count
+- Achievement count
+
+**Coaching Applications**:
+- Track training volume week over week
+- Compare current year progress to goals
+- Identify trends (increasing/decreasing volume)
+- Assess training consistency
+- Plan future workouts based on recent load
+- Celebrate milestones and achievements
+
+**Example Insights**:
+- "You've run 150km this month, up 20% from last month"
+- "YTD you've climbed 5,000m - halfway to your annual goal!"
+- "Recent activity shows consistent 4x/week training"`),
+	mcp.WithNumber("id", mcp.Description("Athlete ID (optional - defaults to authenticated athlete)")),
+)
+
+// HandleGetAthlete returns a handler for the athlete_get tool.
+func HandleGetAthlete(client *strava.Client) server.ToolHandlerFunc {
+	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		data, err := client.Get(ctx, "/athlete", nil)
+		if err != nil {
+			return HandleToolError("athlete_get", err), nil
+		}
+		return FormatResponse(data, client), nil
+	}
+}
+
+// HandleGetAthleteStats returns a handler for the athlete_get_stats tool.
+// When id is omitted (0), auto-fetches the authenticated athlete's ID first.
+func HandleGetAthleteStats(client *strava.Client) server.ToolHandlerFunc {
+	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		athleteID := int64(request.GetInt("id", 0))
+
+		// Auto-fetch athlete ID if not provided
+		if athleteID == 0 {
+			id, err := authenticatedAthleteID(ctx, client)
+			if err != nil {
+				return HandleToolError("athlete_get_stats", err), nil
+			}
+			athleteID = id
+		}
+
+		data, err := client.Get(ctx, fmt.Sprintf("/athletes/%d/stats", athleteID), nil)
+		if err != nil {
+			return HandleToolError("athlete_get_stats", err), nil
+		}
+		return FormatResponse(data, client), nil
+	}
+}
+
+// registerAthlete registers all athlete tools with the MCP server.
+func registerAthlete(s *server.MCPServer, client *strava.Client) {
+	s.AddTool(getAthleteTool, HandleGetAthlete(client))
+	s.AddTool(getAthleteStatsTool, HandleGetAthleteStats(client))
+}

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
+  <title id="title">google-health-mcp</title>
+  <desc id="desc">Cool dawn gradient with pulse motif for google-health-mcp / Google Health API.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0B1F2A"/>
+      <stop offset="55%" stop-color="#163A4A"/>
+      <stop offset="100%" stop-color="#2A6F6A"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="420" fill="url(#bg)"/>
+  <path d="M120 250 C220 180, 320 320, 420 250 S620 180, 720 250 S920 320, 1080 230"
+        fill="none" stroke="#7FD4C5" stroke-width="6" stroke-linecap="round" opacity="0.85"/>
+  <circle cx="420" cy="250" r="10" fill="#F2E6D8"/>
+  <circle cx="720" cy="250" r="10" fill="#F2E6D8"/>
+  <text x="600" y="140" text-anchor="middle" fill="#F2E6D8" font-family="Georgia, serif" font-size="42" letter-spacing="1">google-health-mcp</text>
+  <text x="600" y="190" text-anchor="middle" fill="#A8D5CE" font-family="Georgia, serif" font-size="20" letter-spacing="3">HEALTH.GOOGLEAPIS.COM � SLEEP � ACTIVITY � RECOVERY</text>
+</svg>

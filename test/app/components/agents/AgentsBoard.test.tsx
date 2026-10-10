@@ -1,0 +1,164 @@
+/** @vitest-environment jsdom */
+
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { AgentsBoard, BOARD_POLL_MS, nagsFor } from "@/app/components/agents/AgentsBoard";
+import type { ApiClient } from "@/app/lib/agentsHttp";
+import { CONTAINER, STATUS, card, json, session, href } from "./fixtures";
+
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+  Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
+});
+
+function boardClient(role: "admin" | "operator" = "admin", agents = [card()]): ApiClient {
+  return vi.fn(async (input: RequestInfo | URL) => {
+    await Promise.resolve();
+    const url = href(input);
+    if (url === "/api/auth/me") {
+      return json(200, session(role));
+    }
+    if (url === "/api/agents") {
+      return json(200, { agents });
+    }
+    return json(500, { error: url });
+  });
+}
+
+describe("nagsFor", () => {
+  it("flags skipped tools and a failed container", () => {
+    expect(nagsFor(card())).toEqual([]);
+    expect(nagsFor(card({ status: null, container: null }))).toEqual([]);
+    expect(nagsFor(card({
+      status: { ...STATUS, skipped: [{ name: "maps", reason: "no key" }] },
+    }))).toEqual(["1 tool skipped"]);
+    expect(nagsFor(card({
+      status: { ...STATUS, published: [], skipped: [{ name: "a", reason: "x" }, { name: "b", reason: "y" }] },
+      container: { ...CONTAINER, state: "failed", lastError: null },
+    }))).toEqual(["2 tools skipped", "Container failed"]);
+    expect(nagsFor(card({
+      container: { ...CONTAINER, state: "failed", lastError: "boom" },
+    }))).toEqual(["Container failed: boom"]);
+  });
+});
+
+describe("AgentsBoard", () => {
+  it("lists agents with chat, manage, and a nag", async () => {
+    const now = Date.now();
+    const kit = card({ tags: ["home"], status: { ...STATUS, lastTurn: now - 10_000 } });
+    const ada = card({
+      slug: "ada",
+      name: "Ada",
+      tags: [],
+      status: { ...STATUS, harness: "disconnected", published: [], skipped: [{ name: "maps", reason: "no key" }], lastTurn: null },
+      container: { ...CONTAINER, state: "failed", lastError: "boom" },
+    });
+    render(<AgentsBoard client={boardClient("admin", [kit, ada])} />);
+    const kitCard = await screen.findByRole("listitem", { name: "Kit" });
+    expect(within(kitCard).getByText("connected")).toBeTruthy();
+    expect(within(kitCard).getByText("running")).toBeTruthy();
+    expect(within(kitCard).getByText("home")).toBeTruthy();
+    expect(within(kitCard).getByText("1 published · 0 skipped")).toBeTruthy();
+    expect(within(kitCard).getByText("10s ago")).toBeTruthy();
+    expect(within(kitCard).queryByRole("list", { name: "Needs attention for Kit" })).toBeNull();
+    expect(within(kitCard).getByRole("link", { name: "Open chat" }).getAttribute("href")).toBe("/chat/kit");
+    expect(within(kitCard).getByRole("link", { name: "Manage" }).getAttribute("href")).toBe("/agents/kit");
+
+    const adaCard = screen.getByRole("listitem", { name: "Ada" });
+    expect(within(adaCard).getByText("disconnected")).toBeTruthy();
+    expect(within(adaCard).getByText("1 tool skipped")).toBeTruthy();
+    expect(within(adaCard).getByText("Container failed: boom")).toBeTruthy();
+    expect(within(adaCard).getByText("—")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Users" }).getAttribute("href")).toBe("/users");
+    expect(screen.getByRole("link", { name: "Settings" }).getAttribute("href")).toBe("/settings");
+    expect(screen.getByRole("link", { name: "New agent" }).getAttribute("href")).toBe("/agents/new");
+  });
+
+  it("offers an admin an empty-state create link and an operator a plain sentence", async () => {
+    const { rerender } = render(<AgentsBoard client={boardClient("admin", [])} />);
+    expect(await screen.findByRole("link", { name: "Create your first agent" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Create your first agent" }).getAttribute("href")).toBe("/agents/new");
+
+    rerender(<AgentsBoard client={boardClient("operator", [])} />);
+    expect(await screen.findByText("No agents on your row.")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Users" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Create your first agent" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Settings" })).toBeTruthy();
+  });
+
+  it("says when the list is forbidden and when the request fails", async () => {
+    const denied: ApiClient = vi.fn(() => Promise.resolve(json(403, { error: "forbidden" })));
+    const { rerender } = render(<AgentsBoard client={denied} />);
+    expect((await screen.findByRole("alert")).textContent).toContain("Only an admin or an operator can open agents.");
+    expect(screen.queryByRole("link", { name: "Create your first agent" })).toBeNull();
+
+    const down: ApiClient = vi.fn(() => {
+      throw new Error("offline");
+    });
+    rerender(<AgentsBoard client={down} />);
+    expect(await screen.findByText("Could not reach agents. Try again.")).toBeTruthy();
+    expect(screen.queryByText("Only an admin or an operator can open agents.")).toBeNull();
+  });
+
+  it("polls every 10 seconds while the tab is visible and waits while it is hidden", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    let agents = [card()];
+    let lists = 0;
+    const client: ApiClient = vi.fn(async (input: RequestInfo | URL) => {
+      await Promise.resolve();
+      const url = href(input);
+      if (url === "/api/auth/me") {
+        return json(200, session("admin"));
+      }
+      lists += 1;
+      return json(200, { agents });
+    });
+    render(<AgentsBoard client={client} />);
+    expect(await screen.findByRole("heading", { name: "Kit" })).toBeTruthy();
+    expect(lists).toBe(1);
+    agents = [card({ name: "Kitty" })];
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(BOARD_POLL_MS);
+    });
+    expect(await screen.findByRole("heading", { name: "Kitty" })).toBeTruthy();
+    expect(lists).toBe(2);
+
+    let hidden = true;
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => hidden ? "hidden" : "visible" });
+    const quiet = boardClient("admin", [card()]);
+    cleanup();
+    render(<AgentsBoard client={quiet} />);
+    expect(screen.getByText("Loading agents.")).toBeTruthy();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(BOARD_POLL_MS);
+    });
+    expect(quiet).not.toHaveBeenCalled();
+    hidden = false;
+    fireEvent(document, new Event("visibilitychange"));
+    expect(await screen.findByRole("heading", { name: "Kit" })).toBeTruthy();
+  });
+
+  it("ignores a response that lands after unmount", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const client: ApiClient = vi.fn(async (input: RequestInfo | URL) => {
+      await Promise.resolve();
+      await gate;
+      const url = href(input);
+      if (url === "/api/auth/me") {
+        return json(200, session("admin"));
+      }
+      return json(200, { agents: [card()] });
+    });
+    const { unmount } = render(<AgentsBoard client={client} />);
+    unmount();
+    release();
+    await act(async () => {
+      await gate;
+    });
+    expect(screen.queryByRole("heading", { name: "Kit" })).toBeNull();
+  });
+});

@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" role="img" aria-labelledby="title desc">
+  <title id="title">rentals-search-mcp</title>
+  <desc id="desc">Neighborhood street banner with apartment and house silhouettes for rentals-search-mcp.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1A2F3A"/>
+      <stop offset="55%" stop-color="#2A4A52"/>
+      <stop offset="100%" stop-color="#3D6B5E"/>
+    </linearGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2C3E2F" stop-opacity="0"/>
+      <stop offset="40%" stop-color="#243528" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#1A241C" stop-opacity="0.9"/>
+    </linearGradient>
+    <linearGradient id="warm" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#E8B86D" stop-opacity="0.15"/>
+      <stop offset="50%" stop-color="#E8B86D" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#E8B86D" stop-opacity="0.15"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="320" fill="url(#sky)"/>
+  <rect y="180" width="1200" height="140" fill="url(#ground)"/>
+  <ellipse cx="600" cy="200" rx="420" ry="36" fill="url(#warm)"/>
+
+  <!-- Apartment block -->
+  <rect x="220" y="96" width="160" height="140" rx="4" fill="#D9E4E0"/>
+  <rect x="236" y="112" width="28" height="22" fill="#1A2F3A" opacity="0.75"/>
+  <rect x="276" y="112" width="28" height="22" fill="#E8B86D" opacity="0.85"/>
+  <rect x="316" y="112" width="28" height="22" fill="#1A2F3A" opacity="0.75"/>
+  <rect x="236" y="148" width="28" height="22" fill="#1A2F3A" opacity="0.75"/>
+  <rect x="276" y="148" width="28" height="22" fill="#1A2F3A" opacity="0.75"/>
+  <rect x="316" y="148" width="28" height="22" fill="#E8B86D" opacity="0.7"/>
+  <rect x="280" y="188" width="40" height="48" fill="#1A2F3A" opacity="0.85"/>
+
+  <!-- House -->
+  <polygon points="520,130 620,80 720,130" fill="#C96B28"/>
+  <rect x="540" y="130" width="160" height="106" fill="#F2E6D8"/>
+  <rect x="600" y="168" width="40" height="68" fill="#1A2F3A" opacity="0.8"/>
+  <rect x="560" y="150" width="28" height="24" fill="#2A4A52" opacity="0.7"/>
+  <rect x="652" y="150" width="28" height="24" fill="#E8B86D" opacity="0.85"/>
+
+  <!-- Small house -->
+  <polygon points="820,150 890,110 960,150" fill="#3D6B5E"/>
+  <rect x="835" y="150" width="110" height="86" fill="#E8DCC8"/>
+  <rect x="872" y="178" width="36" height="58" fill="#1A2F3A" opacity="0.8"/>
+  <rect x="848" y="162" width="22" height="18" fill="#2A4A52" opacity="0.7"/>
+
+  <text x="600" y="292" text-anchor="middle" fill="#F2E6D8" font-family="Georgia, serif" font-size="28" letter-spacing="2">
+    rentals-search-mcp
+  </text>
+  <text x="600" y="312" text-anchor="middle" fill="#E8B86D" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14" letter-spacing="3">
+    SEARCH � RECOMMEND � HANDOFF
+  </text>
+</svg>

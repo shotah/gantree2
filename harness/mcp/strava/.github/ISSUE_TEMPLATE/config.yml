@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Strava API Documentation
+    url: https://developers.strava.com/docs/reference/
+    about: Check the Strava API docs for endpoint details and rate limits
+  - name: MCP Specification
+    url: https://modelcontextprotocol.io
+    about: Learn about the Model Context Protocol

@@ -1,0 +1,617 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Accept:
+                - application/json
+            Accept-Language:
+                - en-US,en;q=0.9
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-Android-5.23
+            X-App-Ver:
+                - "10861"
+            X-Garmin-Client-Platform:
+                - Android
+            X-Garmin-Paired-App-Version:
+                - "10861"
+            X-Garmin-User-Agent:
+                - com.garmin.android.apps.connectmobile/5.23; ; Google/sdk_gphone64_arm64/google; Android/33; Dalvik/2.1.0
+            X-Gcexperience:
+                - GC5
+            X-Lang:
+                - en
+        url: https://connectapi.garmin.com/userprofile-service/socialProfile
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"id":12345678,"profileId":12345678,"garminGUID":"00000000-0000-0000-0000-000000000000","displayName":"anonymous","fullName":"Anonymous User","userName":"anonymous","profileImageType":"UPLOADED_PHOTO","profileImageUrlLarge":"https://example.com/profile.png","profileImageUrlMedium":"https://example.com/profile.png","profileImageUrlSmall":"https://example.com/profile.png","hasPremiumSocialIcon":false,"location":"Anonymous City","facebookUrl":null,"twitterUrl":null,"personalWebsite":null,"motivation":null,"bio":null,"primaryActivity":null,"favoriteActivityTypes":["cycling","cross_training","walking","other"],"runningTrainingSpeed":0.0,"cyclingTrainingSpeed":0.0,"favoriteCyclingActivityTypes":[],"cyclingClassification":null,"cyclingMaxAvgPower":0.0,"swimmingTrainingSpeed":0.0,"profileVisibility":"following","activityStartVisibility":"public","activityMapVisibility":"public","courseVisibility":"public","activityHeartRateVisibility":"public","activityPowerVisibility":"public","badgeVisibility":"groups","showAge":true,"showWeight":true,"showHeight":true,"showWeightClass":false,"showAgeRange":false,"showGender":true,"showActivityClass":false,"showVO2Max":true,"showPersonalRecords":true,"showLast12Months":true,"showLifetimeTotals":true,"showUpcomingEvents":true,"showRecentFavorites":true,"showRecentDevice":true,"showRecentGear":false,"showBadges":true,"otherActivity":null,"otherPrimaryActivity":null,"otherMotivation":null,"userRoles":["SCOPE_OMT_DISCOUNTS_READ","SCOPE_DI_COACHING_WRITE","SCOPE_GARMINPAY_WRITE","SCOPE_ATP_READ","SCOPE_GHS_SAMD","SCOPE_INSIGHTS_READ","SCOPE_OMT_DISCOUNTS_CREATE","SCOPE_CIQ_APPSTORE_SERVICES_CREATE","SCOPE_DI_TOUM_NATIVE_REPORTED_DETAIL_WRITE","SCOPE_COMMUNITY_COURSE_WRITE","SCOPE_GCOFFER_WRITE","SCOPE_DI_API_READ","SCOPE_DT_CLIENT_ANALYTICS_WRITE","SCOPE_CIQ_APPSTORE_SERVICES_DELETE","SCOPE_OMT_SUBSCRIPTION_READ","SCOPE_DI_COACHING_READ","SCOPE_CONNECT_READ","SCOPE_COMMUNITY_COURSE_READ","SCOPE_GOLF_API_READ","SCOPE_GHS_UPLOAD","SCOPE_DIVE_API_READ","SCOPE_CIQ_APPSTORE_SERVICES_READ","SCOPE_CIQ_APPSTORE_SERVICES_UPDATE","SCOPE_CONNECT_WRITE","SCOPE_CONNECT_MCT_DAILY_LOG_READ","SCOPE_GARMINPAY_READ","SCOPE_DI_OAUTH_2_AUTHORIZATION_CODE_CREATE","SCOPE_GOLF_API_WRITE","SCOPE_INSIGHTS_WRITE","SCOPE_PRODUCT_SEARCH_READ","SCOPE_OMT_CAMPAIGN_READ","SCOPE_GCOFFER_READ","SCOPE_ATP_WRITE","ROLE_CONNECTUSER","ROLE_FITNESS_USER","ROLE_WELLNESS_USER","ROLE_OUTDOOR_USER","ROLE_GHS_USER","ROLE_TACX_APP_USER","ROLE_GARMIN_USER"],"nameApproved":true,"userProfileFullName":"Anonymous User","makeGolfScorecardsPrivate":true,"allowGolfLiveScoring":false,"allowGolfScoringByConnections":true,"userLevel":3,"userPoint":102,"levelUpdateDate":"2024-10-04T00:56:56.0","levelIsViewed":false,"levelPointThreshold":140,"userPointOffset":0,"userPro":false}'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba932c96feb43-SEA
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 20:54:11 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=pavksMB%2B0%2BG1EyxHYejzVjvAdKna05RfSXahTSOyiRP8QPvZBqkfIxaU71ojSUA%2BGYNuY2vxawbJPom49H4yF8VE2rf4fy616RoDjgN4Uns0M4WnjVP0PGmeUVVvldxW%2B9vY6zMPZw%3D%3D"}]}'
+            Server:
+                - cloudflare
+        status: 200 OK
+        code: 200
+        duration: 54.3168ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        form:
+            calendarDate:
+                - "2026-07-15"
+        headers:
+            Accept:
+                - application/json
+            Accept-Language:
+                - en-US,en;q=0.9
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-Android-5.23
+            X-App-Ver:
+                - "10861"
+            X-Garmin-Client-Platform:
+                - Android
+            X-Garmin-Paired-App-Version:
+                - "10861"
+            X-Garmin-User-Agent:
+                - com.garmin.android.apps.connectmobile/5.23; ; Google/sdk_gphone64_arm64/google; Android/33; Dalvik/2.1.0
+            X-Gcexperience:
+                - GC5
+            X-Lang:
+                - en
+        url: https://connectapi.garmin.com/usersummary-service/usersummary/daily/anonymous?calendarDate=2026-07-15
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"userProfileId":12345678,"totalKilocalories":757.0,"activeKilocalories":16.0,"bmrKilocalories":741.0,"wellnessKilocalories":757.0,"burnedKilocalories":null,"consumedKilocalories":null,"remainingKilocalories":null,"totalSteps":278,"netCalorieGoal":null,"totalDistanceMeters":225,"wellnessDistanceMeters":225,"wellnessActiveKilocalories":16.0,"netRemainingKilocalories":16.0,"userDailySummaryId":108750673,"calendarDate":"2026-07-15","rule":{"typeId":4,"typeKey":"groups"},"uuid":"ab7a32682fa5466f80d15dfcd7d90292","dailyStepGoal":4540,"wellnessStartTimeGmt":"2026-07-15T07:00:00.0","wellnessStartTimeLocal":"2026-07-15T00:00:00.0","wellnessEndTimeGmt":"2026-07-15T15:29:00.0","wellnessEndTimeLocal":"2026-07-15T08:29:00.0","durationInMilliseconds":30540000,"wellnessDescription":null,"highlyActiveSeconds":60,"activeSeconds":842,"sedentarySeconds":9139,"sleepingSeconds":20499,"includesWellnessData":true,"includesActivityData":false,"includesCalorieConsumedData":false,"privacyProtected":false,"moderateIntensityMinutes":0,"vigorousIntensityMinutes":0,"floorsAscendedInMeters":0.0,"floorsDescendedInMeters":0.0,"floorsAscended":0.0,"floorsDescended":0.0,"intensityMinutesGoal":150,"userFloorsAscendedGoal":10,"minHeartRate":50,"maxHeartRate":85,"restingHeartRate":53,"lastSevenDaysAvgRestingHeartRate":51,"source":"GARMIN","averageStressLevel":21,"maxStressLevel":76,"stressDuration":4740,"restStressDuration":25140,"activityStressDuration":360,"uncategorizedStressDuration":120,"totalStressDuration":30360,"lowStressDuration":4200,"mediumStressDuration":480,"highStressDuration":60,"stressPercentage":15.61,"restStressPercentage":82.81,"activityStressPercentage":1.19,"uncategorizedStressPercentage":0.4,"lowStressPercentage":13.83,"mediumStressPercentage":1.58,"highStressPercentage":0.2,"stressQualifier":"UNKNOWN","measurableAwakeDuration":9960,"measurableAsleepDuration":20280,"lastSyncTimestampGMT":"2026-07-15T15:29:48.860","minAvgHeartRate":52,"maxAvgHeartRate":83,"bodyBatteryChargedValue":46,"bodyBatteryDrainedValue":2,"bodyBatteryHighestValue":69,"bodyBatteryLowestValue":23,"bodyBatteryMostRecentValue":67,"bodyBatteryDuringSleep":47,"bodyBatteryAtWakeTime":67,"bodyBatteryVersion":3.0,"abnormalHeartRateAlertsCount":null,"averageSpo2":97.0,"lowestSpo2":94,"latestSpo2":96,"latestSpo2ReadingTimeGmt":"2026-07-15T15:29:00.0","latestSpo2ReadingTimeLocal":"2026-07-15T08:29:00.0","averageMonitoringEnvironmentAltitude":34.0,"restingCaloriesFromActivity":null,"bodyBatteryDynamicFeedbackEvent":{"eventTimestampGmt":"2026-07-15T15:00:58","bodyBatteryLevel":"MODERATE","feedbackShortType":"MORNING_RECOVERING_AND_INACTIVE","feedbackLongType":"MORNING_RECOVERING_AND_INACTIVE"},"endOfDayBodyBatteryDynamicFeedbackEvent":{"eventTimestampGmt":"2026-07-15T07:32:01","bodyBatteryLevel":"HIGH","feedbackShortType":"SLEEP_TIME_PASSED_RECOVERING_AND_INTENSIVE_EXERCISE","feedbackLongType":"SLEEP_TIME_PASSED_RECOVERING_AND_INTENSIVE_EXERCISE"},"bodyBatteryActivityEventList":[{"eventType":"RECOVERY","eventStartTimeGmt":"2026-07-15T09:13:19","timezoneOffset":-25200000,"durationInMilliseconds":2940000,"bodyBatteryImpact":7,"feedbackType":"RECOVERY_BODY_BATTERY_INCREASE","shortFeedback":"BODY_BATTERY_RECHARGE","deviceId":12345678,"activityName":null,"activityType":null,"activityId":null,"eventUpdateTimeGmt":"2026-07-15T15:26:00"}],"avgWakingRespirationValue":13.0,"highestRespirationValue":20.0,"lowestRespirationValue":7.0,"latestRespirationValue":17.0,"latestRespirationTimeGMT":"2026-07-15T15:28:00.0","respirationAlgorithmVersion":200}'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba9332a30eb43-SEA
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 20:54:11 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=swmSCiVzgciawTrNyoEa4XubeybOxSNOkAIIuioR43TB4QYGAq2Zz9vTYc36nzIjHgzVkXbmKJn2sSTe6%2BulQoF99TYaVnZKkZX6o7MPgaA%2FAZE8l8iChxygNEJtkqSW1qgmiEYKCQ%3D%3D"}]}'
+            Server:
+                - cloudflare
+        status: 200 OK
+        code: 200
+        duration: 110.5115ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Accept:
+                - application/json
+            Accept-Language:
+                - en-US,en;q=0.9
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-Android-5.23
+            X-App-Ver:
+                - "10861"
+            X-Garmin-Client-Platform:
+                - Android
+            X-Garmin-Paired-App-Version:
+                - "10861"
+            X-Garmin-User-Agent:
+                - com.garmin.android.apps.connectmobile/5.23; ; Google/sdk_gphone64_arm64/google; Android/33; Dalvik/2.1.0
+            X-Gcexperience:
+                - GC5
+            X-Lang:
+                - en
+        url: https://connectapi.garmin.com/usersummary-service/usersummary/hydration/daily/2026-07-15
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"userId":12345678,"calendarDate":"2026-07-15","valueInML":null,"goalInML":2839.056,"dailyAverageinML":null,"lastEntryTimestampLocal":null,"sweatLossInML":null,"activityIntakeInML":null}'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba933dbd7eb43-SEA
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 20:54:11 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=pM2dD60uvuHEtcFi0GUzPHlKFsKHfLerGWu0rW6CdA7Z%2F%2BCvCkt4k2YNLZrVv3jUM6gMe0eC64paphcoKot4IXKPcMK%2BpzE612ViY7QWu%2BArJOqsPVLkzb%2Be7Yqs%2BkCfm4CCohd7Yw%3D%3D"}]}'
+            Server:
+                - cloudflare
+        status: 200 OK
+        code: 200
+        duration: 78.9091ms
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Accept:
+                - application/json
+            Accept-Language:
+                - en-US,en;q=0.9
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-Android-5.23
+            X-App-Ver:
+                - "10861"
+            X-Garmin-Client-Platform:
+                - Android
+            X-Garmin-Paired-App-Version:
+                - "10861"
+            X-Garmin-User-Agent:
+                - com.garmin.android.apps.connectmobile/5.23; ; Google/sdk_gphone64_arm64/google; Android/33; Dalvik/2.1.0
+            X-Gcexperience:
+                - GC5
+            X-Lang:
+                - en
+        url: https://connectapi.garmin.com/usersummary-service/stats/steps/daily/2026-07-08/2026-07-15
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '[{"calendarDate":"2026-07-08","totalSteps":12310,"totalDistance":11023,"stepGoal":4540},{"calendarDate":"2026-07-09","totalSteps":3164,"totalDistance":2563,"stepGoal":4540},{"calendarDate":"2026-07-10","totalSteps":12338,"totalDistance":10208,"stepGoal":4540},{"calendarDate":"2026-07-11","totalSteps":7787,"totalDistance":5759,"stepGoal":4540},{"calendarDate":"2026-07-12","totalSteps":3238,"totalDistance":2636,"stepGoal":4540},{"calendarDate":"2026-07-13","totalSteps":8093,"totalDistance":7169,"stepGoal":4540},{"calendarDate":"2026-07-14","totalSteps":4165,"totalDistance":3073,"stepGoal":4540},{"calendarDate":"2026-07-15","totalSteps":278,"totalDistance":225,"stepGoal":4540}]'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba9345d45eb43-SEA
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 20:54:11 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=dDxizcy7f0cD82VGBanJnOWU4Bz71dOknd8z8BIe1ZBFdcq3pQAHX2NBxQgVUDGf7ilEytk%2Bc7uryQz%2Boar1oSuVwr%2FnQCNKa%2BsO%2FMMnVXRS4F4meW%2F7RRyoLSQ9G7kW1HYgn00C3w%3D%3D"}]}'
+            Server:
+                - cloudflare
+        status: 200 OK
+        code: 200
+        duration: 58.1184ms
+    - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Accept:
+                - application/json
+            Accept-Language:
+                - en-US,en;q=0.9
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-Android-5.23
+            X-App-Ver:
+                - "10861"
+            X-Garmin-Client-Platform:
+                - Android
+            X-Garmin-Paired-App-Version:
+                - "10861"
+            X-Garmin-User-Agent:
+                - com.garmin.android.apps.connectmobile/5.23; ; Google/sdk_gphone64_arm64/google; Android/33; Dalvik/2.1.0
+            X-Gcexperience:
+                - GC5
+            X-Lang:
+                - en
+        url: https://connectapi.garmin.com/usersummary-service/stats/steps/weekly/2026-07-15/4
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '[{"calendarDate":"2026-06-18","values":{"totalSteps":56922.0,"averageSteps":8131.714285714285,"wellnessDataDaysCount":7,"averageDistance":6539.142857142857,"totalDistance":45774.0}},{"calendarDate":"2026-06-25","values":{"totalSteps":57141.0,"averageSteps":8163.0,"wellnessDataDaysCount":7,"averageDistance":6732.428571428572,"totalDistance":47127.0}},{"calendarDate":"2026-07-02","values":{"totalSteps":55194.0,"averageSteps":7884.857142857143,"wellnessDataDaysCount":7,"averageDistance":6647.571428571428,"totalDistance":46533.0}},{"calendarDate":"2026-07-09","values":{"totalSteps":39063.0,"averageSteps":5580.428571428572,"wellnessDataDaysCount":7,"averageDistance":4519.0,"totalDistance":31633.0}}]'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba934be5ceb43-SEA
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 20:54:12 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=cTaf%2F1XStlcwxHRIoGBYuxCF%2FuUU12sc36PsyAVS8GK38HSYijz5tuyQQPEZU2JC0pKI3yw1oigUHhBrjGNoB1tf9YrjZiPQDZvR86HXY%2F8oupjiCfdprP31NiDYAssOdXmz0vcOmQ%3D%3D"}]}'
+            Server:
+                - cloudflare
+        status: 200 OK
+        code: 200
+        duration: 61.9446ms
+    - id: 5
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Accept:
+                - application/json
+            Accept-Language:
+                - en-US,en;q=0.9
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-Android-5.23
+            X-App-Ver:
+                - "10861"
+            X-Garmin-Client-Platform:
+                - Android
+            X-Garmin-Paired-App-Version:
+                - "10861"
+            X-Garmin-User-Agent:
+                - com.garmin.android.apps.connectmobile/5.23; ; Google/sdk_gphone64_arm64/google; Android/33; Dalvik/2.1.0
+            X-Gcexperience:
+                - GC5
+            X-Lang:
+                - en
+        url: https://connectapi.garmin.com/usersummary-service/stats/stress/daily/2026-07-08/2026-07-15
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '[{"calendarDate":"2026-07-08","values":{"highStressDuration":1800,"lowStressDuration":19500,"overallStressLevel":28,"restStressDuration":34920,"mediumStressDuration":6060}},{"calendarDate":"2026-07-09","values":{"highStressDuration":420,"lowStressDuration":30840,"overallStressLevel":27,"restStressDuration":45480,"mediumStressDuration":4680}},{"calendarDate":"2026-07-10","values":{"highStressDuration":720,"lowStressDuration":9840,"overallStressLevel":28,"restStressDuration":35700,"mediumStressDuration":9540}},{"calendarDate":"2026-07-11","values":{"highStressDuration":600,"lowStressDuration":17100,"overallStressLevel":25,"restStressDuration":47220,"mediumStressDuration":2520}},{"calendarDate":"2026-07-12","values":{"highStressDuration":5640,"lowStressDuration":15420,"overallStressLevel":27,"restStressDuration":44700,"mediumStressDuration":3720}},{"calendarDate":"2026-07-13","values":{"highStressDuration":1500,"lowStressDuration":14220,"overallStressLevel":25,"restStressDuration":48780,"mediumStressDuration":7080}},{"calendarDate":"2026-07-14","values":{"highStressDuration":1020,"lowStressDuration":16200,"overallStressLevel":26,"restStressDuration":47640,"mediumStressDuration":8580}},{"calendarDate":"2026-07-15","values":{"highStressDuration":60,"lowStressDuration":4200,"overallStressLevel":21,"restStressDuration":25140,"mediumStressDuration":480}}]'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba94bcbabeb43-SEA
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 20:54:15 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=3Gaz7%2BxEYq7vDQsV62PGqLU8il0It4VeZULUqOy7T6lvqtgIxdYL9giVKX8NnlH2JXJR1o%2BzUJ%2BacZaHy%2FkJ3sWHeLRV7THYpD7Qc3X4nKXmL57s%2BkfaI1np%2Fz3tc74i7Eutocup7A%3D%3D"}]}'
+            Server:
+                - cloudflare
+        status: 200 OK
+        code: 200
+        duration: 53.0459ms
+    - id: 6
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Accept:
+                - application/json
+            Accept-Language:
+                - en-US,en;q=0.9
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-Android-5.23
+            X-App-Ver:
+                - "10861"
+            X-Garmin-Client-Platform:
+                - Android
+            X-Garmin-Paired-App-Version:
+                - "10861"
+            X-Garmin-User-Agent:
+                - com.garmin.android.apps.connectmobile/5.23; ; Google/sdk_gphone64_arm64/google; Android/33; Dalvik/2.1.0
+            X-Gcexperience:
+                - GC5
+            X-Lang:
+                - en
+        url: https://connectapi.garmin.com/usersummary-service/stats/stress/weekly/2026-07-15/4
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '[{"calendarDate":"2026-06-18","value":29},{"calendarDate":"2026-06-25","value":28},{"calendarDate":"2026-07-02","value":30},{"calendarDate":"2026-07-09","value":25}]'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba964ccaeeb43-SEA
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 20:54:19 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=A0%2FUg%2B27wIuAWEGcGGBZ5fLpuI%2FwqPg7Wbq9Uti4qXz5sDwf1alhAUPSbusb6Qr1YxYYs9ZkM5gXKPMlgH9IA66Cu2BTIPi7t%2Fcao9weZAHNsGmFKsJlPjAAt9BP4%2F2wVxAbBh%2FGzw%3D%3D"}]}'
+            Server:
+                - cloudflare
+        status: 200 OK
+        code: 200
+        duration: 55.9087ms
+    - id: 7
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Accept:
+                - application/json
+            Accept-Language:
+                - en-US,en;q=0.9
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-Android-5.23
+            X-App-Ver:
+                - "10861"
+            X-Garmin-Client-Platform:
+                - Android
+            X-Garmin-Paired-App-Version:
+                - "10861"
+            X-Garmin-User-Agent:
+                - com.garmin.android.apps.connectmobile/5.23; ; Google/sdk_gphone64_arm64/google; Android/33; Dalvik/2.1.0
+            X-Gcexperience:
+                - GC5
+            X-Lang:
+                - en
+        url: https://connectapi.garmin.com/usersummary-service/stats/hydration/daily/2026-07-08/2026-07-15
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 2
+        body: '[]'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba97dce78eb43-SEA
+            Content-Length:
+                - "2"
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 20:54:23 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=O7icIKnnHWjknuJaiEMMyA8NQMY5MjeUiArbHY9AE%2BnDfXp6PX5hXVw19ZsG1NxUqtnFGF5OzZYPbEMl5nBl0Tfxj3LMjy9m3LBPbrW3cMGT9QFfnd4PwQJuUyHcvt%2FinhmoAQaj%2Fg%3D%3D"}]}'
+            Server:
+                - cloudflare
+        status: 200 OK
+        code: 200
+        duration: 53.8667ms
+    - id: 8
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Accept:
+                - application/json
+            Accept-Language:
+                - en-US,en;q=0.9
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-Android-5.23
+            X-App-Ver:
+                - "10861"
+            X-Garmin-Client-Platform:
+                - Android
+            X-Garmin-Paired-App-Version:
+                - "10861"
+            X-Garmin-User-Agent:
+                - com.garmin.android.apps.connectmobile/5.23; ; Google/sdk_gphone64_arm64/google; Android/33; Dalvik/2.1.0
+            X-Gcexperience:
+                - GC5
+            X-Lang:
+                - en
+        url: https://connectapi.garmin.com/usersummary-service/stats/im/daily/2026-07-08/2026-07-15
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '[{"calendarDate":"2026-07-08","weeklyGoal":150,"moderateValue":43,"vigorousValue":74},{"calendarDate":"2026-07-09","weeklyGoal":150,"moderateValue":0,"vigorousValue":0},{"calendarDate":"2026-07-10","weeklyGoal":150,"moderateValue":36,"vigorousValue":73},{"calendarDate":"2026-07-11","weeklyGoal":150,"moderateValue":48,"vigorousValue":11},{"calendarDate":"2026-07-12","weeklyGoal":150,"moderateValue":9,"vigorousValue":15},{"calendarDate":"2026-07-13","weeklyGoal":150,"moderateValue":7,"vigorousValue":23},{"calendarDate":"2026-07-14","weeklyGoal":150,"moderateValue":47,"vigorousValue":41},{"calendarDate":"2026-07-15","weeklyGoal":150,"moderateValue":0,"vigorousValue":0}]'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba996cd64eb43-SEA
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 20:54:27 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=CbLS0ijQ4ctmrINTc1f4gxNMky53xM3pXzNdPyX%2B6%2B1m0w%2BDa9lkZh4Zw0RyYSsrK0p7j%2Bk2VKwTkWyFaI%2B%2BsWS5dR765H1lZxWbyPul1eeX2RSQVx%2BRzCHyA%2FshkogatyRouDeSPg%3D%3D"}]}'
+            Server:
+                - cloudflare
+        status: 200 OK
+        code: 200
+        duration: 56.5007ms
+    - id: 9
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Accept:
+                - application/json
+            Accept-Language:
+                - en-US,en;q=0.9
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-Android-5.23
+            X-App-Ver:
+                - "10861"
+            X-Garmin-Client-Platform:
+                - Android
+            X-Garmin-Paired-App-Version:
+                - "10861"
+            X-Garmin-User-Agent:
+                - com.garmin.android.apps.connectmobile/5.23; ; Google/sdk_gphone64_arm64/google; Android/33; Dalvik/2.1.0
+            X-Gcexperience:
+                - GC5
+            X-Lang:
+                - en
+        url: https://connectapi.garmin.com/usersummary-service/stats/im/weekly/2026-06-17/2026-07-15
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '[{"calendarDate":"2026-06-15","weeklyGoal":150,"moderateValue":146,"vigorousValue":175},{"calendarDate":"2026-06-22","weeklyGoal":150,"moderateValue":91,"vigorousValue":156},{"calendarDate":"2026-06-29","weeklyGoal":150,"moderateValue":240,"vigorousValue":163},{"calendarDate":"2026-07-06","weeklyGoal":150,"moderateValue":172,"vigorousValue":225},{"calendarDate":"2026-07-13","weeklyGoal":150,"moderateValue":54,"vigorousValue":64}]'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba9afce9feb43-SEA
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 20:54:31 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=vo%2BL%2FRQ3PjEwt1KpzT5d9f5sCIlpbJvh8eHwi7zMmuAxw6hA7YuBLb%2BL2n831YsBWb3UI3Yj3qcIQvQ7t0iQzrQoIZ%2FDje%2BSJUJEvMje%2FvPzlPjTQOK15uVYdUJ5oR3%2F01GX58aUrQ%3D%3D"}]}'
+            Server:
+                - cloudflare
+        status: 200 OK
+        code: 200
+        duration: 56.6377ms

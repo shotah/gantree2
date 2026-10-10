@@ -1,0 +1,1 @@
+{"name":"chat","command":"chat","env_keys":[],"optional_env_keys":["CHAT_MAILBOX_URL","CHAT_BEARER","IMAGE_OUTPUT_DIR","PENDANT_IMAGE_DIR"],"blurb":"Chat face / wallpaper / mood. Crane already has CHAT_MAILBOX_URL + CHAT_BEARER. IMAGE_OUTPUT_DIR is the photo_generate handoff; optional PENDANT_IMAGE_DIR is a second allowed root."}

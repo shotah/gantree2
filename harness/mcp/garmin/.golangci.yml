@@ -1,0 +1,70 @@
+version: "2"
+linters:
+  enable:
+    - bodyclose
+    - copyloopvar
+    - dupword
+    - durationcheck
+    - errname
+    - errorlint
+    - exhaustive
+    - exptostd
+    - fatcontext
+    - forcetypeassert
+    - goconst
+    - gocritic
+    - gomodguard_v2
+    - gosec
+    - intrange
+    - misspell
+    - modernize
+    - nestif
+    - nilerr
+    - nilnil
+    - perfsprint
+    - prealloc
+    - predeclared
+    - revive
+    - sqlclosecheck
+    - unconvert
+    - unparam
+    - usestdlibvars
+  settings:
+    goconst:
+      min-len: 3
+      min-occurrences: 5
+      ignore-tests: true
+    gocritic:
+      disabled-checks:
+        - hugeParam
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      # Declarative endpoint registry repeats HTTP verbs, param names, and descriptions by design.
+      - linters:
+          - goconst
+        path: endpoint/definitions/
+      - linters:
+          - goconst
+          - gosec
+        path: _test\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

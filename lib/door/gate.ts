@@ -22,8 +22,17 @@ export type Decision
 const PUBLIC_EXACT = new Set(["/login", "/api/auth/google", "/api/auth/callback/google", "/manifest.webmanifest", "/sw.js", "/icon.svg", "/favicon.ico", "/robots.txt"]);
 const PUBLIC_PREFIX = ["/_vinext/", "/.well-known/", "/_next/", "/assets/"];
 
+/**
+ * Harness snapshot GET/PUT. Signed with the room bearer (`lib/agents/snapshot`);
+ * no session cookie. Only the two restore files, not the rest of `/api/agents`.
+ */
+const SNAPSHOT_PATH = /^\/api\/agents\/[a-z][a-z0-9-]{0,62}\/snapshot\/(?:gantry_db|self_md)$/;
+
 export function isPublicPath(pathname: string): boolean {
   if (PUBLIC_EXACT.has(pathname)) {
+    return true;
+  }
+  if (SNAPSHOT_PATH.test(pathname)) {
     return true;
   }
   return PUBLIC_PREFIX.some((p) => pathname.startsWith(p));
@@ -88,8 +97,11 @@ export async function gate(req: Request, env: GateEnv, store: UserStore, now = D
   return { kind: "pass", who: { ...user, sub: identity.sub, email: identity.email } };
 }
 
-/** Headers handlers read instead of re-opening the cookie. */
-export function principalHeaders(who: Principal): Record<string, string> {
+/** Every name `principalHeaders` writes. Middleware strips these from the client before the gate speaks. */
+export const PRINCIPAL_HEADER_NAMES = ["x-gantree-sub", "x-gantree-email", "x-gantree-role", "x-gantree-agents"] as const;
+
+/** Headers handlers read instead of re-opening the cookie. Only middleware writes them (`forwardHeaders`). */
+export function principalHeaders(who: Principal): Record<(typeof PRINCIPAL_HEADER_NAMES)[number], string> {
   return {
     "x-gantree-sub": who.sub,
     "x-gantree-email": who.email ?? "",

@@ -4,7 +4,8 @@ name: deploy-cloudflare
 #
 # Repository → Settings → Secrets and variables → Actions:
 #   Variables: GOOGLE_CLIENT_ID, GANTREE_ADMINS, GANTREE_ALLOW
-#   Secrets:   GOOGLE_CLIENT_SECRET, SESSION_SECRET, CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
+#   Secrets:   GOOGLE_CLIENT_SECRET, SESSION_SECRET, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
+#   Variables (optional): VAPID_SUBJECT
 #
 # Home (celld) does not use this file: `npm run deploy:home` with CELLD_VARS_FILE.
 
@@ -57,14 +58,21 @@ jobs:
           npx wrangler deploy \
             --var GOOGLE_CLIENT_ID:"${{ vars.GOOGLE_CLIENT_ID }}" \
             --var GANTREE_ADMINS:"${{ vars.GANTREE_ADMINS }}" \
-            --var GANTREE_ALLOW:"${{ vars.GANTREE_ALLOW }}"
+            --var GANTREE_ALLOW:"${{ vars.GANTREE_ALLOW }}" \
+            --var VAPID_SUBJECT:"${{ vars.VAPID_SUBJECT }}"
 
+      # Push secrets are optional: chat works without web push. Only non-empty values are sent.
       - name: wrangler secret bulk
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
         run: |
-          node -e 'process.stdout.write(JSON.stringify({GOOGLE_CLIENT_SECRET:process.env.GOOGLE_CLIENT_SECRET,SESSION_SECRET:process.env.SESSION_SECRET}))' \
-            | npx wrangler secret bulk
+          node -e '
+            const names = ["GOOGLE_CLIENT_SECRET", "SESSION_SECRET", "VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY"];
+            const out = Object.fromEntries(names.filter((n) => process.env[n]).map((n) => [n, process.env[n]]));
+            process.stdout.write(JSON.stringify(out));
+          ' | npx wrangler secret bulk

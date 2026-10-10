@@ -1,0 +1,55 @@
+name: Feature Request
+description: Suggest a new tool, enhancement, or improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea for StravaMCP? We'd love to hear it. Describe the problem you're trying to solve and your proposed solution.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: "What problem does this solve? What are you trying to do that you can't today?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: "How would you like this to work? If it's a new MCP tool, describe the inputs and outputs."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - New MCP tool
+        - Enhancement to existing tool
+        - Authentication / OAuth
+        - CLI / flags
+        - Performance
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: "Have you tried any workarounds? Are there other approaches?"
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: "Links to Strava API docs, screenshots, example payloads, etc."
+    validations:
+      required: false

@@ -1,0 +1,133 @@
+<link rel="icon" href="assets/logo-mono.svg">
+<div class="hero">
+  <img class="map" src="assets/banner.png" width="1280" height="400" alt="gantree — a few people, a few agents, one door.">
+  <div class="lede">
+    <p class="kicker">Your agent. Your box.</p>
+    <h1>A personal AI agent you run, with a chat app that follows you to the car.</h1>
+    <p>
+      One Cloudflare Worker (or the same thing on a box at home) holds
+      the door, the settings, and a chat room per agent. One container
+      image holds the <strong>harness</strong>: a Go process with a
+      persona, a memory you can <code>sqlite3</code>, and the tools you
+      granted. The harness dials out. <strong>No open ports. Ever.</strong>
+    </p>
+    <p>
+      Sign in with Google. An admin keeps a short list of who may enter
+      and which agents they may talk to. Talk from a browser, from the
+      Android app, or from the iPhone app — same room, same thread, same
+      agent, and a message card on the dash when you are driving.
+    </p>
+  </div>
+  <dl class="defs">
+    <div>
+      <dt>harness</dt>
+      <dd>The agent runtime. Static Go binary, one persona, any OpenAI-compatible model, MCP plugins compiled in. It remembers on Thursday.</dd>
+    </div>
+    <div>
+      <dt>agent</dt>
+      <dd>One named person on that harness: its own room, its own memory, its own keys and grants. Kit is not Ada.</dd>
+    </div>
+    <div>
+      <dt>settings</dt>
+      <dd>The admin screens. Users, agents, grants, keys, spend. Never a hop in a chat turn.</dd>
+    </div>
+    <div>
+      <dt>chat</dt>
+      <dd>The PWA and the Durable Object room behind it. Phones dial in; the harness dials in; the Worker never dials the house.</dd>
+    </div>
+  </dl>
+  <div class="cta">
+    <a class="btn primary" href="docs/install.html">Stand it up</a>
+    <a class="btn" href="docs/architecture.html">How it is built</a>
+    <a class="btn" href="docs/security.html">What we chose</a>
+    <a class="btn" href="https://github.com/shotah/gantree2">GitHub</a>
+  </div>
+</div>
+
+<section>
+  <p class="kicker">One repo</p>
+  <h2>Worker, harness, plugins, apps. One manifest, two places to run it.</h2>
+  <p>
+    <code>wrangler deploy</code> puts the Worker on Cloudflare and the
+    harness on Cloudflare Containers. <code>celld deploy</code> puts the
+    same manifest on a Mini at home. Same door, same rooms, same image.
+    The phones do not care which.
+  </p>
+  <div class="family">
+    <a href="docs/architecture.html">
+      <strong>Worker</strong>
+      <em>Door · settings · rooms</em>
+      <span>Vinext on Workers. Google sign-in, allowlist, roles. A Settings DO for people and keys; an Agent DO per slug for the thread and the container.</span>
+    </a>
+    <a href="docs/architecture.html#harness">
+      <strong>Harness</strong>
+      <em>The agent</em>
+      <span>Go. Parallel tool calls in one round, a completer pass, cron, watches, a planner. Snapshots its brain to R2 and wakes up the same person.</span>
+    </a>
+    <a href="docs/mcp-naming.html">
+      <strong>Plugins</strong>
+      <em>MCP, compiled in</em>
+      <span>Maps, Gmail and Calendar, Strava, Garmin, Google Health, feeds, rentals, images, math. Granted per agent in <code>mcp.toml</code>. Omit it and it does not exist.</span>
+    </a>
+    <a href="https://github.com/shotah/gantree2-apps">
+      <strong>Apps</strong>
+      <em>cab · helm</em>
+      <span>Android with Android Auto, iPhone with CarPlay. Native, thin, the same fifteen themes from one generated palette.</span>
+    </a>
+  </div>
+</section>
+
+<section>
+  <p class="kicker">The difference</p>
+  <h2>A harness is a process. A marketplace is a costume.</h2>
+  <div class="split">
+    <article class="card is">
+      <h3>What this is</h3>
+      <ul>
+        <li>A binary you run. Aims, voice, and work still exist next week.</li>
+        <li>The model is a socket — Gemini, OpenAI, Grok, Ollama. Swap it. The loop stays.</li>
+        <li>A tool listed in <code>mcp.toml</code> is the grant. Nothing else is reachable.</li>
+        <li>Outbound chat only. Browser, Android, iPhone share one room. <strong>No open ports. Ever.</strong></li>
+        <li>Independent lookups fan out in one round; the next round uses the results.</li>
+      </ul>
+    </article>
+    <article class="card is-not">
+      <h3>What it is not</h3>
+      <ul>
+        <li>A plugin marketplace with “harness” in the README.</li>
+        <li>Prompts and sub-agents that live in someone else's context window.</li>
+        <li>A chatbot that dies when the window gets expensive.</li>
+        <li>A gateway in the token path so every message pays a platform tax.</li>
+        <li>A hosted service. You hold the keys; we hold the code.</li>
+      </ul>
+    </article>
+  </div>
+</section>
+
+<section>
+  <p class="kicker">Connecting accounts</p>
+  <h2>Gmail, Calendar, Strava, Garmin — a laptop hop, then paste.</h2>
+  <p>
+    The harness is headless. To connect an account, the agent gives you a
+    link; the provider sends you back to a
+    <a href="oauth-catch/">static page</a> that shows a one-time code and
+    stores nothing. Paste it to the agent: <code>/auth google &lt;code&gt;</code>.
+    The refresh token never leaves the agent's box. What that means for
+    your data: <a href="privacy/">privacy</a>.
+  </p>
+</section>
+
+<section>
+  <p class="kicker">Start here</p>
+  <h2>The docs.</h2>
+  <div class="docs">
+    <a href="docs/install.html"><strong>Install</strong><span>Cloudflare or a box at home. Same manifest. Zero inbound agent ports.</span></a>
+    <a href="docs/access.html"><strong>Access</strong><span>One Google sign-in, an allowlist, three roles, which agents.</span></a>
+    <a href="docs/architecture.html"><strong>Architecture</strong><span>Worker, DOs, container, snapshot. Pictures.</span></a>
+    <a href="docs/security.html"><strong>Security</strong><span>Threat model, every choice with its accepted risk, the register.</span></a>
+    <a href="docs/custom-mcp.html"><strong>Custom MCP</strong><span>Write a plugin the harness can carry.</span></a>
+    <a href="docs/mcp-naming.html"><strong>MCP naming</strong><span>The rules server ids and tool names live by.</span></a>
+    <a href="docs/eval_setup.html"><strong>Evals</strong><span>How the turn loop is scored before a release.</span></a>
+    <a href="https://github.com/shotah/gantree2/blob/main/CONTRIBUTING.md"><strong>Contributing</strong><span>Where things go and what the gates are.</span></a>
+  </div>
+</section>

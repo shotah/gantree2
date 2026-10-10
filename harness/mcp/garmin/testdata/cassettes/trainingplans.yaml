@@ -1,0 +1,125 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Accept:
+                - application/json
+            Accept-Language:
+                - en-US,en;q=0.9
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-Android-5.23
+            X-App-Ver:
+                - "10861"
+            X-Garmin-Client-Platform:
+                - Android
+            X-Garmin-Paired-App-Version:
+                - "10861"
+            X-Garmin-User-Agent:
+                - com.garmin.android.apps.connectmobile/5.23; ; Google/sdk_gphone64_arm64/google; Android/33; Dalvik/2.1.0
+            X-Gcexperience:
+                - GC5
+            X-Lang:
+                - en
+        url: https://connectapi.garmin.com/trainingplan-service/trainingplan/plans
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"trainingPlanList":[{"trainingPlanId":43655027,"trainingPlanCategory":"FBT_ADAPTIVE","trainingType":{"typeId":2,"typeKey":"Running"},"trainingSubType":{"subTypeId":27,"subTypeKey":"GarminRunningCoachOpenLoop"},"trainingLevel":{"levelId":3,"levelKey":"Intermediate"},"trainingVersion":{"versionId":3,"versionName":"Pace"},"formatLocale":{"id":12345678,"key":"en","isSupported":true},"ownerId":12345678,"ownerDisplayName":null,"trainingStatus":{"statusId":2,"statusKey":"Completed"},"privacyRule":{"typeId":2,"typeKey":"private"},"name":"2026 Fitness Plan","description":"Garmin Run Coach. Open Loop. Generic version.","durationInWeeks":16,"avgWeeklyWorkouts":7,"parentPlanId":39305049,"createDate":"2026-01-08T00:00:00.0","publishDate":null,"expireDate":null,"startDate":"2026-01-08T00:00:00.0","pausedDate":null,"resumedDate":null,"endDate":"2026-04-30T00:00:00.0","taskList":null,"adaptivePlanPhases":null,"planPhases":null,"nameI18nKey":"tp_name_eb8a9686-7179-44a9-aa28-93888c8cd831","descriptionI18nKey":"tp_descr_4151bc6a-ef63-4fee-820c-c561fe52eec6","planKey":"run_89e4420a-2c28-4f19-ac9f-3de58f4fbd2d","seriesIndex":null,"daysInLastWeek":null,"supplementalSports":[]},{"trainingPlanId":36125875,"trainingPlanCategory":"ITP","trainingType":{"typeId":3,"typeKey":"Cycling"},"trainingSubType":{"subTypeId":32,"subTypeKey":"MountainBiking"},"trainingLevel":{"levelId":2,"levelKey":"Beginner"},"trainingVersion":{"versionId":7,"versionName":"Power"},"formatLocale":{"id":12345678,"key":"en","isSupported":true},"ownerId":12345678,"ownerDisplayName":null,"trainingStatus":{"statusId":2,"statusKey":"Completed"},"privacyRule":{"typeId":2,"typeKey":"private"},"name":"2023 Mountain Biking Plan","description":null,"durationInWeeks":23,"avgWeeklyWorkouts":4,"parentPlanId":33626237,"createDate":"2022-11-10T00:00:00.0","publishDate":null,"expireDate":null,"startDate":"2022-11-10T00:00:00.0","pausedDate":null,"resumedDate":null,"endDate":"2023-04-13T00:00:00.0","taskList":null,"adaptivePlanPhases":null,"planPhases":null,"nameI18nKey":null,"descriptionI18nKey":null,"planKey":null,"seriesIndex":null,"daysInLastWeek":5,"baseWeeks":9,"buildWeeks":8,"peakWeeks":6,"supplementalSports":null}],"searchFilter":{"ownerId":12345678,"ownerDisplayName":null,"trainingLevels":null,"trainingStatusList":[],"trainingTypes":null,"trainingSubTypes":null,"trainingVersions":null,"allowedPrivacyList":null,"locale":null,"start":1,"limit":20,"planKey":false}}'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bbd42f59267633-SEA
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 21:23:32 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=%2BURxWLHLi29DuQPM3YxySQXbRhkgB7g8lkEH9kBTTCmQasGYgXj4oanudJx6iagy3YCdqGYYI6n%2FgkDYkyFIuN%2BRmBsxBfJ3yoKOLojITEQ8sLxg6lnliRW0mcXkqqSiCFIpmxutww%3D%3D"}]}'
+            Server:
+                - cloudflare
+        status: 200 OK
+        code: 200
+        duration: 90.5609ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Accept:
+                - application/json
+            Accept-Language:
+                - en-US,en;q=0.9
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-Android-5.23
+            X-App-Ver:
+                - "10861"
+            X-Garmin-Client-Platform:
+                - Android
+            X-Garmin-Paired-App-Version:
+                - "10861"
+            X-Garmin-User-Agent:
+                - com.garmin.android.apps.connectmobile/5.23; ; Google/sdk_gphone64_arm64/google; Android/33; Dalvik/2.1.0
+            X-Gcexperience:
+                - GC5
+            X-Lang:
+                - en
+        url: https://connectapi.garmin.com/trainingplan-service/trainingplan/fbt-adaptive/43655027
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"trainingPlanId":43655027,"trainingPlanCategory":"FBT_ADAPTIVE","trainingType":{"typeId":2,"typeKey":"Running"},"trainingSubType":{"subTypeId":27,"subTypeKey":"GarminRunningCoachOpenLoop"},"trainingLevel":{"levelId":3,"levelKey":"Intermediate"},"trainingVersion":{"versionId":3,"versionName":"Pace"},"formatLocale":{"id":12345678,"key":"en","isSupported":true},"ownerId":12345678,"ownerDisplayName":null,"trainingStatus":{"statusId":2,"statusKey":"Completed"},"privacyRule":{"typeId":2,"typeKey":"private"},"name":"2026 Fitness Plan","description":"Garmin Run Coach. Open Loop. Generic version.","durationInWeeks":16,"avgWeeklyWorkouts":7,"parentPlanId":39305049,"createDate":"2026-01-08T00:00:00.0","publishDate":null,"expireDate":null,"startDate":"2026-01-08T00:00:00.0","pausedDate":null,"resumedDate":null,"endDate":"2026-04-30T00:00:00.0","taskList":null,"adaptivePlanPhases":null,"planPhases":null,"nameI18nKey":"tp_name_eb8a9686-7179-44a9-aa28-93888c8cd831","descriptionI18nKey":"tp_descr_4151bc6a-ef63-4fee-820c-c561fe52eec6","planKey":"run_89e4420a-2c28-4f19-ac9f-3de58f4fbd2d","seriesIndex":null,"daysInLastWeek":null,"supplementalSports":[]}'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bbd42fa9687633-SEA
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 21:23:32 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=WcE0dY2Z2syFR4VwnH%2B76S0WZm18gY5fe4aw9WEKziwA5FK5y0SVh8NtId7oyzg9X%2Fjm9wysFSQnUMTEesL4Gcld4m%2BlJADHrjKFZsd4K5%2FjqhxaR0fvL9IUc5NctZum%2FqU%2FvoMMXA%3D%3D"}]}'
+            Server:
+                - cloudflare
+        status: 200 OK
+        code: 200
+        duration: 56.5521ms

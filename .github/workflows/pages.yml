@@ -1,0 +1,75 @@
+name: pages
+
+# Builds the static site (home, docs, oauth-catch, privacy) and publishes it
+# to gh-pages beside the coverage badges. Additive: only the site's own paths
+# are replaced, so ci.yml / harness.yml badges survive and vice versa.
+#
+# Pages source: branch gh-pages / (root). Enable once in Settings → Pages,
+# then "Enforce HTTPS" — the oauth-catch page needs a secure context to copy.
+#
+# Optional repository variables:
+#   PAGES_CUSTOM_DOMAIN       → writes CNAME (e.g. gantree.example.com)
+#   GOOGLE_SITE_VERIFICATION  → Search Console HTML-tag token, injected into index.html
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - "docs/**"
+      - "assets/**"
+      - "scripts/pages.mjs"
+      - "scripts/publish-pages.sh"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  site:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: gh-pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run pages
+
+      - name: Site verification + custom domain
+        env:
+          PAGES_CUSTOM_DOMAIN: ${{ vars.PAGES_CUSTOM_DOMAIN }}
+          GOOGLE_SITE_VERIFICATION: ${{ vars.GOOGLE_SITE_VERIFICATION }}
+        run: |
+          if [ -n "${GOOGLE_SITE_VERIFICATION}" ]; then
+            sed -i "s|</title>|</title>\n  <meta name=\"google-site-verification\" content=\"${GOOGLE_SITE_VERIFICATION}\">|" dist/pages/index.html
+          fi
+          if [ -n "${PAGES_CUSTOM_DOMAIN}" ]; then
+            printf '%s\n' "${PAGES_CUSTOM_DOMAIN}" > dist/pages/CNAME
+          else
+            : > dist/pages/.no-cname
+          fi
+
+      - name: Publish site to gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x scripts/publish-pages.sh
+          PAIRS=(
+            dist/pages/index.html:index.html
+            dist/pages/404.html:404.html
+            dist/pages/style.css:style.css
+            dist/pages/docs:docs
+            dist/pages/assets:assets
+            dist/pages/oauth-catch:oauth-catch
+            dist/pages/privacy:privacy
+          )
+          [ -f dist/pages/CNAME ] && PAIRS+=(dist/pages/CNAME:CNAME)
+          scripts/publish-pages.sh "chore: site [skip ci]" "${PAIRS[@]}"

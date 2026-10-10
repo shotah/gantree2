@@ -24,6 +24,11 @@ describe("public paths", () => {
     expect(isPublicPath("/")).toBe(false);
     expect(isPublicPath("/api/auth/me")).toBe(false);
     expect(isPublicPath("/agents/kit")).toBe(false);
+    expect(isPublicPath("/api/agents/kit/snapshot/gantry_db")).toBe(true);
+    expect(isPublicPath("/api/agents/kit/snapshot/self_md")).toBe(true);
+    expect(isPublicPath("/api/agents/kit/snapshot/other")).toBe(false);
+    expect(isPublicPath("/api/agents/kit/config")).toBe(false);
+    expect(isPublicPath("/api/agents/Kit/snapshot/gantry_db")).toBe(false);
   });
 
   it("safeNext keeps same-origin paths only", () => {
@@ -37,6 +42,7 @@ describe("public paths", () => {
 describe("gate", () => {
   it("public passes without a cookie", async () => {
     expect(await gate(new Request("https://g.test/login"), env, memoryStore())).toEqual({ kind: "public" });
+    expect(await gate(new Request("https://g.test/api/agents/kit/snapshot/gantry_db?exp=1&sig=ab"), env, memoryStore())).toEqual({ kind: "public" });
   });
 
   it("no admins is 503 on every gated route, even for a stranger", async () => {

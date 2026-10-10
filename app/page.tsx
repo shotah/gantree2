@@ -1,22 +1,36 @@
-import { ThemeSelect } from "@/app/components/shared/ThemeSelect";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import type { AgentEnv } from "@/lib/chat/env";
+import { roomsFor } from "@/lib/chat/membership";
+import { principalFromHeaders, type Principal } from "@/lib/door/gate";
+import { agentUnion, landing } from "@/lib/door/landing";
+import { doorEnv } from "@/lib/door/runtime";
 
-export default function Home() {
-  return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-10">
-      <header className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-fg">gantree</h1>
-        <div className="w-40">
-          <ThemeSelect />
-        </div>
-      </header>
-      <p className="text-sm text-muted">
-        You are through the door. Agents, Users, and Settings land here next.
-      </p>
-      <form action="/api/auth/logout" method="post">
-        <button type="submit" className="rounded border border-line px-3 py-1.5 text-sm text-body hover:bg-track">
-          Log out
-        </button>
-      </form>
-    </main>
-  );
+/** Never a static shell: the principal is on this request's headers. */
+export const dynamic = "force-dynamic";
+
+/**
+ * Room list for the landing decision. `roomsFor` is the directory ∪ room
+ * admission; union that with the header grants. If the worker env is missing,
+ * the header grants are the whole list.
+ */
+async function chatAgents(who: Principal): Promise<string[]> {
+  try {
+    const env = doorEnv();
+    if (!env) {
+      return agentUnion(who.agents, []);
+    }
+    return agentUnion(who.agents, await roomsFor(env as typeof env & AgentEnv)(who));
+  } catch {
+    return agentUnion(who.agents, []);
+  }
+}
+
+/** `/` is a router. Middleware already sent a missing session to /login. */
+export default async function Home() {
+  const who = principalFromHeaders(await headers());
+  if (!who) {
+    redirect("/login");
+  }
+  redirect(landing({ role: who.role, agents: await chatAgents(who) }));
 }

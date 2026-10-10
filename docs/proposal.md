@@ -109,7 +109,7 @@ phone  ────────► │   /login        Sign in with Google      
                  │                room · bearer · alarm        │
                  │                · container                  │
                  │  KV   directory  sub:<sub> / email:<e> → slugs
-                 │  R2   backups/<slug>/  boards/  avatars/    │
+                 │  R2   backups/<slug>/                       │
                  │  Cron planner tick → Agent alarm fan-out    │
                  └──────────────┬──────────────────────────────┘
                                 │ Container binding (one per Agent DO)
@@ -419,6 +419,11 @@ deploys from the `wrangler.json` you already have, keeps each object's
 state in its own SQLite, and replicates to an S3-compatible, GCS, or
 Azure bucket you own. `celld dev` runs without Docker or a bucket.
 
+Since 2026-10-09 celld belongs to Cloudflare (Deno acquisition) and is
+being merged with workerd. Expect the project to move; the shape we
+depend on — `wrangler.json` in, Workers + DOs + a container binding
+out — is the shape Cloudflare bought it for.
+
 | Question | Answer |
 | --- | --- |
 | Does the harness get rewritten? | **No.** The harness is an OCI image. The Agent DO's container binding starts it. `CELLD_DOCKER=docker` or `podman`; `CELLD_CONTAINER_RUNTIME=runsc` if you want gVisor at home. |
@@ -629,6 +634,17 @@ until Phase 4.
 
 ## Open questions
 
+0. ~~**celld everywhere?**~~ **Decided (a): Cloudflare Workers +
+   Containers in the cloud, celld at home.** Cloudflare acquired Deno
+   on 2026-10-09 and is merging celld into workerd; the two
+   implementations of the Workers platform become one. The manifest we
+   already write is the one both will read. Deno Deploy (shutting down
+   within six months) and the standalone Deno runtime (one year of
+   patches) are not in our stack. Risk: celld's repo, binary name, or
+   `deploy` flags may change mid-merge — pin the version in
+   [install.md](install.md#home-celld) and treat `npm run deploy:home`
+   as the single place that knows how to invoke it. Tracked in
+   [todo.md](todo.md#0-decide).
 1. **CPU/RAM graphs on Cloudflare.** No per-container stats API. Live
    without, or accept a tiny RSS sample in the harness's existing
    `turn perf` line. Default: live without.

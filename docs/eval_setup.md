@@ -30,7 +30,7 @@ is not the Worker's `.dev.vars`, and neither is committed.
    ```sh
    LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
    LLM_API_KEY=your-key
-   LLM_MODEL=gemini-3.5-flash
+   LLM_MODEL=gemini-3.8-flash
    ```
 
    Use the model you ship with — the eval is a reading of the seed on
@@ -102,7 +102,7 @@ Or with the `gh` CLI from the repo:
 ```sh
 gh secret set LLM_API_KEY
 gh variable set LLM_BASE_URL --body 'https://generativelanguage.googleapis.com/v1beta/openai'
-gh variable set LLM_MODEL --body 'gemini-3.5-flash'
+gh variable set LLM_MODEL --body 'gemini-3.8-flash'
 ```
 
 Two workflows read them:

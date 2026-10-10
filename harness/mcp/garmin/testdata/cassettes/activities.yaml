@@ -1,0 +1,538 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-iOS-5.19.1.2
+        url: https://connectapi.garmin.com/activity-service/activity/activityTypes
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '[{"typeId":1,"typeKey":"running","parentTypeId":17,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":2,"typeKey":"cycling","parentTypeId":17,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":3,"typeKey":"hiking","parentTypeId":17,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":4,"typeKey":"other","parentTypeId":17,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":5,"typeKey":"mountain_biking","parentTypeId":2,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":6,"typeKey":"trail_running","parentTypeId":1,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":7,"typeKey":"street_running","parentTypeId":1,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":8,"typeKey":"track_running","parentTypeId":1,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":9,"typeKey":"walking","parentTypeId":17,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":10,"typeKey":"road_biking","parentTypeId":2,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":11,"typeKey":"indoor_cardio","parentTypeId":29,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":13,"typeKey":"strength_training","parentTypeId":29,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":15,"typeKey":"casual_walking","parentTypeId":9,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":16,"typeKey":"speed_walking","parentTypeId":9,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":17,"typeKey":"all","parentTypeId":null,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":18,"typeKey":"treadmill_running","parentTypeId":1,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":19,"typeKey":"cyclocross","parentTypeId":2,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":20,"typeKey":"downhill_biking","parentTypeId":2,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":21,"typeKey":"track_cycling","parentTypeId":2,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":22,"typeKey":"recumbent_cycling","parentTypeId":2,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":25,"typeKey":"indoor_cycling","parentTypeId":2,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":26,"typeKey":"swimming","parentTypeId":17,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":27,"typeKey":"lap_swimming","parentTypeId":26,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":28,"typeKey":"open_water_swimming","parentTypeId":26,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":29,"typeKey":"fitness_equipment","parentTypeId":17,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":30,"typeKey":"elliptical","parentTypeId":29,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":31,"typeKey":"stair_climbing","parentTypeId":29,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":32,"typeKey":"indoor_rowing","parentTypeId":29,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":37,"typeKey":"mountaineering","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":41,"typeKey":"wind_kite_surfing","parentTypeId":4,"isHidden":false,"restricted":true,"trimmable":true},{"typeId":44,"typeKey":"horseback_riding","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":49,"typeKey":"driving_general","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":52,"typeKey":"flying","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":60,"typeKey":"whitewater_rafting_kayaking","parentTypeId":4,"isHidden":false,"restricted":true,"trimmable":true},{"typeId":63,"typeKey":"inline_skating","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":88,"typeKey":"golf","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":89,"typeKey":"multi_sport","parentTypeId":17,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":108,"typeKey":"steps","parentTypeId":17,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":131,"typeKey":"bmx","parentTypeId":2,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":133,"typeKey":"hunting_fishing","parentTypeId":4,"isHidden":false,"restricted":true,"trimmable":true},{"typeId":134,"typeKey":"sky_diving","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":136,"typeKey":"rc_drone","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":139,"typeKey":"rock_climbing","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":140,"typeKey":"hang_gliding","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":141,"typeKey":"wingsuit_flying","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":143,"typeKey":"gravel_cycling","parentTypeId":2,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":144,"typeKey":"diving","parentTypeId":17,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":145,"typeKey":"single_gas_diving","parentTypeId":144,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":146,"typeKey":"multi_gas_diving","parentTypeId":144,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":147,"typeKey":"gauge_diving","parentTypeId":144,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":148,"typeKey":"apnea_diving","parentTypeId":144,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":150,"typeKey":"floor_climbing","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":151,"typeKey":"stop_watch","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":152,"typeKey":"virtual_ride","parentTypeId":2,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":153,"typeKey":"virtual_run","parentTypeId":1,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":154,"typeKey":"obstacle_run","parentTypeId":1,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":155,"typeKey":"apnea_hunting","parentTypeId":144,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":156,"typeKey":"indoor_running","parentTypeId":1,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":157,"typeKey":"safety","parentTypeId":17,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":158,"typeKey":"assistance","parentTypeId":157,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":159,"typeKey":"incident_detected","parentTypeId":157,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":160,"typeKey":"pilates","parentTypeId":29,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":161,"typeKey":"ccr_diving","parentTypeId":144,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":162,"typeKey":"auto_racing","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":163,"typeKey":"yoga","parentTypeId":29,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":164,"typeKey":"breathwork","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":165,"typeKey":"winter_sports","parentTypeId":17,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":166,"typeKey":"snowmobiling_ws","parentTypeId":165,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":167,"typeKey":"snow_shoe_ws","parentTypeId":165,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":168,"typeKey":"skating_ws","parentTypeId":165,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":169,"typeKey":"backcountry_skiing_snowboarding_ws","parentTypeId":165,"isHidden":false,"restricted":true,"trimmable":false},{"typeId":170,"typeKey":"skate_skiing_ws","parentTypeId":165,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":171,"typeKey":"cross_country_skiing_ws","parentTypeId":165,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":172,"typeKey":"resort_skiing_snowboarding_ws","parentTypeId":165,"isHidden":false,"restricted":true,"trimmable":false},{"typeId":173,"typeKey":"indoor_climbing","parentTypeId":29,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":174,"typeKey":"bouldering","parentTypeId":29,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":175,"typeKey":"e_bike_mountain","parentTypeId":2,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":176,"typeKey":"e_bike_fitness","parentTypeId":2,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":180,"typeKey":"hiit","parentTypeId":29,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":181,"typeKey":"ultra_run","parentTypeId":1,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":182,"typeKey":"e_sport","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":185,"typeKey":"motorcycling_v2","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":186,"typeKey":"motocross_v2","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":187,"typeKey":"atv_v2","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":189,"typeKey":"transition_v2","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":190,"typeKey":"swimToBikeTransition_v2","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":191,"typeKey":"bikeToRunTransition_v2","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":192,"typeKey":"runToBikeTransition_v2","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":193,"typeKey":"hunting","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":197,"typeKey":"hand_cycling","parentTypeId":2,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":198,"typeKey":"indoor_hand_cycling","parentTypeId":2,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":199,"typeKey":"para_sports","parentTypeId":17,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":200,"typeKey":"wheelchair_push_run","parentTypeId":199,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":201,"typeKey":"wheelchair_push_walk","parentTypeId":199,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":202,"typeKey":"meditation","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":203,"typeKey":"backcountry_skiing","parentTypeId":165,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":204,"typeKey":"backcountry_snowboarding","parentTypeId":165,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":205,"typeKey":"disc_golf","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":206,"typeKey":"team_sports","parentTypeId":17,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":207,"typeKey":"cricket","parentTypeId":206,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":208,"typeKey":"rugby","parentTypeId":206,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":209,"typeKey":"ice_hockey","parentTypeId":206,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":210,"typeKey":"field_hockey","parentTypeId":206,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":211,"typeKey":"lacrosse","parentTypeId":206,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":212,"typeKey":"volleyball","parentTypeId":206,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":213,"typeKey":"ultimate_disc","parentTypeId":206,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":214,"typeKey":"softball","parentTypeId":206,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":215,"typeKey":"soccer","parentTypeId":206,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":216,"typeKey":"american_football","parentTypeId":206,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":217,"typeKey":"basketball","parentTypeId":206,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":218,"typeKey":"baseball","parentTypeId":206,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":219,"typeKey":"racket_sports","parentTypeId":17,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":220,"typeKey":"table_tennis","parentTypeId":219,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":221,"typeKey":"platform_tennis","parentTypeId":219,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":222,"typeKey":"racquetball","parentTypeId":219,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":223,"typeKey":"squash","parentTypeId":219,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":224,"typeKey":"badminton","parentTypeId":219,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":225,"typeKey":"pickleball","parentTypeId":219,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":226,"typeKey":"paddelball","parentTypeId":219,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":227,"typeKey":"tennis_v2","parentTypeId":219,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":228,"typeKey":"water_sports","parentTypeId":17,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":229,"typeKey":"boating_v2","parentTypeId":228,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":230,"typeKey":"fishing_v2","parentTypeId":228,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":231,"typeKey":"kayaking_v2","parentTypeId":228,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":232,"typeKey":"kiteboarding_v2","parentTypeId":228,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":233,"typeKey":"offshore_grinding_v2","parentTypeId":228,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":234,"typeKey":"onshore_grinding_v2","parentTypeId":29,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":235,"typeKey":"paddling_v2","parentTypeId":228,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":236,"typeKey":"whitewater_rafting_v2","parentTypeId":228,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":237,"typeKey":"rowing_v2","parentTypeId":228,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":238,"typeKey":"sailing_v2","parentTypeId":228,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":239,"typeKey":"stand_up_paddleboarding_v2","parentTypeId":228,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":240,"typeKey":"surfing_v2","parentTypeId":228,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":241,"typeKey":"water_tubing","parentTypeId":228,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":242,"typeKey":"windsurfing_v2","parentTypeId":228,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":243,"typeKey":"wakeboarding_v2","parentTypeId":228,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":244,"typeKey":"wakesurfing","parentTypeId":228,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":245,"typeKey":"waterskiing","parentTypeId":228,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":246,"typeKey":"boxing","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":247,"typeKey":"archery","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":248,"typeKey":"mixed_martial_arts","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":249,"typeKey":"overland","parentTypeId":4,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":250,"typeKey":"snorkeling","parentTypeId":228,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":251,"typeKey":"resort_skiing","parentTypeId":165,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":252,"typeKey":"resort_snowboarding","parentTypeId":165,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":253,"typeKey":"dance","parentTypeId":29,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":254,"typeKey":"jump_rope","parentTypeId":29,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":255,"typeKey":"mobility","parentTypeId":29,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":256,"typeKey":"enduro_mtb","parentTypeId":2,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":257,"typeKey":"rucking","parentTypeId":3,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":259,"typeKey":"pool_apnea","parentTypeId":144,"isHidden":false,"restricted":false,"trimmable":false},{"typeId":260,"typeKey":"e_enduro_mtb","parentTypeId":2,"isHidden":false,"restricted":false,"trimmable":true},{"typeId":263,"typeKey":"cross_country_indoor_skiing","parentTypeId":29,"isHidden":false,"restricted":false,"trimmable":true}]'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba91698d8eb43-SEA
+            Content-Type:
+                - application/json;charset=UTF-8
+            Date:
+                - Wed, 15 Jul 2026 20:54:07 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=gj6IhPzhbOs2DTrYfLu3YAOWWhB3eFLHahTCbNXA5vLO0hJ%2FLRR5Ln%2BNT1Pm383gf0q9xAp3B3J2wkK3vp3vg0rVwgTjrC5Z3FPXQrhR42123yxj6GEgkJkJO%2BLPzReY4gtJ4Dn1XA%3D%3D"}]}'
+            Server:
+                - cloudflare
+            Server-Timing:
+                - cfCacheStatus;desc="DYNAMIC"
+                - cfEdge;dur=58,cfOrigin;dur=12
+        status: 200 OK
+        code: 200
+        duration: 113.0852ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        form:
+            limit:
+                - "5"
+            start:
+                - "0"
+        headers:
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-iOS-5.19.1.2
+        url: https://connectapi.garmin.com/activitylist-service/activities/search/activities?start=0&limit=5
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '[{"activityId":23601622207,"activityName":"Anonymous Activity","startTimeLocal":"2026-07-14 18:38:43","startTimeGMT":"2026-07-15 01:38:43","activityType":{"typeId":174,"typeKey":"bouldering","parentTypeId":29,"isHidden":false,"restricted":false,"trimmable":false},"eventType":{"typeId":9,"typeKey":"uncategorized","sortOrder":10},"duration":1008.9329833984375,"elapsedDuration":1008.9329833984375,"movingDuration":0.0,"hasPolyline":false,"hasImages":false,"ownerId":12345678,"ownerDisplayName":"anonymous","ownerFullName":"Anonymous User","ownerProfileImageUrlSmall":"https://example.com/profile.png","ownerProfileImageUrlMedium":"https://example.com/profile.png","ownerProfileImageUrlLarge":"https://example.com/profile.png","calories":170.0,"bmrCalories":25.0,"averageHR":122.0,"maxHR":143.0,"steps":184,"userRoles":["SCOPE_GOLF_API_READ","SCOPE_DI_OAUTH_2_DEVICE_REVOCATION_WRITE","SCOPE_DI_OAUTH_2_CREATE_DI_USER","SCOPE_ATP_READ","SCOPE_DIVE_API_WRITE","SCOPE_COMMUNITY_COURSE_ADMIN_READ","SCOPE_DIVE_API_READ","SCOPE_DT_ACTIVE_INTELLIGENCE_READ","SCOPE_DI_OAUTH_2_CLIENT_READ","SCOPE_CONNECT_WRITE","SCOPE_COMMUNITY_COURSE_WRITE","SCOPE_CONNECT_MCT_DAILY_LOG_READ","SCOPE_CONNECT_API_CREATE_UPDATE_USER","SCOPE_MESSAGE_GENERATION_READ","SCOPE_DI_OAUTH_2_CLIENT_REVOCATION_ADMIN","SCOPE_CONNECT_WEB_TEMPLATE_RENDER","SCOPE_ACTIVITY_DETECTION_READ","SCOPE_OMT_SUBSCRIPTION_ADMIN_READ","SCOPE_DI_OAUTH_2_MANAGED_STATUS_ADMIN_WRITE","SCOPE_CONNECT_NON_SOCIAL_SHARED_READ","SCOPE_CONNECT_READ","SCOPE_DI_OAUTH_2_PRERELEASE_PERMISSIONS_ADMIN_WRITE","SCOPE_DI_OAUTH_2_TOKEN_ADMIN","SCOPE_ATP_WRITE","ROLE_CONNECTUSER","ROLE_FITNESS_USER","ROLE_WELLNESS_USER","ROLE_OUTDOOR_USER","ROLE_GHS_USER","ROLE_TACX_APP_USER","ROLE_GARMIN_USER"],"privacy":{"typeId":1,"typeKey":"public"},"userPro":false,"hasVideo":false,"timeZoneId":121,"beginTimestamp":1784079523000,"sportTypeId":31,"aerobicTrainingEffect":1.7999999523162842,"anaerobicTrainingEffect":1.7000000476837158,"deviceId":12345678,"summarizedDiveInfo":{"summarizedDiveGases":[]},"manufacturer":"GARMIN","lapCount":1,"waterEstimated":221.0,"trainingEffectLabel":"RECOVERY","activityTrainingLoad":40.14886474609375,"minActivityLapDuration":1008.9329833984375,"aerobicTrainingEffectMessage":"RECOVERY_5","anaerobicTrainingEffectMessage":"MINOR_ANAEROBIC_BENEFIT_15","splitSummaries":[{"noOfSplits":12,"maxGradeValue":{"sortOrder":5,"valueKey":"V4","scale":"VERMIN"},"duration":381.02899169921875,"splitType":"CLIMB_ACTIVE","numClimbSends":0,"numFalls":0},{"noOfSplits":12,"duration":627.5960083007812,"splitType":"CLIMB_REST","numClimbSends":0,"numFalls":0}],"hasSplits":true,"hasIntensityIntervals":false,"moderateIntensityMinutes":3,"vigorousIntensityMinutes":13,"differenceBodyBattery":-3,"hasHeatMap":false,"hrTimeInZone_1":121.489,"hrTimeInZone_2":608.446,"hrTimeInZone_3":278.998,"hrTimeInZone_4":0.0,"hrTimeInZone_5":0.0,"endTimeGMT":"2026-07-15 01:55:31","qualifyingDive":false,"activityUUID":"00000000-0000-0000-0000-000000000000","autoCalcCalories":false,"elevationCorrected":false,"atpActivity":false,"purposeful":false,"manualActivity":false,"favorite":false,"decoDive":false,"pr":false,"parent":false},{"activityId":23601542124,"activityName":"Anonymous Activity","startTimeLocal":"2026-07-14 18:13:29","startTimeGMT":"2026-07-15 01:13:29","activityType":{"typeId":13,"typeKey":"strength_training","parentTypeId":29,"isHidden":false,"restricted":false,"trimmable":false},"eventType":{"typeId":9,"typeKey":"uncategorized","sortOrder":10},"distance":0.0,"duration":1492.1090087890625,"elapsedDuration":1492.1090087890625,"movingDuration":1441.6240234375,"averageSpeed":0.0,"hasPolyline":false,"hasImages":false,"ownerId":12345678,"ownerDisplayName":"anonymous","ownerFullName":"Anonymous User","ownerProfileImageUrlSmall":"https://example.com/profile.png","ownerProfileImageUrlMedium":"https://example.com/profile.png","ownerProfileImageUrlLarge":"https://example.com/profile.png","calories":297.0,"bmrCalories":36.0,"averageHR":136.0,"maxHR":165.0,"steps":680,"userRoles":["SCOPE_GOLF_API_READ","SCOPE_DI_OAUTH_2_DEVICE_REVOCATION_WRITE","SCOPE_DI_OAUTH_2_CREATE_DI_USER","SCOPE_ATP_READ","SCOPE_DIVE_API_WRITE","SCOPE_COMMUNITY_COURSE_ADMIN_READ","SCOPE_DIVE_API_READ","SCOPE_DT_ACTIVE_INTELLIGENCE_READ","SCOPE_DI_OAUTH_2_CLIENT_READ","SCOPE_CONNECT_WRITE","SCOPE_COMMUNITY_COURSE_WRITE","SCOPE_CONNECT_MCT_DAILY_LOG_READ","SCOPE_CONNECT_API_CREATE_UPDATE_USER","SCOPE_MESSAGE_GENERATION_READ","SCOPE_DI_OAUTH_2_CLIENT_REVOCATION_ADMIN","SCOPE_CONNECT_WEB_TEMPLATE_RENDER","SCOPE_ACTIVITY_DETECTION_READ","SCOPE_OMT_SUBSCRIPTION_ADMIN_READ","SCOPE_DI_OAUTH_2_MANAGED_STATUS_ADMIN_WRITE","SCOPE_CONNECT_NON_SOCIAL_SHARED_READ","SCOPE_CONNECT_READ","SCOPE_DI_OAUTH_2_PRERELEASE_PERMISSIONS_ADMIN_WRITE","SCOPE_DI_OAUTH_2_TOKEN_ADMIN","SCOPE_ATP_WRITE","ROLE_CONNECTUSER","ROLE_FITNESS_USER","ROLE_WELLNESS_USER","ROLE_OUTDOOR_USER","ROLE_GHS_USER","ROLE_TACX_APP_USER","ROLE_GARMIN_USER"],"privacy":{"typeId":1,"typeKey":"public"},"userPro":false,"hasVideo":false,"timeZoneId":121,"beginTimestamp":1784078009000,"sportTypeId":10,"aerobicTrainingEffect":2.700000047683716,"anaerobicTrainingEffect":1.7000000476837158,"deviceId":12345678,"summarizedExerciseSets":[{"category":"ROW","reps":314,"volume":0,"duration":712872.9858398438,"sets":2,"maxWeight":0},{"category":"UNKNOWN","reps":10,"volume":0,"duration":422236.99951171875,"sets":1,"maxWeight":0},{"category":"DEADLIFT","subCategory":"BARBELL_DEADLIFT","reps":16,"volume":0,"duration":306514.0075683594,"sets":1,"maxWeight":0}],"summarizedDiveInfo":{"summarizedDiveGases":[]},"manufacturer":"GARMIN","lapCount":1,"waterEstimated":363.0,"totalSets":4,"activeSets":4,"totalReps":340,"trainingEffectLabel":"ANAEROBIC_CAPACITY","activityTrainingLoad":75.65681457519531,"minActivityLapDuration":1492.1090087890625,"aerobicTrainingEffectMessage":"MAINTAINING_AEROBIC_FITNESS_1","anaerobicTrainingEffectMessage":"MINOR_ANAEROBIC_BENEFIT_15","splitSummaries":[],"hasSplits":false,"hasIntensityIntervals":false,"moderateIntensityMinutes":2,"vigorousIntensityMinutes":22,"differenceBodyBattery":-5,"hasHeatMap":false,"hrTimeInZone_1":30.7,"hrTimeInZone_2":375.013,"hrTimeInZone_3":793.647,"hrTimeInZone_4":286.15,"hrTimeInZone_5":0.0,"endTimeGMT":"2026-07-15 01:38:21","qualifyingDive":false,"activityUUID":"00000000-0000-0000-0000-000000000000","autoCalcCalories":false,"elevationCorrected":false,"atpActivity":false,"purposeful":false,"manualActivity":false,"favorite":false,"decoDive":false,"pr":false,"parent":false},{"activityId":23601412441,"activityName":"Anonymous Activity","startTimeLocal":"2026-07-14 17:27:24","startTimeGMT":"2026-07-15 00:27:24","activityType":{"typeId":174,"typeKey":"bouldering","parentTypeId":29,"isHidden":false,"restricted":false,"trimmable":false},"eventType":{"typeId":9,"typeKey":"uncategorized","sortOrder":10},"duration":2746.132080078125,"elapsedDuration":2746.132080078125,"movingDuration":0.0,"hasPolyline":false,"hasImages":false,"ownerId":12345678,"ownerDisplayName":"anonymous","ownerFullName":"Anonymous User","ownerProfileImageUrlSmall":"https://example.com/profile.png","ownerProfileImageUrlMedium":"https://example.com/profile.png","ownerProfileImageUrlLarge":"https://example.com/profile.png","calories":292.0,"bmrCalories":67.0,"averageHR":103.0,"maxHR":136.0,"steps":596,"userRoles":["SCOPE_GOLF_API_READ","SCOPE_DI_OAUTH_2_DEVICE_REVOCATION_WRITE","SCOPE_DI_OAUTH_2_CREATE_DI_USER","SCOPE_ATP_READ","SCOPE_DIVE_API_WRITE","SCOPE_COMMUNITY_COURSE_ADMIN_READ","SCOPE_DIVE_API_READ","SCOPE_DT_ACTIVE_INTELLIGENCE_READ","SCOPE_DI_OAUTH_2_CLIENT_READ","SCOPE_CONNECT_WRITE","SCOPE_COMMUNITY_COURSE_WRITE","SCOPE_CONNECT_MCT_DAILY_LOG_READ","SCOPE_CONNECT_API_CREATE_UPDATE_USER","SCOPE_MESSAGE_GENERATION_READ","SCOPE_DI_OAUTH_2_CLIENT_REVOCATION_ADMIN","SCOPE_CONNECT_WEB_TEMPLATE_RENDER","SCOPE_ACTIVITY_DETECTION_READ","SCOPE_OMT_SUBSCRIPTION_ADMIN_READ","SCOPE_DI_OAUTH_2_MANAGED_STATUS_ADMIN_WRITE","SCOPE_CONNECT_NON_SOCIAL_SHARED_READ","SCOPE_CONNECT_READ","SCOPE_DI_OAUTH_2_PRERELEASE_PERMISSIONS_ADMIN_WRITE","SCOPE_DI_OAUTH_2_TOKEN_ADMIN","SCOPE_ATP_WRITE","ROLE_CONNECTUSER","ROLE_FITNESS_USER","ROLE_WELLNESS_USER","ROLE_OUTDOOR_USER","ROLE_GHS_USER","ROLE_TACX_APP_USER","ROLE_GARMIN_USER"],"privacy":{"typeId":1,"typeKey":"public"},"userPro":false,"hasVideo":false,"timeZoneId":121,"beginTimestamp":1784075244000,"sportTypeId":31,"aerobicTrainingEffect":1.0,"anaerobicTrainingEffect":2.0,"deviceId":12345678,"summarizedDiveInfo":{"summarizedDiveGases":[]},"manufacturer":"GARMIN","lapCount":1,"waterEstimated":498.0,"trainingEffectLabel":"SPEED","activityTrainingLoad":36.41801452636719,"minActivityLapDuration":2746.132080078125,"aerobicTrainingEffectMessage":"RECOVERY_5","anaerobicTrainingEffectMessage":"MAINTAINING_FAST_FORCE_PRODUCTION_6","splitSummaries":[{"noOfSplits":17,"maxGradeValue":{"sortOrder":5,"valueKey":"V4","scale":"VERMIN"},"duration":736.2020263671875,"splitType":"CLIMB_ACTIVE","numClimbSends":0,"numFalls":0},{"noOfSplits":17,"duration":2009.6719970703125,"splitType":"CLIMB_REST","numClimbSends":0,"numFalls":0}],"hasSplits":true,"hasIntensityIntervals":false,"moderateIntensityMinutes":33,"vigorousIntensityMinutes":5,"differenceBodyBattery":-5,"hasHeatMap":false,"hrTimeInZone_1":1136.81,"hrTimeInZone_2":719.991,"hrTimeInZone_3":120.002,"hrTimeInZone_4":0.0,"hrTimeInZone_5":0.0,"endTimeGMT":"2026-07-15 01:13:10","qualifyingDive":false,"activityUUID":"00000000-0000-0000-0000-000000000000","autoCalcCalories":false,"elevationCorrected":false,"atpActivity":false,"purposeful":false,"manualActivity":false,"favorite":false,"decoDive":false,"pr":false,"parent":false},{"activityId":23601123796,"activityName":"Anonymous Activity","startTimeLocal":"2026-07-14 17:15:17","startTimeGMT":"2026-07-15 00:15:17","activityType":{"typeId":13,"typeKey":"strength_training","parentTypeId":29,"isHidden":false,"restricted":false,"trimmable":false},"eventType":{"typeId":9,"typeKey":"uncategorized","sortOrder":10},"distance":0.0,"duration":499.72698974609375,"elapsedDuration":499.72698974609375,"movingDuration":218.1750030517578,"averageSpeed":0.0,"hasPolyline":false,"hasImages":false,"ownerId":12345678,"ownerDisplayName":"anonymous","ownerFullName":"Anonymous User","ownerProfileImageUrlSmall":"https://example.com/profile.png","ownerProfileImageUrlMedium":"https://example.com/profile.png","ownerProfileImageUrlLarge":"https://example.com/profile.png","calories":45.0,"bmrCalories":12.0,"averageHR":91.0,"maxHR":123.0,"steps":148,"userRoles":["SCOPE_GOLF_API_READ","SCOPE_DI_OAUTH_2_DEVICE_REVOCATION_WRITE","SCOPE_DI_OAUTH_2_CREATE_DI_USER","SCOPE_ATP_READ","SCOPE_DIVE_API_WRITE","SCOPE_COMMUNITY_COURSE_ADMIN_READ","SCOPE_DIVE_API_READ","SCOPE_DT_ACTIVE_INTELLIGENCE_READ","SCOPE_DI_OAUTH_2_CLIENT_READ","SCOPE_CONNECT_WRITE","SCOPE_COMMUNITY_COURSE_WRITE","SCOPE_CONNECT_MCT_DAILY_LOG_READ","SCOPE_CONNECT_API_CREATE_UPDATE_USER","SCOPE_MESSAGE_GENERATION_READ","SCOPE_DI_OAUTH_2_CLIENT_REVOCATION_ADMIN","SCOPE_CONNECT_WEB_TEMPLATE_RENDER","SCOPE_ACTIVITY_DETECTION_READ","SCOPE_OMT_SUBSCRIPTION_ADMIN_READ","SCOPE_DI_OAUTH_2_MANAGED_STATUS_ADMIN_WRITE","SCOPE_CONNECT_NON_SOCIAL_SHARED_READ","SCOPE_CONNECT_READ","SCOPE_DI_OAUTH_2_PRERELEASE_PERMISSIONS_ADMIN_WRITE","SCOPE_DI_OAUTH_2_TOKEN_ADMIN","SCOPE_ATP_WRITE","ROLE_CONNECTUSER","ROLE_FITNESS_USER","ROLE_WELLNESS_USER","ROLE_OUTDOOR_USER","ROLE_GHS_USER","ROLE_TACX_APP_USER","ROLE_GARMIN_USER"],"privacy":{"typeId":1,"typeKey":"public"},"userPro":false,"hasVideo":false,"timeZoneId":121,"beginTimestamp":1784074517000,"sportTypeId":10,"aerobicTrainingEffect":0.20000000298023224,"anaerobicTrainingEffect":0.0,"deviceId":12345678,"summarizedExerciseSets":[{"category":"PUSH_UP","reps":42,"volume":0,"duration":74577.99911499023,"sets":2,"maxWeight":0},{"category":"PULL_UP","reps":6,"volume":0,"duration":17444.99969482422,"sets":1,"maxWeight":0},{"category":"UNKNOWN","reps":2,"volume":0,"duration":10725.000381469727,"sets":1,"maxWeight":0},{"category":"ROW","reps":10,"volume":0,"duration":51116.00112915039,"sets":1,"maxWeight":0},{"category":"DEADLIFT","subCategory":"BARBELL_DEADLIFT","reps":14,"volume":0,"duration":64310.997009277344,"sets":1,"maxWeight":0}],"summarizedDiveInfo":{"summarizedDiveGases":[]},"manufacturer":"GARMIN","lapCount":1,"waterEstimated":65.0,"totalSets":6,"activeSets":6,"totalReps":74,"trainingEffectLabel":"UNKNOWN","activityTrainingLoad":2.8495330810546875,"minActivityLapDuration":499.72698974609375,"aerobicTrainingEffectMessage":"NO_AEROBIC_BENEFIT_18","anaerobicTrainingEffectMessage":"NO_ANAEROBIC_BENEFIT_0","splitSummaries":[],"hasSplits":false,"hasIntensityIntervals":false,"moderateIntensityMinutes":4,"vigorousIntensityMinutes":0,"differenceBodyBattery":-1,"hasHeatMap":false,"hrTimeInZone_1":182.724,"hrTimeInZone_2":42.223,"hrTimeInZone_3":0.0,"hrTimeInZone_4":0.0,"hrTimeInZone_5":0.0,"endTimeGMT":"2026-07-15 00:23:36","qualifyingDive":false,"activityUUID":"00000000-0000-0000-0000-000000000000","autoCalcCalories":false,"elevationCorrected":false,"atpActivity":false,"purposeful":false,"manualActivity":false,"favorite":false,"decoDive":false,"pr":false,"parent":false},{"activityId":23587751271,"activityName":"Anonymous Activity","startTimeLocal":"2026-07-13 15:36:19","startTimeGMT":"2026-07-13 22:36:19","activityType":{"typeId":1,"typeKey":"running","parentTypeId":17,"isHidden":false,"restricted":false,"trimmable":true},"eventType":{"typeId":9,"typeKey":"uncategorized","sortOrder":10},"distance":4008.659912109375,"duration":1722.4329833984375,"elapsedDuration":1723.468994140625,"movingDuration":1711.4489982128143,"elevationGain":75.54000002145767,"elevationLoss":76.40000000596046,"averageSpeed":2.3269999027252197,"maxSpeed":6.540999889373779,"startLatitude":48.8566,"startLongitude":2.3522,"hasPolyline":true,"hasImages":false,"ownerId":12345678,"ownerDisplayName":"anonymous","ownerFullName":"Anonymous User","ownerProfileImageUrlSmall":"https://example.com/profile.png","ownerProfileImageUrlMedium":"https://example.com/profile.png","ownerProfileImageUrlLarge":"https://example.com/profile.png","calories":341.0,"bmrCalories":42.0,"averageHR":137.0,"maxHR":176.0,"averageRunningCadenceInStepsPerMinute":140.546875,"maxRunningCadenceInStepsPerMinute":247.0,"steps":4150,"userRoles":["SCOPE_GOLF_API_READ","SCOPE_DI_OAUTH_2_DEVICE_REVOCATION_WRITE","SCOPE_DI_OAUTH_2_CREATE_DI_USER","SCOPE_ATP_READ","SCOPE_DIVE_API_WRITE","SCOPE_COMMUNITY_COURSE_ADMIN_READ","SCOPE_DIVE_API_READ","SCOPE_DT_ACTIVE_INTELLIGENCE_READ","SCOPE_DI_OAUTH_2_CLIENT_READ","SCOPE_CONNECT_WRITE","SCOPE_COMMUNITY_COURSE_WRITE","SCOPE_CONNECT_MCT_DAILY_LOG_READ","SCOPE_CONNECT_API_CREATE_UPDATE_USER","SCOPE_MESSAGE_GENERATION_READ","SCOPE_DI_OAUTH_2_CLIENT_REVOCATION_ADMIN","SCOPE_CONNECT_WEB_TEMPLATE_RENDER","SCOPE_ACTIVITY_DETECTION_READ","SCOPE_OMT_SUBSCRIPTION_ADMIN_READ","SCOPE_DI_OAUTH_2_MANAGED_STATUS_ADMIN_WRITE","SCOPE_CONNECT_NON_SOCIAL_SHARED_READ","SCOPE_CONNECT_READ","SCOPE_DI_OAUTH_2_PRERELEASE_PERMISSIONS_ADMIN_WRITE","SCOPE_DI_OAUTH_2_TOKEN_ADMIN","SCOPE_ATP_WRITE","ROLE_CONNECTUSER","ROLE_FITNESS_USER","ROLE_WELLNESS_USER","ROLE_OUTDOOR_USER","ROLE_GHS_USER","ROLE_TACX_APP_USER","ROLE_GARMIN_USER"],"privacy":{"typeId":1,"typeKey":"public"},"userPro":false,"hasVideo":false,"timeZoneId":121,"beginTimestamp":1783982179000,"sportTypeId":1,"avgPower":261.0,"maxPower":759.0,"aerobicTrainingEffect":2.700000047683716,"anaerobicTrainingEffect":3.299999952316284,"normPower":366.0,"avgVerticalOscillation":6.8500000000000005,"avgGroundContactTime":243.89999389648438,"avgStrideLength":102.41999511718751,"vO2MaxValue":48.0,"avgVerticalRatio":8.0600004196167,"deviceId":12345678,"minElevation":30.200000762939453,"maxElevation":72.0,"avgElevation":59.949622776919306,"maxDoubleCadence":247.0,"summarizedDiveInfo":{"summarizedDiveGases":[]},"maxVerticalSpeed":0.6000022888183594,"manufacturer":"GARMIN","locationName":"Seattle","lapCount":21,"endLatitude":47.59521952830255,"endLongitude":-122.30993681587279,"waterEstimated":471.0,"trainingEffectLabel":"ANAEROBIC_CAPACITY","activityTrainingLoad":154.06475830078125,"minActivityLapDuration":2.0429999828338623,"aerobicTrainingEffectMessage":"MAINTAINING_TEMPO_21","anaerobicTrainingEffectMessage":"IMPROVING_ANAEROBIC_CAPACITY_AND_POWER_8","splitSummaries":[{"noOfSplits":9,"totalAscent":13.28999999165535,"duration":377.406005859375,"splitType":"INTERVAL_ACTIVE","numClimbSends":0,"maxElevationGain":4.769999980926514,"averageElevationGain":0.41999998688697815,"maxDistance":245,"maxDistanceWithPrecision":245.27000427246094,"distance":1836.3900146484375,"averageSpeed":4.866000175476074,"maxSpeed":6.540999889373779,"numFalls":0,"elevationLoss":23.87000000476837},{"noOfSplits":1,"totalAscent":5.860000014305115,"duration":273.11199951171875,"splitType":"INTERVAL_COOLDOWN","numClimbSends":0,"maxElevationGain":5.860000014305115,"averageElevationGain":1.2000000029802322,"maxDistance":513,"maxDistanceWithPrecision":513.0399780273438,"distance":513.0399780273438,"averageSpeed":1.878000020980835,"maxSpeed":4.572000026702881,"numFalls":0,"elevationLoss":38.360000014305115},{"noOfSplits":8,"totalAscent":17.540000021457672,"duration":766.8060302734375,"splitType":"INTERVAL_RECOVERY","numClimbSends":0,"maxElevationGain":5.239999994635582,"averageElevationGain":1.7900000214576721,"maxDistance":146,"maxDistanceWithPrecision":146.2899932861328,"distance":961.52001953125,"averageSpeed":1.253999948501587,"maxSpeed":5.159999847412109,"numFalls":0,"elevationLoss":9.07999999821186},{"noOfSplits":1,"totalAscent":38.17000000178814,"duration":305.1090087890625,"splitType":"INTERVAL_WARMUP","numClimbSends":0,"maxElevationGain":38.17000000178814,"averageElevationGain":38.17000000178814,"maxDistance":698,"maxDistanceWithPrecision":698.5399780273438,"distance":698.5399780273438,"averageSpeed":2.2890000343322754,"maxSpeed":4.291999816894531,"numFalls":0,"elevationLoss":3.419999986886978},{"noOfSplits":9,"totalAscent":13.560000002384186,"duration":787.0,"splitType":"RWD_WALK","numClimbSends":0,"maxElevationGain":5.009999999776483,"averageElevationGain":1.479999989271164,"maxDistance":137,"maxDistanceWithPrecision":137.38999938964844,"distance":1057.1600341796875,"averageSpeed":1.343000054359436,"maxSpeed":4.244999885559082,"numFalls":0,"elevationLoss":6.839999973773956},{"noOfSplits":2,"totalAscent":0.0,"duration":7.000999927520752,"splitType":"RWD_STAND","numClimbSends":0,"maxElevationGain":0.0,"averageElevationGain":0.0,"maxDistance":0,"maxDistanceWithPrecision":0.0,"distance":0.0,"averageSpeed":0.0,"maxSpeed":0.0,"numFalls":0,"elevationLoss":0.0},{"noOfSplits":10,"totalAscent":62.74000000953674,"duration":928.1799926757812,"splitType":"RWD_RUN","numClimbSends":0,"maxElevationGain":40.660000026226044,"averageElevationGain":6.100000001490116,"maxDistance":892,"maxDistanceWithPrecision":892.010009765625,"distance":2952.330078125,"averageSpeed":3.180999994277954,"maxSpeed":6.540999889373779,"numFalls":0,"elevationLoss":69.33000001311302}],"hasSplits":true,"hasIntensityIntervals":true,"moderateIntensityMinutes":5,"vigorousIntensityMinutes":23,"avgGradeAdjustedSpeed":2.450000047683716,"differenceBodyBattery":-7,"hasHeatMap":false,"fastestSplit_1000":356.8609924316406,"fastestSplit_1609":596.9910278320312,"hrTimeInZone_1":21.288,"hrTimeInZone_2":651.66,"hrTimeInZone_3":518.343,"hrTimeInZone_4":460.556,"hrTimeInZone_5":41.873,"powerTimeInZone_1":140.241,"powerTimeInZone_2":47.999,"powerTimeInZone_3":20.999,"powerTimeInZone_4":63.878,"powerTimeInZone_5":395.66,"endTimeGMT":"2026-07-13 23:05:02","qualifyingDive":false,"activityUUID":"00000000-0000-0000-0000-000000000000","autoCalcCalories":false,"elevationCorrected":false,"atpActivity":false,"purposeful":false,"manualActivity":false,"favorite":false,"decoDive":false,"pr":false,"parent":false}]'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba9170a23eb43-SEA
+            Content-Type:
+                - application/json;charset=UTF-8
+            Date:
+                - Wed, 15 Jul 2026 20:54:07 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=PeiZpJ5owl2Krsr1phPxlGskxB0tuSRgJ3Miiv8qVbkpKfu2C4VESXa0FHj71N9fbbwJXLZelH%2FmYrwsb2CzbbeKwLn%2BCT%2BLk47tt7iNbEVwDCCKypLPTQcNWvY9iNvAD9gE6dZjRw%3D%3D"}]}'
+            Server:
+                - cloudflare
+            Server-Timing:
+                - cfCacheStatus;desc="DYNAMIC"
+                - cfEdge;dur=5,cfOrigin;dur=87
+        status: 200 OK
+        code: 200
+        duration: 97.1118ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-iOS-5.19.1.2
+        url: https://connectapi.garmin.com/activity-service/activity/23601622207
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"activityId":23601622207,"activityUUID":{"uuid":"00000000-0000-0000-0000-000000000000"},"activityName":"Anonymous Activity","userProfileId":12345678,"isMultiSportParent":false,"activityTypeDTO":{"typeId":174,"typeKey":"bouldering","parentTypeId":29,"isHidden":false,"restricted":false,"trimmable":false},"eventTypeDTO":{"typeId":9,"typeKey":"uncategorized","sortOrder":10},"accessControlRuleDTO":{"typeId":1,"typeKey":"public"},"timeZoneUnitDTO":{"unitId":12345678,"unitKey":"America/Los_Angeles","factor":0.0,"timeZone":"America/Los_Angeles"},"metadataDTO":{"isOriginal":true,"deviceApplicationInstallationId":1008727,"agentApplicationInstallationId":null,"agentString":null,"fileFormat":{"formatId":7,"formatKey":"fit"},"associatedCourseId":null,"lastUpdateDate":"2026-07-15T01:55:44.0","uploadedDate":"2026-07-15T01:55:44.0","videoUrl":null,"hasPolyline":false,"hasChartData":true,"hasHrTimeInZones":true,"hasPowerTimeInZones":false,"userInfoDto":{"userProfilePk":12345678,"displayname":"anonymous","fullname":"Anonymous User","profileImageUrlLarge":"https://example.com/profile.png","profileImageUrlMedium":"https://example.com/profile.png","profileImageUrlSmall":"https://example.com/profile.png","userPro":false},"childIds":[],"childActivityTypes":[],"sensors":null,"activityImages":[],"manufacturer":"GARMIN","diveNumber":null,"lapCount":1,"associatedWorkoutId":null,"isAtpActivity":null,"deviceMetaDataDTO":{"deviceId":"3499843767","deviceTypePk":37074,"deviceVersionPk":1008727},"hasIntensityIntervals":false,"hasSplits":true,"eBikeMaxAssistModes":null,"eBikeBatteryUsage":null,"eBikeBatteryRemaining":null,"eBikeAssistModeInfoDTOList":null,"hasRunPowerWindData":null,"calendarEventInfo":null,"groupRideUUID":null,"hasHeatMap":false,"personalRecord":false,"gcj02":false,"runPowerWindDataEnabled":null,"autoCalcCalories":false,"favorite":false,"manualActivity":false,"elevationCorrected":false,"trimmed":false},"summaryDTO":{"startTimeLocal":"2026-07-14T18:38:43.0","startTimeGMT":"2026-07-15T01:38:43.0","duration":1008.933,"movingDuration":0.0,"elapsedDuration":1008.933,"calories":170.0,"bmrCalories":25.0,"averageHR":122.0,"maxHR":143.0,"minHR":94.0,"trainingEffect":1.7999999523162842,"anaerobicTrainingEffect":1.7000000476837158,"aerobicTrainingEffectMessage":"RECOVERY_5","anaerobicTrainingEffectMessage":"MINOR_ANAEROBIC_BENEFIT_15","waterEstimated":221.0,"trainingEffectLabel":"RECOVERY","activityTrainingLoad":40.14886474609375,"minActivityLapDuration":1008.933,"moderateIntensityMinutes":3,"vigorousIntensityMinutes":13,"steps":184,"differenceBodyBattery":-3},"splitSummaries":[{"duration":381.029,"movingDuration":0.0,"calories":57.0,"bmrCalories":9.0,"averageHR":116.0,"maxHR":137.0,"totalExerciseReps":0,"splitType":"CLIMB_ACTIVE","noOfSplits":12,"numClimbsCompleted":12,"maxGradeValue":{"sortOrder":5,"valueKey":"V4","scale":"VERMIN"}},{"duration":627.596,"movingDuration":0.0,"calories":113.0,"bmrCalories":15.0,"averageHR":125.0,"maxHR":143.0,"totalExerciseReps":0,"splitType":"CLIMB_REST","noOfSplits":12}]}'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba917abb9eb43-SEA
+            Content-Type:
+                - application/json;charset=UTF-8
+            Date:
+                - Wed, 15 Jul 2026 20:54:07 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=5X65qICNxzeIi4zeBn6f7TXI8Fnah5Ris4UZhfxlEO2XeDy2FQ5QN2fOQ4Zp7FwdbPsSc3o08y%2F22idLaWZyrls0PbIuKPCZe1vBs1P5B0APGPXebp3yAnIBGMulB5fCOT5LphCbZg%3D%3D"}]}'
+            Server:
+                - cloudflare
+            Server-Timing:
+                - cfCacheStatus;desc="DYNAMIC"
+                - cfEdge;dur=44,cfOrigin;dur=33
+        status: 200 OK
+        code: 200
+        duration: 83.1631ms
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-iOS-5.19.1.2
+        url: https://connectapi.garmin.com/activity-service/activity/23601622207/splits
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"activityId":23601622207,"lapDTOs":[{"startTimeGMT":"2026-07-15T01:38:43.0","duration":1008.933,"movingDuration":0.0,"elapsedDuration":1008.933,"calories":170.0,"bmrCalories":25.0,"averageHR":122.0,"maxHR":143.0,"lapIndex":1,"lengthDTOs":[],"connectIQMeasurement":[],"intensityType":"ACTIVE","messageIndex":0}],"eventDTOs":[{"startTimeGMT":"2026-07-15T01:38:42.0","startTimeGMTDoubleValue":1.784079522E12,"sectionTypeDTO":{"id":12345678,"key":"timerTrigger","sectionTypeKey":"TIMER_TRIGGER"}},{"startTimeGMT":"2026-07-15T01:38:43.0","startTimeGMTDoubleValue":1.784079523E12,"sectionTypeDTO":{"id":12345678,"key":"timerTrigger","sectionTypeKey":"TIMER_TRIGGER"}},{"startTimeGMT":"2026-07-15T01:55:32.0","startTimeGMTDoubleValue":1.784080532E12,"sectionTypeDTO":{"id":12345678,"key":"timerTrigger","sectionTypeKey":"TIMER_TRIGGER"}}]}'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba9183d25eb43-SEA
+            Content-Type:
+                - application/json;charset=UTF-8
+            Date:
+                - Wed, 15 Jul 2026 20:54:07 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=YxrWJLg3OIBW5zM8NMENFwqmecZw4ki285%2BkEpYq5jMa%2Fq%2B3ctBotOB%2Banl9hpQYmVO8v1briP2vIH1jjerNNQNUKQD0F6tr8fjWn1huJGHE5ycT8ZfwLxCfyEVrSREnDkJeOn8L4g%3D%3D"}]}'
+            Server:
+                - cloudflare
+            Server-Timing:
+                - cfCacheStatus;desc="DYNAMIC"
+                - cfEdge;dur=45,cfOrigin;dur=17
+        status: 200 OK
+        code: 200
+        duration: 68.1419ms
+    - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-iOS-5.19.1.2
+        url: https://connectapi.garmin.com/activity-service/activity/23601622207/weather
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"issueDate":null,"temp":null,"apparentTemp":null,"dewPoint":null,"relativeHumidity":null,"windDirection":null,"windDirectionCompassPoint":null,"windSpeed":null,"windGust":null,"latitude":48.8566,"longitude":2.3522,"weatherStationDTO":null,"weatherTypeDTO":null}'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba918ae5aeb43-SEA
+            Content-Type:
+                - application/json;charset=UTF-8
+            Date:
+                - Wed, 15 Jul 2026 20:54:07 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=pEC598l86MHKnm7%2Fp0K5f41dSZ7WkIoHPB3PPSaHcZs5FXdYzoXRn7zRf2%2Bp7MISmN2DbskYhOMzXiCilUYDBD63rJbDKDm%2Bz0NqoabSLC5nMYdsbFiNQnALP%2BP9MhjAaU8J7YyEBQ%3D%3D"}]}'
+            Server:
+                - cloudflare
+            Server-Timing:
+                - cfCacheStatus;desc="DYNAMIC"
+                - cfEdge;dur=44,cfOrigin;dur=7
+        status: 200 OK
+        code: 200
+        duration: 55.9453ms
+    - id: 5
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-iOS-5.19.1.2
+        url: https://connectapi.garmin.com/activity-service/activity/23601622207/details
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"activityId":23601622207,"measurementCount":6,"metricsCount":246,"totalMetricsCount":728,"metricDescriptors":[{"metricsIndex":0,"key":"directHeartRate","unit":{"id":12345678,"key":"bpm","factor":1.0}},{"metricsIndex":1,"key":"sumDuration","unit":{"id":12345678,"key":"second","factor":1000.0}},{"metricsIndex":2,"key":"directTimestamp","unit":{"id":12345678,"key":"gmt","factor":0.0}},{"metricsIndex":3,"key":"directBodyBattery","unit":{"id":12345678,"key":"dimensionless","factor":1.0}},{"metricsIndex":4,"key":"sumElapsedDuration","unit":{"id":12345678,"key":"second","factor":1000.0}},{"metricsIndex":5,"key":"sumMovingDuration","unit":{"id":12345678,"key":"second","factor":1000.0}}],"activityDetailMetrics":[{"metrics":[100.0,0.0,1.784079523E12,40.0,0.0,0.0]},{"metrics":[101.0,3.0,1.784079526E12,40.0,3.0,0.0]},{"metrics":[99.0,6.0,1.784079529E12,40.0,6.0,0.0]},{"metrics":[99.0,9.0,1.784079532E12,40.0,9.0,0.0]},{"metrics":[98.0,12.0,1.784079535E12,40.0,12.0,0.0]},{"metrics":[99.0,15.0,1.784079538E12,40.0,15.0,0.0]},{"metrics":[99.0,18.0,1.784079541E12,40.0,18.0,0.0]},{"metrics":[100.0,21.0,1.784079544E12,40.0,21.0,0.0]},{"metrics":[100.0,24.0,1.784079547E12,40.0,24.0,0.0]},{"metrics":[99.0,27.0,1.78407955E12,40.0,27.0,0.0]},{"metrics":[101.0,30.0,1.784079553E12,40.0,30.0,0.0]},{"metrics":[101.0,33.0,1.784079556E12,40.0,33.0,0.0]},{"metrics":[102.0,36.0,1.784079559E12,40.0,36.0,0.0]},{"metrics":[98.0,39.0,1.784079562E12,40.0,39.0,0.0]},{"metrics":[94.0,41.0,1.784079564E12,40.0,41.0,0.0]},{"metrics":[94.0,42.0,1.784079565E12,40.0,42.0,0.0]},{"metrics":[94.0,45.0,1.784079568E12,40.0,45.0,0.0]},{"metrics":[95.0,52.0,1.784079575E12,40.0,52.0,0.0]},{"metrics":[96.0,64.0,1.784079587E12,40.0,64.0,0.0]},{"metrics":[111.0,67.0,1.78407959E12,40.0,67.0,0.0]},{"metrics":[123.0,70.0,1.784079593E12,40.0,70.0,0.0]},{"metrics":[126.0,78.0,1.784079601E12,40.0,78.0,0.0]},{"metrics":[121.0,86.0,1.784079609E12,40.0,86.0,0.0]},{"metrics":[116.0,89.0,1.784079612E12,40.0,89.0,0.0]},{"metrics":[117.0,92.0,1.784079615E12,40.0,92.0,0.0]},{"metrics":[116.0,95.0,1.784079618E12,40.0,95.0,0.0]},{"metrics":[117.0,98.0,1.784079621E12,40.0,98.0,0.0]},{"metrics":[119.0,101.0,1.784079624E12,40.0,101.0,0.0]},{"metrics":[122.0,104.0,1.784079627E12,40.0,104.0,0.0]},{"metrics":[125.0,107.0,1.78407963E12,40.0,107.0,0.0]},{"metrics":[127.0,110.0,1.784079633E12,40.0,110.0,0.0]},{"metrics":[131.0,113.0,1.784079636E12,40.0,113.0,0.0]},{"metrics":[133.0,116.0,1.784079639E12,40.0,116.0,0.0]},{"metrics":[135.0,119.0,1.784079642E12,40.0,119.0,0.0]},{"metrics":[137.0,122.0,1.784079645E12,40.0,122.0,0.0]},{"metrics":[138.0,131.0,1.784079654E12,40.0,131.0,0.0]},{"metrics":[142.0,135.0,1.784079658E12,40.0,135.0,0.0]},{"metrics":[136.0,140.0,1.784079663E12,40.0,140.0,0.0]},{"metrics":[133.0,145.0,1.784079668E12,40.0,145.0,0.0]},{"metrics":[132.0,151.0,1.784079674E12,40.0,151.0,0.0]},{"metrics":[129.0,156.0,1.784079679E12,40.0,156.0,0.0]},{"metrics":[125.0,159.0,1.784079682E12,40.0,159.0,0.0]},{"metrics":[120.0,162.0,1.784079685E12,40.0,162.0,0.0]},{"metrics":[116.0,165.0,1.784079688E12,40.0,165.0,0.0]},{"metrics":[112.0,169.0,1.784079692E12,40.0,169.0,0.0]},{"metrics":[113.0,172.0,1.784079695E12,40.0,172.0,0.0]},{"metrics":[116.0,175.0,1.784079698E12,40.0,175.0,0.0]},{"metrics":[117.0,178.0,1.784079701E12,40.0,178.0,0.0]},{"metrics":[117.0,181.0,1.784079704E12,40.0,181.0,0.0]},{"metrics":[118.0,184.0,1.784079707E12,40.0,184.0,0.0]},{"metrics":[119.0,187.0,1.78407971E12,40.0,187.0,0.0]},{"metrics":[119.0,190.0,1.784079713E12,40.0,190.0,0.0]},{"metrics":[120.0,193.0,1.784079716E12,40.0,193.0,0.0]},{"metrics":[119.0,196.0,1.784079719E12,40.0,196.0,0.0]},{"metrics":[119.0,199.0,1.784079722E12,39.0,199.0,0.0]},{"metrics":[120.0,202.0,1.784079725E12,39.0,202.0,0.0]},{"metrics":[119.0,208.0,1.784079731E12,39.0,208.0,0.0]},{"metrics":[123.0,214.0,1.784079737E12,39.0,214.0,0.0]},{"metrics":[131.0,217.0,1.78407974E12,39.0,217.0,0.0]},{"metrics":[126.0,220.0,1.784079743E12,39.0,220.0,0.0]},{"metrics":[118.0,223.0,1.784079746E12,39.0,223.0,0.0]},{"metrics":[114.0,226.0,1.784079749E12,39.0,226.0,0.0]},{"metrics":[116.0,230.0,1.784079753E12,39.0,230.0,0.0]},{"metrics":[141.0,233.0,1.784079756E12,39.0,233.0,0.0]},{"metrics":[137.0,236.0,1.784079759E12,39.0,236.0,0.0]},{"metrics":[129.0,239.0,1.784079762E12,39.0,239.0,0.0]},{"metrics":[125.0,250.0,1.784079773E12,39.0,250.0,0.0]},{"metrics":[125.0,257.0,1.78407978E12,39.0,257.0,0.0]},{"metrics":[127.0,260.0,1.784079783E12,39.0,260.0,0.0]},{"metrics":[127.0,263.0,1.784079786E12,39.0,263.0,0.0]},{"metrics":[125.0,266.0,1.784079789E12,39.0,266.0,0.0]},{"metrics":[124.0,269.0,1.784079792E12,39.0,269.0,0.0]},{"metrics":[125.0,272.0,1.784079795E12,39.0,272.0,0.0]},{"metrics":[125.0,275.0,1.784079798E12,39.0,275.0,0.0]},{"metrics":[126.0,278.0,1.784079801E12,39.0,278.0,0.0]},{"metrics":[125.0,281.0,1.784079804E12,39.0,281.0,0.0]},{"metrics":[125.0,284.0,1.784079807E12,39.0,284.0,0.0]},{"metrics":[126.0,287.0,1.78407981E12,39.0,287.0,0.0]},{"metrics":[127.0,292.0,1.784079815E12,39.0,292.0,0.0]},{"metrics":[142.0,299.0,1.784079822E12,39.0,299.0,0.0]},{"metrics":[143.0,301.0,1.784079824E12,39.0,301.0,0.0]},{"metrics":[141.0,304.0,1.784079827E12,39.0,304.0,0.0]},{"metrics":[138.0,308.0,1.784079831E12,39.0,308.0,0.0]},{"metrics":[135.0,317.0,1.78407984E12,39.0,317.0,0.0]},{"metrics":[130.0,323.0,1.784079846E12,39.0,323.0,0.0]},{"metrics":[126.0,326.0,1.784079849E12,39.0,326.0,0.0]},{"metrics":[123.0,334.0,1.784079857E12,39.0,334.0,0.0]},{"metrics":[123.0,337.0,1.78407986E12,39.0,337.0,0.0]},{"metrics":[122.0,340.0,1.784079863E12,39.0,340.0,0.0]},{"metrics":[121.0,343.0,1.784079866E12,39.0,343.0,0.0]},{"metrics":[117.0,346.0,1.784079869E12,39.0,346.0,0.0]},{"metrics":[117.0,349.0,1.784079872E12,39.0,349.0,0.0]},{"metrics":[119.0,352.0,1.784079875E12,39.0,352.0,0.0]},{"metrics":[120.0,355.0,1.784079878E12,39.0,355.0,0.0]},{"metrics":[121.0,358.0,1.784079881E12,39.0,358.0,0.0]},{"metrics":[122.0,361.0,1.784079884E12,39.0,361.0,0.0]},{"metrics":[124.0,364.0,1.784079887E12,39.0,364.0,0.0]},{"metrics":[124.0,371.0,1.784079894E12,39.0,371.0,0.0]},{"metrics":[121.0,375.0,1.784079898E12,39.0,375.0,0.0]},{"metrics":[118.0,383.0,1.784079906E12,39.0,383.0,0.0]},{"metrics":[126.0,388.0,1.784079911E12,39.0,388.0,0.0]},{"metrics":[139.0,391.0,1.784079914E12,39.0,391.0,0.0]},{"metrics":[136.0,397.0,1.78407992E12,39.0,397.0,0.0]},{"metrics":[131.0,401.0,1.784079924E12,39.0,401.0,0.0]},{"metrics":[128.0,404.0,1.784079927E12,39.0,404.0,0.0]},{"metrics":[123.0,407.0,1.78407993E12,39.0,407.0,0.0]},{"metrics":[117.0,410.0,1.784079933E12,39.0,410.0,0.0]},{"metrics":[116.0,417.0,1.78407994E12,39.0,417.0,0.0]},{"metrics":[116.0,420.0,1.784079943E12,39.0,420.0,0.0]},{"metrics":[118.0,423.0,1.784079946E12,39.0,423.0,0.0]},{"metrics":[120.0,426.0,1.784079949E12,39.0,426.0,0.0]},{"metrics":[117.0,429.0,1.784079952E12,39.0,429.0,0.0]},{"metrics":[114.0,432.0,1.784079955E12,39.0,432.0,0.0]},{"metrics":[112.0,435.0,1.784079958E12,39.0,435.0,0.0]},{"metrics":[109.0,438.0,1.784079961E12,39.0,438.0,0.0]},{"metrics":[111.0,441.0,1.784079964E12,39.0,441.0,0.0]},{"metrics":[111.0,444.0,1.784079967E12,39.0,444.0,0.0]},{"metrics":[111.0,447.0,1.78407997E12,39.0,447.0,0.0]},{"metrics":[110.0,450.0,1.784079973E12,39.0,450.0,0.0]},{"metrics":[111.0,453.0,1.784079976E12,39.0,453.0,0.0]},{"metrics":[111.0,463.0,1.784079986E12,39.0,463.0,0.0]},{"metrics":[136.0,466.0,1.784079989E12,39.0,466.0,0.0]},{"metrics":[138.0,472.0,1.784079995E12,39.0,472.0,0.0]},{"metrics":[139.0,481.0,1.784080004E12,39.0,481.0,0.0]},{"metrics":[132.0,490.0,1.784080013E12,39.0,490.0,0.0]},{"metrics":[127.0,493.0,1.784080016E12,39.0,493.0,0.0]},{"metrics":[122.0,496.0,1.784080019E12,39.0,496.0,0.0]},{"metrics":[113.0,499.0,1.784080022E12,39.0,499.0,0.0]},{"metrics":[111.0,502.0,1.784080025E12,39.0,502.0,0.0]},{"metrics":[112.0,505.0,1.784080028E12,39.0,505.0,0.0]},{"metrics":[115.0,508.0,1.784080031E12,39.0,508.0,0.0]},{"metrics":[120.0,511.0,1.784080034E12,39.0,511.0,0.0]},{"metrics":[117.0,514.0,1.784080037E12,39.0,514.0,0.0]},{"metrics":[116.0,517.0,1.78408004E12,39.0,517.0,0.0]},{"metrics":[114.0,520.0,1.784080043E12,39.0,520.0,0.0]},{"metrics":[116.0,523.0,1.784080046E12,39.0,523.0,0.0]},{"metrics":[118.0,526.0,1.784080049E12,39.0,526.0,0.0]},{"metrics":[120.0,535.0,1.784080058E12,39.0,535.0,0.0]},{"metrics":[131.0,538.0,1.784080061E12,39.0,538.0,0.0]},{"metrics":[132.0,546.0,1.784080069E12,39.0,546.0,0.0]},{"metrics":[131.0,552.0,1.784080075E12,39.0,552.0,0.0]},{"metrics":[128.0,560.0,1.784080083E12,38.0,560.0,0.0]},{"metrics":[123.0,564.0,1.784080087E12,38.0,564.0,0.0]},{"metrics":[119.0,567.0,1.78408009E12,38.0,567.0,0.0]},{"metrics":[115.0,570.0,1.784080093E12,38.0,570.0,0.0]},{"metrics":[114.0,576.0,1.784080099E12,38.0,576.0,0.0]},{"metrics":[114.0,582.0,1.784080105E12,38.0,582.0,0.0]},{"metrics":[115.0,585.0,1.784080108E12,38.0,585.0,0.0]},{"metrics":[115.0,588.0,1.784080111E12,38.0,588.0,0.0]},{"metrics":[113.0,591.0,1.784080114E12,38.0,591.0,0.0]},{"metrics":[114.0,594.0,1.784080117E12,38.0,594.0,0.0]},{"metrics":[116.0,597.0,1.78408012E12,38.0,597.0,0.0]},{"metrics":[117.0,600.0,1.784080123E12,38.0,600.0,0.0]},{"metrics":[117.0,603.0,1.784080126E12,38.0,603.0,0.0]},{"metrics":[118.0,606.0,1.784080129E12,38.0,606.0,0.0]},{"metrics":[129.0,614.0,1.784080137E12,38.0,614.0,0.0]},{"metrics":[139.0,617.0,1.78408014E12,38.0,617.0,0.0]},{"metrics":[138.0,624.0,1.784080147E12,38.0,624.0,0.0]},{"metrics":[135.0,630.0,1.784080153E12,38.0,630.0,0.0]},{"metrics":[132.0,635.0,1.784080158E12,38.0,635.0,0.0]},{"metrics":[129.0,638.0,1.784080161E12,38.0,638.0,0.0]},{"metrics":[125.0,641.0,1.784080164E12,38.0,641.0,0.0]},{"metrics":[122.0,644.0,1.784080167E12,38.0,644.0,0.0]},{"metrics":[118.0,647.0,1.78408017E12,38.0,647.0,0.0]},{"metrics":[115.0,650.0,1.784080173E12,38.0,650.0,0.0]},{"metrics":[113.0,657.0,1.78408018E12,38.0,657.0,0.0]},{"metrics":[114.0,661.0,1.784080184E12,38.0,661.0,0.0]},{"metrics":[116.0,664.0,1.784080187E12,38.0,664.0,0.0]},{"metrics":[119.0,667.0,1.78408019E12,38.0,667.0,0.0]},{"metrics":[119.0,670.0,1.784080193E12,38.0,670.0,0.0]},{"metrics":[120.0,673.0,1.784080196E12,38.0,673.0,0.0]},{"metrics":[121.0,676.0,1.784080199E12,38.0,676.0,0.0]},{"metrics":[122.0,679.0,1.784080202E12,38.0,679.0,0.0]},{"metrics":[122.0,682.0,1.784080205E12,38.0,682.0,0.0]},{"metrics":[123.0,685.0,1.784080208E12,38.0,685.0,0.0]},{"metrics":[123.0,688.0,1.784080211E12,38.0,688.0,0.0]},{"metrics":[122.0,698.0,1.784080221E12,38.0,698.0,0.0]},{"metrics":[136.0,704.0,1.784080227E12,38.0,704.0,0.0]},{"metrics":[138.0,708.0,1.784080231E12,38.0,708.0,0.0]},{"metrics":[137.0,714.0,1.784080237E12,38.0,714.0,0.0]},{"metrics":[136.0,719.0,1.784080242E12,38.0,719.0,0.0]},{"metrics":[130.0,722.0,1.784080245E12,38.0,722.0,0.0]},{"metrics":[125.0,725.0,1.784080248E12,38.0,725.0,0.0]},{"metrics":[121.0,729.0,1.784080252E12,38.0,729.0,0.0]},{"metrics":[118.0,733.0,1.784080256E12,38.0,733.0,0.0]},{"metrics":[115.0,736.0,1.784080259E12,38.0,736.0,0.0]},{"metrics":[112.0,741.0,1.784080264E12,38.0,741.0,0.0]},{"metrics":[107.0,744.0,1.784080267E12,38.0,744.0,0.0]},{"metrics":[110.0,755.0,1.784080278E12,38.0,755.0,0.0]},{"metrics":[113.0,759.0,1.784080282E12,38.0,759.0,0.0]},{"metrics":[116.0,762.0,1.784080285E12,38.0,762.0,0.0]},{"metrics":[114.0,765.0,1.784080288E12,38.0,765.0,0.0]},{"metrics":[114.0,768.0,1.784080291E12,38.0,768.0,0.0]},{"metrics":[116.0,771.0,1.784080294E12,38.0,771.0,0.0]},{"metrics":[117.0,774.0,1.784080297E12,38.0,774.0,0.0]},{"metrics":[118.0,777.0,1.7840803E12,38.0,777.0,0.0]},{"metrics":[119.0,780.0,1.784080303E12,38.0,780.0,0.0]},{"metrics":[120.0,783.0,1.784080306E12,38.0,783.0,0.0]},{"metrics":[121.0,790.0,1.784080313E12,38.0,790.0,0.0]},{"metrics":[129.0,794.0,1.784080317E12,38.0,794.0,0.0]},{"metrics":[130.0,797.0,1.78408032E12,38.0,797.0,0.0]},{"metrics":[136.0,800.0,1.784080323E12,38.0,800.0,0.0]},{"metrics":[135.0,812.0,1.784080335E12,38.0,812.0,0.0]},{"metrics":[132.0,816.0,1.784080339E12,38.0,816.0,0.0]},{"metrics":[131.0,822.0,1.784080345E12,38.0,822.0,0.0]},{"metrics":[129.0,826.0,1.784080349E12,38.0,826.0,0.0]},{"metrics":[126.0,829.0,1.784080352E12,38.0,829.0,0.0]},{"metrics":[125.0,832.0,1.784080355E12,38.0,832.0,0.0]},{"metrics":[124.0,835.0,1.784080358E12,38.0,835.0,0.0]},{"metrics":[122.0,838.0,1.784080361E12,38.0,838.0,0.0]},{"metrics":[121.0,841.0,1.784080364E12,38.0,841.0,0.0]},{"metrics":[121.0,844.0,1.784080367E12,38.0,844.0,0.0]},{"metrics":[123.0,847.0,1.78408037E12,38.0,847.0,0.0]},{"metrics":[125.0,850.0,1.784080373E12,38.0,850.0,0.0]},{"metrics":[127.0,853.0,1.784080376E12,38.0,853.0,0.0]},{"metrics":[128.0,856.0,1.784080379E12,38.0,856.0,0.0]},{"metrics":[130.0,859.0,1.784080382E12,38.0,859.0,0.0]},{"metrics":[133.0,865.0,1.784080388E12,38.0,865.0,0.0]},{"metrics":[137.0,872.0,1.784080395E12,38.0,872.0,0.0]},{"metrics":[140.0,879.0,1.784080402E12,38.0,879.0,0.0]},{"metrics":[141.0,889.0,1.784080412E12,38.0,889.0,0.0]},{"metrics":[138.0,892.0,1.784080415E12,38.0,892.0,0.0]},{"metrics":[137.0,901.0,1.784080424E12,38.0,901.0,0.0]},{"metrics":[136.0,917.0,1.78408044E12,37.0,917.0,0.0]},{"metrics":[130.0,920.0,1.784080443E12,37.0,920.0,0.0]},{"metrics":[118.0,923.0,1.784080446E12,37.0,923.0,0.0]},{"metrics":[115.0,931.0,1.784080454E12,37.0,931.0,0.0]},{"metrics":[117.0,935.0,1.784080458E12,37.0,935.0,0.0]},{"metrics":[116.0,940.0,1.784080463E12,37.0,940.0,0.0]},{"metrics":[112.0,945.0,1.784080468E12,37.0,945.0,0.0]},{"metrics":[111.0,951.0,1.784080474E12,37.0,951.0,0.0]},{"metrics":[112.0,956.0,1.784080479E12,37.0,956.0,0.0]},{"metrics":[109.0,964.0,1.784080487E12,37.0,964.0,0.0]},{"metrics":[108.0,973.0,1.784080496E12,37.0,973.0,0.0]},{"metrics":[107.0,978.0,1.784080501E12,37.0,978.0,0.0]},{"metrics":[108.0,981.0,1.784080504E12,37.0,981.0,0.0]},{"metrics":[109.0,984.0,1.784080507E12,37.0,984.0,0.0]},{"metrics":[109.0,987.0,1.78408051E12,37.0,987.0,0.0]},{"metrics":[112.0,990.0,1.784080513E12,37.0,990.0,0.0]},{"metrics":[112.0,993.0,1.784080516E12,37.0,993.0,0.0]},{"metrics":[114.0,996.0,1.784080519E12,37.0,996.0,0.0]},{"metrics":[115.0,999.0,1.784080522E12,37.0,999.0,0.0]},{"metrics":[118.0,1002.0,1.784080525E12,37.0,1002.0,0.0]},{"metrics":[118.0,1005.0,1.784080528E12,37.0,1005.0,0.0]},{"metrics":[120.0,1008.0,1.784080531E12,37.0,1008.0,0.0]},{"metrics":[119.0,1009.0,1.784080532E12,37.0,1009.0,0.0]}],"geoPolylineDTO":null,"heartRateDTOs":null,"pendingData":null,"detailsAvailable":true}'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba918ff4aeb43-SEA
+            Content-Type:
+                - application/json;charset=UTF-8
+            Date:
+                - Wed, 15 Jul 2026 20:54:07 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=5Bc4TG2qwxOUM6m4tPSPAouTb5MwK2m7V%2FlQMz3OqF3%2F%2BI1IaEEwhPZUq9rf5YOoMS4viJuxY%2F6B3rDmKbdbPqtw%2Fya4zZdlTawyrwKjYE0jAHh9xu0DXh%2BS%2FAPwTyRhAX2gsIHHVA%3D%3D"}]}'
+            Server:
+                - cloudflare
+            Server-Timing:
+                - cfCacheStatus;desc="DYNAMIC"
+                - cfEdge;dur=44,cfOrigin;dur=34
+        status: 200 OK
+        code: 200
+        duration: 83.1953ms
+    - id: 6
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-iOS-5.19.1.2
+        url: https://connectapi.garmin.com/activity-service/activity/23601622207/hrTimeInZones
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '[{"zoneNumber":1,"secsInZone":121.489,"zoneLowBoundary":93},{"zoneNumber":2,"secsInZone":608.446,"zoneLowBoundary":111},{"zoneNumber":3,"secsInZone":278.998,"zoneLowBoundary":130},{"zoneNumber":4,"secsInZone":0.0,"zoneLowBoundary":148},{"zoneNumber":5,"secsInZone":0.0,"zoneLowBoundary":167}]'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba91988a7eb43-SEA
+            Content-Type:
+                - application/json;charset=UTF-8
+            Date:
+                - Wed, 15 Jul 2026 20:54:07 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=o9coXIGMLcZD1G6LJuar1RBv5R6%2BisrPo4xd1l1hetNifwCN%2FNQrIItqStbjXYG0YtakU3g5F5Hrc13tAIb%2F9CeyLWFkz7kEm%2FFxEjl1W3iUgUzjjcugj1%2FjDrQ5lWcdeP9qC%2Byn3A%3D%3D"}]}'
+            Server:
+                - cloudflare
+            Server-Timing:
+                - cfCacheStatus;desc="DYNAMIC"
+                - cfEdge;dur=44,cfOrigin;dur=7
+        status: 200 OK
+        code: 200
+        duration: 55.5009ms
+    - id: 7
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-iOS-5.19.1.2
+        url: https://connectapi.garmin.com/activity-service/activity/23601622207/powerTimeInZones
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 2
+        body: '[]'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba919e96feb43-SEA
+            Content-Length:
+                - "2"
+            Content-Type:
+                - application/json;charset=UTF-8
+            Date:
+                - Wed, 15 Jul 2026 20:54:07 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=KVy9RyJLZwr2MwIj8%2BRr%2FIQeCJcAZlVUuG2A3puixui1OvWTr9IJvEtYA4JXnAqCX7NuehQhEE7j5K7RJ%2FGSrB%2B8dKfMTRQO%2BP4SyWVns1ZQpvlSQr9ldURoklLXSKwlfavhr4p8Hw%3D%3D"}]}'
+            Server:
+                - cloudflare
+            Server-Timing:
+                - cfCacheStatus;desc="DYNAMIC"
+                - cfEdge;dur=44,cfOrigin;dur=9
+        status: 200 OK
+        code: 200
+        duration: 56.7818ms
+    - id: 8
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-iOS-5.19.1.2
+        url: https://connectapi.garmin.com/activity-service/activity/23601622207/exerciseSets
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 46
+        body: '{"activityId":23601622207,"exerciseSets":null}'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba91a3a5beb43-SEA
+            Content-Length:
+                - "46"
+            Content-Type:
+                - application/json;charset=UTF-8
+            Date:
+                - Wed, 15 Jul 2026 20:54:07 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=RSLCGBtzFzEH8pLhDd09MZDyK%2B0%2FTvDXEzaYekNmTvhyy2O8RFXu%2Ft6wHdSLSGRX2dJvyLhlogM3CRHkShKqxS%2B3dTX8u8EqnXriGTYjmD9%2B%2FGtPexx9pXgHWHu%2FsZopTfIjjqn99A%3D%3D"}]}'
+            Server:
+                - cloudflare
+            Server-Timing:
+                - cfCacheStatus;desc="DYNAMIC"
+                - cfEdge;dur=44,cfOrigin;dur=11
+        status: 200 OK
+        code: 200
+        duration: 60.0013ms
+    - id: 9
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-iOS-5.19.1.2
+        url: https://connectapi.garmin.com/activity-service/activity/23601622207/typedsplits
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"activityId":23601622207,"activityUUID":{"uuid":"00000000-0000-0000-0000-000000000000"},"splits":[{"startTimeLocal":"2026-07-14T18:38:43.0","startTimeGMT":"2026-07-15T01:38:43.0","duration":45.712,"movingDuration":0.0,"elapsedDuration":45.712,"calories":5.0,"bmrCalories":1.0,"averageHR":99.0,"maxHR":102.0,"totalExerciseReps":0,"type":"CLIMB_ACTIVE","messageIndex":0,"endTimeGMT":"2026-07-15T01:39:28.0","status":"CLIMB_COMPLETED","gradeValue":{"sortOrder":1,"valueKey":"V0","scale":"VERMIN"}},{"startTimeLocal":"2026-07-14T18:39:29.0","startTimeGMT":"2026-07-15T01:39:29.0","duration":43.134,"movingDuration":0.0,"elapsedDuration":43.134,"calories":6.0,"bmrCalories":1.0,"averageHR":110.0,"maxHR":127.0,"totalExerciseReps":0,"type":"CLIMB_REST","messageIndex":1,"endTimeGMT":"2026-07-15T01:40:11.0"},{"startTimeLocal":"2026-07-14T18:40:12.0","startTimeGMT":"2026-07-15T01:40:12.0","duration":33.818,"movingDuration":0.0,"elapsedDuration":33.818,"calories":6.0,"bmrCalories":1.0,"averageHR":124.0,"maxHR":137.0,"totalExerciseReps":0,"type":"CLIMB_ACTIVE","messageIndex":2,"endTimeGMT":"2026-07-15T01:40:45.0","status":"CLIMB_COMPLETED","gradeValue":{"sortOrder":1,"valueKey":"V0","scale":"VERMIN"}},{"startTimeLocal":"2026-07-14T18:40:46.0","startTimeGMT":"2026-07-15T01:40:46.0","duration":46.799,"movingDuration":0.0,"elapsedDuration":46.799,"calories":10.0,"bmrCalories":1.0,"averageHR":131.0,"maxHR":142.0,"totalExerciseReps":0,"type":"CLIMB_REST","messageIndex":3,"endTimeGMT":"2026-07-15T01:41:32.0"},{"startTimeLocal":"2026-07-14T18:41:33.0","startTimeGMT":"2026-07-15T01:41:33.0","duration":32.232,"movingDuration":0.0,"elapsedDuration":32.232,"calories":5.0,"bmrCalories":1.0,"averageHR":118.0,"maxHR":120.0,"totalExerciseReps":0,"type":"CLIMB_ACTIVE","messageIndex":4,"endTimeGMT":"2026-07-15T01:42:04.0","status":"CLIMB_COMPLETED","gradeValue":{"sortOrder":1,"valueKey":"V0","scale":"VERMIN"}},{"startTimeLocal":"2026-07-14T18:42:05.0","startTimeGMT":"2026-07-15T01:42:05.0","duration":55.131,"movingDuration":0.0,"elapsedDuration":55.131,"calories":10.0,"bmrCalories":1.0,"averageHR":125.0,"maxHR":141.0,"totalExerciseReps":0,"type":"CLIMB_REST","messageIndex":5,"endTimeGMT":"2026-07-15T01:42:59.0"},{"startTimeLocal":"2026-07-14T18:43:00.0","startTimeGMT":"2026-07-15T01:43:00.0","duration":31.08,"movingDuration":0.0,"elapsedDuration":31.08,"calories":6.0,"bmrCalories":1.0,"averageHR":125.0,"maxHR":127.0,"totalExerciseReps":0,"type":"CLIMB_ACTIVE","messageIndex":6,"endTimeGMT":"2026-07-15T01:43:30.0","status":"CLIMB_COMPLETED","gradeValue":{"sortOrder":1,"valueKey":"V0","scale":"VERMIN"}},{"startTimeLocal":"2026-07-14T18:43:31.0","startTimeGMT":"2026-07-15T01:43:31.0","duration":46.924,"movingDuration":0.0,"elapsedDuration":46.924,"calories":10.0,"bmrCalories":1.0,"averageHR":133.0,"maxHR":143.0,"totalExerciseReps":0,"type":"CLIMB_REST","messageIndex":7,"endTimeGMT":"2026-07-15T01:44:17.0"},{"startTimeLocal":"2026-07-14T18:44:18.0","startTimeGMT":"2026-07-15T01:44:18.0","duration":31.033,"movingDuration":0.0,"elapsedDuration":31.033,"calories":5.0,"bmrCalories":1.0,"averageHR":121.0,"maxHR":124.0,"totalExerciseReps":0,"type":"CLIMB_ACTIVE","messageIndex":8,"endTimeGMT":"2026-07-15T01:44:48.0","status":"CLIMB_COMPLETED","gradeValue":{"sortOrder":1,"valueKey":"V0","scale":"VERMIN"}},{"startTimeLocal":"2026-07-14T18:44:49.0","startTimeGMT":"2026-07-15T01:44:49.0","duration":51.277,"movingDuration":0.0,"elapsedDuration":51.277,"calories":9.0,"bmrCalories":1.0,"averageHR":125.0,"maxHR":140.0,"totalExerciseReps":0,"type":"CLIMB_REST","messageIndex":9,"endTimeGMT":"2026-07-15T01:45:39.0"},{"startTimeLocal":"2026-07-14T18:45:40.0","startTimeGMT":"2026-07-15T01:45:40.0","duration":36.431,"movingDuration":0.0,"elapsedDuration":36.431,"calories":5.0,"bmrCalories":1.0,"averageHR":113.0,"maxHR":120.0,"totalExerciseReps":0,"type":"CLIMB_ACTIVE","messageIndex":10,"endTimeGMT":"2026-07-15T01:46:16.0","status":"CLIMB_COMPLETED","gradeValue":{"sortOrder":1,"valueKey":"V0","scale":"VERMIN"}},{"startTimeLocal":"2026-07-14T18:46:17.0","startTimeGMT":"2026-07-15T01:46:17.0","duration":46.31,"movingDuration":0.0,"elapsedDuration":46.31,"calories":9.0,"bmrCalories":1.0,"averageHR":128.0,"maxHR":139.0,"totalExerciseReps":0,"type":"CLIMB_REST","messageIndex":11,"endTimeGMT":"2026-07-15T01:47:02.0"},{"startTimeLocal":"2026-07-14T18:47:03.0","startTimeGMT":"2026-07-15T01:47:03.0","duration":26.899,"movingDuration":0.0,"elapsedDuration":26.899,"calories":4.0,"bmrCalories":1.0,"averageHR":115.0,"maxHR":120.0,"totalExerciseReps":0,"type":"CLIMB_ACTIVE","messageIndex":12,"endTimeGMT":"2026-07-15T01:47:29.0","status":"CLIMB_COMPLETED","gradeValue":{"sortOrder":1,"valueKey":"V0","scale":"VERMIN"}},{"startTimeLocal":"2026-07-14T18:47:30.0","startTimeGMT":"2026-07-15T01:47:30.0","duration":53.53,"movingDuration":0.0,"elapsedDuration":53.53,"calories":9.0,"bmrCalories":1.0,"averageHR":124.0,"maxHR":133.0,"totalExerciseReps":0,"type":"CLIMB_REST","messageIndex":13,"endTimeGMT":"2026-07-15T01:48:23.0"},{"startTimeLocal":"2026-07-14T18:48:24.0","startTimeGMT":"2026-07-15T01:48:24.0","duration":23.638,"movingDuration":0.0,"elapsedDuration":23.638,"calories":3.0,"bmrCalories":1.0,"averageHR":115.0,"maxHR":117.0,"totalExerciseReps":0,"type":"CLIMB_ACTIVE","messageIndex":14,"endTimeGMT":"2026-07-15T01:48:46.0","status":"CLIMB_COMPLETED","gradeValue":{"sortOrder":1,"valueKey":"V0","scale":"VERMIN"}},{"startTimeLocal":"2026-07-14T18:48:47.0","startTimeGMT":"2026-07-15T01:48:47.0","duration":54.559,"movingDuration":0.0,"elapsedDuration":54.559,"calories":10.0,"bmrCalories":1.0,"averageHR":126.0,"maxHR":140.0,"totalExerciseReps":0,"type":"CLIMB_REST","messageIndex":15,"endTimeGMT":"2026-07-15T01:49:41.0"},{"startTimeLocal":"2026-07-14T18:49:42.0","startTimeGMT":"2026-07-15T01:49:42.0","duration":30.453,"movingDuration":0.0,"elapsedDuration":30.453,"calories":5.0,"bmrCalories":1.0,"averageHR":120.0,"maxHR":124.0,"totalExerciseReps":0,"type":"CLIMB_ACTIVE","messageIndex":16,"endTimeGMT":"2026-07-15T01:50:11.0","status":"CLIMB_COMPLETED","gradeValue":{"sortOrder":1,"valueKey":"V0","scale":"VERMIN"}},{"startTimeLocal":"2026-07-14T18:50:12.0","startTimeGMT":"2026-07-15T01:50:12.0","duration":70.168,"movingDuration":0.0,"elapsedDuration":70.168,"calories":12.0,"bmrCalories":2.0,"averageHR":122.0,"maxHR":139.0,"totalExerciseReps":0,"type":"CLIMB_REST","messageIndex":17,"endTimeGMT":"2026-07-15T01:51:21.0"},{"startTimeLocal":"2026-07-14T18:51:22.0","startTimeGMT":"2026-07-15T01:51:22.0","duration":24.473,"movingDuration":0.0,"elapsedDuration":24.473,"calories":3.0,"bmrCalories":1.0,"averageHR":116.0,"maxHR":120.0,"totalExerciseReps":0,"type":"CLIMB_ACTIVE","messageIndex":18,"endTimeGMT":"2026-07-15T01:51:46.0","status":"CLIMB_COMPLETED","gradeValue":{"sortOrder":4,"valueKey":"V3","scale":"VERMIN"}},{"startTimeLocal":"2026-07-14T18:51:47.0","startTimeGMT":"2026-07-15T01:51:47.0","duration":40.787,"movingDuration":0.0,"elapsedDuration":40.787,"calories":8.0,"bmrCalories":1.0,"averageHR":130.0,"maxHR":136.0,"totalExerciseReps":0,"type":"CLIMB_REST","messageIndex":19,"endTimeGMT":"2026-07-15T01:52:27.0"},{"startTimeLocal":"2026-07-14T18:52:28.0","startTimeGMT":"2026-07-15T01:52:28.0","duration":34.834,"movingDuration":0.0,"elapsedDuration":34.834,"calories":6.0,"bmrCalories":1.0,"averageHR":125.0,"maxHR":130.0,"totalExerciseReps":0,"type":"CLIMB_ACTIVE","messageIndex":20,"endTimeGMT":"2026-07-15T01:53:02.0","status":"CLIMB_COMPLETED","gradeValue":{"sortOrder":5,"valueKey":"V4","scale":"VERMIN"}},{"startTimeLocal":"2026-07-14T18:53:03.0","startTimeGMT":"2026-07-15T01:53:03.0","duration":117.064,"movingDuration":0.0,"elapsedDuration":117.064,"calories":20.0,"bmrCalories":3.0,"averageHR":125.0,"maxHR":141.0,"totalExerciseReps":0,"type":"CLIMB_REST","messageIndex":21,"endTimeGMT":"2026-07-15T01:54:59.0"},{"startTimeLocal":"2026-07-14T18:55:00.0","startTimeGMT":"2026-07-15T01:55:00.0","duration":30.426,"movingDuration":0.0,"elapsedDuration":30.426,"calories":3.0,"bmrCalories":1.0,"averageHR":112.0,"maxHR":118.0,"totalExerciseReps":0,"type":"CLIMB_ACTIVE","messageIndex":22,"endTimeGMT":"2026-07-15T01:55:29.0","status":"CLIMB_COMPLETED","gradeValue":{"sortOrder":5,"valueKey":"V4","scale":"VERMIN"}},{"startTimeLocal":"2026-07-14T18:55:30.0","startTimeGMT":"2026-07-15T01:55:30.0","duration":1.913,"movingDuration":0.0,"elapsedDuration":8.817,"calories":0.0,"bmrCalories":0.0,"averageHR":119.0,"maxHR":120.0,"totalExerciseReps":0,"type":"CLIMB_REST","messageIndex":23,"endTimeGMT":"2026-07-15T01:55:32.0"}]}'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba91a9b74eb43-SEA
+            Content-Type:
+                - application/json;charset=UTF-8
+            Date:
+                - Wed, 15 Jul 2026 20:54:07 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=%2B7oPZQxImjfoinmA13eUnESC5P2hN5yE%2BmDHS4IXDvbjHLpo7NP4d55emjzKtB%2FHbeMi0LQGpGtqSMMN2qL4OsEevgtE0%2F%2F%2B%2FP4OY40lxYuO4HXysNCZEtqoaEVvOwW0K%2FdGVJCk0w%3D%3D"}]}'
+            Server:
+                - cloudflare
+            Server-Timing:
+                - cfCacheStatus;desc="DYNAMIC"
+                - cfEdge;dur=44,cfOrigin;dur=16
+        status: 200 OK
+        code: 200
+        duration: 65.9857ms
+    - id: 10
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-iOS-5.19.1.2
+        url: https://connectapi.garmin.com/activity-service/activity/23601622207/split_summaries
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"activityId":23601622207,"activityUUID":{"uuid":"00000000-0000-0000-0000-000000000000"},"splitSummaries":[{"duration":381.029,"movingDuration":0.0,"calories":57.0,"bmrCalories":9.0,"averageHR":116.0,"maxHR":137.0,"totalExerciseReps":0,"splitType":"CLIMB_ACTIVE","noOfSplits":12,"numClimbsCompleted":12,"maxGradeValue":{"sortOrder":5,"valueKey":"V4","scale":"VERMIN"}},{"duration":627.596,"movingDuration":0.0,"calories":113.0,"bmrCalories":15.0,"averageHR":125.0,"maxHR":143.0,"totalExerciseReps":0,"splitType":"CLIMB_REST","noOfSplits":12}]}'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba91b0c71eb43-SEA
+            Content-Type:
+                - application/json;charset=UTF-8
+            Date:
+                - Wed, 15 Jul 2026 20:54:07 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=dLZQcHwCWEbyAaibaK7ayh1LvTw0u5XiH73ltc15gtc2LwrGcmyNRMQg3D422MuJwvoUeDiCs6%2Fpg5ApZQDTBzW8s3kZ88Qh%2B33Um5mUuVMSd0PoyJwoPnVfKB5Vz8a%2BhPyn98jGSA%3D%3D"}]}'
+            Server:
+                - cloudflare
+            Server-Timing:
+                - cfCacheStatus;desc="DYNAMIC"
+                - cfEdge;dur=44,cfOrigin;dur=10
+        status: 200 OK
+        code: 200
+        duration: 58.5886ms

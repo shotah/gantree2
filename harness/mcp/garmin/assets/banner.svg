@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" role="img" aria-label="go-garmin">
+  <defs>
+    <linearGradient id="sky" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1f2a"/>
+      <stop offset="55%" stop-color="#123d4a"/>
+      <stop offset="100%" stop-color="#0e2f28"/>
+    </linearGradient>
+    <linearGradient id="line" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3dd6c6" stop-opacity="0"/>
+      <stop offset="15%" stop-color="#3dd6c6"/>
+      <stop offset="50%" stop-color="#7ce38b"/>
+      <stop offset="85%" stop-color="#f4c15d"/>
+      <stop offset="100%" stop-color="#f4c15d" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="320" fill="url(#sky)"/>
+  <circle cx="1080" cy="40" r="160" fill="#1a5c63" opacity="0.25"/>
+  <circle cx="160" cy="280" r="120" fill="#1f6b4a" opacity="0.2"/>
+
+  <g stroke="#ffffff" stroke-opacity="0.04" stroke-width="1">
+    <path d="M0 80 H1280 M0 160 H1280 M0 240 H1280"/>
+    <path d="M160 0 V320 M320 0 V320 M480 0 V320 M640 0 V320 M800 0 V320 M960 0 V320 M1120 0 V320"/>
+  </g>
+
+  <path
+    d="M80 210 C160 210, 200 120, 280 150 S400 250, 480 180 S640 90, 720 140 S880 230, 960 170 S1120 110, 1200 150"
+    fill="none"
+    stroke="url(#line)"
+    stroke-width="4"
+    stroke-linecap="round"
+    filter="url(#glow)"
+  />
+  <circle cx="720" cy="140" r="6" fill="#7ce38b" filter="url(#glow)"/>
+  <circle cx="480" cy="180" r="4" fill="#3dd6c6"/>
+  <circle cx="960" cy="170" r="4" fill="#f4c15d"/>
+
+  <g transform="translate(96,88)">
+    <circle cx="56" cy="56" r="52" fill="none" stroke="#3dd6c6" stroke-width="3" opacity="0.9"/>
+    <circle cx="56" cy="56" r="40" fill="none" stroke="#7ce38b" stroke-width="2" opacity="0.55"/>
+    <path
+      d="M78 56 A22 22 0 1 1 56 34"
+      fill="none"
+      stroke="#f4c15d"
+      stroke-width="8"
+      stroke-linecap="round"
+    />
+    <path
+      d="M34 70 L48 54 L58 62 L76 40"
+      fill="none"
+      stroke="#ffffff"
+      stroke-width="4"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </g>
+
+  <text x="240" y="145" fill="#f4faf8" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="72" font-weight="700" letter-spacing="-2">go-garmin</text>
+  <text x="244" y="188" fill="#9fd0c8" font-family="ui-sans-serif, system-ui, Segoe UI, sans-serif" font-size="22" font-weight="500" letter-spacing="3">CONNECT API � CLI � MCP</text>
+
+  <rect x="244" y="214" rx="8" ry="8" width="72" height="28" fill="#163a40" stroke="#3dd6c6" stroke-opacity="0.45"/>
+  <text x="280" y="232" text-anchor="middle" fill="#b8ebe3" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">Go</text>
+
+  <rect x="328" y="214" rx="8" ry="8" width="72" height="28" fill="#163a40" stroke="#7ce38b" stroke-opacity="0.45"/>
+  <text x="364" y="232" text-anchor="middle" fill="#c8f0d0" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">CLI</text>
+
+  <rect x="412" y="214" rx="8" ry="8" width="72" height="28" fill="#163a40" stroke="#f4c15d" stroke-opacity="0.45"/>
+  <text x="448" y="232" text-anchor="middle" fill="#f6e2b0" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">MCP</text>
+</svg>

@@ -67,3 +67,17 @@ body {
     touch-action: manipulation;
   }
 }
+
+/* Chat fills the screen. Other pages keep the document scroll. */
+html:has([data-shot="phone"]),
+html:has([data-shot="agent"]) {
+  height: 100%;
+  overflow: hidden;
+}
+
+html:has([data-shot="phone"]) body,
+html:has([data-shot="agent"]) body {
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+}

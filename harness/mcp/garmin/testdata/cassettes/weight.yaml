@@ -1,0 +1,102 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-iOS-5.19.1.2
+        url: https://connectapi.garmin.com/weight-service/weight/dayview/2026-07-15
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"startDate":"2026-07-15","endDate":"2026-07-15","dateWeightList":[{"samplePk":1784133284381,"date":1784108054000,"calendarDate":"2026-07-15","weight":84510.0,"bmi":26.700000762939453,"bodyFat":6.9,"bodyWater":68.0,"boneMass":6340,"muscleMass":33200,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1784133254000,"weightDelta":816.4662660000051}],"totalAverage":{"from":1784073600000,"until":1784159999999,"weight":84510.0,"bmi":26.700000762939453,"bodyFat":6.9,"bodyWater":68.0,"boneMass":6340,"muscleMass":33200,"physiqueRating":null,"visceralFat":null,"metabolicAge":null}}'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba9b02823eb43-SEA
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 20:54:31 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=eU6bbqhq1TuNzj0txPp24v6ZmkPgo3YIzDJ9ICdNW%2B9OFt%2FjMdAhB1gZKQKHm3m3SLpNQM5rmZiaFtjxulflZPavHUVnG1gi5CWqPUnbiLi9DXAw0YEtdedrcCEc%2BOSMoEEdngJY1A%3D%3D"}]}'
+            Server:
+                - cloudflare
+            Server-Timing:
+                - cfCacheStatus;desc="DYNAMIC"
+                - cfEdge;dur=43,cfOrigin;dur=12
+        status: 200 OK
+        code: 200
+        duration: 58.9446ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        form:
+            includeAll:
+                - "true"
+        headers:
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-iOS-5.19.1.2
+        url: https://connectapi.garmin.com/weight-service/weight/range/2026-06-15/2026-07-15?includeAll=true
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"dailyWeightSummaries":[{"summaryDate":"2026-07-15","numOfWeightEntries":1,"minWeight":84510.0,"maxWeight":84510.0,"latestWeight":{"samplePk":1784133284381,"date":1784108054000,"calendarDate":"2026-07-15","weight":84510.0,"bmi":26.700000762939453,"bodyFat":6.9,"bodyWater":68.0,"boneMass":6340,"muscleMass":33200,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1784133254000,"weightDelta":816.4662660000051},"allWeightMetrics":[{"samplePk":1784133284381,"date":1784108054000,"calendarDate":"2026-07-15","weight":84510.0,"bmi":26.700000762939453,"bodyFat":6.9,"bodyWater":68.0,"boneMass":6340,"muscleMass":33200,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1784133254000,"weightDelta":816.4662660000051}]},{"summaryDate":"2026-07-13","numOfWeightEntries":2,"minWeight":83680.0,"maxWeight":84660.0,"latestWeight":{"samplePk":1783987157802,"date":1783961925000,"calendarDate":"2026-07-13","weight":83680.0,"bmi":26.399999618530273,"bodyFat":5.1,"bodyWater":69.3,"boneMass":6429,"muscleMass":33000,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1783987125000,"weightDelta":-907.18474},"allWeightMetrics":[{"samplePk":1783987157802,"date":1783961925000,"calendarDate":"2026-07-13","weight":83680.0,"bmi":26.399999618530273,"bodyFat":5.1,"bodyWater":69.3,"boneMass":6429,"muscleMass":33000,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1783987125000,"weightDelta":-952.5439769999974},{"samplePk":1783948000990,"date":1783922775000,"calendarDate":"2026-07-13","weight":84660.0,"bmi":26.700000762939453,"bodyFat":7.4,"bodyWater":67.6,"boneMass":6300,"muscleMass":33240,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1783947975000,"weightDelta":45.35923699999742}]},{"summaryDate":"2026-07-12","numOfWeightEntries":1,"minWeight":84610.0,"maxWeight":84610.0,"latestWeight":{"samplePk":1783866134657,"date":1783840905000,"calendarDate":"2026-07-12","weight":84610.0,"bmi":26.700000762939453,"bodyFat":6.6,"bodyWater":68.2,"boneMass":6380,"muscleMass":33220,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1783866105000,"weightDelta":907.18474},"allWeightMetrics":[{"samplePk":1783866134657,"date":1783840905000,"calendarDate":"2026-07-12","weight":84610.0,"bmi":26.700000762939453,"bodyFat":6.6,"bodyWater":68.2,"boneMass":6380,"muscleMass":33220,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1783866105000,"weightDelta":907.18474}]},{"summaryDate":"2026-07-11","numOfWeightEntries":1,"minWeight":83699.0,"maxWeight":83699.0,"latestWeight":{"samplePk":1783780649199,"date":1783755430000,"calendarDate":"2026-07-11","weight":83699.0,"bmi":26.399999618530273,"bodyFat":6.7,"bodyWater":68.1,"boneMass":6260,"muscleMass":33000,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1783780630000,"weightDelta":-408.23313300000257},"allWeightMetrics":[{"samplePk":1783780649199,"date":1783755430000,"calendarDate":"2026-07-11","weight":83699.0,"bmi":26.399999618530273,"bodyFat":6.7,"bodyWater":68.1,"boneMass":6260,"muscleMass":33000,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1783780630000,"weightDelta":-408.23313300000257}]},{"summaryDate":"2026-07-10","numOfWeightEntries":1,"minWeight":84099.0,"maxWeight":84099.0,"latestWeight":{"samplePk":1783721751684,"date":1783696520000,"calendarDate":"2026-07-10","weight":84099.0,"bmi":26.5,"bodyFat":5.4,"bodyWater":69.0,"boneMass":6440,"muscleMass":33099,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1783721720000,"weightDelta":861.8255030000026},"allWeightMetrics":[{"samplePk":1783721751684,"date":1783696520000,"calendarDate":"2026-07-10","weight":84099.0,"bmi":26.5,"bodyFat":5.4,"bodyWater":69.0,"boneMass":6440,"muscleMass":33099,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1783721720000,"weightDelta":861.8255030000026}]},{"summaryDate":"2026-07-09","numOfWeightEntries":1,"minWeight":83239.0,"maxWeight":83239.0,"latestWeight":{"samplePk":1783603718283,"date":1783578468000,"calendarDate":"2026-07-09","weight":83239.0,"bmi":26.299999237060547,"bodyFat":6.3,"bodyWater":68.4,"boneMass":6250,"muscleMass":32889,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1783603668000,"weightDelta":-226.796185},"allWeightMetrics":[{"samplePk":1783603718283,"date":1783578468000,"calendarDate":"2026-07-09","weight":83239.0,"bmi":26.299999237060547,"bodyFat":6.3,"bodyWater":68.4,"boneMass":6250,"muscleMass":32889,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1783603668000,"weightDelta":-226.796185}]},{"summaryDate":"2026-07-08","numOfWeightEntries":1,"minWeight":83459.0,"maxWeight":83459.0,"latestWeight":{"samplePk":1783554667118,"date":1783529437000,"calendarDate":"2026-07-08","weight":83459.0,"bmi":26.299999237060547,"bodyFat":5.5,"bodyWater":69.0,"boneMass":6360,"muscleMass":32939,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1783554637000,"weightDelta":907.18474},"allWeightMetrics":[{"samplePk":1783554667118,"date":1783529437000,"calendarDate":"2026-07-08","weight":83459.0,"bmi":26.299999237060547,"bodyFat":5.5,"bodyWater":69.0,"boneMass":6360,"muscleMass":32939,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1783554637000,"weightDelta":907.18474}]},{"summaryDate":"2026-07-07","numOfWeightEntries":1,"minWeight":82550.0,"maxWeight":82550.0,"latestWeight":{"samplePk":1783430419873,"date":1783405188000,"calendarDate":"2026-07-07","weight":82550.0,"bmi":26.100000381469727,"bodyFat":6.0,"bodyWater":68.6,"boneMass":6210,"muscleMass":32720,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1783430388000,"weightDelta":-498.95160699999747},"allWeightMetrics":[{"samplePk":1783430419873,"date":1783405188000,"calendarDate":"2026-07-07","weight":82550.0,"bmi":26.100000381469727,"bodyFat":6.0,"bodyWater":68.6,"boneMass":6210,"muscleMass":32720,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1783430388000,"weightDelta":-498.95160699999747}]},{"summaryDate":"2026-06-30","numOfWeightEntries":1,"minWeight":83059.0,"maxWeight":83059.0,"latestWeight":{"samplePk":1782882779503,"date":1782857552000,"calendarDate":"2026-06-30","weight":83059.0,"bmi":26.200000762939453,"bodyFat":5.9,"bodyWater":68.7,"boneMass":6269,"muscleMass":32840,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1782882752000,"weightDelta":544.3108439999949},"allWeightMetrics":[{"samplePk":1782882779503,"date":1782857552000,"calendarDate":"2026-06-30","weight":83059.0,"bmi":26.200000762939453,"bodyFat":5.9,"bodyWater":68.7,"boneMass":6269,"muscleMass":32840,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1782882752000,"weightDelta":544.3108439999949}]},{"summaryDate":"2026-06-28","numOfWeightEntries":1,"minWeight":82510.0,"maxWeight":82510.0,"latestWeight":{"samplePk":1782661787426,"date":1782636532000,"calendarDate":"2026-06-28","weight":82510.0,"bmi":26.0,"bodyFat":6.4,"bodyWater":68.3,"boneMass":6159,"muscleMass":32709,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1782661732000,"weightDelta":498.95160699999747},"allWeightMetrics":[{"samplePk":1782661787426,"date":1782636532000,"calendarDate":"2026-06-28","weight":82510.0,"bmi":26.0,"bodyFat":6.4,"bodyWater":68.3,"boneMass":6159,"muscleMass":32709,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1782661732000,"weightDelta":498.95160699999747}]},{"summaryDate":"2026-06-27","numOfWeightEntries":1,"minWeight":81989.0,"maxWeight":81989.0,"latestWeight":{"samplePk":1782592042764,"date":1782566811000,"calendarDate":"2026-06-27","weight":81989.0,"bmi":25.899999618530273,"bodyFat":5.0,"bodyWater":69.5,"boneMass":6250,"muscleMass":32580,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1782592011000,"weightDelta":-181.43694799998968},"allWeightMetrics":[{"samplePk":1782592042764,"date":1782566811000,"calendarDate":"2026-06-27","weight":81989.0,"bmi":25.899999618530273,"bodyFat":5.0,"bodyWater":69.5,"boneMass":6250,"muscleMass":32580,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1782592011000,"weightDelta":-181.43694799998968}]},{"summaryDate":"2026-06-24","numOfWeightEntries":1,"minWeight":82209.0,"maxWeight":82209.0,"latestWeight":{"samplePk":1782345128068,"date":1782319898000,"calendarDate":"2026-06-24","weight":82209.0,"bmi":25.899999618530273,"bodyFat":5.0,"bodyWater":69.6,"boneMass":6280,"muscleMass":32639,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1782345098000,"weightDelta":-2494.7580350000003},"allWeightMetrics":[{"samplePk":1782345128068,"date":1782319898000,"calendarDate":"2026-06-24","weight":82209.0,"bmi":25.899999618530273,"bodyFat":5.0,"bodyWater":69.6,"boneMass":6280,"muscleMass":32639,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1782345098000,"weightDelta":-2494.7580350000003}]},{"summaryDate":"2026-06-22","numOfWeightEntries":2,"minWeight":84080.0,"maxWeight":84699.0,"latestWeight":{"samplePk":1782188036087,"date":1782162811000,"calendarDate":"2026-06-22","weight":84699.0,"bmi":26.700000762939453,"bodyFat":7.0,"bodyWater":67.9,"boneMass":6340,"muscleMass":33240,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1782188011000,"weightDelta":2222.6026129999896},"allWeightMetrics":[{"samplePk":1782188036087,"date":1782162811000,"calendarDate":"2026-06-22","weight":84699.0,"bmi":26.700000762939453,"bodyFat":7.0,"bodyWater":67.9,"boneMass":6340,"muscleMass":33240,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1782188011000,"weightDelta":589.6700809999923},{"samplePk":1782135865214,"date":1782110621000,"calendarDate":"2026-06-22","weight":84080.0,"bmi":26.5,"bodyFat":6.6,"bodyWater":68.2,"boneMass":6320,"muscleMass":33090,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1782135821000,"weightDelta":1632.9325319999975}]},{"summaryDate":"2026-06-20","numOfWeightEntries":1,"minWeight":82459.0,"maxWeight":82459.0,"latestWeight":{"samplePk":1781967803239,"date":1781942578000,"calendarDate":"2026-06-20","weight":82459.0,"bmi":26.0,"bodyFat":5.9,"bodyWater":68.7,"boneMass":6210,"muscleMass":32700,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1781967778000,"weightDelta":544.3108440000077},"allWeightMetrics":[{"samplePk":1781967803239,"date":1781942578000,"calendarDate":"2026-06-20","weight":82459.0,"bmi":26.0,"bodyFat":5.9,"bodyWater":68.7,"boneMass":6210,"muscleMass":32700,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1781967778000,"weightDelta":544.3108440000077}]},{"summaryDate":"2026-06-19","numOfWeightEntries":1,"minWeight":81940.0,"maxWeight":81940.0,"latestWeight":{"samplePk":1781876941131,"date":1781851714000,"calendarDate":"2026-06-19","weight":81940.0,"bmi":25.899999618530273,"bodyFat":6.0,"bodyWater":68.6,"boneMass":6139,"muscleMass":32569,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1781876914000,"weightDelta":-2222.6026130000027},"allWeightMetrics":[{"samplePk":1781876941131,"date":1781851714000,"calendarDate":"2026-06-19","weight":81940.0,"bmi":25.899999618530273,"bodyFat":6.0,"bodyWater":68.6,"boneMass":6139,"muscleMass":32569,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1781876914000,"weightDelta":-2222.6026130000027}]},{"summaryDate":"2026-06-16","numOfWeightEntries":1,"minWeight":84120.0,"maxWeight":84120.0,"latestWeight":{"samplePk":1781617127775,"date":1781591902000,"calendarDate":"2026-06-16","weight":84120.0,"bmi":26.5,"bodyFat":6.6,"bodyWater":68.2,"boneMass":6320,"muscleMass":33099,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1781617102000,"weightDelta":1723.6510060000053},"allWeightMetrics":[{"samplePk":1781617127775,"date":1781591902000,"calendarDate":"2026-06-16","weight":84120.0,"bmi":26.5,"bodyFat":6.6,"bodyWater":68.2,"boneMass":6320,"muscleMass":33099,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1781617102000,"weightDelta":1723.6510060000053}]}],"totalAverage":{"from":1781481600000,"until":1784159999999,"weight":83301.9375,"bmi":26.28125,"bodyFat":6.0,"bodyWater":68.6,"boneMass":6289,"muscleMass":32902,"physiqueRating":null,"visceralFat":null,"metabolicAge":null},"previousDateWeight":{"samplePk":1781270673776,"date":1781245441000,"calendarDate":"2026-06-12","weight":82440.0,"bmi":26.0,"bodyFat":5.9,"bodyWater":68.7,"boneMass":6210,"muscleMass":32689,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":"INDEX_SCALE","timestampGMT":1781270641000,"weightDelta":null},"nextDateWeight":{"samplePk":null,"date":null,"calendarDate":null,"weight":null,"bmi":null,"bodyFat":null,"bodyWater":null,"boneMass":null,"muscleMass":null,"physiqueRating":null,"visceralFat":null,"metabolicAge":null,"sourceType":null,"timestampGMT":null,"weightDelta":null}}'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba9b0894beb43-SEA
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 20:54:31 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=9QQfc5f6Od7C%2Fg0oJ6mwViSTf0W17%2FiDo2Gr2Qvjels%2Bp35icHBBq4glP1uo5qKJkuPeM5hE3vGY6CewDu0IaDEUrQMtzQ78JDaj26qx6TgbBW2XnNT%2F%2Ft3WftX4ljuP%2FLGpzwbUGg%3D%3D"}]}'
+            Server:
+                - cloudflare
+            Server-Timing:
+                - cfCacheStatus;desc="DYNAMIC"
+                - cfEdge;dur=43,cfOrigin;dur=12
+        status: 200 OK
+        code: 200
+        duration: 59.7498ms

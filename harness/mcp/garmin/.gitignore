@@ -1,0 +1,50 @@
+# IDE
+.idea/
+.vscode/
+.claude/
+*.swp
+
+# OS
+.DS_Store
+
+# Test coverage artifacts
+coverage
+coverage.out
+coverage.txt
+*.coverprofile
+
+# Built binaries (do not ignore the garmin/ package directory)
+/bin/
+/garmin.exe
+/record-fixtures
+/record-fixtures.exe
+/har-parser
+/har-parser.exe
+/validate-endpoints
+/validate-endpoints.exe
+
+docs/
+.mcp.json
+
+# Go workspace (local development)
+go.work
+go.work.sum
+
+# Local secrets / sessions (Garmin fixture + CLI auth)
+.env
+.env.local
+settings.json
+
+# Nix/direnv
+.direnv/
+result
+
+# Reference repos
+refs/
+
+# HAR files (browser network recordings)
+*.har
+har.json
+
+# Cassettes with unanonymized binary/GPS data
+testdata/cassettes/courses_download.yaml

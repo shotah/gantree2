@@ -1,0 +1,125 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Accept:
+                - application/json
+            Accept-Language:
+                - en-US,en;q=0.9
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-Android-5.23
+            X-App-Ver:
+                - "10861"
+            X-Garmin-Client-Platform:
+                - Android
+            X-Garmin-Paired-App-Version:
+                - "10861"
+            X-Garmin-User-Agent:
+                - com.garmin.android.apps.connectmobile/5.23; ; Google/sdk_gphone64_arm64/google; Android/33; Dalvik/2.1.0
+            X-Gcexperience:
+                - GC5
+            X-Lang:
+                - en
+        url: https://connectapi.garmin.com/userprofile-service/socialProfile
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"id":12345678,"profileId":12345678,"garminGUID":"00000000-0000-0000-0000-000000000000","displayName":"anonymous","fullName":"Anonymous User","userName":"anonymous","profileImageType":"UPLOADED_PHOTO","profileImageUrlLarge":"https://example.com/profile.png","profileImageUrlMedium":"https://example.com/profile.png","profileImageUrlSmall":"https://example.com/profile.png","hasPremiumSocialIcon":false,"location":"Anonymous City","facebookUrl":null,"twitterUrl":null,"personalWebsite":null,"motivation":null,"bio":null,"primaryActivity":null,"favoriteActivityTypes":["cycling","cross_training","walking","other"],"runningTrainingSpeed":0.0,"cyclingTrainingSpeed":0.0,"favoriteCyclingActivityTypes":[],"cyclingClassification":null,"cyclingMaxAvgPower":0.0,"swimmingTrainingSpeed":0.0,"profileVisibility":"following","activityStartVisibility":"public","activityMapVisibility":"public","courseVisibility":"public","activityHeartRateVisibility":"public","activityPowerVisibility":"public","badgeVisibility":"groups","showAge":true,"showWeight":true,"showHeight":true,"showWeightClass":false,"showAgeRange":false,"showGender":true,"showActivityClass":false,"showVO2Max":true,"showPersonalRecords":true,"showLast12Months":true,"showLifetimeTotals":true,"showUpcomingEvents":true,"showRecentFavorites":true,"showRecentDevice":true,"showRecentGear":false,"showBadges":true,"otherActivity":null,"otherPrimaryActivity":null,"otherMotivation":null,"userRoles":["SCOPE_OMT_DISCOUNTS_READ","SCOPE_DI_COACHING_WRITE","SCOPE_GARMINPAY_WRITE","SCOPE_ATP_READ","SCOPE_GHS_SAMD","SCOPE_INSIGHTS_READ","SCOPE_OMT_DISCOUNTS_CREATE","SCOPE_CIQ_APPSTORE_SERVICES_CREATE","SCOPE_DI_TOUM_NATIVE_REPORTED_DETAIL_WRITE","SCOPE_COMMUNITY_COURSE_WRITE","SCOPE_GCOFFER_WRITE","SCOPE_DI_API_READ","SCOPE_DT_CLIENT_ANALYTICS_WRITE","SCOPE_CIQ_APPSTORE_SERVICES_DELETE","SCOPE_OMT_SUBSCRIPTION_READ","SCOPE_DI_COACHING_READ","SCOPE_CONNECT_READ","SCOPE_COMMUNITY_COURSE_READ","SCOPE_GOLF_API_READ","SCOPE_GHS_UPLOAD","SCOPE_DIVE_API_READ","SCOPE_CIQ_APPSTORE_SERVICES_READ","SCOPE_CIQ_APPSTORE_SERVICES_UPDATE","SCOPE_CONNECT_WRITE","SCOPE_CONNECT_MCT_DAILY_LOG_READ","SCOPE_GARMINPAY_READ","SCOPE_DI_OAUTH_2_AUTHORIZATION_CODE_CREATE","SCOPE_GOLF_API_WRITE","SCOPE_INSIGHTS_WRITE","SCOPE_PRODUCT_SEARCH_READ","SCOPE_OMT_CAMPAIGN_READ","SCOPE_GCOFFER_READ","SCOPE_ATP_WRITE","ROLE_CONNECTUSER","ROLE_FITNESS_USER","ROLE_WELLNESS_USER","ROLE_OUTDOOR_USER","ROLE_GHS_USER","ROLE_TACX_APP_USER","ROLE_GARMIN_USER"],"nameApproved":true,"userProfileFullName":"Anonymous User","makeGolfScorecardsPrivate":true,"allowGolfLiveScoring":false,"allowGolfScoringByConnections":true,"userLevel":3,"userPoint":102,"levelUpdateDate":"2024-10-04T00:56:56.0","levelIsViewed":false,"levelPointThreshold":140,"userPointOffset":0,"userPro":false}'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bbdb990a76d7dd-SEA
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 21:28:36 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=eJ1Y%2BhgqUJOPB8vbG5oxpMESUiF3zON6yqESXSB5xVvB8mOGOA%2BfiwUjyEmDrQ2VvxIT%2FtM6KTjGDmzToFHwZpzHuYkhpCEt%2FzCctbyaYVVXOwuS7tNeEdv91T%2F%2FGzONNkvz4QyF5g%3D%3D"}]}'
+            Server:
+                - cloudflare
+        status: 200 OK
+        code: 200
+        duration: 98.3729ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Accept:
+                - application/json
+            Accept-Language:
+                - en-US,en;q=0.9
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-Android-5.23
+            X-App-Ver:
+                - "10861"
+            X-Garmin-Client-Platform:
+                - Android
+            X-Garmin-Paired-App-Version:
+                - "10861"
+            X-Garmin-User-Agent:
+                - com.garmin.android.apps.connectmobile/5.23; ; Google/sdk_gphone64_arm64/google; Android/33; Dalvik/2.1.0
+            X-Gcexperience:
+                - GC5
+            X-Lang:
+                - en
+        url: https://connectapi.garmin.com/personalrecord-service/personalrecord/prs/anonymous
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '[{"id":12345678,"typeId":1,"status":"ACCEPTED","activityId":19985605261,"activityName":"Anonymous Activity","activityType":"running","activityStartDateTimeInGMT":1754597191000,"actStartDateTimeInGMTFormatted":"2025-08-07T20:06:31.0","activityStartDateTimeLocal":1754571991000,"activityStartDateTimeLocalFormatted":"2025-08-07T13:06:31.0","value":291.572998046875,"prStartTimeGmt":1754598060000,"prStartTimeGmtFormatted":"2025-08-07T20:21:00.0","prStartTimeLocal":null,"prStartTimeLocalFormatted":null,"prTypeLabelKey":null,"poolLengthUnit":null},{"id":12345678,"typeId":2,"status":"ACCEPTED","activityId":23503161825,"activityName":"Anonymous Activity","activityType":"running","activityStartDateTimeInGMT":1783367566000,"actStartDateTimeInGMTFormatted":"2026-07-06T19:52:46.0","activityStartDateTimeLocal":1783342366000,"activityStartDateTimeLocalFormatted":"2026-07-06T12:52:46.0","value":491.5419921875,"prStartTimeGmt":1783367584000,"prStartTimeGmtFormatted":"2026-07-06T19:53:04.0","prStartTimeLocal":null,"prStartTimeLocalFormatted":null,"prTypeLabelKey":null,"poolLengthUnit":null},{"id":12345678,"typeId":3,"status":"ACCEPTED","activityId":19838411636,"activityName":"Anonymous Activity","activityType":"running","activityStartDateTimeInGMT":1753386345000,"actStartDateTimeInGMTFormatted":"2025-07-24T19:45:45.0","activityStartDateTimeLocal":1753361145000,"activityStartDateTimeLocalFormatted":"2025-07-24T12:45:45.0","value":1750.6219482421875,"prStartTimeGmt":1753386632000,"prStartTimeGmtFormatted":"2025-07-24T19:50:32.0","prStartTimeLocal":null,"prStartTimeLocalFormatted":null,"prTypeLabelKey":null,"poolLengthUnit":null},{"id":12345678,"typeId":4,"status":"ACCEPTED","activityId":21778494879,"activityName":"Anonymous Activity","activityType":"running","activityStartDateTimeInGMT":1770336277000,"actStartDateTimeInGMTFormatted":"2026-02-06T00:04:37.0","activityStartDateTimeLocal":1770307477000,"activityStartDateTimeLocalFormatted":"2026-02-05T16:04:37.0","value":4524.3359375,"prStartTimeGmt":1770336883000,"prStartTimeGmtFormatted":"2026-02-06T00:14:43.0","prStartTimeLocal":null,"prStartTimeLocalFormatted":null,"prTypeLabelKey":null,"poolLengthUnit":null},{"id":12345678,"typeId":7,"status":"ACCEPTED","activityId":21796532126,"activityName":"Anonymous Activity","activityType":"running","activityStartDateTimeInGMT":1770486204000,"actStartDateTimeInGMTFormatted":"2026-02-07T17:43:24.0","activityStartDateTimeLocal":1770457404000,"activityStartDateTimeLocalFormatted":"2026-02-07T09:43:24.0","value":12066.6298828125,"prStartTimeGmt":1770486204000,"prStartTimeGmtFormatted":"2026-02-07T17:43:24.0","prStartTimeLocal":null,"prStartTimeLocalFormatted":null,"prTypeLabelKey":null,"poolLengthUnit":null},{"id":12345678,"typeId":8,"status":"ACCEPTED","activityId":11460305644,"activityName":"Anonymous Activity","activityType":"road_biking","activityStartDateTimeInGMT":1688159793000,"actStartDateTimeInGMTFormatted":"2023-06-30T21:16:33.0","activityStartDateTimeLocal":1688134593000,"activityStartDateTimeLocalFormatted":"2023-06-30T14:16:33.0","value":96704.828125,"prStartTimeGmt":1688159793000,"prStartTimeGmtFormatted":"2023-06-30T21:16:33.0","prStartTimeLocal":null,"prStartTimeLocalFormatted":null,"prTypeLabelKey":null,"poolLengthUnit":null},{"id":12345678,"typeId":9,"status":"ACCEPTED","activityId":14131065213,"activityName":"Anonymous Activity","activityType":"gravel_cycling","activityStartDateTimeInGMT":1708878877000,"actStartDateTimeInGMTFormatted":"2024-02-25T16:34:37.0","activityStartDateTimeLocal":1708850077000,"activityStartDateTimeLocalFormatted":"2024-02-25T08:34:37.0","value":831.0,"prStartTimeGmt":1708878877000,"prStartTimeGmtFormatted":"2024-02-25T16:34:37.0","prStartTimeLocal":null,"prStartTimeLocalFormatted":null,"prTypeLabelKey":null,"poolLengthUnit":null},{"id":12345678,"typeId":10,"status":"ACCEPTED","activityId":22154919090,"activityName":"Anonymous Activity","activityType":"cycling","activityStartDateTimeInGMT":1773356009000,"actStartDateTimeInGMTFormatted":"2026-03-12T22:53:29.0","activityStartDateTimeLocal":1773330809000,"activityStartDateTimeLocalFormatted":"2026-03-12T15:53:29.0","value":212.77416666666667,"prStartTimeGmt":1773356009000,"prStartTimeGmtFormatted":"2026-03-12T22:53:29.0","prStartTimeLocal":null,"prStartTimeLocalFormatted":null,"prTypeLabelKey":null,"poolLengthUnit":null},{"id":12345678,"typeId":11,"status":"ACCEPTED","activityId":11460305644,"activityName":"Anonymous Activity","activityType":"road_biking","activityStartDateTimeInGMT":1688159793000,"actStartDateTimeInGMTFormatted":"2023-06-30T21:16:33.0","activityStartDateTimeLocal":1688134593000,"activityStartDateTimeLocalFormatted":"2023-06-30T14:16:33.0","value":4942.078125,"prStartTimeGmt":1688162596000,"prStartTimeGmtFormatted":"2023-06-30T22:03:16.0","prStartTimeLocal":null,"prStartTimeLocalFormatted":null,"prTypeLabelKey":null,"poolLengthUnit":null},{"id":12345678,"typeId":12,"status":"ACCEPTED","activityId":0,"activityName":null,"activityType":null,"activityStartDateTimeInGMT":null,"actStartDateTimeInGMTFormatted":null,"activityStartDateTimeLocal":null,"activityStartDateTimeLocalFormatted":null,"value":28652.0,"prStartTimeGmt":1770451200000,"prStartTimeGmtFormatted":"2026-02-07T08:00:00.0","prStartTimeLocal":1770422400000,"prStartTimeLocalFormatted":"2026-02-07T00:00:00.0","prTypeLabelKey":null,"poolLengthUnit":null},{"id":12345678,"typeId":13,"status":"ACCEPTED","activityId":0,"activityName":null,"activityType":null,"activityStartDateTimeInGMT":null,"actStartDateTimeInGMTFormatted":null,"activityStartDateTimeLocal":null,"activityStartDateTimeLocalFormatted":null,"value":108511.0,"prStartTimeGmt":1758985200000,"prStartTimeGmtFormatted":"2025-09-27T15:00:00.0","prStartTimeLocal":1759017600000,"prStartTimeLocalFormatted":"2025-09-28T00:00:00.0","prTypeLabelKey":null,"poolLengthUnit":null},{"id":12345678,"typeId":14,"status":"ACCEPTED","activityId":0,"activityName":null,"activityType":null,"activityStartDateTimeInGMT":null,"actStartDateTimeInGMTFormatted":null,"activityStartDateTimeLocal":null,"activityStartDateTimeLocalFormatted":null,"value":223939.0,"prStartTimeGmt":1782802800000,"prStartTimeGmtFormatted":"2026-06-30T07:00:00.0","prStartTimeLocal":1782777600000,"prStartTimeLocalFormatted":"2026-06-30T00:00:00.0","prTypeLabelKey":null,"poolLengthUnit":null},{"id":12345678,"typeId":15,"status":"ACCEPTED","activityId":0,"activityName":null,"activityType":null,"activityStartDateTimeInGMT":null,"actStartDateTimeInGMTFormatted":null,"activityStartDateTimeLocal":null,"activityStartDateTimeLocalFormatted":null,"value":11.0,"prStartTimeGmt":1777964400000,"prStartTimeGmtFormatted":"2026-05-05T07:00:00.0","prStartTimeLocal":1777939200000,"prStartTimeLocalFormatted":"2026-05-05T00:00:00.0","prTypeLabelKey":null,"poolLengthUnit":null},{"id":12345678,"typeId":16,"status":"ACCEPTED","activityId":0,"activityName":null,"activityType":null,"activityStartDateTimeInGMT":null,"actStartDateTimeInGMTFormatted":null,"activityStartDateTimeLocal":null,"activityStartDateTimeLocalFormatted":null,"value":0.0,"prStartTimeGmt":1784098800000,"prStartTimeGmtFormatted":"2026-07-15T07:00:00.0","prStartTimeLocal":1784073600000,"prStartTimeLocalFormatted":"2026-07-15T00:00:00.0","prTypeLabelKey":null,"poolLengthUnit":null}]'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bbdb997b94d7dd-SEA
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 21:28:36 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=KflerWwUKxTsVQUvYKeLp%2BwdFkRgCljNgVXoIm8EK%2BTTcmGK0AMciiuN4dmB%2FZfAy%2Fn2QrSLVQdYc1xhN6hJogB13mzLafkstqyNOmrL4ZRi%2Fm1XzUHRbQ3eoZyCSypE3xN4Df6MKg%3D%3D"}]}'
+            Server:
+                - cloudflare
+        status: 200 OK
+        code: 200
+        duration: 77.6192ms

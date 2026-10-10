@@ -1,0 +1,77 @@
+version: "2"
+linters:
+  enable:
+    - bodyclose
+    - copyloopvar
+    - dupword
+    - durationcheck
+    - errname
+    - errorlint
+    - exhaustive
+    - exptostd
+    - fatcontext
+    - forcetypeassert
+    - goconst
+    - gocritic
+    - gomodguard_v2
+    - gosec
+    - intrange
+    - misspell
+    - modernize
+    - nestif
+    - nilerr
+    - nilnil
+    - perfsprint
+    - prealloc
+    - predeclared
+    - revive
+    - sqlclosecheck
+    - unconvert
+    - unparam
+    - usestdlibvars
+  settings:
+    goconst:
+      min-len: 3
+      min-occurrences: 8
+      ignore-tests: true
+    gocritic:
+      disabled-checks:
+        - hugeParam
+        - unnamedResult
+        - unnecessaryBlock
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+    nestif:
+      min-complexity: 8
+    revive:
+      rules:
+        - name: var-naming
+          disabled: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - goconst
+          - gosec
+          - forcetypeassert
+          - nestif
+          - modernize
+        path: _test\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

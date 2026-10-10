@@ -1,0 +1,572 @@
+// service_metrics.go
+package garmin
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"time"
+)
+
+// TrainingReadinessEntry represents a single training readiness measurement.
+type TrainingReadinessEntry struct {
+	UserProfilePK                     int64   `json:"userProfilePK"`
+	CalendarDate                      string  `json:"calendarDate"`
+	Timestamp                         string  `json:"timestamp"`
+	TimestampLocal                    string  `json:"timestampLocal"`
+	DeviceID                          int64   `json:"deviceId"`
+	Level                             string  `json:"level"`
+	FeedbackLong                      string  `json:"feedbackLong"`
+	FeedbackShort                     string  `json:"feedbackShort"`
+	Score                             int     `json:"score"`
+	SleepScore                        *int    `json:"sleepScore"`
+	SleepScoreFactorPercent           int     `json:"sleepScoreFactorPercent"`
+	SleepScoreFactorFeedback          string  `json:"sleepScoreFactorFeedback"`
+	RecoveryTime                      int     `json:"recoveryTime"`
+	RecoveryTimeFactorPercent         int     `json:"recoveryTimeFactorPercent"`
+	RecoveryTimeFactorFeedback        string  `json:"recoveryTimeFactorFeedback"`
+	AcwrFactorPercent                 int     `json:"acwrFactorPercent"`
+	AcwrFactorFeedback                string  `json:"acwrFactorFeedback"`
+	AcuteLoad                         int     `json:"acuteLoad"`
+	StressHistoryFactorPercent        int     `json:"stressHistoryFactorPercent"`
+	StressHistoryFactorFeedback       string  `json:"stressHistoryFactorFeedback"`
+	HRVFactorPercent                  int     `json:"hrvFactorPercent"`
+	HRVFactorFeedback                 string  `json:"hrvFactorFeedback"`
+	HRVWeeklyAverage                  int     `json:"hrvWeeklyAverage"`
+	SleepHistoryFactorPercent         int     `json:"sleepHistoryFactorPercent"`
+	SleepHistoryFactorFeedback        string  `json:"sleepHistoryFactorFeedback"`
+	ValidSleep                        bool    `json:"validSleep"`
+	InputContext                      string  `json:"inputContext"`
+	PrimaryActivityTracker            bool    `json:"primaryActivityTracker"`
+	RecoveryTimeChangePhrase          *string `json:"recoveryTimeChangePhrase"`
+	SleepHistoryFactorFeedbackPhrase  *string `json:"sleepHistoryFactorFeedbackPhrase"`
+	HRVFactorFeedbackPhrase           *string `json:"hrvFactorFeedbackPhrase"`
+	StressHistoryFactorFeedbackPhrase *string `json:"stressHistoryFactorFeedbackPhrase"`
+	AcwrFactorFeedbackPhrase          *string `json:"acwrFactorFeedbackPhrase"`
+	RecoveryTimeFactorFeedbackPhrase  *string `json:"recoveryTimeFactorFeedbackPhrase"`
+	SleepScoreFactorFeedbackPhrase    *string `json:"sleepScoreFactorFeedbackPhrase"`
+}
+
+// TrainingReadiness represents the training readiness response.
+type TrainingReadiness struct {
+	Entries []TrainingReadinessEntry
+
+	raw json.RawMessage
+}
+
+// RawJSON returns the original JSON response.
+func (t *TrainingReadiness) RawJSON() json.RawMessage {
+	return t.raw
+}
+
+// SetRaw sets the raw JSON response.
+func (t *TrainingReadiness) SetRaw(data json.RawMessage) {
+	t.raw = data
+}
+
+// UnmarshalJSON unmarshals the array response into the Entries field.
+func (t *TrainingReadiness) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, &t.Entries)
+}
+
+// ScoreContributor represents a contributor to an endurance or hill score.
+type ScoreContributor struct {
+	ActivityTypeID *int    `json:"activityTypeId"`
+	Group          *int    `json:"group"`
+	Contribution   float64 `json:"contribution"`
+}
+
+// EnduranceScore represents the endurance score response.
+type EnduranceScore struct {
+	UserProfilePK                        int64              `json:"userProfilePK"`
+	DeviceID                             int64              `json:"deviceId"`
+	CalendarDate                         string             `json:"calendarDate"`
+	OverallScore                         int                `json:"overallScore"`
+	Classification                       int                `json:"classification"`
+	FeedbackPhrase                       int                `json:"feedbackPhrase"`
+	PrimaryTrainingDevice                bool               `json:"primaryTrainingDevice"`
+	GaugeLowerLimit                      int                `json:"gaugeLowerLimit"`
+	ClassificationLowerLimitIntermediate int                `json:"classificationLowerLimitIntermediate"`
+	ClassificationLowerLimitTrained      int                `json:"classificationLowerLimitTrained"`
+	ClassificationLowerLimitWellTrained  int                `json:"classificationLowerLimitWellTrained"`
+	ClassificationLowerLimitExpert       int                `json:"classificationLowerLimitExpert"`
+	ClassificationLowerLimitSuperior     int                `json:"classificationLowerLimitSuperior"`
+	ClassificationLowerLimitElite        int                `json:"classificationLowerLimitElite"`
+	GaugeUpperLimit                      int                `json:"gaugeUpperLimit"`
+	Contributors                         []ScoreContributor `json:"contributors"`
+
+	raw json.RawMessage
+}
+
+// RawJSON returns the original JSON response.
+func (e *EnduranceScore) RawJSON() json.RawMessage {
+	return e.raw
+}
+
+// SetRaw sets the raw JSON response.
+func (e *EnduranceScore) SetRaw(data json.RawMessage) {
+	e.raw = data
+}
+
+// EnduranceScoreStatsGroup represents a single time period's endurance score statistics.
+type EnduranceScoreStatsGroup struct {
+	GroupAverage int                `json:"groupAverage"`
+	GroupMax     int                `json:"groupMax"`
+	Contributors []ScoreContributor `json:"enduranceContributorDTOList"`
+}
+
+// EnduranceScoreStats represents endurance score statistics over a date range.
+type EnduranceScoreStats struct {
+	UserProfilePK  int64                                `json:"userProfilePK"`
+	StartDate      string                               `json:"startDate"`
+	EndDate        string                               `json:"endDate"`
+	Avg            int                                  `json:"avg"`
+	Max            int                                  `json:"max"`
+	GroupMap       map[string]*EnduranceScoreStatsGroup `json:"groupMap"`
+	EnduranceScore *EnduranceScore                      `json:"enduranceScoreDTO"`
+
+	raw json.RawMessage
+}
+
+// RawJSON returns the original JSON response.
+func (e *EnduranceScoreStats) RawJSON() json.RawMessage {
+	return e.raw
+}
+
+// SetRaw sets the raw JSON response.
+func (e *EnduranceScoreStats) SetRaw(data json.RawMessage) {
+	e.raw = data
+}
+
+// HillScore represents the hill score response.
+type HillScore struct {
+	UserProfilePK             int64   `json:"userProfilePK"`
+	DeviceID                  int64   `json:"deviceId"`
+	CalendarDate              string  `json:"calendarDate"`
+	StrengthScore             int     `json:"strengthScore"`
+	EnduranceScore            int     `json:"enduranceScore"`
+	HillScoreClassificationID int     `json:"hillScoreClassificationId"`
+	OverallScore              int     `json:"overallScore"`
+	HillScoreFeedbackPhraseID int     `json:"hillScoreFeedbackPhraseId"`
+	VO2Max                    float64 `json:"vo2Max"`
+	VO2MaxPreciseValue        float64 `json:"vo2MaxPreciseValue"`
+	PrimaryTrainingDevice     bool    `json:"primaryTrainingDevice"`
+
+	raw json.RawMessage
+}
+
+// RawJSON returns the original JSON response.
+func (h *HillScore) RawJSON() json.RawMessage {
+	return h.raw
+}
+
+// SetRaw sets the raw JSON response.
+func (h *HillScore) SetRaw(data json.RawMessage) {
+	h.raw = data
+}
+
+// HeatAltitudeAcclimation represents heat and altitude acclimation data.
+type HeatAltitudeAcclimation struct {
+	CalendarDate                      string  `json:"calendarDate"`
+	AltitudeAcclimationDate           string  `json:"altitudeAcclimationDate"`
+	PreviousAltitudeAcclimationDate   string  `json:"previousAltitudeAcclimationDate"`
+	HeatAcclimationDate               string  `json:"heatAcclimationDate"`
+	PreviousHeatAcclimationDate       string  `json:"previousHeatAcclimationDate"`
+	AltitudeAcclimation               int     `json:"altitudeAcclimation"`
+	PreviousAltitudeAcclimation       int     `json:"previousAltitudeAcclimation"`
+	HeatAcclimationPercentage         int     `json:"heatAcclimationPercentage"`
+	PreviousHeatAcclimationPercentage int     `json:"previousHeatAcclimationPercentage"`
+	HeatTrend                         string  `json:"heatTrend"`
+	AltitudeTrend                     *string `json:"altitudeTrend"`
+	CurrentAltitude                   int     `json:"currentAltitude"`
+	PreviousAltitude                  int     `json:"previousAltitude"`
+	AcclimationPercentage             int     `json:"acclimationPercentage"`
+	PreviousAcclimationPercentage     int     `json:"previousAcclimationPercentage"`
+	AltitudeAcclimationLocalTimestamp string  `json:"altitudeAcclimationLocalTimestamp"`
+
+	raw json.RawMessage
+}
+
+// RawJSON returns the original JSON response.
+func (h *HeatAltitudeAcclimation) RawJSON() json.RawMessage {
+	return h.raw
+}
+
+// SetRaw sets the raw JSON response.
+func (h *HeatAltitudeAcclimation) SetRaw(data json.RawMessage) {
+	h.raw = data
+}
+
+// VO2MaxGeneric represents generic VO2 max data.
+type VO2MaxGeneric struct {
+	CalendarDate          string  `json:"calendarDate"`
+	VO2MaxPreciseValue    float64 `json:"vo2MaxPreciseValue"`
+	VO2MaxValue           float64 `json:"vo2MaxValue"`
+	FitnessAge            *int    `json:"fitnessAge"`
+	FitnessAgeDescription *string `json:"fitnessAgeDescription"`
+	MaxMetCategory        int     `json:"maxMetCategory"`
+}
+
+// MaxMetEntry represents a single VO2 max / MET entry.
+type MaxMetEntry struct {
+	UserID                  int64                    `json:"userId"`
+	Generic                 *VO2MaxGeneric           `json:"generic"`
+	Cycling                 *VO2MaxGeneric           `json:"cycling"`
+	HeatAltitudeAcclimation *HeatAltitudeAcclimation `json:"heatAltitudeAcclimation"`
+}
+
+// MaxMetLatest represents the latest VO2 max / MET data.
+type MaxMetLatest struct {
+	MaxMetEntry
+
+	raw json.RawMessage
+}
+
+// RawJSON returns the original JSON response.
+func (m *MaxMetLatest) RawJSON() json.RawMessage {
+	return m.raw
+}
+
+// SetRaw sets the raw JSON response.
+func (m *MaxMetLatest) SetRaw(data json.RawMessage) {
+	m.raw = data
+}
+
+// MaxMetDaily represents VO2 max / MET data for a date range.
+type MaxMetDaily struct {
+	Entries []MaxMetEntry
+
+	raw json.RawMessage
+}
+
+// RawJSON returns the original JSON response.
+func (m *MaxMetDaily) RawJSON() json.RawMessage {
+	return m.raw
+}
+
+// SetRaw sets the raw JSON response.
+func (m *MaxMetDaily) SetRaw(data json.RawMessage) {
+	m.raw = data
+}
+
+// UnmarshalJSON unmarshals the array response into the Entries field.
+func (m *MaxMetDaily) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, &m.Entries)
+}
+
+// AcuteTrainingLoad represents acute training load data.
+type AcuteTrainingLoad struct {
+	AcwrPercent                    int     `json:"acwrPercent"`
+	AcwrStatus                     string  `json:"acwrStatus"`
+	AcwrStatusFeedback             string  `json:"acwrStatusFeedback"`
+	DailyTrainingLoadAcute         int     `json:"dailyTrainingLoadAcute"`
+	MaxTrainingLoadChronic         float64 `json:"maxTrainingLoadChronic"`
+	MinTrainingLoadChronic         float64 `json:"minTrainingLoadChronic"`
+	DailyTrainingLoadChronic       int     `json:"dailyTrainingLoadChronic"`
+	DailyAcuteChronicWorkloadRatio float64 `json:"dailyAcuteChronicWorkloadRatio"`
+}
+
+// TrainingStatusData represents training status data for a device.
+type TrainingStatusData struct {
+	CalendarDate                 string             `json:"calendarDate"`
+	SinceDate                    string             `json:"sinceDate"`
+	WeeklyTrainingLoad           *int               `json:"weeklyTrainingLoad"`
+	TrainingStatus               int                `json:"trainingStatus"`
+	Timestamp                    int64              `json:"timestamp"`
+	DeviceID                     int64              `json:"deviceId"`
+	LoadTunnelMin                *int               `json:"loadTunnelMin"`
+	LoadTunnelMax                *int               `json:"loadTunnelMax"`
+	LoadLevelTrend               *string            `json:"loadLevelTrend"`
+	Sport                        *string            `json:"sport"`
+	SubSport                     *string            `json:"subSport"`
+	FitnessTrendSport            string             `json:"fitnessTrendSport"`
+	FitnessTrend                 int                `json:"fitnessTrend"`
+	TrainingStatusFeedbackPhrase string             `json:"trainingStatusFeedbackPhrase"`
+	TrainingPaused               bool               `json:"trainingPaused"`
+	AcuteTrainingLoadDTO         *AcuteTrainingLoad `json:"acuteTrainingLoadDTO"`
+	PrimaryTrainingDevice        bool               `json:"primaryTrainingDevice"`
+}
+
+// RecordedDevice represents a recorded device.
+type RecordedDevice struct {
+	DeviceID   int64  `json:"deviceId"`
+	ImageURL   string `json:"imageURL"`
+	DeviceName string `json:"deviceName"`
+	Category   int    `json:"category"`
+}
+
+// TrainingStatusDaily represents daily training status.
+type TrainingStatusDaily struct {
+	UserID                   int64                          `json:"userId"`
+	LatestTrainingStatusData map[string]*TrainingStatusData `json:"latestTrainingStatusData"`
+	RecordedDevices          []RecordedDevice               `json:"recordedDevices"`
+	ShowSelector             bool                           `json:"showSelector"`
+	LastPrimarySyncDate      string                         `json:"lastPrimarySyncDate"`
+
+	raw json.RawMessage
+}
+
+// RawJSON returns the original JSON response.
+func (t *TrainingStatusDaily) RawJSON() json.RawMessage {
+	return t.raw
+}
+
+// SetRaw sets the raw JSON response.
+func (t *TrainingStatusDaily) SetRaw(data json.RawMessage) {
+	t.raw = data
+}
+
+// TrainingLoadBalanceData represents training load balance data for a device.
+type TrainingLoadBalanceData struct {
+	CalendarDate                    string  `json:"calendarDate"`
+	DeviceID                        int64   `json:"deviceId"`
+	MonthlyLoadAerobicLow           float64 `json:"monthlyLoadAerobicLow"`
+	MonthlyLoadAerobicHigh          float64 `json:"monthlyLoadAerobicHigh"`
+	MonthlyLoadAnaerobic            float64 `json:"monthlyLoadAnaerobic"`
+	MonthlyLoadAerobicLowTargetMin  int     `json:"monthlyLoadAerobicLowTargetMin"`
+	MonthlyLoadAerobicLowTargetMax  int     `json:"monthlyLoadAerobicLowTargetMax"`
+	MonthlyLoadAerobicHighTargetMin int     `json:"monthlyLoadAerobicHighTargetMin"`
+	MonthlyLoadAerobicHighTargetMax int     `json:"monthlyLoadAerobicHighTargetMax"`
+	MonthlyLoadAnaerobicTargetMin   int     `json:"monthlyLoadAnaerobicTargetMin"`
+	MonthlyLoadAnaerobicTargetMax   int     `json:"monthlyLoadAnaerobicTargetMax"`
+	TrainingBalanceFeedbackPhrase   string  `json:"trainingBalanceFeedbackPhrase"`
+	PrimaryTrainingDevice           bool    `json:"primaryTrainingDevice"`
+}
+
+// TrainingLoadBalance represents training load balance response.
+type TrainingLoadBalance struct {
+	UserID                           int64                               `json:"userId"`
+	MetricsTrainingLoadBalanceDTOMap map[string]*TrainingLoadBalanceData `json:"metricsTrainingLoadBalanceDTOMap"`
+	RecordedDevices                  []RecordedDevice                    `json:"recordedDevices"`
+
+	raw json.RawMessage
+}
+
+// RawJSON returns the original JSON response.
+func (t *TrainingLoadBalance) RawJSON() json.RawMessage {
+	return t.raw
+}
+
+// SetRaw sets the raw JSON response.
+func (t *TrainingLoadBalance) SetRaw(data json.RawMessage) {
+	t.raw = data
+}
+
+// TrainingStatusAggregated represents aggregated training status.
+type TrainingStatusAggregated struct {
+	UserID                        int64                    `json:"userId"`
+	MostRecentVO2Max              *MaxMetEntry             `json:"mostRecentVO2Max"`
+	MostRecentTrainingLoadBalance *TrainingLoadBalance     `json:"mostRecentTrainingLoadBalance"`
+	MostRecentTrainingStatus      *TrainingStatusDaily     `json:"mostRecentTrainingStatus"`
+	HeatAltitudeAcclimationDTO    *HeatAltitudeAcclimation `json:"heatAltitudeAcclimationDTO"`
+
+	raw json.RawMessage
+}
+
+// RawJSON returns the original JSON response.
+func (t *TrainingStatusAggregated) RawJSON() json.RawMessage {
+	return t.raw
+}
+
+// SetRaw sets the raw JSON response.
+func (t *TrainingStatusAggregated) SetRaw(data json.RawMessage) {
+	t.raw = data
+}
+
+// GetTrainingReadiness retrieves training readiness data for the specified date.
+func (s *MetricsService) GetTrainingReadiness(ctx context.Context, date time.Time) (*TrainingReadiness, error) {
+	return fetch[TrainingReadiness](ctx, s.client, "/metrics-service/metrics/trainingreadiness/"+date.Format("2006-01-02"))
+}
+
+// GetEnduranceScore retrieves endurance score data for the specified date.
+func (s *MetricsService) GetEnduranceScore(ctx context.Context, date time.Time) (*EnduranceScore, error) {
+	path := "/metrics-service/metrics/endurancescore?calendarDate=" + date.Format("2006-01-02")
+	return fetch[EnduranceScore](ctx, s.client, path)
+}
+
+// Aggregation represents the time period aggregation for stats endpoints.
+type Aggregation string
+
+const (
+	AggregationNone    Aggregation = "none"
+	AggregationDaily   Aggregation = "daily"
+	AggregationWeekly  Aggregation = "weekly"
+	AggregationMonthly Aggregation = "monthly"
+	AggregationYearly  Aggregation = "yearly"
+)
+
+// GetEnduranceScoreStats retrieves endurance score statistics for a date range.
+func (s *MetricsService) GetEnduranceScoreStats(ctx context.Context, startDate, endDate time.Time, aggregation Aggregation) (*EnduranceScoreStats, error) {
+	path := fmt.Sprintf("/metrics-service/metrics/endurancescore/stats?startDate=%s&endDate=%s&aggregation=%s",
+		startDate.Format("2006-01-02"), endDate.Format("2006-01-02"), aggregation)
+	return fetch[EnduranceScoreStats](ctx, s.client, path)
+}
+
+// HillScoreStatsGroup represents a single time period's hill score statistics.
+type HillScoreStatsGroup struct {
+	GroupAverage int `json:"groupAverage"`
+	GroupMax     int `json:"groupMax"`
+}
+
+// HillScoreStats represents hill score statistics over a date range.
+type HillScoreStats struct {
+	UserProfilePK int64                           `json:"userProfilePK"`
+	StartDate     string                          `json:"startDate"`
+	EndDate       string                          `json:"endDate"`
+	Avg           int                             `json:"avg"`
+	Max           int                             `json:"max"`
+	GroupMap      map[string]*HillScoreStatsGroup `json:"groupMap"`
+	HillScore     *HillScore                      `json:"hillScoreDTO"`
+	raw           json.RawMessage
+}
+
+func (h *HillScoreStats) RawJSON() json.RawMessage { return h.raw }
+
+func (h *HillScoreStats) SetRaw(data json.RawMessage) { h.raw = data }
+
+// GetHillScore retrieves hill score data for the specified date.
+func (s *MetricsService) GetHillScore(ctx context.Context, date time.Time) (*HillScore, error) {
+	path := "/metrics-service/metrics/hillscore?calendarDate=" + date.Format("2006-01-02")
+	return fetch[HillScore](ctx, s.client, path)
+}
+
+// GetHillScoreStats retrieves hill score statistics for a date range.
+func (s *MetricsService) GetHillScoreStats(ctx context.Context, startDate, endDate time.Time, aggregation Aggregation) (*HillScoreStats, error) {
+	path := fmt.Sprintf("/metrics-service/metrics/hillscore/stats?startDate=%s&endDate=%s&aggregation=%s",
+		startDate.Format("2006-01-02"), endDate.Format("2006-01-02"), aggregation)
+	return fetch[HillScoreStats](ctx, s.client, path)
+}
+
+// GetMaxMetLatest retrieves the latest VO2 max / MET data.
+func (s *MetricsService) GetMaxMetLatest(ctx context.Context, date time.Time) (*MaxMetLatest, error) {
+	path := "/metrics-service/metrics/maxmet/latest/" + date.Format("2006-01-02")
+	return fetch[MaxMetLatest](ctx, s.client, path)
+}
+
+// GetMaxMetDaily retrieves VO2 max / MET data for a date range.
+func (s *MetricsService) GetMaxMetDaily(ctx context.Context, startDate, endDate time.Time) (*MaxMetDaily, error) {
+	path := fmt.Sprintf("/metrics-service/metrics/maxmet/daily/%s/%s",
+		startDate.Format("2006-01-02"),
+		endDate.Format("2006-01-02"))
+	return fetch[MaxMetDaily](ctx, s.client, path)
+}
+
+// GetTrainingStatusAggregated retrieves aggregated training status data.
+func (s *MetricsService) GetTrainingStatusAggregated(ctx context.Context, date time.Time) (*TrainingStatusAggregated, error) {
+	path := "/metrics-service/metrics/trainingstatus/aggregated/" + date.Format("2006-01-02")
+	return fetch[TrainingStatusAggregated](ctx, s.client, path)
+}
+
+// GetTrainingStatusDaily retrieves daily training status data.
+func (s *MetricsService) GetTrainingStatusDaily(ctx context.Context, date time.Time) (*TrainingStatusDaily, error) {
+	path := "/metrics-service/metrics/trainingstatus/daily/" + date.Format("2006-01-02")
+	return fetch[TrainingStatusDaily](ctx, s.client, path)
+}
+
+// GetTrainingLoadBalance retrieves training load balance data.
+func (s *MetricsService) GetTrainingLoadBalance(ctx context.Context, date time.Time) (*TrainingLoadBalance, error) {
+	path := "/metrics-service/metrics/trainingloadbalance/latest/" + date.Format("2006-01-02")
+	return fetch[TrainingLoadBalance](ctx, s.client, path)
+}
+
+// GetHeatAltitudeAcclimation retrieves heat and altitude acclimation data.
+func (s *MetricsService) GetHeatAltitudeAcclimation(ctx context.Context, date time.Time) (*HeatAltitudeAcclimation, error) {
+	path := "/metrics-service/metrics/heataltitudeacclimation/latest/" + date.Format("2006-01-02")
+	return fetch[HeatAltitudeAcclimation](ctx, s.client, path)
+}
+
+// RacePredictions represents predicted race times based on current fitness.
+type RacePredictions struct {
+	UserID           int64   `json:"userId"`
+	FromCalendarDate *string `json:"fromCalendarDate"`
+	ToCalendarDate   *string `json:"toCalendarDate"`
+	CalendarDate     string  `json:"calendarDate"`
+	Time5K           int     `json:"time5K"`
+	Time10K          int     `json:"time10K"`
+	TimeHalfMarathon int     `json:"timeHalfMarathon"`
+	TimeMarathon     int     `json:"timeMarathon"`
+
+	raw json.RawMessage
+}
+
+// RawJSON returns the original JSON response.
+func (r *RacePredictions) RawJSON() json.RawMessage {
+	return r.raw
+}
+
+// SetRaw sets the raw JSON response.
+func (r *RacePredictions) SetRaw(data json.RawMessage) {
+	r.raw = data
+}
+
+// Time5KDuration returns the 5K prediction as a time.Duration.
+func (r *RacePredictions) Time5KDuration() time.Duration {
+	return time.Duration(r.Time5K) * time.Second
+}
+
+// Time10KDuration returns the 10K prediction as a time.Duration.
+func (r *RacePredictions) Time10KDuration() time.Duration {
+	return time.Duration(r.Time10K) * time.Second
+}
+
+// TimeHalfMarathonDuration returns the half marathon prediction as a time.Duration.
+func (r *RacePredictions) TimeHalfMarathonDuration() time.Duration {
+	return time.Duration(r.TimeHalfMarathon) * time.Second
+}
+
+// TimeMarathonDuration returns the marathon prediction as a time.Duration.
+func (r *RacePredictions) TimeMarathonDuration() time.Duration {
+	return time.Duration(r.TimeMarathon) * time.Second
+}
+
+// RacePredictionsList is a list of race prediction snapshots.
+type RacePredictionsList struct {
+	Entries []RacePredictions
+	raw     json.RawMessage
+}
+
+func (r *RacePredictionsList) RawJSON() json.RawMessage { return r.raw }
+
+func (r *RacePredictionsList) SetRaw(data json.RawMessage) { r.raw = data }
+
+func (r *RacePredictionsList) UnmarshalJSON(data []byte) error {
+	var arr []RacePredictions
+	if err := json.Unmarshal(data, &arr); err == nil {
+		r.Entries = arr
+		return nil
+	}
+	var one RacePredictions
+	if err := json.Unmarshal(data, &one); err != nil {
+		return err
+	}
+	r.Entries = []RacePredictions{one}
+	return nil
+}
+
+// GetRacePredictionsLatest retrieves the latest race predictions for the user.
+func (s *MetricsService) GetRacePredictionsLatest(ctx context.Context, displayName string) (*RacePredictions, error) {
+	path := "/metrics-service/metrics/racepredictions/latest/" + displayName
+	return fetch[RacePredictions](ctx, s.client, path)
+}
+
+// GetRacePredictionsDaily retrieves daily race predictions for a date range.
+func (s *MetricsService) GetRacePredictionsDaily(ctx context.Context, displayName string, start, end time.Time) (*RacePredictionsList, error) {
+	path := fmt.Sprintf(
+		"/metrics-service/metrics/racepredictions/daily/%s?fromCalendarDate=%s&toCalendarDate=%s",
+		displayName,
+		start.Format("2006-01-02"),
+		end.Format("2006-01-02"),
+	)
+	return fetch[RacePredictionsList](ctx, s.client, path)
+}
+
+// GetRacePredictionsMonthly retrieves monthly race predictions for a date range.
+func (s *MetricsService) GetRacePredictionsMonthly(ctx context.Context, displayName string, start, end time.Time) (*RacePredictionsList, error) {
+	path := fmt.Sprintf(
+		"/metrics-service/metrics/racepredictions/monthly/%s?fromCalendarDate=%s&toCalendarDate=%s",
+		displayName,
+		start.Format("2006-01-02"),
+		end.Format("2006-01-02"),
+	)
+	return fetch[RacePredictionsList](ctx, s.client, path)
+}

@@ -24,3 +24,6 @@ worker-configuration.d.ts
 
 # celld
 .celld/
+
+# Per-agent env + mcp.toml copied from the compose yard (gantries/<slug>/). Seeds for the Agent DO config; never commit.
+/local/

@@ -1,0 +1,80 @@
+// endpoint/definitions/register.go
+package definitions
+
+import "github.com/shotah/go-garmin/endpoint"
+
+// RegisterAll registers all endpoint definitions with the registry.
+func RegisterAll(r *endpoint.Registry) {
+	for i := range SleepEndpoints {
+		r.Register(SleepEndpoints[i])
+	}
+	for i := range WellnessEndpoints {
+		r.Register(WellnessEndpoints[i])
+	}
+	for i := range HRVEndpoints {
+		r.Register(HRVEndpoints[i])
+	}
+	for i := range WeightEndpoints {
+		r.Register(WeightEndpoints[i])
+	}
+	for i := range DeviceEndpoints {
+		r.Register(DeviceEndpoints[i])
+	}
+	for i := range UserProfileEndpoints {
+		r.Register(UserProfileEndpoints[i])
+	}
+	for i := range ActivityEndpoints {
+		r.Register(ActivityEndpoints[i])
+	}
+	for i := range BiometricEndpoints {
+		r.Register(BiometricEndpoints[i])
+	}
+	for i := range MetricsEndpoints {
+		r.Register(MetricsEndpoints[i])
+	}
+	for i := range WorkoutEndpoints {
+		r.Register(WorkoutEndpoints[i])
+	}
+	for i := range UtilityEndpoints {
+		r.Register(UtilityEndpoints[i])
+	}
+	for i := range CalendarEndpoints {
+		r.Register(CalendarEndpoints[i])
+	}
+	for i := range FitnessAgeEndpoints {
+		r.Register(FitnessAgeEndpoints[i])
+	}
+	for i := range FitnessStatsEndpoints {
+		r.Register(FitnessStatsEndpoints[i])
+	}
+	for i := range ExerciseEndpoints {
+		r.Register(ExerciseEndpoints[i])
+	}
+	for i := range CourseEndpoints {
+		r.Register(CourseEndpoints[i])
+	}
+	for i := range UserSummaryEndpoints {
+		r.Register(UserSummaryEndpoints[i])
+	}
+	for i := range PersonalRecordsEndpoints {
+		r.Register(PersonalRecordsEndpoints[i])
+	}
+	for i := range BadgeEndpoints {
+		r.Register(BadgeEndpoints[i])
+	}
+	for i := range BloodPressureEndpoints {
+		r.Register(BloodPressureEndpoints[i])
+	}
+	for i := range PeriodicHealthEndpoints {
+		r.Register(PeriodicHealthEndpoints[i])
+	}
+	for i := range LifestyleEndpoints {
+		r.Register(LifestyleEndpoints[i])
+	}
+	for i := range TrainingPlanEndpoints {
+		r.Register(TrainingPlanEndpoints[i])
+	}
+	for i := range GolfEndpoints {
+		r.Register(GolfEndpoints[i])
+	}
+}

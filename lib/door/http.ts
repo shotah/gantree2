@@ -3,7 +3,7 @@
  * files under app/api/auth stay one line each and this file is what tests hit.
  */
 import type { JWTVerifyGetKey } from "jose";
-import { gate, type GateEnv, safeNext } from "./gate";
+import { type Decision, gate, type GateEnv, type Principal, PRINCIPAL_HEADER_NAMES, principalHeaders, safeNext } from "./gate";
 import { authorizeUrl, exchangeCode, type GoogleEnv, randomToken, verifyIdToken } from "./google";
 import {
   clearCookieHeader,
@@ -118,11 +118,24 @@ export function logout(req: Request): Response {
   });
 }
 
-/** GET /api/auth/me → the principal, or 401 / 503 from the gate. */
-export async function me(req: Request, env: DoorEnv, store: UserStore): Promise<Response> {
+/**
+ * GET /api/auth/me → the principal, or 401 / 503 from the gate.
+ *
+ * `agents` is the union of the Settings grants and whatever `rooms` admits
+ * (chat room membership). `cranes` is the alias copy cab and helm still read,
+ * dropped at the Phase 4 cutover.
+ */
+export async function me(
+  req: Request,
+  env: DoorEnv,
+  store: UserStore,
+  rooms?: (who: Principal) => Promise<string[]>,
+): Promise<Response> {
   const d = await gate(req, env, store);
   if (d.kind === "pass") {
-    return json({ sub: d.who.sub, email: d.who.email, role: d.who.role, agents: d.who.agents });
+    const admitted = rooms ? await rooms(d.who) : [];
+    const agents = [...new Set([...d.who.agents, ...admitted])].sort();
+    return json({ sub: d.who.sub, email: d.who.email, role: d.who.role, agents, cranes: [...agents] });
   }
   if (d.kind === "unauthorized") {
     return json({ error: d.reason }, d.status);
@@ -132,8 +145,29 @@ export async function me(req: Request, env: DoorEnv, store: UserStore): Promise<
 
 /** What middleware does with a gate decision for a page or API hit. `null` = let it through. */
 export async function guard(req: Request, env: DoorEnv, store: UserStore): Promise<Response | null> {
-  const d = await gate(req, env, store);
-  const url = new URL(req.url);
+  return refusal(await gate(req, env, store), new URL(req.url));
+}
+
+/**
+ * Request headers the handlers behind the door will see. Client-sent
+ * `x-gantree-*` is always dropped — `principalFromHeaders` trusts those names,
+ * so only the gate may write them — and a `pass` writes the resolved principal.
+ */
+export function forwardHeaders(d: Decision, incoming: Headers): Headers {
+  const h = new Headers(incoming);
+  for (const name of PRINCIPAL_HEADER_NAMES) {
+    h.delete(name);
+  }
+  if (d.kind === "pass") {
+    for (const [name, value] of Object.entries(principalHeaders(d.who))) {
+      h.set(name, value);
+    }
+  }
+  return h;
+}
+
+/** The response a decision refuses with, or `null` when the request may go on. */
+export function refusal(d: Decision, url: URL): Response | null {
   switch (d.kind) {
     case "public":
     case "pass":

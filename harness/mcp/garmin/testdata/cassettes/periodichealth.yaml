@@ -1,0 +1,180 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Accept:
+                - application/json
+            Accept-Language:
+                - en-US,en;q=0.9
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-Android-5.23
+            X-App-Ver:
+                - "10861"
+            X-Garmin-Client-Platform:
+                - Android
+            X-Garmin-Paired-App-Version:
+                - "10861"
+            X-Garmin-User-Agent:
+                - com.garmin.android.apps.connectmobile/5.23; ; Google/sdk_gphone64_arm64/google; Android/33; Dalvik/2.1.0
+            X-Gcexperience:
+                - GC5
+            X-Lang:
+                - en
+        url: https://connectapi.garmin.com/periodichealth-service/menstrualcycle/dayview/2026-07-15
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 0
+        body: ""
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bbd428dc3f2b22-SEA
+            Date:
+                - Wed, 15 Jul 2026 21:23:31 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=9Mr4G6btWVEPJW6VzgFcvGohqiEwFjn2HS1S9gyoeH5AivhEjZVECy7Fkpb3emnytXaaSdJiXO6Li%2FcJItbSnaP6qE0IouKX0tuV4CkhSqzs1hk%2FI5i89tTOaTwTxMTPpQf55J1aBQ%3D%3D"}]}'
+            Server:
+                - cloudflare
+        status: 204 No Content
+        code: 204
+        duration: 88.764ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Accept:
+                - application/json
+            Accept-Language:
+                - en-US,en;q=0.9
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-Android-5.23
+            X-App-Ver:
+                - "10861"
+            X-Garmin-Client-Platform:
+                - Android
+            X-Garmin-Paired-App-Version:
+                - "10861"
+            X-Garmin-User-Agent:
+                - com.garmin.android.apps.connectmobile/5.23; ; Google/sdk_gphone64_arm64/google; Android/33; Dalvik/2.1.0
+            X-Gcexperience:
+                - GC5
+            X-Lang:
+                - en
+        url: https://connectapi.garmin.com/periodichealth-service/menstrualcycle/calendar/2026-04-16/2026-07-15
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"cycleSummaries":[],"loggedSymptomDays":[],"loggedOvulationDays":[],"loggedNoteDays":[]}'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bbd4292d2b2b22-SEA
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 21:23:31 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=yDEPJIhy8vIaQDF0bVGjkPZoHbOWpVdRRRQiuvQLLelXyYsbX5SGExqsahHdFbBO%2BPXkyEAYI9Oygw1lCTsQo%2BA2WkF1rnqefCFHsio1x0RL78O0d%2BgB%2F4xgxU5ZSjY3iu%2BFqhChEA%3D%3D"}]}'
+            Server:
+                - cloudflare
+        status: 200 OK
+        code: 200
+        duration: 77.0227ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Accept:
+                - application/json
+            Accept-Language:
+                - en-US,en;q=0.9
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-Android-5.23
+            X-App-Ver:
+                - "10861"
+            X-Garmin-Client-Platform:
+                - Android
+            X-Garmin-Paired-App-Version:
+                - "10861"
+            X-Garmin-User-Agent:
+                - com.garmin.android.apps.connectmobile/5.23; ; Google/sdk_gphone64_arm64/google; Android/33; Dalvik/2.1.0
+            X-Gcexperience:
+                - GC5
+            X-Lang:
+                - en
+        url: https://connectapi.garmin.com/periodichealth-service/menstrualcycle/pregnancysnapshot
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 0
+        body: ""
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bbd429ae702b22-SEA
+            Date:
+                - Wed, 15 Jul 2026 21:23:31 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=g6f97GJ2K9sWMVomPdxD5OBsJh%2F5IJg1krgrnexkVMthWxG2UqdIwPhWVJbK9SrUcA1LxciTvMxqZMnjXN5y%2Fenom6csoaaJ%2Bdh%2B9dT5iwthq4D2h9As8fUb%2BLhyC%2F12JmEqZ12kug%3D%3D"}]}'
+            Server:
+                - cloudflare
+        status: 204 No Content
+        code: 204
+        duration: 92.256ms

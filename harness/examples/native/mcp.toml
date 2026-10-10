@@ -1,0 +1,65 @@
+# MCP server manifest — listed = granted (process may start).
+# Binaries on PATH (/opt/gantry/bin via systemd unit).
+#
+# Kernel-only: leave everything commented until static binaries exist.
+# Fetch: gantry tools-fetch --manifest /opt/gantry/mcp.toml --outdir /opt/gantry/bin
+
+# --- Google (shotah/google-mcp) ---------------------------------------------
+# [[server]]
+# name = "google"
+# command = "google-mcp"
+# args = ["--preset", "everyday"]
+# auth_args = ["auth"]
+# download_tag = "latest"
+# download_url = "https://github.com/shotah/google-mcp/releases/download/{tag}/google-mcp_{version}_{os}_{arch}.tar.gz"
+
+# --- Web search is a gantry builtin (web_search). Do not grant google-search. ---
+
+# --- Calculator (shotah/mcp-go-math) -----------------------------------------
+# [[server]]
+# name = "math"
+# command = "mcp-go-math"
+# download_tag = "latest"
+# download_url = "https://github.com/shotah/mcp-go-math/releases/download/{tag}/mcp-go-math_{version}_{os}_{arch}.tar.gz"
+
+# --- RSS / Atom / JSON Feed (shotah/feeds-mcp) — watch: feeds__items_list ----
+# [[server]]
+# name = "feeds"
+# command = "feeds-mcp"
+# download_tag = "latest"
+# download_url = "https://github.com/shotah/feeds-mcp/releases/download/{tag}/feeds-mcp_{version}_{os}_{arch}.tar.gz"
+# # tools = ["items_list", "source_resolve"]
+
+# --- X public posts (shotah/twitter-mcp) — watch: twitter__posts_list --------
+# [[server]]
+# name = "twitter"
+# command = "twitter-mcp"
+# download_tag = "latest"
+# download_url = "https://github.com/shotah/twitter-mcp/releases/download/{tag}/twitter-mcp_{version}_{os}_{arch}.tar.gz"
+# # X_BEARER_TOKEN must be in gantry.env (child inherits it)
+#
+# --- Google Maps (shotah/google-maps-mcp) — place_search / route_eta ----
+# [[server]]
+# name = "maps"
+# command = "google-maps-mcp"
+# download_tag = "latest"
+# download_url = "https://github.com/shotah/google-maps-mcp/releases/download/{tag}/google-maps-mcp_{version}_{os}_{arch}.tar.gz"
+# # GOOGLE_MAPS_API_KEY must be in gantry.env (child inherits it)
+#
+# --- Image gen (shotah/image-generation-mcp) — photo_generate / photo_edit ----
+# [[server]]
+# name = "image"
+# command = "image-generation-mcp"
+# download_tag = "latest"
+# download_url = "https://github.com/shotah/image-generation-mcp/releases/download/{tag}/image-generation-mcp_{version}_{os}_{arch}.tar.gz"
+# # IMAGE_API_KEY wins; else crane LLM_API_KEY. Do not grant fat google for drawing.
+#
+# --- Chat face / wallpaper / mood (shotah/pendant-mcp) -----------------------
+# [[server]]
+# name = "chat"
+# command = "chat"
+# download_tag = "latest"
+# download_url = "https://github.com/shotah/pendant-mcp/releases/download/{tag}/pendant-mcp_{version}_{os}_{arch}.tar.gz"
+# # CHAT_MAILBOX_URL + CHAT_BEARER already in gantry.env when CHANNEL=chat.
+# # PENDANT_MAILBOX_URL + PENDANT_BEARER are deprecated aliases.
+# # IMAGE_OUTPUT_DIR must be set for the picture pair (avatar_update / backdrop_update).

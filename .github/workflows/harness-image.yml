@@ -1,0 +1,43 @@
+name: harness-image
+
+# First build of harness/Dockerfile. No registry push except main → GHCR.
+# The image ENTRYPOINT is already /usr/local/bin/gantry (distroless, no shell).
+# `gantry version` is the command; `--version` is not a flag, and a bare
+# `docker run <image> gantry --version` would exec `gantry gantry --version`.
+
+on:
+  push:
+    paths:
+      - "harness/**"
+      - ".github/workflows/harness-image.yml"
+  pull_request:
+    paths:
+      - "harness/**"
+      - ".github/workflows/harness-image.yml"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Build
+        run: docker build -f harness/Dockerfile -t gantree-harness harness/
+
+      - name: Smoke
+        run: docker run --rm --entrypoint /usr/local/bin/gantry gantree-harness version
+
+      - name: Push to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GITHUB_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker tag gantree-harness "ghcr.io/shotah/gantree-harness:${{ github.sha }}"
+          docker push "ghcr.io/shotah/gantree-harness:${{ github.sha }}"

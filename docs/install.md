@@ -90,8 +90,47 @@ npm run deploy
 npx wrangler secret bulk < secrets.json   # {"GOOGLE_CLIENT_SECRET":"…","SESSION_SECRET":"…"}
 ```
 
-Containers (Phase 2) need the Workers Paid plan; everything in Phase 1
-runs on the free tier.
+The Worker itself runs on the free tier. Containers need Workers Paid —
+see [below](#containers).
+
+---
+
+## Containers
+
+One harness container per agent. The Cloudflare account needs Containers
+enabled (Workers Paid). `wrangler deploy` builds `harness/Dockerfile`
+(context is the `harness/` directory, which is where that file's
+`COPY` expects to run) and ships the image with the Worker.
+`wrangler.jsonc` names the application `gantree-harness`, class
+`Harness`, five instances, plus a `v2` migration for the `Harness`
+Durable Object.
+
+The process env is the dial-back. Everything else (LLM keys, `mcp.toml`,
+persona) arrives on the socket in a `config` frame.
+
+| Var | Value |
+| --- | --- |
+| `CHANNEL` | `pendant` |
+| `PENDANT_MAILBOX_URL` | `wss://<origin>/ws/<slug>` — the harness adds `?role=crane` |
+| `PENDANT_BEARER` | room bearer from the Agent DO |
+| `SNAPSHOT` | `true` |
+| `SNAPSHOT_INTERVAL` | `5m` |
+
+Set `PUBLIC_ORIGIN` to `https://<worker-origin>` (no path) when the host
+the harness should dial is not the browser's. Leave it unset locally and
+start uses the request origin.
+
+The image does not `EXPOSE` a port. The supervisor still sets
+`defaultPort` 8080 so the Container class has a probe port; `gantry`
+dials out and does not listen.
+
+Local `wrangler dev` without Docker has no container binding. `GET
+/api/agents/:slug/container` then returns `state: "unknown"`.
+
+The `gantry` binary in this tree also refuses to stay up without
+`PENDANT_ALLOWED_USERS`. The start body does not carry that list — the
+room lives on the Agent DO — so a real container exits until the harness
+takes the room from the `config` frame.
 
 ---
 
@@ -141,10 +180,11 @@ and should not.
 
 Agents run `ghcr.io/shotah/gantree-harness:<tag>` — the Go harness plus
 every MCP server in `harness/mcp.lock` baked into `/opt/mcp`.
-`harness-image.yml` builds it on changes to `harness/**`, and pushes to
-GHCR and the Cloudflare container registry. The Agent DO pins the tag;
-**pull + recreate** on `/agents/<slug>` moves an agent to a newer one.
-Phase 2.
+`harness-image.yml` builds it when `harness/**` changes, smokes
+`gantry version`, and on `main` pushes
+`ghcr.io/shotah/gantree-harness:<sha>`. `wrangler deploy` builds the
+same Dockerfile into the account's container registry. **Recreate**
+picks up a newly deployed image.
 
 ---
 

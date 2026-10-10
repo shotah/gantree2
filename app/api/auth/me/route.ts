@@ -1,6 +1,9 @@
+import type { AgentEnv } from "@/lib/chat/env";
+import { roomsFor } from "@/lib/chat/membership";
 import { me } from "@/lib/door/http";
 import { doorEnv, userStore } from "@/lib/door/runtime";
 
 export function GET(request: Request): Promise<Response> {
-  return me(request, doorEnv(), userStore());
+  const env = doorEnv();
+  return me(request, env, userStore(), roomsFor(env));
 }

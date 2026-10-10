@@ -21,9 +21,9 @@ the eval that fails a fixture when a plugin renames a tool
 
 | Layer | Who owns it | Example |
 | --- | --- | --- |
-| MCP **server id** | `harness/mcp.lock` `name`, mirrored in each agent's `config.mcp` | `youtube`, `google`, `cast` |
-| MCP **tool name** | Binary registration | `videos_search`, `calendar_list_events` |
-| **Host-facing name** | Harness joins with `__` | `youtube__videos_search` |
+| MCP **server id** | `harness/mcp.lock` `name`, mirrored in each agent's `config.mcp` | `strava`, `google`, `garmin` |
+| MCP **tool name** | Binary registration | `activities_list`, `calendar_list_events` |
+| **Host-facing name** | Harness joins with `__` | `strava__activities_list` |
 
 ```text
 {server_id}__{service}_{verb}_{object}[_{qualifier}]
@@ -39,9 +39,9 @@ the eval that fails a fixture when a plugin renames a tool
 
 2. **Never put the server id in the tool name**
    The harness already prefixes.
-   - Bad: `youtube_videos_search` → `youtube__youtube_videos_search`
+   - Bad: `garmin_sleep_get` → `garmin__garmin_sleep_get`
    - Bad: `strava_get_activities` → `strava__strava_get_activities`
-   - Good: `videos_search` → `youtube__videos_search`
+   - Good: `activities_list` → `strava__activities_list`
 
 3. **No dual aliases**
    One name set per release. A breaking rename is a semver bump on the
@@ -69,11 +69,7 @@ the eval that fails a fixture when a plugin renames a tool
    | Calendar events | `calendar_` | google |
    | Activities / workouts | `activities_` | garmin, strava |
    | Saved Strava courses / share links | `routes_` / `urls_` | strava (`urls_resolve`; not `maps__link_resolve`) |
-   | Devices (LAN / cast) | `devices_` | cast (and garmin hardware — prefix disambiguates) |
-   | Playlists | `playlists_` | youtube |
-   | Library shelves | `library_` | youtube |
-   | Videos | `videos_` | youtube (not `tracks_`) |
-   | Cast handoff helpers | `cast_` | youtube (`cast_format_target`); beam owns playback |
+   | Devices (hardware) | `devices_` | garmin |
    | Math | `expression_` / `units_` | math |
    | Web search | `web_` | harness builtin `web_search` (not a plugin) |
    | Flight offers / dates / airports / returns / booking / quota | `offers_` / `dates_` / `airports_` / `returns_` / `booking_` / `link_` / `account_` | flights |
@@ -83,13 +79,13 @@ the eval that fails a fixture when a plugin renames a tool
    | X / Twitter public posts | `posts_` | twitter (not `tweets_`) |
    | Places / Maps share links / leave-by | `place_` / `link_` / `route_` | maps (`place_search`; `link_resolve` not `short_url_*`; `route_eta` is leave-by) |
    | Generated / edited pictures | `photo_` | image (`photo_generate` / `photo_edit`; not `image_*` — double prefix) |
-   | Chat face / wallpaper / room mood | `avatar_` / `backdrop_` / `theme_` | pendant — wire name for the chat plugin until Phase 4 (`avatar_update`, `backdrop_update`, `theme_list`; not `pendant_*`) |
-   | Household boards | `roster_` / `notices_` / `challenges_` | boards (not `profile_`, not `posts_`, not `activities_`, not `calendar_`) |
+   | Chat face / wallpaper / room mood | `avatar_` / `backdrop_` / `theme_` | chat (`avatar_update`, `backdrop_update`, `theme_list`; not `chat_*`, not `pendant_*`) |
 
 6. **Descriptions sell the intent**
-   First sentence = what the agent wants ("Search YouTube videos…",
-   "List liked videos…"). Nearest-name matching uses these tokens. Do
-   not start with "Calls the YouTube Data API v3 Search.list…"
+   First sentence = what the agent wants ("List recent Strava
+   activities…", "Get last night's sleep…"). Nearest-name matching uses
+   these tokens. Do not start with "Calls the Strava API v3
+   athlete/activities…"
 
 7. **Args: snake_case**
    `task_list_id`, `video_id`, `time_min` — never camelCase in schemas.
@@ -120,8 +116,6 @@ the eval that fails a fixture when a plugin renames a tool
 | `google` | `calendar_list_events` | `google__calendar_list_events` |
 | `garmin` | `sleep_get`, `activities_list` | `garmin__sleep_get` |
 | `strava` | `activities_list`, `routes_list`, `urls_resolve` | `strava__activities_list` |
-| `youtube` | `videos_search`, `library_list_liked_videos` | `youtube__videos_search` |
-| `cast` | `devices_list`, `youtube_beam_video` | `cast__devices_list` |
 | `math` | `expression_evaluate`, `units_convert` | `math__expression_evaluate` |
 | `flights` | `offers_search`, `dates_search`, `airports_search`, `returns_search`, `booking_options_get`, `link_format`, `account_get` | `flights__offers_search` |
 | `rentals` | `listings_search`, `listings_get`, `rent_estimate_get`, `markets_get`, `areas_resolve`, `link_format`, `account_get` | `rentals__listings_search` |
@@ -130,8 +124,7 @@ the eval that fails a fixture when a plugin renames a tool
 | `twitter` | `posts_list` | `twitter__posts_list` |
 | `maps` | `link_resolve`, `place_resolve`, `place_search`, `route_eta` | `maps__place_search` |
 | `image` | `photo_generate`, `photo_edit` | `image__photo_generate` |
-| `pendant` | `avatar_update`, `backdrop_update`, `theme_list` | `pendant__avatar_update` |
-| `boards` | `roster_list`, `notices_list`, `challenges_create` | `boards__roster_list` |
+| `chat` | `avatar_update`, `backdrop_update`, `theme_list` | `chat__avatar_update` |
 
 Hyphenated server ids are fine; tool suffixes stay underscores. The
 harness aliases underscored prefixes (`google_health__…` →
@@ -142,7 +135,7 @@ search is the unprefixed builtin `web_search`.
 
 ## Checklist for a new or reshaped plugin
 
-- [ ] Pick a **short** server id (`youtube`, not `youtube-music-go-mcp`)
+- [ ] Pick a **short** server id (`strava`, not `go-strava-mcp`)
 - [ ] Every tool is `{service}_{verb}_{object…}` with no server-id prefix
 - [ ] Diff verbs/nouns against the table above before inventing a third synonym
 - [ ] Descriptions lead with agent intent

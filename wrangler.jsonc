@@ -2,13 +2,39 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "gantree",
   "compatibility_date": "2026-10-10",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
-  "main": "vinext/server/fetch-handler",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "./worker/index.ts",
   "assets": {
     "directory": "dist/client",
     "not_found_handling": "none",
     "binding": "ASSETS"
-  }
+  },
+  "containers": [
+    {
+      "class_name": "Harness",
+      "image": "./harness/Dockerfile",
+      "max_instances": 5,
+      "name": "gantree-harness"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "SETTINGS", "class_name": "Settings" },
+      { "name": "AGENT", "class_name": "Agent" },
+      { "name": "HARNESS", "class_name": "Harness" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["Settings", "Agent"] },
+    { "tag": "v2", "new_sqlite_classes": ["Harness"] }
+  ],
+  "kv_namespaces": [
+    { "binding": "DIRECTORY", "id": "TODO" }
+  ],
+  "r2_buckets": [
+    { "binding": "STORE", "bucket_name": "gantree-store" }
+  ],
+  // Optional var. Origin the harness dials, no path.
+  // Unset locally: start falls back to the request origin.
+  // "vars": { "PUBLIC_ORIGIN": "https://gantree.example.com" }
 }

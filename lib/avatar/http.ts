@@ -1,0 +1,239 @@
+import { me, type DoorEnv } from "@/lib/door/http";
+import type { UserStore } from "@/lib/door/users";
+import { fetchRoomUsers } from "@/lib/chat/allow";
+import { blobEtag, blobResponse, etagMatches } from "@/lib/chat/blob";
+import { headerSaysTooLarge } from "@/lib/chat/caps";
+import { configError, forbidden } from "@/lib/chat/deny";
+import { agentStub, type AgentBinding } from "@/lib/chat/location";
+import { roomAllows } from "@/lib/chat/room";
+import { parseSlug } from "@/lib/chat/slug";
+import { fromStub } from "@/lib/chat/slugRoute";
+import { acceptJpeg, AVATAR_MAX_BYTES } from "./jpeg";
+
+export { blobEtag, blobResponse, etagMatches };
+
+export type BlobRequestOpts = {
+  slug: string;
+  rev?: number;
+  secret?: string;
+  bearer?: string;
+};
+
+/** `/api/chat/avatar?slug=kit` — relative, for same-origin fetch. */
+export function avatarRequestPath(opts: BlobRequestOpts): string {
+  return blobRequestPath("/api/chat/avatar", opts);
+}
+
+/** Same query shape for every per-slug JPEG the Durable Object serves (face, backdrop). */
+export function blobRequestPath(pathname: string, opts: BlobRequestOpts): string {
+  const u = new URL(pathname, "http://pendant.local");
+  u.searchParams.set("slug", opts.slug);
+  if (opts.rev && opts.rev > 0) {
+    u.searchParams.set("v", String(opts.rev));
+  }
+  if (opts.secret) {
+    u.searchParams.set("secret", opts.secret);
+  }
+  if (opts.bearer) {
+    u.searchParams.set("bearer", opts.bearer);
+  }
+  return `${u.pathname}${u.search}`;
+}
+
+/** Forward the browser's validator to the Durable Object so it can answer 304. */
+export function conditionalHeaders(req: Request): Record<string, string> {
+  const tag = req.headers.get("If-None-Match");
+  return tag ? { "If-None-Match": tag } : {};
+}
+
+/**
+ * Harness `.env` `PENDANT_MAILBOX_URL` (`wss://…/ws/kit`) → Worker face POST.
+ * Same job as Telegram `setMyProfilePhoto`, different mouth.
+ */
+export function mailboxToAvatarUrl(raw: string): string | null {
+  let u: URL;
+  try {
+    u = new URL(raw.trim());
+  } catch {
+    return null;
+  }
+  if (u.protocol === "wss:") {
+    u.protocol = "https:";
+  } else if (u.protocol === "ws:") {
+    u.protocol = "http:";
+  } else if (u.protocol !== "http:" && u.protocol !== "https:") {
+    return null;
+  }
+  const parts = u.pathname.split("/").filter(Boolean);
+  const slug = parts[0] === "ws" ? parseSlug(parts[1] ?? "") : parseSlug(u.searchParams.get("slug") ?? "");
+  if (!slug) {
+    return null;
+  }
+  u.pathname = "/api/chat/avatar";
+  u.search = "";
+  u.hash = "";
+  u.searchParams.set("slug", slug);
+  return u.toString();
+}
+
+export type UploadCap = { maxBytes: number; tooLarge: string };
+export type UploadResult = { ok: true; bytes: Uint8Array } | { ok: false; detail: string };
+
+const AVATAR_CAP: UploadCap = { maxBytes: AVATAR_MAX_BYTES, tooLarge: "image too large (max 5MB)" };
+
+export async function readAvatarUpload(req: Request): Promise<UploadResult> {
+  return readJpegUpload(req, AVATAR_CAP);
+}
+
+/** Raw body or multipart `file`, refused past `cap` before buffering when the length is declared. */
+export async function readJpegUpload(req: Request, cap: UploadCap): Promise<UploadResult> {
+  if (headerSaysTooLarge(req.headers.get("content-length"), cap.maxBytes)) {
+    return { ok: false, detail: cap.tooLarge };
+  }
+  const ctype = (req.headers.get("content-type") ?? "").toLowerCase();
+  if (ctype.includes("multipart/form-data")) {
+    return fileFromForm(req, cap);
+  }
+  try {
+    const bytes = new Uint8Array(await req.arrayBuffer());
+    if (bytes.byteLength > cap.maxBytes) {
+      return { ok: false, detail: cap.tooLarge };
+    }
+    if (bytes.byteLength) {
+      return { ok: true, bytes };
+    }
+  } catch {
+    /* try form */
+  }
+  return fileFromForm(req, cap);
+}
+
+async function fileFromForm(req: Request, cap: UploadCap): Promise<UploadResult> {
+  try {
+    const form = await req.formData();
+    const row = form.get("file");
+    if (!(row instanceof Blob)) {
+      return { ok: false, detail: "file required" };
+    }
+    if (row.size > cap.maxBytes) {
+      return { ok: false, detail: cap.tooLarge };
+    }
+    const bytes = new Uint8Array(await row.arrayBuffer());
+    if (bytes.byteLength > cap.maxBytes) {
+      return { ok: false, detail: cap.tooLarge };
+    }
+    return { ok: true, bytes };
+  } catch {
+    return { ok: false, detail: "multipart file required" };
+  }
+}
+
+export type ChatUser = {
+  sub: string;
+  email: string | null;
+  role: string;
+  agents: string[];
+};
+
+export type RoomEnv = DoorEnv & AgentBinding & { ALLOWED_SUBS?: string };
+
+type RoomStub = NonNullable<ReturnType<typeof agentStub>>;
+
+export function slugFromRequest(req: Request): string | null {
+  return parseSlug(new URL(req.url).searchParams.get("slug") ?? "");
+}
+
+/** Identity from the door. `me()` returns the response, so a miss is that response. */
+export async function readChatUser(
+  req: Request,
+  env: DoorEnv,
+  store: UserStore,
+): Promise<{ user: ChatUser } | { response: Response }> {
+  const res = await me(req, env, store);
+  if (res.status !== 200) {
+    return { response: res };
+  }
+  const body = await res.json() as Partial<ChatUser>;
+  if (typeof body.sub !== "string" || !body.sub) {
+    return { response: Response.json({ error: "unauthorized" }, { status: 401 }) };
+  }
+  const agents = Array.isArray(body.agents) ? body.agents.filter((s): s is string => typeof s === "string") : [];
+  return {
+    user: {
+      sub: body.sub,
+      email: typeof body.email === "string" ? body.email : null,
+      role: typeof body.role === "string" ? body.role : "member",
+      agents,
+    },
+  };
+}
+
+/**
+ * Signed-in caller who is on this room's list. No `AGENT` binding yet → 503.
+ * TODO: `me()` does not take a slug; the room list on the Agent DO is the second check.
+ */
+export async function admitRoom(
+  req: Request,
+  env: RoomEnv,
+  store: UserStore,
+  slug: string,
+): Promise<{ user: ChatUser; stub: RoomStub } | { response: Response }> {
+  const who = await readChatUser(req, env, store);
+  if ("response" in who) {
+    return who;
+  }
+  const stub = agentStub(env, slug);
+  if (!stub) {
+    return { response: configError() };
+  }
+  const list = await fetchRoomUsers(stub);
+  const allowed = roomAllows(list, {
+    sub: who.user.sub,
+    email: who.user.email ?? undefined,
+    emailVerified: Boolean(who.user.email),
+  }, env.ALLOWED_SUBS);
+  if (!allowed) {
+    return { response: forbidden() };
+  }
+  return { user: who.user, stub };
+}
+
+function jpegBody(bytes: Uint8Array): ArrayBuffer {
+  const buf = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buf).set(bytes);
+  return buf;
+}
+
+/** GET/POST `/api/chat/avatar?slug=`. Bytes live on the Agent DO. */
+export async function handleAvatar(req: Request, env: RoomEnv, store: UserStore): Promise<Response> {
+  const slug = slugFromRequest(req);
+  if (!slug) {
+    return Response.json({ error: "bad slug" }, { status: 400 });
+  }
+  const admitted = await admitRoom(req, env, store, slug);
+  if ("response" in admitted) {
+    return admitted.response;
+  }
+  if (req.method === "GET") {
+    return fromStub(await admitted.stub.fetch(new Request("https://agent/avatar", {
+      method: "GET",
+      headers: { "X-Chat-Op": "avatar", ...conditionalHeaders(req) },
+    })));
+  }
+  if (req.method === "POST") {
+    const got = await readAvatarUpload(req);
+    if (!got.ok) {
+      return Response.json({ error: got.detail }, { status: 400 });
+    }
+    const check = acceptJpeg(got.bytes);
+    if (!check.ok) {
+      return Response.json({ error: check.detail }, { status: 400 });
+    }
+    return fromStub(await admitted.stub.fetch(new Request("https://agent/avatar", {
+      method: "PUT",
+      headers: { "X-Chat-Op": "avatar", "Content-Type": "image/jpeg" },
+      body: jpegBody(got.bytes),
+    })));
+  }
+  return new Response("method", { status: 405 });
+}

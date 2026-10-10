@@ -1,0 +1,57 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        form:
+            limit:
+                - "10"
+            start:
+                - "0"
+        headers:
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-iOS-5.19.1.2
+        url: https://connectapi.garmin.com/workout-service/workouts?start=0&limit=10
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 2
+        body: '[]'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bbae2cf8f17e5a-SEA
+            Content-Length:
+                - "2"
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 20:57:35 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=NIPz49Zrt%2BjoLpnDRa6UQM6LxOBfeH1csrGa43cttzCUoLPEDrZNimZZ35gbPXc8drMgX%2F6oz%2BwRL27kqYKaYN6i%2F1aQoL128oBUMejUVFKL5rm6oKDyhThxDikmzklra5foEA0h2Q%3D%3D"}]}'
+            Server:
+                - cloudflare
+            Server-Timing:
+                - cfCacheStatus;desc="DYNAMIC"
+                - cfEdge;dur=44,cfOrigin;dur=8
+        status: 200 OK
+        code: 200
+        duration: 87.5835ms

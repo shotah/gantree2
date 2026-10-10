@@ -1,0 +1,147 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-iOS-5.19.1.2
+        url: https://connectapi.garmin.com/userprofile-service/socialProfile
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"id":12345678,"profileId":12345678,"garminGUID":"00000000-0000-0000-0000-000000000000","displayName":"anonymous","fullName":"Anonymous User","userName":"anonymous","profileImageType":"UPLOADED_PHOTO","profileImageUrlLarge":"https://example.com/profile.png","profileImageUrlMedium":"https://example.com/profile.png","profileImageUrlSmall":"https://example.com/profile.png","hasPremiumSocialIcon":false,"location":"Anonymous City","facebookUrl":null,"twitterUrl":null,"personalWebsite":null,"motivation":null,"bio":null,"primaryActivity":null,"favoriteActivityTypes":["cycling","cross_training","walking","other"],"runningTrainingSpeed":0.0,"cyclingTrainingSpeed":0.0,"favoriteCyclingActivityTypes":[],"cyclingClassification":null,"cyclingMaxAvgPower":0.0,"swimmingTrainingSpeed":0.0,"profileVisibility":"following","activityStartVisibility":"public","activityMapVisibility":"public","courseVisibility":"public","activityHeartRateVisibility":"public","activityPowerVisibility":"public","badgeVisibility":"groups","showAge":true,"showWeight":true,"showHeight":true,"showWeightClass":false,"showAgeRange":false,"showGender":true,"showActivityClass":false,"showVO2Max":true,"showPersonalRecords":true,"showLast12Months":true,"showLifetimeTotals":true,"showUpcomingEvents":true,"showRecentFavorites":true,"showRecentDevice":true,"showRecentGear":false,"showBadges":true,"otherActivity":null,"otherPrimaryActivity":null,"otherMotivation":null,"userRoles":["SCOPE_OMT_DISCOUNTS_READ","SCOPE_DI_COACHING_WRITE","SCOPE_GARMINPAY_WRITE","SCOPE_ATP_READ","SCOPE_GHS_SAMD","SCOPE_INSIGHTS_READ","SCOPE_OMT_DISCOUNTS_CREATE","SCOPE_CIQ_APPSTORE_SERVICES_CREATE","SCOPE_DI_TOUM_NATIVE_REPORTED_DETAIL_WRITE","SCOPE_COMMUNITY_COURSE_WRITE","SCOPE_GCOFFER_WRITE","SCOPE_DI_API_READ","SCOPE_DT_CLIENT_ANALYTICS_WRITE","SCOPE_CIQ_APPSTORE_SERVICES_DELETE","SCOPE_OMT_SUBSCRIPTION_READ","SCOPE_DI_COACHING_READ","SCOPE_CONNECT_READ","SCOPE_COMMUNITY_COURSE_READ","SCOPE_GOLF_API_READ","SCOPE_GHS_UPLOAD","SCOPE_DIVE_API_READ","SCOPE_CIQ_APPSTORE_SERVICES_READ","SCOPE_CIQ_APPSTORE_SERVICES_UPDATE","SCOPE_CONNECT_WRITE","SCOPE_CONNECT_MCT_DAILY_LOG_READ","SCOPE_GARMINPAY_READ","SCOPE_DI_OAUTH_2_AUTHORIZATION_CODE_CREATE","SCOPE_GOLF_API_WRITE","SCOPE_INSIGHTS_WRITE","SCOPE_PRODUCT_SEARCH_READ","SCOPE_OMT_CAMPAIGN_READ","SCOPE_GCOFFER_READ","SCOPE_ATP_WRITE","ROLE_CONNECTUSER","ROLE_FITNESS_USER","ROLE_WELLNESS_USER","ROLE_OUTDOOR_USER","ROLE_GHS_USER","ROLE_TACX_APP_USER","ROLE_GARMIN_USER"],"nameApproved":true,"userProfileFullName":"Anonymous User","makeGolfScorecardsPrivate":true,"allowGolfLiveScoring":false,"allowGolfScoringByConnections":true,"userLevel":3,"userPoint":102,"levelUpdateDate":"2024-10-04T00:56:56.0","levelIsViewed":false,"levelPointThreshold":140,"userPointOffset":0,"userPro":false}'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba9315d4deb43-SEA
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 20:54:11 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=hPtvHQVuHIoiCuJFZaybay82ofdP5QuKqpIC3Q16rlvMGCDeceSuMNFQvNbs18v2o20LMHyO1%2Bpk%2BpZV4zCslpVmIWqSSJq80X233MGzJ5dK%2BAoslzhMy3PYcnX1GMTVu2k8b4wg9w%3D%3D"}]}'
+            Server:
+                - cloudflare
+            Server-Timing:
+                - cfCacheStatus;desc="DYNAMIC"
+                - cfEdge;dur=44,cfOrigin;dur=7
+        status: 200 OK
+        code: 200
+        duration: 56.0465ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-iOS-5.19.1.2
+        url: https://connectapi.garmin.com/userprofile-service/userprofile/user-settings
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"id":12345678,"userData":{"gender":"MALE","weight":84510.0,"height":177.8,"timeFormat":"time_twelve_hr","birthDate":"1990-01-01","measurementSystem":"statute_us","activityLevel":7,"handedness":"RIGHT","powerFormat":{"formatId":30,"formatKey":"watt","minFraction":0,"maxFraction":0,"groupingUsed":true,"displayFormat":null},"heartRateFormat":{"formatId":21,"formatKey":"bpm","minFraction":0,"maxFraction":0,"groupingUsed":false,"displayFormat":null},"firstDayOfWeek":{"dayId":2,"dayName":"sunday","sortOrder":2,"isPossibleFirstDay":true},"vo2MaxRunning":49.0,"vo2MaxCycling":null,"lactateThresholdSpeed":0.32499909,"lactateThresholdHeartRate":163,"diveNumber":null,"intensityMinutesCalcMethod":"AUTO","moderateIntensityMinutesHrZone":3,"vigorousIntensityMinutesHrZone":4,"hydrationMeasurementUnit":"cup","hydrationContainers":[],"hydrationAutoGoalEnabled":true,"firstbeatMaxStressScore":null,"firstbeatCyclingLtTimestamp":1145207935,"firstbeatRunningLtTimestamp":1151277487,"thresholdHeartRateAutoDetected":true,"ftpAutoDetected":true,"trainingStatusPausedDate":null,"weatherLocation":{"useFixedLocation":null,"latitude":null,"longitude":null,"locationName":null,"isoCountryCode":null,"postalCode":null},"golfDistanceUnit":"statute_us","golfElevationUnit":null,"golfSpeedUnit":null,"externalBottomTime":null,"availableTrainingDays":["THURSDAY","WEDNESDAY","MONDAY","TUESDAY","FRIDAY","SUNDAY","SATURDAY"],"preferredLongTrainingDays":["SUNDAY","SATURDAY"],"virtualCaddieDataSource":null,"numberDivesAutomatically":null,"firstbeatRowingLtTimestamp":null,"lactateThresholdRowingPace":null,"lactateThresholdHeartRateRowing":null,"lactateThresholdHeartRateCycling":null},"userSleep":{"sleepTime":79200,"defaultSleepTime":false,"wakeTime":21600,"defaultWakeTime":false},"connectDate":null,"sourceType":null,"userSleepWindows":[{"sleepWindowFrequency":"SUNDAY","startSleepTimeSecondsFromMidnight":79200,"endSleepTimeSecondsFromMidnight":21600},{"sleepWindowFrequency":"MONDAY","startSleepTimeSecondsFromMidnight":79200,"endSleepTimeSecondsFromMidnight":21600},{"sleepWindowFrequency":"TUESDAY","startSleepTimeSecondsFromMidnight":79200,"endSleepTimeSecondsFromMidnight":21600},{"sleepWindowFrequency":"WEDNESDAY","startSleepTimeSecondsFromMidnight":79200,"endSleepTimeSecondsFromMidnight":21600},{"sleepWindowFrequency":"THURSDAY","startSleepTimeSecondsFromMidnight":79200,"endSleepTimeSecondsFromMidnight":21600},{"sleepWindowFrequency":"FRIDAY","startSleepTimeSecondsFromMidnight":79200,"endSleepTimeSecondsFromMidnight":21600},{"sleepWindowFrequency":"SATURDAY","startSleepTimeSecondsFromMidnight":79200,"endSleepTimeSecondsFromMidnight":21600},{"sleepWindowFrequency":"DAILY","startSleepTimeSecondsFromMidnight":79200,"endSleepTimeSecondsFromMidnight":21600}]}'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba931be66eb43-SEA
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 20:54:11 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=d%2F4LcNYCuOv%2F0euRbeZSm69QFb%2BJRcC%2FSwzz3v0Lqa35hOdyW2Gh1L3072%2BPVhLwZ4kr2UEUpJjGX4uU59pcGzEO52Gw5LzJrxAqooXJfV2%2F7igKrQjp6TQV5OHqKXRwg9x8UVkS%2Bw%3D%3D"}]}'
+            Server:
+                - cloudflare
+            Server-Timing:
+                - cfCacheStatus;desc="DYNAMIC"
+                - cfEdge;dur=43,cfOrigin;dur=68
+        status: 200 OK
+        code: 200
+        duration: 115.9271ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-iOS-5.19.1.2
+        url: https://connectapi.garmin.com/userprofile-service/userprofile/settings
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"displayName":"anonymous","preferredLocale":"en","measurementSystem":"statute_us","firstDayOfWeek":{"dayId":2,"dayName":"sunday","sortOrder":2,"isPossibleFirstDay":true},"numberFormat":"decimal_period","timeFormat":{"formatId":32,"formatKey":"time_twelve_hr","minFraction":0,"maxFraction":0,"groupingUsed":false,"displayFormat":"h:mm a"},"dateFormat":{"formatId":23,"formatKey":"mmddyyyy","minFraction":0,"maxFraction":0,"groupingUsed":false,"displayFormat":"EEE, MMM d, yyyy"},"powerFormat":{"formatId":30,"formatKey":"watt","minFraction":0,"maxFraction":0,"groupingUsed":true,"displayFormat":null},"heartRateFormat":{"formatId":21,"formatKey":"bpm","minFraction":0,"maxFraction":0,"groupingUsed":false,"displayFormat":null},"timeZone":"America/Los_Angeles","hydrationMeasurementUnit":"cup","hydrationContainers":[],"golfDistanceUnit":"statute_us","golfElevationUnit":null,"golfSpeedUnit":null,"availableTrainingDays":null,"preferredLongTrainingDays":null}'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba932788aeb43-SEA
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 20:54:11 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=jYtCSl0oc15y%2BcUMWlu%2FsuAp7ZgJSY%2Fh2qLOBYkc%2FcumF6hclm3zq2kITYj%2BJgwnC9uFFECUWL4%2BuP4OvWRb%2F1BltRVvHTF%2BhWTboF1ZuNWvWv%2Bq4aMs5%2F4b9jWW2FW8lDFki0ygoQ%3D%3D"}]}'
+            Server:
+                - cloudflare
+            Server-Timing:
+                - cfCacheStatus;desc="DYNAMIC"
+                - cfEdge;dur=4,cfOrigin;dur=45
+        status: 200 OK
+        code: 200
+        duration: 53.3705ms

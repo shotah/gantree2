@@ -1,7 +1,7 @@
 name: harness
 
 # Go harness + every baked-in MCP plugin under harness/mcp/*. One merged
-# coverage number, one badge. Skips cleanly until Phase 3 lands harness/go.mod.
+# coverage number, one badge. Runs when harness/go.mod is present.
 
 on:
   push:
@@ -23,7 +23,8 @@ permissions:
 
 env:
   # Floor for the merged harness + plugins number. Raise, never lower.
-  HARNESS_COVERAGE_MIN: "60"
+  # 68.2% with fifteen plugins; 69.4% after dropping youtube/boards/cast/search. Floored; only goes up.
+  HARNESS_COVERAGE_MIN: "69"
 
 jobs:
   go:
@@ -56,6 +57,12 @@ jobs:
             [ -f "$mod/go.mod" ] || continue
             (cd "$mod" && go vet ./...)
           done
+
+      # The frame bridge and snapshot code are concurrent; one local run saw a
+      # flaky `flushed 0`. The race detector needs cgo, which the dev box lacks.
+      - name: Race (harness, 3×)
+        if: steps.present.outputs.yes == 'true'
+        run: cd harness && go test -race -count=3 ./...
 
       - name: Test + merged coverage
         if: steps.present.outputs.yes == 'true'

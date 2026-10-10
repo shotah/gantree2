@@ -1,0 +1,147 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-iOS-5.19.1.2
+        url: https://connectapi.garmin.com/wellness-service/wellness/daily/spo2/2026-07-15
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"userProfilePK":12345678,"calendarDate":"2026-07-15","startTimestampGMT":"2026-07-15T07:00:00.0","endTimestampGMT":"2026-07-15T15:29:00.0","startTimestampLocal":"2026-07-15T00:00:00.0","endTimestampLocal":"2026-07-15T08:29:00.0","sleepStartTimestampGMT":"2026-07-15T05:45:39.0","sleepEndTimestampGMT":"2026-07-15T12:41:39.0","sleepStartTimestampLocal":"2026-07-14T22:45:39.0","sleepEndTimestampLocal":"2026-07-15T05:41:39.0","tomorrowSleepStartTimestampGMT":null,"tomorrowSleepEndTimestampGMT":null,"tomorrowSleepStartTimestampLocal":null,"tomorrowSleepEndTimestampLocal":null,"averageSpO2":97.0,"lowestSpO2":94,"lastSevenDaysAvgSpO2":96.85714285714286,"latestSpO2":96,"latestSpO2TimestampGMT":"2026-07-15T15:29:00.0","latestSpO2TimestampLocal":"2026-07-15T08:29:00.0","avgSleepSpO2":97.0,"avgTomorrowSleepSpO2":null,"spO2ValueDescriptorsDTOList":[{"spo2ValueDescriptorIndex":0,"spo2ValueDescriptorKey":"timestamp"},{"spo2ValueDescriptorIndex":1,"spo2ValueDescriptorKey":"spo2Reading"},{"spo2ValueDescriptorIndex":2,"spo2ValueDescriptorKey":"singleReadingPlottable"}],"spO2SingleValues":null,"continuousReadingDTOList":null,"spO2HourlyAverages":[[1784098800000,97],[1784102400000,96],[1784106000000,96],[1784109600000,96],[1784113200000,96],[1784116800000,97],[1784120400000,97],[1784124000000,98],[1784127600000,97]]}'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba9b61e5feb43-SEA
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 20:54:32 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=SiD4OABdC3%2Bf1F%2FZZP9y1uVGOI2iBm5tp6fRqALGAGFdYZFAJjfz4b3QmNr620WpNkTJYNkoDNo1BCZzq%2FcYDsMKoTc%2B2qooQaQptKaMLZztImY3xK6IG3fkM8S7tAUSibF9i5fkrA%3D%3D"}]}'
+            Server:
+                - cloudflare
+            Server-Timing:
+                - cfCacheStatus;desc="DYNAMIC"
+                - cfEdge;dur=45,cfOrigin;dur=31
+        status: 200 OK
+        code: 200
+        duration: 82.026ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-iOS-5.19.1.2
+        url: https://connectapi.garmin.com/wellness-service/wellness/daily/respiration/2026-07-15
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"userProfilePK":12345678,"calendarDate":"2026-07-15","startTimestampGMT":"2026-07-15T07:00:00.0","endTimestampGMT":"2026-07-15T15:29:00.0","startTimestampLocal":"2026-07-15T00:00:00.0","endTimestampLocal":"2026-07-15T08:29:00.0","sleepStartTimestampGMT":"2026-07-15T05:45:39.0","sleepEndTimestampGMT":"2026-07-15T12:41:39.0","sleepStartTimestampLocal":"2026-07-14T22:45:39.0","sleepEndTimestampLocal":"2026-07-15T05:41:39.0","tomorrowSleepStartTimestampGMT":null,"tomorrowSleepEndTimestampGMT":null,"tomorrowSleepStartTimestampLocal":null,"tomorrowSleepEndTimestampLocal":null,"lowestRespirationValue":7.0,"highestRespirationValue":20.0,"avgWakingRespirationValue":13.0,"avgSleepRespirationValue":13.0,"avgTomorrowSleepRespirationValue":null,"respirationValueDescriptorsDTOList":[{"index":0,"key":"timestamp"},{"index":1,"key":"respiration"}],"respirationValuesArray":[[1784098920000,14.0],[1784099040000,11.0],[1784099160000,14.0],[1784099280000,13.0],[1784099400000,14.0],[1784099520000,13.0],[1784099640000,13.0],[1784099760000,15.0],[1784099880000,14.0],[1784100000000,12.0],[1784100120000,11.0],[1784100240000,12.0],[1784100360000,12.0],[1784100480000,13.0],[1784100600000,13.0],[1784100720000,15.0],[1784100840000,14.0],[1784100960000,13.0],[1784101080000,14.0],[1784101200000,14.0],[1784101320000,13.0],[1784101440000,14.0],[1784101560000,14.0],[1784101680000,14.0],[1784101800000,14.0],[1784101920000,15.0],[1784102040000,14.0],[1784102160000,15.0],[1784102280000,13.0],[1784102400000,13.0],[1784102520000,13.0],[1784102640000,10.0],[1784102760000,11.0],[1784102880000,13.0],[1784103000000,15.0],[1784103120000,14.0],[1784103240000,9.0],[1784103360000,12.0],[1784103480000,14.0],[1784103600000,18.0],[1784103720000,13.0],[1784103840000,11.0],[1784103960000,13.0],[1784104080000,12.0],[1784104200000,13.0],[1784104320000,13.0],[1784104440000,12.0],[1784104560000,13.0],[1784104680000,13.0],[1784104800000,12.0],[1784104920000,13.0],[1784105040000,11.0],[1784105160000,11.0],[1784105280000,14.0],[1784105400000,13.0],[1784105520000,12.0],[1784105640000,13.0],[1784105760000,13.0],[1784105880000,12.0],[1784106000000,13.0],[1784106120000,14.0],[1784106240000,14.0],[1784106360000,13.0],[1784106480000,13.0],[1784106600000,13.0],[1784106720000,13.0],[1784106840000,14.0],[1784106960000,14.0],[1784107080000,13.0],[1784107200000,13.0],[1784107320000,14.0],[1784107440000,14.0],[1784107560000,11.0],[1784107680000,11.0],[1784107800000,13.0],[1784107920000,14.0],[1784108040000,14.0],[1784108160000,13.0],[1784108280000,13.0],[1784108400000,12.0],[1784108520000,13.0],[1784108640000,13.0],[1784108760000,13.0],[1784108880000,13.0],[1784109000000,13.0],[1784109120000,11.0],[1784109240000,12.0],[1784109360000,12.0],[1784109480000,11.0],[1784109600000,10.0],[1784109720000,11.0],[1784109840000,11.0],[1784109960000,14.0],[1784110080000,16.0],[1784110200000,15.0],[1784110320000,14.0],[1784110440000,14.0],[1784110560000,14.0],[1784110680000,12.0],[1784110800000,13.0],[1784110920000,12.0],[1784111040000,14.0],[1784111160000,12.0],[1784111280000,13.0],[1784111400000,11.0],[1784111520000,12.0],[1784111640000,10.0],[1784111760000,11.0],[1784111880000,10.0],[1784112000000,12.0],[1784112120000,13.0],[1784112240000,12.0],[1784112360000,13.0],[1784112480000,13.0],[1784112600000,13.0],[1784112720000,13.0],[1784112840000,12.0],[1784112960000,13.0],[1784113080000,13.0],[1784113200000,13.0],[1784113320000,11.0],[1784113440000,13.0],[1784113560000,11.0],[1784113680000,11.0],[1784113800000,12.0],[1784113920000,11.0],[1784114040000,11.0],[1784114160000,12.0],[1784114280000,12.0],[1784114400000,12.0],[1784114520000,12.0],[1784114640000,13.0],[1784114760000,14.0],[1784114880000,12.0],[1784115000000,10.0],[1784115120000,10.0],[1784115240000,11.0],[1784115360000,11.0],[1784115480000,11.0],[1784115600000,14.0],[1784115720000,12.0],[1784115840000,13.0],[1784115960000,10.0],[1784116080000,13.0],[1784116200000,13.0],[1784116320000,11.0],[1784116440000,12.0],[1784116560000,13.0],[1784116680000,11.0],[1784116800000,13.0],[1784116920000,11.0],[1784117040000,13.0],[1784117160000,12.0],[1784117280000,13.0],[1784117400000,13.0],[1784117520000,14.0],[1784117640000,15.0],[1784117760000,16.0],[1784117880000,13.0],[1784118000000,10.0],[1784118120000,10.0],[1784118240000,8.0],[1784118360000,11.0],[1784118480000,12.0],[1784118600000,12.0],[1784118720000,11.0],[1784118840000,13.0],[1784118960000,11.0],[1784119080000,9.0],[1784119200000,12.0],[1784119320000,12.0],[1784119440000,10.0],[1784119560000,10.0],[1784119680000,12.0],[1784119800000,12.0],[1784119920000,14.0],[1784120040000,13.0],[1784120160000,11.0],[1784120280000,12.0],[1784120400000,11.0],[1784120520000,12.0],[1784120640000,13.0],[1784120760000,13.0],[1784120880000,12.0],[1784121000000,15.0],[1784121120000,14.0],[1784121240000,-1.0],[1784121360000,-1.0],[1784121480000,9.0],[1784121600000,9.0],[1784121720000,11.0],[1784121840000,14.0],[1784121960000,17.0],[1784122080000,14.0],[1784122200000,13.0],[1784122320000,11.0],[1784122440000,12.0],[1784122560000,13.0],[1784122680000,14.0],[1784122800000,11.0],[1784122920000,8.0],[1784123040000,12.0],[1784123160000,8.0],[1784123280000,14.0],[1784123400000,15.0],[1784123520000,13.0],[1784123640000,10.0],[1784123760000,10.0],[1784123880000,14.0],[1784124000000,15.0],[1784124120000,11.0],[1784124240000,14.0],[1784124360000,16.0],[1784124480000,16.0],[1784124600000,16.0],[1784124720000,15.0],[1784124840000,9.0],[1784124960000,13.0],[1784125080000,14.0],[1784125200000,11.0],[1784125320000,11.0],[1784125440000,13.0],[1784125560000,16.0],[1784125680000,16.0],[1784125800000,14.0],[1784125920000,13.0],[1784126040000,17.0],[1784126160000,15.0],[1784126280000,12.0],[1784126400000,12.0],[1784126520000,11.0],[1784126640000,12.0],[1784126760000,9.0],[1784126880000,10.0],[1784127000000,7.0],[1784127120000,10.0],[1784127240000,13.0],[1784127360000,13.0],[1784127480000,15.0],[1784127600000,15.0],[1784127720000,12.0],[1784127840000,14.0],[1784127960000,10.0],[1784128080000,13.0],[1784128200000,15.0],[1784128320000,14.0],[1784128440000,12.0],[1784128560000,15.0],[1784128680000,15.0],[1784128800000,13.0],[1784128920000,12.0],[1784129040000,15.0],[1784129160000,15.0],[1784129280000,15.0],[1784129400000,-1.0]],"respirationAveragesValueDescriptorDTOList":[{"respirationAveragesValueDescriptorIndex":0,"respirationAveragesValueDescriptionKey":"timestamp"},{"respirationAveragesValueDescriptorIndex":1,"respirationAveragesValueDescriptionKey":"averageRespirationValue"},{"respirationAveragesValueDescriptorIndex":2,"respirationAveragesValueDescriptionKey":"highRespirationValue"},{"respirationAveragesValueDescriptorIndex":3,"respirationAveragesValueDescriptionKey":"lowRespirationValue"}],"respirationAveragesValuesArray":[[1784102400000,13.52,16.0,10.0],[1784106000000,12.65,20.0,8.0],[1784109600000,12.88,15.0,10.0],[1784113200000,12.65,18.0,9.0],[1784116800000,12.05,15.0,9.0],[1784120400000,11.86,16.0,7.0],[1784124000000,12.5,17.0,8.0],[1784127600000,13.08,18.0,7.0],[1784129340000,-1.0,null,null]],"respirationVersion":200}'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba9b69833eb43-SEA
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 20:54:32 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=YZCspGrifUld9rppedCVSm%2BqmODnWQlRrbyeE0q6jhdlEUV8wiowWd%2FoTPQ6lt3IvDGNqVPEvrJEWNA7YkivFZ3mPHm9w4lCS0NYyx4g%2Bnc9MVKril%2B%2BQjqtmq1js0cjO5UsyAM%2BIA%3D%3D"}]}'
+            Server:
+                - cloudflare
+            Server-Timing:
+                - cfCacheStatus;desc="DYNAMIC"
+                - cfEdge;dur=46,cfOrigin;dur=37
+        status: 200 OK
+        code: 200
+        duration: 88.5965ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: connectapi.garmin.com
+        headers:
+            Authorization:
+                - '[REDACTED]'
+            User-Agent:
+                - GCM-iOS-5.19.1.2
+        url: https://connectapi.garmin.com/wellness-service/wellness/daily/im/2026-07-15
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"userProfilePK":12345678,"calendarDate":"2026-07-15","startTimestampGMT":"2026-07-15T07:00:00.0","endTimestampGMT":"2026-07-15T15:29:00.0","startTimestampLocal":"2026-07-15T00:00:00.0","endTimestampLocal":"2026-07-15T08:29:00.0","weeklyModerate":54,"weeklyVigorous":64,"weeklyTotal":182,"weekGoal":150,"dayOfGoalMet":"Tue","startDayMinutes":182,"endDayMinutes":182,"moderateMinutes":0,"vigorousMinutes":0,"imValueDescriptorsDTOList":null,"imValuesArray":null}'
+        headers:
+            Alt-Svc:
+                - h3=":443"; ma=86400
+            Cache-Control:
+                - no-cache, no-store, private
+            Cf-Cache-Status:
+                - DYNAMIC
+            Cf-Ray:
+                - a1bba9b72a57eb43-SEA
+            Content-Type:
+                - application/json
+            Date:
+                - Wed, 15 Jul 2026 20:54:32 GMT
+            Nel:
+                - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+            Pragma:
+                - no-cache
+            Report-To:
+                - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=5D4CriRMXTm%2BDIjH6TvT3nmu9HtF0Qu2iZOoAv84fo37WbTA59dHtAd4l%2FvVAHq3FscooKRYS3l7miNAbz1g1oF4WRNPkWqsr0errnxcM6q4uWzRbyOsaL7USjdQao0t2GSAO6DHvg%3D%3D"}]}'
+            Server:
+                - cloudflare
+            Server-Timing:
+                - cfCacheStatus;desc="DYNAMIC"
+                - cfEdge;dur=6,cfOrigin;dur=63
+        status: 200 OK
+        code: 200
+        duration: 74.4024ms

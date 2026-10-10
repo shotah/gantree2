@@ -9,9 +9,10 @@ proposal disagree, fix both.
 Vocabulary: **settings** (what operators see), **chat** (the PWA a
 member talks through), **agents** (one Durable Object + one container
 each), **harness** (the Go binary that is the agent), **users** (one
-list, three roles). Wire names from the originals (`PENDANT_*`,
-`CHANNEL=pendant`) survive until Phase 4 and are marked where they
-appear.
+list, three roles). Wire names are the new ones (`CHAT_*`,
+`CHANNEL=chat`, `agents`, `chat:<slug>:<sub>`); the originals'
+(`PENDANT_*`, `CHANNEL=pendant`, `cranes`) are accepted as aliases
+until the Phase 4 cutover and are marked where they appear.
 
 ## 1. The product
 
@@ -91,6 +92,11 @@ and the harness on **Cloudflare Containers**. At home **celld** runs
 that same platform, and for its container binding it drives Docker or
 Podman underneath — an engine you install once and never address. One
 OCI image, two supervisors; Docker survives only as celld's engine.
+
+Two supervisors, one owner: Cloudflare acquired Deno on 2026-10-09 and
+is merging celld into workerd. The home column below is the same
+platform, catching up to the cloud column, maintained by the same
+people. That is why the cloud target is Workers and not a VM.
 
 | | Cloudflare | Home |
 | --- | --- | --- |
@@ -196,13 +202,14 @@ sequenceDiagram
   participant A as Agent:kit DO
   participant H as harness (container)
 
-  Note over H,A: on container start
+  Note over H,A: on container start — config is the first frame
   H->>A: wss /ws/kit  Authorization: Bearer <PENDANT_BEARER>
   A->>A: bearer matches DO row
+  A->>H: config {env, mcp, persona, restore/put presigned GET/PUT}
   H->>A: allow {PENDANT_ALLOWED_USERS}
   A->>A: room list ← allow
-  A->>H: config {env, mcp.toml, persona, R2 presigned GET/PUT}
   H->>A: status {published, skipped MCP}
+  Note over A: status, perf, log, snapshot stay on the DO — never fanned to phones
 
   Note over M,A: a person opens the chat
   M->>MW: GET /chat/kit (gantree_session)
@@ -237,12 +244,12 @@ stateDiagram-v2
   [*] --> Stopped
   Stopped --> Starting : operator Start<br/>or Cron tick with work
   Starting --> Restoring : container up<br/>harness dials /ws
-  Restoring --> Running : R2 latest.tar restored<br/>(or none — fresh brain)
+  Restoring --> Running : R2 latest gantry_db and self_md<br/>(or 404 — fresh brain)
   Running --> Running : turns · alarm wakes · perf/log frames
   Running --> Snapshotting : timer · SIGTERM
-  Snapshotting --> Running : PUT backups/kit/<stamp>.tar
+  Snapshotting --> Running : PUT backups/kit/latest and backups/kit/<stamp>
   Snapshotting --> Stopped : was stopping
-  Running --> Recreating : operator edits config.env
+  Running --> Recreating : env drifted since markStarted<br/>(start is a separate call)
   Recreating --> Starting : new env → new container
   Running --> Stopped : crash → DO notes restart count
   Stopped --> [*]
@@ -269,23 +276,22 @@ sequenceDiagram
   A->>C: start(image, env)
   C-->>A: running
   H->>A: dial /ws/kit (bearer)
-  A->>H: config {…, restore: presigned GET latest.tar}
-  H->>R: GET latest.tar
-  R-->>H: tar (or 404)
+  A->>H: config {…, restore: presigned GET gantry_db and self_md}
+  H->>R: GET backups/kit/latest/gantry_db
+  R-->>H: file (or 404)
   H->>A: status
   A-->>W: alive · image · status
   W-->>O: card turns green
 
   loop every N minutes and on SIGTERM
-    H->>R: PUT backups/kit/<stamp>.tar (presigned)
+    H->>R: PUT backups/kit/latest/{gantry_db,self_md} (presigned)
     H->>A: snapshot {stamp, bytes}
   end
 
-  O->>W: edit config.env
+  O->>W: PATCH config.env
   W->>A: write config.env
-  A->>C: stop
-  A->>C: start(image, new env)
-  Note over A,H: "env change recreates" — same rule as Docker
+  A-->>W: view { recreate: true } when env differs from last start
+  Note over A,H: container start calls markStarted; env drift is a recreate hint
 ```
 
 ## 6. Users — one list, three roles
@@ -478,10 +484,14 @@ If a task fails one of these, it is later, or it is wrong.
   plain TypeScript Vitest can run.
 - ESLint + `@stylistic` is the style. No Prettier. Do not disable
   `no-explicit-any`; type it or delete the dead write.
-- Wire names from the originals (`PENDANT_*`, `CHANNEL=pendant`,
-  `cranes` on `/api/auth/me`, `pendant:<slug>:<sub>`) stay until
-  Phase 4 so cab, helm, and agents on the old stack keep working.
-  They are marked as wire names wherever they appear.
+- Nothing new is written with the originals' wire names. `CHAT_*`,
+  `CHANNEL=chat`, `agents`, `chat:<slug>:<sub>`, plugin `chat` are the
+  names ([todo.md](todo.md#0-decide)). `PENDANT_*`, `CHANNEL=pendant`,
+  `cranes` beside `agents` on `/api/auth/me` are accepted as aliases so
+  cab, helm, and agents on the old stack keep working until the Phase 4
+  cutover, then dropped. Marked as aliases wherever they appear.
+  Harness-side detail: [channels.md](channels.md),
+  [contract.md](contract.md).
 
 ## 12. Later, and not the product
 
