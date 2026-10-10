@@ -18,7 +18,9 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json-summary"],
       reportsDirectory: "coverage",
-      include: ["lib/**/*.ts", "edge/**/*.ts"],
+      include: ["lib/**/*.ts", "edge/**/*.ts", "app/lib/**/*.ts"],
+      // Binding glue: imports `cloudflare:workers`, nothing to assert.
+      exclude: ["lib/door/runtime.ts"],
       thresholds: {
         lines: 60,
         statements: 60,

@@ -57,7 +57,7 @@ export async function startGoogle(req: Request, env: DoorEnv): Promise<Response>
   const to = await authorizeUrl({ clientId: env.GOOGLE_CLIENT_ID, origin: url.origin, ...claims });
   return new Response(null, {
     status: 302,
-    headers: { "location": to, "set-cookie": cookieHeader(OAUTH_COOKIE, cookie, url, OAUTH_TTL_S), "cache-control": "no-store" },
+    headers: { location: to, "set-cookie": cookieHeader(OAUTH_COOKIE, cookie, url, OAUTH_TTL_S), "cache-control": "no-store" },
   });
 }
 
@@ -75,7 +75,7 @@ export async function finishGoogle(
   const url = new URL(req.url);
   const clearOauth = clearCookieHeader(OAUTH_COOKIE, url);
   const bounce = (error: string, next = "/") =>
-    new Response(null, { status: 302, headers: { "location": loginUrl(url, next, error), "set-cookie": clearOauth, "cache-control": "no-store" } });
+    new Response(null, { status: 302, headers: { location: loginUrl(url, next, error), "set-cookie": clearOauth, "cache-control": "no-store" } });
 
   if (!env.GOOGLE_CLIENT_ID || !env.SESSION_SECRET) {
     return bounce("not_configured");
@@ -103,7 +103,7 @@ export async function finishGoogle(
     return bounce("not_allowed", oauth.next);
   }
   const session = await sealSession(key, { sub: verified.who.sub, email: verified.who.email }, deps.now);
-  const headers = new Headers({ "location": new URL(oauth.next, url.origin).toString(), "cache-control": "no-store" });
+  const headers = new Headers({ location: new URL(oauth.next, url.origin).toString(), "cache-control": "no-store" });
   headers.append("set-cookie", cookieHeader(SESSION_COOKIE, session, url, SESSION_TTL_S));
   headers.append("set-cookie", clearOauth);
   return new Response(null, { status: 302, headers });
@@ -114,7 +114,7 @@ export function logout(req: Request): Response {
   const url = new URL(req.url);
   return new Response(null, {
     status: 303,
-    headers: { "location": loginUrl(url, "/"), "set-cookie": clearCookieHeader(SESSION_COOKIE, url), "cache-control": "no-store" },
+    headers: { location: loginUrl(url, "/"), "set-cookie": clearCookieHeader(SESSION_COOKIE, url), "cache-control": "no-store" },
   });
 }
 
