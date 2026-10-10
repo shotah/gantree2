@@ -70,6 +70,7 @@ jobs:
           go-version-file: harness/go.mod
           cache-dependency-path: |
             harness/go.sum
+            harness/mcp/flights/go.sum
             harness/mcp/google/go.sum
             harness/mcp/rentals/go.sum
 
@@ -81,6 +82,7 @@ jobs:
           out="${RUNNER_TEMP}/gantry-eval-mcp"
           mkdir -p "$out"
           (cd mcp/rentals && CGO_ENABLED=0 go build -o "$out/rentals-search-mcp" ./cmd/rentals-search-mcp)
+          (cd mcp/flights && CGO_ENABLED=0 go build -o "$out/flights-search-mcp" ./cmd/flights-search-mcp)
           (cd mcp/google && CGO_ENABLED=0 go build -o "$out/google-mcp" .)
           echo "EVAL_MCP_BIN=${out}" >> "$GITHUB_ENV"
 

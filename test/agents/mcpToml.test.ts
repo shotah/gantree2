@@ -331,12 +331,13 @@ auth_args = ["auth"]
     expect(grantsFromToml(added)).toEqual([{ name: "a", command: "a", env: ["K=V"] }]);
   });
 
-  it("preserves the eval manifest's download urls and tool allowlist", () => {
+  it("preserves the eval manifest's env lines and tool allowlist", () => {
     const grants = grantsFromToml(evalToml);
     const next = tomlFromGrants(grants, evalToml);
     expect(grantsFromToml(next)).toEqual(grants);
     expect(next).toContain("# Live MCP catalogs");
-    expect(next).toContain("download_url = \"https://github.com/shotah/rentals-search-mcp/releases/download/{tag}/rentals-search-mcp_{version}_{os}_{arch}.tar.gz\"");
+    expect(next).toContain("env = [\"RENTCAST_API_KEY=eval-placeholder\"]");
+    expect(next).toContain("env = [\"SERPAPI_API_KEY=eval-placeholder\"]");
     expect(next).toContain("tools   = [\"calendar_list_events\", \"calendar_create_events\"]");
     expect(next).toContain("# Google publishes ~100 tools");
     const withoutFlights = tomlFromGrants(grants.filter((grant) => grant.name !== "flights"), evalToml);

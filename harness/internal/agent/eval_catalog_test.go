@@ -213,12 +213,10 @@ func TestEvalLockCoversSiblingPlugins(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, ok := lock["flights"]; ok {
-		t.Fatal("flights-search-mcp is not a sibling module")
-	}
 	want := map[string]string{
 		"rentals": "./cmd/rentals-search-mcp",
 		"google":  ".",
+		"flights": "./cmd/flights-search-mcp",
 	}
 	for id, pkg := range want {
 		row, err := evalPluginRow(lock, id)

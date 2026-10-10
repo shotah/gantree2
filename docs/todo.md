@@ -39,12 +39,17 @@ pricing, in the Hosted section.
       `github.bldhosting.com`; Google Health's client likewise; the
       consent screen's privacy URL is `https://github.bldhosting.com/privacy/`.
       Proof is a `/auth google` round trip in chat that lands a token.
+- [ ] **owner · easy** GitHub settings. Every variable and secret any
+      workflow reads is one table:
+      [install.md → GitHub settings](install.md#github-settings--the-whole-list).
+      Tick it top to bottom; then the house keys with
+      `wrangler secret put`. Nothing else is tracked anywhere.
 - [ ] **owner · easy** `deploy-cloudflare.yml` first run (§8). CI is
-      green and the workflow now provisions KV + R2 itself; it needs
-      `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` secrets and the
-      `vars` it reads (`GOOGLE_CLIENT_ID`, `GANTREE_ADMINS`,
-      `GANTREE_ALLOW`, `VAPID_SUBJECT`). Then `https://gantree2.bldhosting.com`
-      resolves.
+      green and the workflow provisions KV + R2 itself; it needs the
+      table above filled. Then `https://gantree2.bldhosting.com`
+      resolves. The Worker alone is on the free plan; the first
+      container start needs Workers Paid ($5/month) — the only paid
+      piece, see [monetize.md](monetize.md#why-it-has-been-free-so-far-and-where-the-charge-comes-from).
 - [ ] **owner · easy** Walk: add Bob on `/users`; he gets in; remove;
       `401` next click (§2).
 - [ ] **owner · medium** Walk: build Kit on `/agents/new`; grant maps;
@@ -53,27 +58,26 @@ pricing, in the Hosted section.
       container path is the open half.
 - [ ] **owner · medium** Walk: Agent DO starts the image; harness
       dials with the DO's bearer; `status` lists published MCP;
-      `snapshot` lands in R2 (§5). Needs the deploy above and the GHCR
-      image (`harness-image.yml` pushes on `main`; not run yet).
+      `snapshot` lands in R2 (§5). Needs only the deploy above —
+      `wrangler deploy` builds the image into Cloudflare's registry;
+      GHCR is not on this path.
 - [ ] **owner · hard** Walk: a stranger with **one** README stands up
       Kit for two humans, yanks one, never opens the Cloudflare
       dashboard after the token (§8). The last box.
 
 ## Next — ship quality
 
-- [ ] **easy** GHCR image name `gantree-harness`; Docker Hub
-      description only if we keep publishing there (§7).
-- [ ] **easy** Raise `HARNESS_COVERAGE_MIN` (§6): garmin went 33 % →
-      63 %, so re-run `scripts/coverage-harness.sh` and lift the floor
-      from 69 to whatever the merged number is, minus a point.
-- [ ] **medium** Eval fixtures + `mcp.toml` → `harness/internal/agent/
-      testdata/eval/`; `tools_from` builds the sibling plugin, no
-      release fetch. `eval.yml` turns real (§5). Then release gets
-      `needs: eval` before tagging and a `vX.Y.Z`-tagged harness image
-      (`harness-image.yml` publishes on push only) (§8).
+- [ ] **medium** Two eval fixtures flaked one run of three on the
+      full live set (`react_to_thanks` reached for `cron_schedule`;
+      `chat_todo_add` for `memory_recall`). Not catalog drift — model
+      judgement on fixtures without `tools_from`. Re-run the full set
+      once; if either repeats, tighten the fixture's persona text or
+      allow the tool, don't loosen the judge (§5).
 - [ ] **medium** Walk: `tools/list` from the image matches the Tools
-      grid; the eval's catalog-drift check passes on every `tools_from`
-      server (§6).
+      grid for all twelve; the eval's drift check already covers the
+      three `tools_from` servers (rentals, flights, google) — extend
+      the sibling build to every `mcp.lock` row and compare each
+      `tools/list` against its `host-manifest` (§6).
 - [ ] **medium** Chat pitch (carried): one multi-step turn with tool
       trace from a real agent on this stack, for the README. Needs the
       provider consoles above.
@@ -108,12 +112,10 @@ the cutover in §9 — a hosted customer cannot be the first stranger.
 Ordered: the free, legal, and architectural prerequisites, then the
 product.
 
-- [ ] **owner · easy** License. No `LICENSE` file exists (the README
-      badge points at one). Pick MIT or Apache-2.0 and commit it. Open
-      is how a stranger trusts the door with their Gmail; the money is
-      in hosting and time, not the code.
-- [ ] **easy** `FUNDING.yml` + a Support line in the README and the
-      site footer (GitHub Sponsors; one tip jar, not five).
+- [ ] **owner · easy** Enrol in GitHub Sponsors (Settings → Sponsors
+      → set up). `.github/FUNDING.yml` (`github: shotah`) and the
+      README sponsor line are in; the button appears when the account
+      is enrolled.
 - [ ] **owner · medium** The entity: LLC in your state, registered
       agent, business bank account, EIN; a merchant of record (Lemon
       Squeezy / Paddle / Polar.sh) so sales tax and VAT are theirs.

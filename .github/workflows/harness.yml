@@ -24,7 +24,7 @@ permissions:
 env:
   # Floor for the merged harness + plugins number. Raise, never lower.
   # 68.2% with fifteen plugins; 69.4% after dropping youtube/boards/cast/search. Floored; only goes up.
-  HARNESS_COVERAGE_MIN: "69"
+  HARNESS_COVERAGE_MIN: "72"
 
 jobs:
   go:

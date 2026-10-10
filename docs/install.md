@@ -137,20 +137,58 @@ no `GANTREE_DEV_USER` (seed writes the member cookie).
 
 ---
 
+## GitHub settings — the whole list
+
+Everything any workflow in `.github/workflows/` reads. Repository →
+**Settings → Secrets and variables → Actions**. Variables are plain
+text and show in logs; Secrets are masked. This is the only list —
+if a workflow grows a new `vars.X` or `secrets.X`, it is added here.
+
+| Kind | Name | Used by | Value | Required |
+| --- | --- | --- | --- | --- |
+| Secret | `CLOUDFLARE_API_TOKEN` | `deploy-cloudflare` | API token with Workers Scripts Edit · Workers KV Storage Edit · Workers R2 Storage Edit · Account Settings Read | yes |
+| Secret | `CLOUDFLARE_ACCOUNT_ID` | `deploy-cloudflare` | dashboard sidebar | yes |
+| Variable | `GOOGLE_CLIENT_ID` | `deploy-cloudflare` | the sign-in client, from GCP | yes |
+| Secret | `GOOGLE_CLIENT_SECRET` | `deploy-cloudflare` | same client | yes |
+| Secret | `SESSION_SECRET` | `deploy-cloudflare` | `openssl rand -base64 48` (≥ 32 chars) | yes |
+| Variable | `GANTREE_ADMINS` | `deploy-cloudflare` | `you@example.com` (grammar: [access.md](access.md#allowlist-entry-grammar)) | yes |
+| Variable | `GANTREE_ALLOW` | `deploy-cloudflare` | members, comma list; may be empty | set, may be blank |
+| Variable | `VAPID_SUBJECT` | `deploy-cloudflare` | `mailto:you@example.com` | only with push |
+| Secret | `VAPID_PUBLIC_KEY` | `deploy-cloudflare` | `npx web-push generate-vapid-keys` | only with push |
+| Secret | `VAPID_PRIVATE_KEY` | `deploy-cloudflare` | same pair | only with push |
+| Secret | `LLM_BASE_URL` | `eval` | the model the eval drives, e.g. `https://generativelanguage.googleapis.com/v1beta/openai` | eval skips without all three |
+| Secret | `LLM_API_KEY` | `eval` | | eval skips without all three |
+| Secret | `LLM_MODEL` | `eval` | e.g. `gemini-3.8-flash` | eval skips without all three |
+| Variable | `PAGES_CUSTOM_DOMAIN` | `pages` | defaults to `github.bldhosting.com`; a fork sets its own or empties it | no |
+| Variable | `GOOGLE_SITE_VERIFICATION` | `pages` | Search Console token for the docs site | no |
+
+`GITHUB_TOKEN` is automatic (`ci`, `harness`, `harness-image`, `pages`,
+`release`). The `deploy-cloudflare` job fails fast if any of the four
+auth values (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
+`SESSION_SECRET`, `GANTREE_ADMINS`) is empty.
+
+**Not in GitHub.** The house keys that let a new agent run with no
+keys of its own (`LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`,
+`BRAVE_SEARCH_API_KEY`) are Worker secrets, set once from a laptop
+with the same Cloudflare token:
+
+```bash
+npx wrangler secret put LLM_BASE_URL     # and LLM_API_KEY, LLM_MODEL, BRAVE_SEARCH_API_KEY
+```
+
+Never set in production: `GANTREE_DEV_USER` (loopback dev door) and
+`CHAT_SECRET` (loopback two-tab spike). `AGENT_BEARERS` is an
+override; the Agent DO mints bearers itself.
+
+Outside GitHub and Cloudflare, the remaining owner steps are the
+Google client redirect URIs ([above](#google-oauth-client)) and the
+tools' provider consoles ([auth.md](auth.md)).
+
+---
+
 ## Cloudflare
 
-CI does it. Repository → **Settings → Secrets and variables → Actions**:
-
-| Kind | Name | Value |
-| --- | --- | --- |
-| Variable | `GOOGLE_CLIENT_ID` | from GCP |
-| Variable | `GANTREE_ADMINS` | `you@example.com` (grammar: [access.md](access.md#allowlist-entry-grammar)) |
-| Variable | `GANTREE_ALLOW` | optional members |
-| Secret | `GOOGLE_CLIENT_SECRET` | from GCP |
-| Secret | `SESSION_SECRET` | `openssl rand -base64 48` |
-| Secret | `CLOUDFLARE_API_TOKEN` | Workers Scripts Edit · Workers KV Storage Edit · Workers R2 Storage Edit · Account Settings Read |
-| Secret | `CLOUDFLARE_ACCOUNT_ID` | dashboard sidebar |
-
+CI does it, with the GitHub settings [above](#github-settings--the-whole-list).
 Push to `main`. `ci.yml` runs tests, lint, typecheck, build.
 `deploy-cloudflare.yml` then creates the `DIRECTORY` KV namespace and
 the `gantree-store` R2 bucket if they are missing (the `TODO` id in
@@ -271,13 +309,16 @@ and should not.
 
 ## Harness image
 
-Agents run `ghcr.io/shotah/gantree-harness:<tag>` — the Go harness plus
-every MCP server in `harness/mcp.lock` baked into `/opt/mcp`.
-`harness-image.yml` builds it when `harness/**` changes, smokes
-`gantry version`, and on `main` pushes
-`ghcr.io/shotah/gantree-harness:<sha>`. `wrangler deploy` builds the
-same Dockerfile into the account's container registry. **Recreate**
-picks up a newly deployed image.
+One image, `harness/Dockerfile`: the Go harness plus every MCP server in
+`harness/mcp.lock` baked into `/opt/mcp/<id>/<id>`. Neither deploy
+target pulls it from a registry — `wrangler deploy` builds it into the
+account's container registry and celld builds it on the box — so
+**Recreate** picks up whatever was last deployed. `harness-image.yml`
+builds and smokes (`gantry version`) the same file on every
+`harness/**` change and publishes the prebuilt copy for anyone who
+wants `docker run` without the build: `main` →
+`ghcr.io/shotah/gantree-harness:<sha>`, a release tag →
+`:vX.Y.Z` and `:latest`.
 
 Build it yourself with any Docker-API engine: `cd harness && docker
 build -t gantree-harness:local .` (~70 s warm). Rootless podman is

@@ -55,6 +55,11 @@ Nothing here is a plan; the plan is [proposal.md](proposal.md).
       client, orgs beyond one household per account. Plan in
       [todo.md](todo.md#hosted-phase-5--the-paid-door); numbers in
       [monetize.md](monetize.md).
+- [x] **D — License: MIT (2026-10-10).** Root `LICENSE`, copyright
+      `shotah` like the plugins; `package.json` `"license": "MIT"`. The
+      code stays open; the money is hosting and time
+      ([monetize.md](monetize.md)). Every plugin under `harness/mcp/`
+      already carried its own MIT file.
 - [x] **D — The mark (2026-10-10).** A bare tree with roots — the
       owner's traced silhouette, **`assets/tree.svg`** (one black path,
       SVG 1.0, 1264×1280 pt) — recoloured to the theme foreground and
@@ -267,6 +272,20 @@ role gate; every host-I/O module was replaced by a DO stub. Contract:
       config frame is applied, so a bare image boots far enough to
       dial the Agent DO and pick up the house keys. Without `SNAPSHOT`
       the check is unchanged. `TestLoad_SnapshotDefersLLM`.
+- [x] **Eval off GitHub Releases (2026-10-10).** `tools_from` builds
+      the sibling module named in `mcp.lock` (`go build` into a temp
+      dir, or `EVAL_MCP_BIN` when CI prebuilt) and boots it over stdio
+      for `tools/list`; no `download_url`, no fetch. Fixtures pull
+      `rentals` and `flights` + `google` (16 live tools). A
+      `tools_from` with no lock row fails with its name. `eval.yml` is
+      real: builds the three binaries, runs `make -C harness
+      integration-test` (`go test -tags integration -run
+      '^TestEval_Live$' -eval.n=3`), skips with a notice when the
+      `LLM_*` secrets are absent. `release.yml` calls it
+      (`uses: ./.github/workflows/eval.yml`, `secrets: inherit`) and
+      the release job `needs: eval` — a failed eval blocks the tag's
+      release, a skipped one does not. Live: `denver_flight` and
+      `rental_daily_cron` 3/3 after flights landed.
 - [x] `harness/Dockerfile`: static `gantry` + `scripts/build-mcp.sh`
       (globs `mcp/*/go.mod` → `/opt/mcp/<id>/`, runs `host-manifest`
       when present). **Built 2026-10-10** on the dev box with rootless
@@ -354,6 +373,9 @@ are still `github.com/shotah/<old>` (rename when free). Server id per
       `blood_pressure_create`, `summary_log_hydration` →
       `summary_update_hydration`); request-body args snake_case. Both
       allowlists empty. CLI subcommands unchanged.
+- [x] `HARNESS_COVERAGE_MIN` 69 → **72** (2026-10-10): merged harness
+      + twelve plugins measured 73.3 % by `scripts/coverage-harness.sh`
+      after garmin and flights.
 - [x] Garmin coverage 33.2 % → **63.1 %** (2026-10-10): endpoint
       98 %, garmin 88 %, har-parser 86 %; new tests for the CLI exec
       path, MCP call path, recorder flow, SSO flow, and HTTP service.
@@ -486,6 +508,15 @@ shipping-yard art is gone, not restyled.
       commits, tags `vX.Y.Z` and a floating `latest`, pushes; the tag
       runs `release.yml` (GitHub Release, generated notes, `-rc` →
       pre-release). `npm run release:dry` prints current → next.
+- [x] **Image registry (2026-10-10).** Containers stay — one harness
+      container per agent is the architecture on both targets; what
+      went was compose and the deploy scripts, not the image. Neither
+      target pulls from a registry (`wrangler deploy` and celld both
+      build `harness/Dockerfile`), so GHCR is the public prebuilt copy
+      and the release artifact: `harness-image.yml` pushes `main` →
+      `:<sha>`, and a `v*` tag (from `npm run release`) → `:vX.Y.Z` +
+      `:latest`. Name `gantree-harness`, under the repo owner. Docker
+      Hub dropped — one registry.
 - [x] `pages.yml`: docs site → `gh-pages` beside `badges/`.
 - [x] `docs/security.md` (risks, choices, register), root `SECURITY.md`
       and `CONTRIBUTING.md` for GitHub's tabs.

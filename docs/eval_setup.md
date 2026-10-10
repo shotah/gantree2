@@ -264,10 +264,9 @@ does not publish fails before any model call, and so does a
 `tools_from` server with no `mcp.lock` row. That is the naming contract
 ([mcp-naming.md](mcp-naming.md)) enforced by the eval.
 
-`flights-search-mcp` is not in this repo. `denver_flight` keeps canned
-`flights__*` tools and does not list `flights` in `tools_from`.
-`google` on that fixture, and `rentals` on the rental cron, are the
-sibling builds.
+The fixtures that set `tools_from` name `rentals`, `flights`, and
+`google`. Each is a row in `harness/mcp.lock` and is built from
+`harness/mcp/<id>/`.
 
 Then:
 

@@ -8,15 +8,18 @@
 # startup check. A sibling module that renames a tool fails the fixture
 # before any model call.
 #
-# flights-search-mcp is not in this repo (no mcp.lock row). The denver
-# flight fixture does not list `flights` in tools_from; those tools stay
-# canned in the fixture. Binaries land in a fresh temp directory unless
-# EVAL_MCP_BIN already holds them (CI prebuilds there).
+# Binaries land in a fresh temp directory unless EVAL_MCP_BIN already
+# holds them (CI prebuilds there).
 
 [[server]]
 name    = "rentals"
 command = "rentals-search-mcp"
 env     = ["RENTCAST_API_KEY=eval-placeholder"]
+
+[[server]]
+name    = "flights"
+command = "flights-search-mcp"
+env     = ["SERPAPI_API_KEY=eval-placeholder"]
 
 # Google publishes ~100 tools; a real deploy runs a tier or an allowlist.
 # The eval takes list plus the batch create. A single event is a one-element

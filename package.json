@@ -3,6 +3,7 @@
   "version": "0.2.1",
   "private": true,
   "description": "gantree — one repo, one door, one product. Settings, chat (PWA), and the harness, on Cloudflare or celld.",
+  "license": "MIT",
   "engines": {
     "node": ">=22"
   },
