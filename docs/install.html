@@ -132,10 +132,24 @@ npm run dev            # http://127.0.0.1:3000 → /login</code></pre>
 <p>Sign in. You are admin. A second Google account gets <code>not_allowed</code>
 until you add it on <code>/users</code>.</p>
 <p>Without a Google client: <code>GANTREE_DEV_USER=118212345678901234567:you@example.com</code>
-in <code>.dev.vars</code> fakes a session on loopback only. It still has to be in
-<code>GANTREE_ADMINS</code> or <code>GANTREE_ALLOW</code>. Details:
+in <code>.dev.vars</code> fakes a session on loopback only. The sub is 10–32 digits.
+It still has to be in <code>GANTREE_ADMINS</code> or <code>GANTREE_ALLOW</code>. Details:
 <a href="access.html#dev-without-google">access.md</a>.</p>
-<p>Built Worker under Miniflare: <code>npm run build &amp;&amp; npm run start</code>.</p>
+<p><code>npm run dev</code> is Vite on <code>127.0.0.1:3000</code>. It serves the Durable Objects.
+Containers need Docker, which local dev does not assume: <code>wrangler.jsonc</code>
+sets <code>dev.enable_containers</code> to false, and the agent page shows the
+container as unknown instead of failing. Screenshots in this repo were
+taken against <code>npm run dev</code>. <code>npm run build &amp;&amp; npm run start</code> is the
+built Worker under Miniflare (<code>dist/server/wrangler.json</code>); use it when
+you want the production bundle, not to get Durable Objects.</p>
+<pre><code class="language-bash">npm run seed   # dev must already be up. Fills Kit and Ada through the HTTP API.
+npm run shot   # headless Chrome → assets/docs/*.png. CHROME_BIN overrides the Chrome path.</code></pre>
+<p><code>npm run seed</code> writes any missing <code>GANTREE_DEV_USER</code> or <code>AGENT_BEARERS</code>
+into <code>.dev.vars</code> and then tells you to restart dev so the Worker reloads
+them. <code>npm run shot</code> opens <code>/chat</code> as the loopback dev user. A member
+picker needs that variable unset and <code>GANTREE_SHOT_AS_MEMBER=1</code> (seed
+writes the member cookie).</p>
+<p><img src="../assets/docs/login.png" alt="Sign-in page with Continue with Google"></p>
 <hr>
 <h2 id="cloudflare">Cloudflare</h2>
 <p>CI does it. Repository → <strong>Settings → Secrets and variables → Actions</strong>:</p>
@@ -282,6 +296,11 @@ every MCP server in <code>harness/mcp.lock</code> baked into <code>/opt/mcp</cod
 <code>ghcr.io/shotah/gantree-harness:&lt;sha&gt;</code>. <code>wrangler deploy</code> builds the
 same Dockerfile into the account&#39;s container registry. <strong>Recreate</strong>
 picks up a newly deployed image.</p>
+<p>Build it yourself with any Docker-API engine: <code>cd harness &amp;&amp; docker build -t gantree-harness:local .</code> (~70 s warm). Rootless podman is
+enough — <code>systemctl --user enable --now podman.socket</code> and
+<code>DOCKER_HOST=unix:///run/user/$UID/podman/podman.sock</code> make the
+<code>docker</code> CLI talk to it; no daemon, no root. Smoke:
+<code>docker run --rm gantree-harness:local version</code>.</p>
 <hr>
 <h2 id="release">Release</h2>
 <pre><code class="language-bash">npm test
