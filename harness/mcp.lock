@@ -15,3 +15,4 @@ strava	./mcp/strava	github.com/shotah/go-strava-mcp	strava-mcp	STRAVA_CLIENT_ID,
 feeds	./mcp/feeds	github.com/shotah/feeds-mcp	feeds-mcp	FEEDS_USER_AGENT
 twitter	./mcp/twitter	github.com/shotah/twitter-mcp	twitter-mcp	X_BEARER_TOKEN
 rentals	./mcp/rentals	github.com/shotah/rentals-search-mcp	rentals-search-mcp	RENTCAST_API_KEY
+flights	./mcp/flights	github.com/shotah/flights-search-mcp	flights-search-mcp	SERPAPI_API_KEY

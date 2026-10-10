@@ -249,12 +249,16 @@ number is seeded to catch that); a Wednesday planner schedules the cue
 for the task whose words say `Wed 11am` and nothing for the one that
 says Friday; a nine-day-old task gets a line and not an offer to drop it.
 
-Where a fixture names a server, the tool defs are **real**. `tools_from`
-builds that server from `harness/mcp/<name>/` (or uses the binary already
-in `/opt/mcp` inside the image) and takes `tools/list` — names,
-descriptions, schemas — as the catalog. Nothing is checked in and nothing
-is called; a placeholder env is enough for binaries that refuse to start
-without a key present. No release download.
+Where a fixture names a server that has a sibling module, the tool defs
+are **real**. `tools_from` builds that server from `harness/mcp/<name>/`
+(or uses the binary already in `/opt/mcp` inside the image, or a prebuild
+in `EVAL_MCP_BIN`) and takes `tools/list` — names, descriptions, schemas —
+as the catalog. Nothing is checked in and nothing is called; a placeholder
+env is enough for binaries that refuse to start without a key present. No
+release download.
+`flights` is the exception: `flights-search-mcp` is not in this repo, so
+`denver_flight` keeps canned `flights__*` tools and `tools_from` names
+only `google` there. `rental_daily_cron` still builds `rentals`.
 [eval_setup.md](eval_setup.md#real-catalogs-tools_from).
 A renamed or dropped tool fails the fixture before any model call. A
 fixture that proves the model can drive the harness author's idea of a

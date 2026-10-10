@@ -217,11 +217,11 @@ func TestTasksHandlerDeleteTaskMissingTaskID(t *testing.T) {
 	}
 }
 
-// --- tasks_move_task ---
+// --- tasks_update_task_position ---
 
 func TestTasksHandlerMoveTaskMissingTaskListID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "tasks_move_task", nil)
+	text, isError := callTool(t, s, "tasks_update_task_position", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -232,7 +232,7 @@ func TestTasksHandlerMoveTaskMissingTaskListID(t *testing.T) {
 
 func TestTasksHandlerMoveTaskMissingTaskID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "tasks_move_task", map[string]any{
+	text, isError := callTool(t, s, "tasks_update_task_position", map[string]any{
 		"task_list_id": "abc123",
 	})
 	if !isError {
@@ -243,11 +243,11 @@ func TestTasksHandlerMoveTaskMissingTaskID(t *testing.T) {
 	}
 }
 
-// --- tasks_clear_completed ---
+// --- tasks_delete_completed ---
 
 func TestTasksHandlerClearCompletedTasksMissingTaskListID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "tasks_clear_completed", nil)
+	text, isError := callTool(t, s, "tasks_delete_completed", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -258,7 +258,7 @@ func TestTasksHandlerClearCompletedTasksMissingTaskListID(t *testing.T) {
 
 func TestTasksHandlerClearCompletedTasksAuthFailure(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "tasks_clear_completed", map[string]any{
+	text, isError := callTool(t, s, "tasks_delete_completed", map[string]any{
 		"task_list_id": "abc123",
 	})
 	if !isError {

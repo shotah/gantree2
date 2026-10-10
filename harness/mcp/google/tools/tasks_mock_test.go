@@ -204,7 +204,7 @@ func TestTasksMockUpdateTask(t *testing.T) {
 	}
 }
 
-// --- tasks_move_task ---
+// --- tasks_update_task_position ---
 
 func TestTasksMockMoveTask(t *testing.T) {
 	ts := fakeAPIServer(t, map[string]any{

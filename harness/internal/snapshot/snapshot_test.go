@@ -1,13 +1,17 @@
 package snapshot
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -231,11 +235,12 @@ func TestLoop_TickAndCancel(t *testing.T) {
 }
 
 func TestSetPut_KeepsEmptyFields(t *testing.T) {
-	r := New(Options{Put: URLs{DB: "https://r2.example/db", Self: "https://r2.example/self"}})
+	r := New(Options{Put: URLs{DB: "https://r2.example/db", Self: "https://r2.example/self", Tokens: "https://r2.example/tokens"}})
 	r.SetPut(URLs{DB: "https://r2.example/new-db"})
+	r.SetPut(URLs{Tokens: "https://r2.example/new-tokens"})
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if r.put.DB != "https://r2.example/new-db" || r.put.Self != "https://r2.example/self" {
+	if r.put.DB != "https://r2.example/new-db" || r.put.Self != "https://r2.example/self" || r.put.Tokens != "https://r2.example/new-tokens" {
 		t.Fatalf("%+v", r.put)
 	}
 }
@@ -254,5 +259,170 @@ func TestPlace_EmptySkipped(t *testing.T) {
 	body, err := os.ReadFile(path)
 	if err != nil || string(body) != "be brief\n" {
 		t.Fatalf("%q %v", body, err)
+	}
+}
+
+func TestTokens_PutAndRestore(t *testing.T) {
+	key := bytes.Repeat([]byte{4}, 32)
+	b64 := base64.StdEncoding.EncodeToString(key)
+	secret := []byte(`{"refresh_token":"s3cret-value"}`)
+	var mu sync.Mutex
+	var stored []byte
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/tokens" {
+			http.NotFound(w, r)
+			return
+		}
+		if r.Method == http.MethodPut {
+			if r.Header.Get("Content-Type") != "application/octet-stream" {
+				t.Errorf("content-type %q", r.Header.Get("Content-Type"))
+			}
+			body, _ := io.ReadAll(r.Body)
+			if bytes.Contains(body, []byte("refresh_token")) {
+				t.Errorf("plaintext uploaded")
+			}
+			mu.Lock()
+			stored = body
+			mu.Unlock()
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		mu.Lock()
+		body := append([]byte(nil), stored...)
+		mu.Unlock()
+		if body == nil {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = w.Write(body)
+	}))
+	defer srv.Close()
+
+	data := t.TempDir()
+	writeToken(t, data, ".config/ghealth/tokens.json", string(secret))
+	writeToken(t, data, ".env", "LLM_API_KEY=nope")
+	r := New(Options{
+		DataDir: data,
+		Key:     b64,
+		Put:     URLs{Tokens: srv.URL + "/tokens"},
+		Get:     URLs{Tokens: srv.URL + "/tokens"},
+	})
+	pub, err := r.Publish(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pub.Files != 1 || pub.Bytes == 0 || pub.Stamp == "" {
+		t.Fatalf("%+v", pub)
+	}
+	mu.Lock()
+	blob := append([]byte(nil), stored...)
+	mu.Unlock()
+	plain, err := DecryptTokens(key, blob)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(plain, []byte("LLM_API_KEY")) || !bytes.Contains(plain, secret) {
+		t.Fatal("tar contents")
+	}
+
+	fresh := t.TempDir()
+	r2 := New(Options{DataDir: fresh, Key: "  " + b64 + "\n", Get: URLs{Tokens: srv.URL + "/tokens"}})
+	res, err := r2.Restore(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Files != 1 {
+		t.Fatalf("files %d", res.Files)
+	}
+	got, err := os.ReadFile(filepath.Join(fresh, ".config", "ghealth", "tokens.json"))
+	if err != nil || !bytes.Equal(got, secret) {
+		t.Fatalf("%q %v", got, err)
+	}
+	if _, err := os.Stat(filepath.Join(fresh, ".env")); !os.IsNotExist(err) {
+		t.Fatalf("env restored: %v", err)
+	}
+
+	wrongKey := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{5}, 32))
+	wrong := New(Options{DataDir: t.TempDir(), Key: wrongKey, Get: URLs{Tokens: srv.URL + "/tokens"}})
+	if _, err := wrong.Restore(context.Background()); err == nil {
+		t.Fatal("want wrong key error")
+	}
+}
+
+func TestRestore_TokensNotFound(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}))
+	defer srv.Close()
+	key := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{1}, 32))
+	r := New(Options{DataDir: t.TempDir(), Key: key, Get: URLs{Tokens: srv.URL + "/tokens"}})
+	res, err := r.Restore(context.Background())
+	if err != nil || res.Files != 0 {
+		t.Fatalf("%+v %v", res, err)
+	}
+}
+
+func TestPublish_NoTokenFilesSkips(t *testing.T) {
+	var hits int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+	key := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{2}, 32))
+	r := New(Options{DataDir: t.TempDir(), Key: key, Put: URLs{Tokens: srv.URL + "/tokens"}})
+	res, err := r.Publish(context.Background())
+	if err != nil || res.Files != 0 || hits != 0 {
+		t.Fatalf("%+v %v hits=%d", res, err, hits)
+	}
+}
+
+func TestPublish_MissingKeySkipsTokens(t *testing.T) {
+	keys := []struct {
+		name string
+		key  string
+	}{
+		{name: "empty", key: ""},
+		{name: "garbage", key: "%%%"},
+		{name: "short", key: base64.StdEncoding.EncodeToString([]byte("short"))},
+	}
+	for _, tc := range keys {
+		t.Run(tc.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			prev := slog.Default()
+			slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
+			t.Cleanup(func() { slog.SetDefault(prev) })
+
+			var hits int
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				hits++
+				w.WriteHeader(http.StatusOK)
+			}))
+			defer srv.Close()
+			data := t.TempDir()
+			writeToken(t, data, ".strava/tokens.json", "secret-token")
+			r := New(Options{
+				DataDir: data,
+				Key:     tc.key,
+				Get:     URLs{Tokens: srv.URL + "/tokens"},
+				Put:     URLs{Tokens: srv.URL + "/tokens"},
+			})
+			if _, err := r.Restore(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			res, err := r.Publish(context.Background())
+			if err != nil || res.Files != 0 {
+				t.Fatalf("%+v %v", res, err)
+			}
+			if _, err := r.Publish(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			if hits != 0 {
+				t.Fatalf("hits %d", hits)
+			}
+			if strings.Count(buf.String(), "tokens skipped, no key") != 1 {
+				t.Fatalf("log %q", buf.String())
+			}
+		})
 	}
 }

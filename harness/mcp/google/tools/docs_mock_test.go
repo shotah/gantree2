@@ -204,7 +204,7 @@ func TestDocsMockListDocsInFolder(t *testing.T) {
 	})
 }
 
-// --- docs_inspect_structure ---
+// --- docs_get_structure ---
 
 func TestDocsMockInspectDocStructure(t *testing.T) {
 	ts := fakeAPIServer(t, map[string]any{
@@ -232,7 +232,7 @@ func TestDocsMockInspectDocStructure(t *testing.T) {
 	}
 }
 
-// --- docs_modify_text ---
+// --- docs_update_text ---
 
 func TestDocsMockModifyDocText(t *testing.T) {
 	ts := fakeAPIServer(t, map[string]any{
@@ -253,7 +253,7 @@ func TestDocsMockModifyDocText(t *testing.T) {
 	}
 }
 
-// --- docs_find_and_replace ---
+// --- docs_update_replace ---
 
 func TestDocsMockFindAndReplaceDoc(t *testing.T) {
 	ts := fakeAPIServer(t, map[string]any{

@@ -179,10 +179,20 @@ export function configFrame(
   config: AgentConfig,
   urls: { restore: SnapshotUrls; put: SnapshotUrls },
   house: Record<string, string> = {},
+  snapshotKey = "",
 ): string {
+  const env: Record<string, string> = {};
+  for (const [key, value] of Object.entries({ ...house, ...config.env })) {
+    if (key !== "SNAPSHOT_KEY") {
+      env[key] = value;
+    }
+  }
+  if (snapshotKey) {
+    env.SNAPSHOT_KEY = snapshotKey;
+  }
   return JSON.stringify({
     kind: "config",
-    env: { ...house, ...config.env },
+    env,
     mcp: config.mcp,
     persona: config.persona,
     restore: presentUrls(urls.restore),

@@ -174,7 +174,7 @@ var WorkoutEndpoints = []endpoint.Endpoint{
 		MCPTool:       "workouts_get",
 		Short:         "Workout steps & segments",
 		Long: "Full workout definition: segments, steps, targets by workout_id. " +
-			"Use for 'what's in my interval workout'. Schedule to calendar: workouts_schedule.",
+			"Use for 'what's in my interval workout'. Schedule to calendar: workouts_create_schedule.",
 		DependsOn: "ListWorkouts",
 		ArgProvider: func(result any) map[string]any {
 			list, ok := result.(*garmin.WorkoutList)
@@ -203,9 +203,9 @@ var WorkoutEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "workouts",
 		CLISubcommand: "schedule",
-		MCPTool:       "workouts_schedule",
+		MCPTool:       "workouts_create_schedule",
 		Short:         "Put workout on calendar",
-		Long: "Schedule a saved workout to a calendar day; returns schedule_id for workouts_unschedule. " +
+		Long: "Schedule a saved workout to a calendar day; returns schedule_id for workouts_delete_schedule. " +
 			"Use for 'add workout to Friday'.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
@@ -222,13 +222,13 @@ var WorkoutEndpoints = []endpoint.Endpoint{
 		Path:       "/workout-service/schedule/{scheduleId}",
 		HTTPMethod: "DELETE",
 		Params: []endpoint.Param{
-			{Name: "schedule_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Schedule ID returned by workouts_schedule"},
+			{Name: "schedule_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Schedule ID returned by workouts_create_schedule"},
 		},
 		CLICommand:    "workouts",
 		CLISubcommand: "unschedule",
-		MCPTool:       "workouts_unschedule",
+		MCPTool:       "workouts_delete_schedule",
 		Short:         "Remove scheduled workout",
-		Long: "Remove a workout from the calendar by schedule_id from workouts_schedule. " +
+		Long: "Remove a workout from the calendar by schedule_id from workouts_create_schedule. " +
 			"Use to cancel a planned session — does not delete the workout template.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)

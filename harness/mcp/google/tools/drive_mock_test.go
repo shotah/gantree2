@@ -272,7 +272,7 @@ func TestDriveMockCreateFile(t *testing.T) {
 	})
 }
 
-// --- drive_share_file ---
+// --- drive_create_permission ---
 
 func TestDriveMockShareFile(t *testing.T) {
 	t.Run("success_share_with_user", func(t *testing.T) {
@@ -544,7 +544,7 @@ func TestDriveMockUpdateFile(t *testing.T) {
 	})
 }
 
-// --- drive_copy_file ---
+// --- drive_create_copy ---
 
 func TestDriveMockCopyFile(t *testing.T) {
 	t.Run("success_default_name", func(t *testing.T) {
@@ -575,7 +575,7 @@ func TestDriveMockCopyFile(t *testing.T) {
 	})
 }
 
-// --- drive_check_file_public_access ---
+// --- drive_get_file_public_access ---
 
 func TestDriveMockCheckPublicAccess(t *testing.T) {
 	t.Run("success_public_file", func(t *testing.T) {

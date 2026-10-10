@@ -298,7 +298,7 @@ func TestGmailMockGetMessagesContentBatch(t *testing.T) {
 	})
 }
 
-// --- gmail_send_message ---
+// --- gmail_create_message ---
 
 func TestGmailMockSendMessage(t *testing.T) {
 	t.Run("success_plain_text", func(t *testing.T) {
@@ -324,7 +324,7 @@ func TestGmailMockSendMessage(t *testing.T) {
 	})
 }
 
-// --- gmail_draft_message ---
+// --- gmail_create_draft ---
 
 func TestGmailMockDraftMessage(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
@@ -608,7 +608,7 @@ func TestGmailMockGetThreadsContentBatch(t *testing.T) {
 	})
 }
 
-// --- gmail_manage_label ---
+// --- gmail_update_label ---
 
 func TestGmailMockManageLabel(t *testing.T) {
 	t.Run("create_success", func(t *testing.T) {
@@ -735,7 +735,7 @@ func TestGmailMockDeleteFilter(t *testing.T) {
 	})
 }
 
-// --- gmail_modify_message_labels ---
+// --- gmail_update_message_labels ---
 
 func TestGmailMockModifyMessageLabels(t *testing.T) {
 	t.Run("success_add_and_remove", func(t *testing.T) {
@@ -763,7 +763,7 @@ func TestGmailMockModifyMessageLabels(t *testing.T) {
 	})
 }
 
-// --- gmail_batch_modify_message_labels ---
+// --- gmail_batch_update_message_labels ---
 
 func TestGmailMockBatchModifyMessageLabels(t *testing.T) {
 	t.Run("success", func(t *testing.T) {

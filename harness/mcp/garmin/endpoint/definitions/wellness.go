@@ -93,7 +93,7 @@ var WellnessEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "wellness",
 		CLISubcommand: "spo2",
-		MCPTool:       "wellness_get_spo2",
+		MCPTool:       "wellness_get_spo_two",
 		Short:         "Daily SpO2 / blood oxygen",
 		Long: "Blood oxygen (SpO2) for one calendar day: average, lowest, and sleep SpO2 when available. " +
 			"Use for 'blood oxygen', 'SpO2'. Not respiration rate — use wellness_get_respiration.",
@@ -119,7 +119,7 @@ var WellnessEndpoints = []endpoint.Endpoint{
 		MCPTool:       "wellness_get_respiration",
 		Short:         "Daily breathing rate",
 		Long: "Respiration rate for one calendar day: waking and sleep averages. " +
-			"Use for 'breathing rate', 'respiration while sleeping'. Not SpO2 — use wellness_get_spo2.",
+			"Use for 'breathing rate', 'respiration while sleeping'. Not SpO2 — use wellness_get_spo_two.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {

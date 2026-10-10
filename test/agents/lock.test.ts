@@ -61,6 +61,7 @@ describe("loadLock", () => {
       "feeds",
       "twitter",
       "rentals",
+      "flights",
     ]);
     expect(rows.every((row) => row.homeOnly === false)).toBe(true);
     expect(rows.find((row) => row.id === "maps")?.needs).toEqual(["GOOGLE_MAPS_API_KEY"]);

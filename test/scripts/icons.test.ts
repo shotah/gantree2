@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { inflateSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { pngSize } from "@/lib/pwa/iconPng";
-import { generateIcons } from "../../scripts/icons.ts";
+import { FONT_DIRS, fontDir, generateIcons } from "../../scripts/icons.ts";
 
 const PNG_SIG = Uint8Array.of(137, 80, 78, 71, 13, 10, 26, 10);
 
@@ -137,6 +137,24 @@ function pngIsOpaque(bytes: Uint8Array): boolean {
   }
   return true;
 }
+
+describe("fontDir", () => {
+  it("takes the first directory holding both DejaVu faces, across distro layouts", () => {
+    const debian = new Set([
+      "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+      "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    ]);
+    const exists = (file: string) => debian.has(file);
+    expect(fontDir(FONT_DIRS, exists)).toBe("/usr/share/fonts/truetype/dejavu");
+    expect(fontDir(["/opt/fonts", ...FONT_DIRS], exists)).toBe("/usr/share/fonts/truetype/dejavu");
+    // Half a pair is no pair.
+    expect(fontDir(FONT_DIRS, (file) => file.endsWith("/DejaVuSans.ttf"))).toBeNull();
+    expect(fontDir(FONT_DIRS, () => false)).toBeNull();
+    expect(FONT_DIRS).toContain("/usr/share/fonts/TTF");
+    // This machine has one of them, or generateIcons below could not run.
+    expect(fontDir()).not.toBeNull();
+  });
+});
 
 describe("generateIcons", () => {
   const dir = mkdtempSync(join(tmpdir(), "gantree-icons-"));

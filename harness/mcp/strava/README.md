@@ -45,7 +45,7 @@ Built for **local, single-user** AI tool use. Sibling MCP servers in the same st
 
 1. Create an application at [Strava API settings](https://www.strava.com/settings/api)
 2. **Authorization Callback Domain** — **one** hostname only (no
-   `localhost; …` / comma lists). Use `shotah.github.io` for chat `/auth
+   `localhost; …` / comma lists). Use `github.bldhosting.com` for chat `/auth
    strava` (Pages catch page). `localhost` / `127.0.0.1` stay whitelisted
    for laptop `strava-mcp auth` even with that set. Forks: your Pages host or
    `STRAVA_OAUTH_REDIRECT_URI` — see
@@ -96,7 +96,7 @@ strava-mcp auth
 
 Opens a browser, completes OAuth, writes tokens locally. You should see `Authenticated as [Your Name]!`.
 
-Headless / chat paste (needs callback domain `shotah.github.io`):
+Headless / chat paste (needs callback domain `github.bldhosting.com`):
 `strava-mcp auth url` → approve → `strava-mcp auth exchange <code>`.
 See [ai-gantry docs/auth.md](https://github.com/shotah/ai-gantry/blob/main/docs/auth.md)
 (smoke-test recommended).
@@ -152,7 +152,7 @@ Release builds also register `utility_check_update` / `utility_self_update` (not
 | `STRAVA_CLIENT_SECRET` | Yes | — | Strava API client secret |
 | `STRAVA_TOKEN_PATH` | No | `$DATA_DIR/.strava/tokens.json` when `DATA_DIR` is set, else `~/.strava/tokens.json` | Token store path |
 | `STRAVA_OAUTH_BIND` | No | `0.0.0.0` | OAuth callback bind host (`0.0.0.0` for Docker `-p`; use `127.0.0.1` for loopback-only). `redirect_uri` stays `http://localhost:19876/callback` |
-| `STRAVA_OAUTH_REDIRECT_URI` | No | Pages catch URL | Override redirect for `auth url` / `exchange` (default: `https://shotah.github.io/ai-gantry/oauth-catch/`) |
+| `STRAVA_OAUTH_REDIRECT_URI` | No | Pages catch URL | Override redirect for `auth url` / `exchange` (default: `https://github.bldhosting.com/oauth-catch/`) |
 | `STRAVA_MCP_NO_UPDATE_CHECK` | No | unset | Set to skip background update check on startup |
 
 ### CLI

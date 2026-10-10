@@ -273,11 +273,11 @@ func TestContactsHandlerDeleteContactGroupMissingGroupID(t *testing.T) {
 	}
 }
 
-// --- contacts_modify_group_members ---
+// --- contacts_update_group_members ---
 
 func TestContactsHandlerModifyContactGroupMembersMissingGroupID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "contacts_modify_group_members", nil)
+	text, isError := callTool(t, s, "contacts_update_group_members", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -288,7 +288,7 @@ func TestContactsHandlerModifyContactGroupMembersMissingGroupID(t *testing.T) {
 
 func TestContactsHandlerModifyContactGroupMembersNoAddOrRemove(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "contacts_modify_group_members", map[string]any{
+	text, isError := callTool(t, s, "contacts_update_group_members", map[string]any{
 		"group_id": "abc123",
 	})
 	if !isError {

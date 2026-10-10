@@ -145,7 +145,7 @@ func TestSlidesHandlerGetPageThumbnailMissingPageObjectID(t *testing.T) {
 
 func TestSlidesHandlerReadPresentationCommentsMissingPresentationID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "slides_read_comments", nil)
+	text, isError := callTool(t, s, "slides_list_comments", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -180,7 +180,7 @@ func TestSlidesHandlerCreatePresentationCommentMissingContent(t *testing.T) {
 
 func TestSlidesHandlerReplyToPresentationCommentMissingPresentationID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "slides_reply_to_comment", nil)
+	text, isError := callTool(t, s, "slides_create_reply", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -191,7 +191,7 @@ func TestSlidesHandlerReplyToPresentationCommentMissingPresentationID(t *testing
 
 func TestSlidesHandlerReplyToPresentationCommentMissingCommentID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "slides_reply_to_comment", map[string]any{
+	text, isError := callTool(t, s, "slides_create_reply", map[string]any{
 		"presentation_id": "pres123",
 	})
 	if !isError {
@@ -204,7 +204,7 @@ func TestSlidesHandlerReplyToPresentationCommentMissingCommentID(t *testing.T) {
 
 func TestSlidesHandlerReplyToPresentationCommentMissingReplyContent(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "slides_reply_to_comment", map[string]any{
+	text, isError := callTool(t, s, "slides_create_reply", map[string]any{
 		"presentation_id": "pres123",
 		"comment_id":      "comment123",
 	})

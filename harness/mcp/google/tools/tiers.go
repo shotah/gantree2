@@ -13,23 +13,23 @@ var tierTools = map[string]map[string][]string{
 			"gmail_search_messages",
 			"gmail_get_message",
 			"gmail_get_messages_batch",
-			"gmail_send_message",
-			"gmail_modify_message_labels", // trash/archive/spam — everyday cleanup
+			"gmail_create_message",
+			"gmail_update_message_labels", // trash/archive/spam — everyday cleanup
 		},
 		"extended": {
 			"gmail_get_attachment",
 			"gmail_get_thread",
 			"gmail_list_labels",
-			"gmail_manage_label",
-			"gmail_draft_message",
+			"gmail_update_label",
+			"gmail_create_draft",
 			"gmail_list_filters",
 			"gmail_create_filter",
 			"gmail_delete_filter",
 		},
 		"complete": {
 			"gmail_get_threads_batch",
-			"gmail_batch_modify_message_labels",
-			"auth_start",
+			"gmail_batch_update_message_labels",
+			"auth_generate_url",
 		},
 	},
 	"auth": {
@@ -45,22 +45,22 @@ var tierTools = map[string]map[string][]string{
 			"drive_get_file_content",
 			"drive_get_file_download_url",
 			"drive_create_file",
-			"drive_import_to_doc",
-			"drive_share_file",
+			"drive_convert_to_doc",
+			"drive_create_permission",
 			"drive_get_shareable_link",
 		},
 		"extended": {
 			"drive_list_items",
-			"drive_copy_file",
+			"drive_create_copy",
 			"drive_update_file",
 			"drive_update_permission",
-			"drive_remove_permission",
-			"drive_transfer_ownership",
-			"drive_batch_share_file",
+			"drive_delete_permission",
+			"drive_update_ownership",
+			"drive_batch_create_permission",
 		},
 		"complete": {
 			"drive_get_file_permissions",
-			"drive_check_file_public_access",
+			"drive_get_file_public_access",
 		},
 	},
 	"calendar": {
@@ -70,8 +70,8 @@ var tierTools = map[string]map[string][]string{
 			"calendar_get_event",
 			"calendar_create_events",
 			"calendar_update_events",
-			"calendar_delete_event",   // everyday dedupe / cleanup — keep in core+edit
-			"calendar_query_freebusy", // mutual availability — everyday scheduling
+			"calendar_delete_event",    // everyday dedupe / cleanup — keep in core+edit
+			"calendar_search_freebusy", // mutual availability — everyday scheduling
 		},
 		"extended": {},
 		"complete": {},
@@ -80,34 +80,34 @@ var tierTools = map[string]map[string][]string{
 		"core": {
 			"docs_get_content",
 			"docs_create",
-			"docs_modify_text",
+			"docs_update_text",
 			"docs_search", // title / share-URL lookup for everyday + small models
 		},
 		"extended": {
-			"docs_export_to_pdf",
-			"docs_find_and_replace",
+			"docs_convert_to_pdf",
+			"docs_update_replace",
 			"docs_list_in_folder",
-			"docs_insert_elements",
+			"docs_create_elements",
 			"docs_update_paragraph_style",
 		},
 		"complete": {
-			"docs_insert_image",
+			"docs_create_image",
 			"docs_update_headers_footers",
 			"docs_batch_update",
-			"docs_inspect_structure",
+			"docs_get_structure",
 			"docs_create_table_with_data",
-			"docs_debug_table_structure",
-			"docs_read_comments",
+			"docs_get_table_structure",
+			"docs_list_comments",
 			"docs_create_comment",
-			"docs_reply_to_comment",
+			"docs_create_reply",
 			"docs_resolve_comment",
 		},
 	},
 	"sheets": {
 		"core": {
 			"sheets_create_spreadsheet",
-			"sheets_read_values",
-			"sheets_modify_values",
+			"sheets_get_values",
+			"sheets_update_values",
 			"sheets_list_spreadsheets", // title filter / share-URL lookup for everyday + small models
 		},
 		"extended": {
@@ -116,18 +116,18 @@ var tierTools = map[string]map[string][]string{
 		"complete": {
 			"sheets_create_sheet",
 			"sheets_format_range",
-			"sheets_add_conditional_formatting",
+			"sheets_create_conditional_formatting",
 			"sheets_update_conditional_formatting",
 			"sheets_delete_conditional_formatting",
-			"sheets_read_comments",
+			"sheets_list_comments",
 			"sheets_create_comment",
-			"sheets_reply_to_comment",
+			"sheets_create_reply",
 			"sheets_resolve_comment",
 		},
 	},
 	"chat": {
 		"core": {
-			"chat_send_message",
+			"chat_create_message",
 			"chat_list_messages",
 			"chat_search_messages",
 		},
@@ -145,7 +145,7 @@ var tierTools = map[string]map[string][]string{
 			"forms_list_responses",
 		},
 		"complete": {
-			"forms_set_publish_settings",
+			"forms_update_publish_settings",
 			"forms_get_response",
 			"forms_batch_update",
 		},
@@ -161,9 +161,9 @@ var tierTools = map[string]map[string][]string{
 			"slides_get_page_thumbnail",
 		},
 		"complete": {
-			"slides_read_comments",
+			"slides_list_comments",
 			"slides_create_comment",
-			"slides_reply_to_comment",
+			"slides_create_reply",
 			"slides_resolve_comment",
 		},
 	},
@@ -184,8 +184,8 @@ var tierTools = map[string]map[string][]string{
 			"tasks_get_tasklist",
 			"tasks_update_tasklist",
 			"tasks_delete_tasklist",
-			"tasks_move_task",
-			"tasks_clear_completed",
+			"tasks_update_task_position",
+			"tasks_delete_completed",
 		},
 	},
 	"contacts": {
@@ -208,18 +208,18 @@ var tierTools = map[string]map[string][]string{
 			"contacts_create_group",
 			"contacts_update_group",
 			"contacts_delete_group",
-			"contacts_modify_group_members",
+			"contacts_update_group_members",
 		},
 	},
 	"search": {
 		"core": {
-			"search_query",
+			"pse_search",
 		},
 		"extended": {
-			"search_query_siterestrict",
+			"pse_search_siterestrict",
 		},
 		"complete": {
-			"search_get_engine_info",
+			"pse_get_engine_info",
 		},
 	},
 	"appscript": {
@@ -229,7 +229,7 @@ var tierTools = map[string]map[string][]string{
 			"appscript_get_content",
 			"appscript_create_project",
 			"appscript_update_content",
-			"appscript_run_function",
+			"appscript_evaluate_function",
 			"appscript_generate_trigger_code",
 		},
 		"extended": {
@@ -251,12 +251,12 @@ var tierTools = map[string]map[string][]string{
 // destructiveTools are withheld unless --capability complete (or unset).
 // Everyday deletes (events, tasks, contacts, filters) stay available under edit.
 var destructiveTools = map[string]bool{
-	"drive_transfer_ownership": true,
+	"drive_update_ownership":   true,
 	"contacts_batch_delete":    true,
 	"tasks_delete_tasklist":    true,
 	"contacts_delete_group":    true,
 	"appscript_delete_project": true,
-	"tasks_clear_completed":    true,
+	"tasks_delete_completed":   true,
 }
 
 // readOnlyTools is the set of tools that are allowed in --read-only mode /
@@ -274,29 +274,29 @@ var readOnlyTools = map[string]bool{
 	"gmail_list_labels":        true,
 	"gmail_list_filters":       true,
 	// Drive
-	"drive_search_files":             true,
-	"drive_get_file_content":         true,
-	"drive_get_file_download_url":    true,
-	"drive_list_items":               true,
-	"drive_get_file_permissions":     true,
-	"drive_check_file_public_access": true,
-	"drive_get_shareable_link":       true,
+	"drive_search_files":           true,
+	"drive_get_file_content":       true,
+	"drive_get_file_download_url":  true,
+	"drive_list_items":             true,
+	"drive_get_file_permissions":   true,
+	"drive_get_file_public_access": true,
+	"drive_get_shareable_link":     true,
 	// Calendar
-	"calendar_list_calendars": true,
-	"calendar_list_events":    true,
-	"calendar_get_event":      true,
-	"calendar_query_freebusy": true,
+	"calendar_list_calendars":  true,
+	"calendar_list_events":     true,
+	"calendar_get_event":       true,
+	"calendar_search_freebusy": true,
 	// Docs
-	"docs_search":                true,
-	"docs_get_content":           true,
-	"docs_list_in_folder":        true,
-	"docs_inspect_structure":     true,
-	"docs_debug_table_structure": true,
-	"docs_export_to_pdf":         true,
+	"docs_search":              true,
+	"docs_get_content":         true,
+	"docs_list_in_folder":      true,
+	"docs_get_structure":       true,
+	"docs_get_table_structure": true,
+	"docs_convert_to_pdf":      true,
 	// Sheets
 	"sheets_list_spreadsheets":    true,
 	"sheets_get_spreadsheet_info": true,
-	"sheets_read_values":          true,
+	"sheets_get_values":           true,
 	// Chat
 	"chat_list_spaces":     true,
 	"chat_list_messages":   true,
@@ -321,9 +321,9 @@ var readOnlyTools = map[string]bool{
 	"contacts_list_groups": true,
 	"contacts_get_group":   true,
 	// Search (all read-only)
-	"search_query":              true,
-	"search_get_engine_info":    true,
-	"search_query_siterestrict": true,
+	"pse_search":              true,
+	"pse_get_engine_info":     true,
+	"pse_search_siterestrict": true,
 	// Apps Script
 	"appscript_list_projects":    true,
 	"appscript_get_project":      true,
@@ -334,9 +334,9 @@ var readOnlyTools = map[string]bool{
 	"appscript_get_version":      true,
 	"appscript_get_metrics":      true,
 	// Comments (read only)
-	"docs_read_comments":   true,
-	"sheets_read_comments": true,
-	"slides_read_comments": true,
+	"docs_list_comments":   true,
+	"sheets_list_comments": true,
+	"slides_list_comments": true,
 }
 
 // allowedToolsForTier returns the set of tool names allowed for the given tier.

@@ -121,8 +121,24 @@ func (g *MCPGenerator) typeToParamName(t reflect.Type) string {
 	if name == "" {
 		return "body"
 	}
-	// Convert to camelCase (e.g., "Workout" -> "workout")
-	return strings.ToLower(name[:1]) + name[1:]
+	return snakeParamName(name)
+}
+
+// snakeParamName turns a Go type name into a snake_case tool argument.
+// "BloodPressureLogRequest" -> "blood_pressure_log_request".
+func snakeParamName(name string) string {
+	var b strings.Builder
+	for i, r := range name {
+		if r >= 'A' && r <= 'Z' {
+			if i > 0 {
+				b.WriteByte('_')
+			}
+			b.WriteByte(byte(r - 'A' + 'a'))
+			continue
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
 }
 
 func (g *MCPGenerator) createHandler(ep *Endpoint) server.ToolHandlerFunc {

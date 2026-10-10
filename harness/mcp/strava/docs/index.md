@@ -66,7 +66,7 @@ Download the latest binary for your platform from [GitHub Releases](https://gith
 ### Configure
 
 1. Create a Strava API application at [https://www.strava.com/settings/api](https://www.strava.com/settings/api)
-2. Set **Authorization Callback Domain** to `shotah.github.io` (one domain
+2. Set **Authorization Callback Domain** to `github.bldhosting.com` (one domain
    only; `localhost` stays whitelisted for laptop auth). See
    [ai-gantry docs/auth.md](https://github.com/shotah/ai-gantry/blob/main/docs/auth.md).
 3. Export your credentials:

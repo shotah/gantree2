@@ -20,7 +20,8 @@ type doBoot struct {
 }
 
 // prepareSnapshot reads a config frame (chat channel only), writes persona and
-// mcp.toml, and downloads gantry.db + SELF.md before those stores open.
+// mcp.toml, and downloads gantry.db, SELF.md, and the token archive before
+// those stores open.
 func prepareSnapshot(cfg *config.Config, logger *slog.Logger) (*doBoot, error) {
 	if cfg == nil {
 		return nil, nil
@@ -29,8 +30,8 @@ func prepareSnapshot(cfg *config.Config, logger *slog.Logger) (*doBoot, error) {
 		logger = slog.Default()
 	}
 	boot := &doBoot{}
-	get := snapshot.URLs{DB: cfg.SnapshotGetDB, Self: cfg.SnapshotGetSelf}
-	put := snapshot.URLs{DB: cfg.SnapshotPutDB, Self: cfg.SnapshotPutSelf}
+	get := snapshot.URLs{DB: cfg.SnapshotGetDB, Self: cfg.SnapshotGetSelf, Tokens: cfg.SnapshotGetTokens}
+	put := snapshot.URLs{DB: cfg.SnapshotPutDB, Self: cfg.SnapshotPutSelf, Tokens: cfg.SnapshotPutTokens}
 	if config.IsChatChannel(cfg.Channel) {
 		hctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		sock, frame, err := chat.Handshake(hctx, cfg.PendantMailboxURL, cfg.PendantBearer)
@@ -56,6 +57,12 @@ func prepareSnapshot(cfg *config.Config, logger *slog.Logger) (*doBoot, error) {
 			if frame.Put.Self != "" {
 				put.Self = frame.Put.Self
 			}
+			if frame.Restore.Tokens != "" {
+				get.Tokens = frame.Restore.Tokens
+			}
+			if frame.Put.Tokens != "" {
+				put.Tokens = frame.Put.Tokens
+			}
 		}
 	}
 	boot.snap = snapshot.New(snapshot.Options{
@@ -64,6 +71,7 @@ func prepareSnapshot(cfg *config.Config, logger *slog.Logger) (*doBoot, error) {
 		Interval:   cfg.SnapshotInterval,
 		Get:        get,
 		Put:        put,
+		Key:        cfg.SnapshotKey,
 	})
 	rctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
@@ -135,7 +143,7 @@ func wireDO(p *chat.Channel, boot *doBoot, bridge *chat.LogBridge, host *mcp.Hos
 	}
 	if boot != nil && boot.snap != nil {
 		p.SetOnConfig(func(frame chat.ConfigFrame) {
-			boot.snap.SetPut(snapshot.URLs{DB: frame.Put.DB, Self: frame.Put.Self})
+			boot.snap.SetPut(snapshot.URLs{DB: frame.Put.DB, Self: frame.Put.Self, Tokens: frame.Put.Tokens})
 		})
 		p.SetStatus(func() chat.StatusFrame { return statusFrame(host) })
 	}

@@ -34,8 +34,12 @@ func RunAuth(ctx context.Context, spec ServerSpec, extraArgs []string) error {
 	if len(extraArgs) > 0 {
 		args = append(args, extraArgs...)
 	}
+	bin, err := resolveExecutable(spec, command)
+	if err != nil {
+		return fmt.Errorf("mcp: auth %q: %w", spec.Name, err)
+	}
 
-	cmd := exec.CommandContext(ctx, command, args...) //nolint:gosec // G204: from operator mcp.toml
+	cmd := exec.CommandContext(ctx, bin, args...) //nolint:gosec // G204: from operator mcp.toml
 	cmd.Env = append(os.Environ(), spec.Env...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -58,8 +62,12 @@ func RunAuthOutput(ctx context.Context, spec ServerSpec, extraArgs []string) (st
 	if len(extraArgs) > 0 {
 		args = append(args, extraArgs...)
 	}
+	bin, err := resolveExecutable(spec, command)
+	if err != nil {
+		return "", "", fmt.Errorf("mcp: auth %q: %w", spec.Name, err)
+	}
 
-	cmd := exec.CommandContext(ctx, command, args...) //nolint:gosec // G204: from operator mcp.toml
+	cmd := exec.CommandContext(ctx, bin, args...) //nolint:gosec // G204: from operator mcp.toml
 	cmd.Env = append(os.Environ(), spec.Env...)
 	var outBuf, errBuf bytes.Buffer
 	cmd.Stdout = &outBuf

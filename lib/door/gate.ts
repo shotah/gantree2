@@ -24,9 +24,9 @@ const PUBLIC_PREFIX = ["/_vinext/", "/.well-known/", "/_next/", "/assets/"];
 
 /**
  * Harness snapshot GET/PUT. Signed with the room bearer (`lib/agents/snapshot`);
- * no session cookie. Only the two restore files, not the rest of `/api/agents`.
+ * no session cookie. Only the snapshot files, not the rest of `/api/agents`.
  */
-const SNAPSHOT_PATH = /^\/api\/agents\/[a-z][a-z0-9-]{0,62}\/snapshot\/(?:gantry_db|self_md)$/;
+const SNAPSHOT_PATH = /^\/api\/agents\/[a-z][a-z0-9-]{0,62}\/snapshot\/(?:gantry_db|self_md|tokens_tar)$/;
 
 export function isPublicPath(pathname: string): boolean {
   if (PUBLIC_EXACT.has(pathname)) {

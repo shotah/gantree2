@@ -251,7 +251,7 @@ garmin mcp --tools "sleep wellness hrv weight activities metrics utility" --tool
 
 **`extended`:** core plus `wellness_get_stress`, `wellness_get_heart_rate`,
 `wellness_get_body_battery_reports`, `wellness_get_sleep_score_stats`, `wellness_get_intensity_minutes`,
-`metrics_get_training_status`, `metrics_get_vo2max`, `activities_get_details`,
+`metrics_get_training_status`, `metrics_get_vo_two_max`, `activities_get_details`,
 `summary_get_daily`.
 
 **`complete`:** all tools in the selected services (historical behavior).
@@ -362,20 +362,20 @@ generated from the endpoint registry:
 |----------|-------|
 | Utility | `utility_get_current_date` |
 | Sleep | `sleep_get` |
-| Wellness | `wellness_get_stress`, `wellness_get_body_battery`, `wellness_get_heart_rate`, `wellness_get_spo2`, `wellness_get_respiration`, `wellness_get_intensity_minutes`, `wellness_get_daily_events`, `wellness_get_sleep`, `wellness_get_steps_chart`, `wellness_get_floors`, `wellness_get_body_battery_reports`, `wellness_get_sleep_score_stats` |
-| User summary | `summary_get_daily`, `summary_get_hydration`, `summary_log_hydration`, `summary_get_steps_daily`, `summary_get_steps_weekly`, `summary_get_stress_daily`, `summary_get_stress_weekly`, `summary_get_hydration_stats`, `summary_get_intensity_minutes_daily`, `summary_get_intensity_minutes_weekly` |
+| Wellness | `wellness_get_stress`, `wellness_get_body_battery`, `wellness_get_heart_rate`, `wellness_get_spo_two`, `wellness_get_respiration`, `wellness_get_intensity_minutes`, `wellness_get_daily_events`, `wellness_get_sleep`, `wellness_get_steps_chart`, `wellness_get_floors`, `wellness_get_body_battery_reports`, `wellness_get_sleep_score_stats` |
+| User summary | `summary_get_daily`, `summary_get_hydration`, `summary_update_hydration`, `summary_get_steps_daily`, `summary_get_steps_weekly`, `summary_get_stress_daily`, `summary_get_stress_weekly`, `summary_get_hydration_stats`, `summary_get_intensity_minutes_daily`, `summary_get_intensity_minutes_weekly` |
 | Activity | `activities_list`, `activities_get`, `activities_get_types`, `activities_get_splits`, `activities_get_weather`, `activities_get_details`, `activities_get_hr_zones`, `activities_get_power_zones`, `activities_get_exercise_sets`, `activities_get_typed_splits`, `activities_get_split_summaries`, `activities_get_gear` |
 | Weight / HRV | `weight_get`, `hrv_get` |
-| Metrics | `metrics_get_training_readiness`, `metrics_get_training_status`, `metrics_get_vo2max`, `metrics_get_endurance_score`, `metrics_get_hill_score`, `metrics_get_hill_score_stats`, `metrics_get_training_load_balance`, `metrics_get_heat_altitude_acclimation`, `metrics_get_race_predictions`, `metrics_get_race_predictions_daily`, `metrics_get_race_predictions_monthly` |
+| Metrics | `metrics_get_training_readiness`, `metrics_get_training_status`, `metrics_get_vo_two_max`, `metrics_get_endurance_score`, `metrics_get_hill_score`, `metrics_get_hill_score_stats`, `metrics_get_training_load_balance`, `metrics_get_heat_altitude_acclimation`, `metrics_get_race_predictions`, `metrics_get_race_predictions_daily`, `metrics_get_race_predictions_monthly` |
 | Fitness age / stats | `fitness_age_get`, `fitness_age_get_stats`, `fitness_stats_get`, `fitness_stats_get_activities` |
 | Biometric | `biometric_get_lactate_threshold`, `biometric_get_cycling_ftp`, `biometric_get_heart_rate_zones`, `biometric_get_power_to_weight` |
 | Devices / profile | `devices_list`, `devices_get_settings`, `profile_get_social`, `profile_get_user_settings`, `profile_get_settings` |
-| Workouts | `workouts_list`, `workouts_get`, `workouts_create`, `workouts_update`, `workouts_delete`, `workouts_schedule`, `workouts_unschedule` |
+| Workouts | `workouts_list`, `workouts_get`, `workouts_create`, `workouts_update`, `workouts_delete`, `workouts_create_schedule`, `workouts_delete_schedule` |
 | Exercises | `exercises_list_categories`, `exercises_list_muscle_groups`, `exercises_list_equipment`, `exercises_list`, `exercises_get` |
-| Calendar / courses | `calendar_get`, `courses_list`, `courses_get`, `courses_delete` |
+| Calendar / courses | `training_calendar_get`, `courses_list`, `courses_get`, `courses_delete` |
 | Records / plans | `personal_records_get`, `training_plans_list`, `training_plans_get_phased`, `training_plans_get_adaptive` |
 | Badges | `badges_get_earned`, `badges_get_available`, `badges_get_completed_challenges`, `badges_get_available_challenges`, `badges_get_open_challenges`, `badges_get_virtual_in_progress`, `badges_get_adhoc_historical` |
-| Blood pressure | `blood_pressure_get_range`, `blood_pressure_log`, `blood_pressure_delete` |
+| Blood pressure | `blood_pressure_get_range`, `blood_pressure_create`, `blood_pressure_delete` |
 | Periodic health | `periodic_health_get_menstrual_day`, `periodic_health_get_menstrual_calendar`, `periodic_health_get_pregnancy` |
 | Lifestyle | `lifestyle_get_daily`, `lifestyle_create_behaviour` |
 | Golf | `golf_list_scorecards`, `golf_get_scorecard`, `golf_get_shot_data` |

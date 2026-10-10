@@ -6,14 +6,14 @@
 
 Three values, two places. The eval replays each fixture against a live
 model with the shipped persona seed; it needs the same three `LLM_*` the
-harness needs and nothing else. No MCP servers running, no chat room,
-no Google — every tool is canned, or its catalog is read from the
-binary already baked into the image.
+harness needs. Tool results stay canned. Where a fixture sets
+`tools_from`, the test builds that sibling plugin and reads `tools/list`;
+it does not call the tool.
 
 | Value | Local | GitHub |
 | --- | --- | --- |
-| `LLM_BASE_URL` | `harness/.env` | Repository **variable** |
-| `LLM_MODEL` | `harness/.env` | Repository **variable** |
+| `LLM_BASE_URL` | `harness/.env` | Repository **secret** |
+| `LLM_MODEL` | `harness/.env` | Repository **secret** |
 | `LLM_API_KEY` | `harness/.env` | Repository **secret** |
 
 This is the harness's own `.env` for running Go tests from a laptop. It
@@ -88,21 +88,22 @@ is not the Worker's `.dev.vars`, and neither is committed.
 
 ## 2. GitHub
 
-The release gate reads the key from a **secret** and the endpoint and
-model from **variables** — the endpoint and model are not sensitive,
-and variables show up in the run log so a wrong one is visible.
+The release gate reads all three from **secrets**. The workflow checks
+that each one is set and, if any is missing, prints a notice and
+succeeds without running the model. It does not print the values.
 
-**Settings → Secrets and variables → Actions**
+**Settings → Secrets and variables → Actions → Secrets**
 
-- **Secrets** → `LLM_API_KEY`
-- **Variables** → `LLM_BASE_URL`, `LLM_MODEL`
+- `LLM_API_KEY`
+- `LLM_BASE_URL`
+- `LLM_MODEL`
 
 Or with the `gh` CLI from the repo:
 
 ```sh
 gh secret set LLM_API_KEY
-gh variable set LLM_BASE_URL --body 'https://generativelanguage.googleapis.com/v1beta/openai'
-gh variable set LLM_MODEL --body 'gemini-3.8-flash'
+gh secret set LLM_BASE_URL --body 'https://generativelanguage.googleapis.com/v1beta/openai'
+gh secret set LLM_MODEL --body 'gemini-3.8-flash'
 ```
 
 Two workflows read them:
@@ -114,16 +115,16 @@ Two workflows read them:
   gh workflow run eval.yml -f runs=5 -f only=scoop_at_2
   ```
 
-- **`release.yml`** — on a `v*` tag the `eval` job runs first and the
-  release `needs` it. Eval fails → no release, no image tag. Fix the
-  fixture or the seed, then re-run the failed job (or push the next
-  tag).
+- **`release.yml`** — on a `v*` tag it calls `eval.yml`
+  (`workflow_call`) and the release job `needs` that run. Eval fails →
+  the GitHub Release is not created. Fix the fixture or the seed, then
+  re-run the failed job (or push the next tag). A skipped eval (missing
+  secrets) still lets the release through.
 
-Without the secret the eval job skips and stays green, so a fork with
-no key still releases. `ci.yml` and `harness.yml` do not call the eval
-— the free goldens and the coverage floors are the PR gate; this is the
-release gate. Until `harness/go.mod` lands (Phase 2) the job skips with
-a notice, like `harness.yml`.
+Without any of the three secrets the eval job skips and stays green, so
+a fork with no key still releases. `ci.yml` and `harness.yml` do not
+call the eval — the free goldens and the coverage floors are the PR
+gate; this is the release gate.
 
 ## 3. Reading a failure
 
@@ -256,12 +257,17 @@ reaches a vendor.
 
 **In this repo the binary is already there.** Plugins live under
 `harness/mcp/<name>/`, so the eval runs `go build` on the sibling
-module (or uses the one in `/opt/mcp` when run inside the image) — no
-GitHub release lookup, no rate limit, no `GITHUB_TOKEN`. A fixture
-`tools` entry whose name the live server does not publish fails before
-any model call, and so does a `tools_from` server with no `mcp.lock`
-row. That is the naming contract ([mcp-naming.md](mcp-naming.md))
-enforced by the eval.
+module (or uses the one in `/opt/mcp` when run inside the image, or a
+prebuild in `EVAL_MCP_BIN`) — no GitHub release lookup, no rate limit,
+no `GITHUB_TOKEN`. A fixture `tools` entry whose name the live server
+does not publish fails before any model call, and so does a
+`tools_from` server with no `mcp.lock` row. That is the naming contract
+([mcp-naming.md](mcp-naming.md)) enforced by the eval.
+
+`flights-search-mcp` is not in this repo. `denver_flight` keeps canned
+`flights__*` tools and does not list `flights` in `tools_from`.
+`google` on that fixture, and `rentals` on the rental cron, are the
+sibling builds.
 
 Then:
 

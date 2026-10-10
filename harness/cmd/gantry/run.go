@@ -93,6 +93,12 @@ func run() int {
 				emitSnapshot(logger, boot.snap, mouth)
 			}
 		}()
+		// The config frame has had its chance to lay the house LLM_* keys
+		// under the container env; now they are required.
+		if err := cfg.RequireLLM(); err != nil {
+			logger.Error("config: no LLM keys after the config frame; set them on the agent (Keys fold) or in the image env", "err", err)
+			return 1
+		}
 	}
 
 	removed, err := persona.SyncKernel(cfg.PersonaDir)

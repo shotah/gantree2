@@ -18,7 +18,7 @@ import (
 const (
 	pendingFileName        = "oauth_pending.json"
 	pendingTTL             = 10 * time.Minute
-	defaultChatRedirectURI = "https://shotah.github.io/ai-gantry/oauth-catch/"
+	defaultChatRedirectURI = "https://github.bldhosting.com/oauth-catch/"
 )
 
 // pendingAuth is persisted alongside the token path dir so a separate

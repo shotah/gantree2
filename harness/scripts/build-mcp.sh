@@ -1,13 +1,17 @@
 #!/bin/sh
-# Build every Go module under mcp/*/ into /opt/mcp/<id>/ and /export/bin.
+# Build every Go module under mcp/*/ to /opt/mcp/<id>/<id>.
+# When the module implements host-manifest, write
+# /opt/mcp/<id>/host-manifest.json beside that binary.
+# One binary per plugin. The harness resolves a bare command to that
+# path; this script does not copy onto PATH or under the old module name.
 # An empty or missing mcp/ directory is success. Does not read mcp.lock.
 set -eu
 
 os="${TARGETOS:-linux}"
 arch="${TARGETARCH:-amd64}"
 
-mkdir -p /opt/mcp /export/bin
-touch /opt/mcp/.keep /export/bin/.keep
+mkdir -p /opt/mcp
+touch /opt/mcp/.keep
 
 if [ ! -d mcp ]; then
   echo "no mcp/ directory; skipping plugin build"
@@ -63,23 +67,16 @@ while IFS= read -r mod; do
 
   echo "building mcp/$id ($target)"
   (cd "$dir" && GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o "$dest/$id" "$target")
-  cp "$dest/$id" "/export/bin/$id"
 
   if has_manifest "$dir"; then
     set +e
     (cd "$dir" && timeout 30s go run "$target" host-manifest > "$dest/host-manifest.json")
     rc=$?
     set -e
-    if [ "$rc" -eq 0 ]; then
-      cmd=$(sed -n 's/.*"command"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$dest/host-manifest.json" | head -n 1)
-      case "$cmd" in
-        ""|*[!A-Za-z0-9._-]*) ;;
-        *) cp "$dest/$id" "/export/bin/$cmd" ;;
-      esac
-    elif [ "$rc" -eq 124 ] || [ "$rc" -eq 143 ]; then
+    if [ "$rc" -eq 124 ] || [ "$rc" -eq 143 ]; then
       echo "mcp/$id: host-manifest timed out; shape not shipped" >&2
       rm -f "$dest/host-manifest.json"
-    else
+    elif [ "$rc" -ne 0 ]; then
       echo "mcp/$id: host-manifest exited $rc" >&2
       exit "$rc"
     fi

@@ -130,14 +130,15 @@ npm test · npm run lint · npm run typecheck             # what CI runs
 
 ## Tools in the box
 
-Eleven MCP servers, one image, switched on per assistant:
+Twelve MCP servers, one image, switched on per assistant:
 
 | | | |
 | --- | --- | --- |
 | **maps** — Google Maps | **google** — Gmail, Calendar, Docs, Drive | **google-health** |
 | **garmin** | **strava** | **image** — generation |
 | **feeds** — RSS / Atom | **twitter** — X | **rentals** |
-| **math** | **chat** — the room itself | [custom servers](docs/custom-mcp.md) |
+| **flights** — Google Flights via SerpAPI | **math** | **chat** — the room itself |
+| [custom servers](docs/custom-mcp.md) | | |
 
 Each lists what it needs (a key, an OAuth client) and the dashboard tells
 you what is missing before the assistant tries. Naming is a contract:
@@ -165,7 +166,7 @@ fails a test with the import chain named.
 
 ## Docs
 
-Site: [shotah.github.io/gantree2](https://shotah.github.io/gantree2).
+Site: [github.bldhosting.com](https://github.bldhosting.com).
 Same files under [`docs/`](docs/):
 
 | Running it | The assistant | The rules |

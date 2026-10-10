@@ -53,7 +53,7 @@ func TestChatMockListSpaces(t *testing.T) {
 	})
 }
 
-// --- chat_send_message ---
+// --- chat_create_message ---
 
 func TestChatMockSendMessage(t *testing.T) {
 	t.Run("success", func(t *testing.T) {

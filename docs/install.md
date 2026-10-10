@@ -6,7 +6,7 @@ Same Worker, same `wrangler.jsonc`, three places it runs. Agents open
 | Place | Command | State | Reach it at |
 | --- | --- | --- | --- |
 | Local dev | `npm run dev` | in-memory, `.wrangler/` | `http://127.0.0.1:3000` |
-| Cloudflare | `wrangler deploy` (CI) | Workers · DO · KV · R2 · Containers | your `workers.dev` or custom domain |
+| Cloudflare | `wrangler deploy` (CI) | Workers · DO · KV · R2 · Containers | `https://gantree2.bldhosting.com` (custom domain in `wrangler.jsonc`; a fork edits `routes` or drops it for `workers.dev`) |
 | Home (Mini / NUC / VM) | `npm run deploy:home` (`celld deploy`) | celld's SQLite + an S3-compatible bucket you own | Tailscale HTTPS or a Cloudflare Tunnel |
 
 Need **Node 22** (`node -v`). Distro `apt install npm` is often Node 20
@@ -28,7 +28,7 @@ Create credentials → OAuth client ID**.
 | Place | Redirect URI |
 | --- | --- |
 | Local dev | `http://127.0.0.1:3000/api/auth/callback/google` (Google accepts loopback `http`) |
-| Cloudflare | `https://<worker-origin>/api/auth/callback/google` |
+| Cloudflare | `https://gantree2.bldhosting.com/api/auth/callback/google` (a fork: its own `routes` host or `workers.dev` origin) |
 | Home | `https://<mini>.<tailnet>.ts.net/api/auth/callback/google` or your Tunnel hostname |
 
 **Google rejects private LAN IPs** (`http://192.168.x.x`). A home box
@@ -96,7 +96,8 @@ persona, MCP manifest, secrets, and presigned snapshot URLs. Memory,
 self-notes, cron, aims, and the snapshot restore/publish loop are the
 real ones; state lives in `local/run/<slug>/` (git-ignored) and the
 snapshot in the local R2 bucket, so stopping and restarting the runner
-restores the brain. With no slug it runs every agent on the board;
+restores the brain and, encrypted, the tool logins
+([below](#oauth-tokens-in-the-snapshot)). With no slug it runs every agent on the board;
 `--build` forces a rebuild; `--base=` points at another origin.
 
 House keys: `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, and
@@ -151,13 +152,18 @@ CI does it. Repository → **Settings → Secrets and variables → Actions**:
 | Secret | `CLOUDFLARE_ACCOUNT_ID` | dashboard sidebar |
 
 Push to `main`. `ci.yml` runs tests, lint, typecheck, build.
-`deploy-cloudflare.yml` then runs `wrangler deploy --var …` and
-`wrangler secret bulk`. It fails fast if any of the four auth values is
-empty. Add the Worker origin to the Google client's redirect list.
+`deploy-cloudflare.yml` then creates the `DIRECTORY` KV namespace and
+the `gantree-store` R2 bucket if they are missing (the `TODO` id in
+`wrangler.jsonc` is patched for that run only), runs
+`wrangler deploy --var …` and `wrangler secret bulk`. It fails fast if
+any of the four auth values is empty. Add the Worker origin to the
+Google client's redirect list.
 
-By hand from a laptop (same token in your shell):
+By hand from a laptop (same token in your shell), once:
 
 ```bash
+npx wrangler kv namespace create DIRECTORY   # paste the id over "TODO" in wrangler.jsonc
+npx wrangler r2 bucket create gantree-store
 npm run deploy
 npx wrangler secret bulk < secrets.json   # {"GOOGLE_CLIENT_SECRET":"…","SESSION_SECRET":"…"}
 ```
@@ -203,6 +209,21 @@ The `gantry` binary in this tree also refuses to stay up without
 `PENDANT_ALLOWED_USERS`. The start body does not carry that list — the
 room lives on the Agent DO — so a real container exits until the harness
 takes the room from the `config` frame.
+
+### OAuth tokens in the snapshot
+
+Refresh tokens for Google Workspace, Strava, Google Health, and Garmin
+live under `DATA_DIR` and join the agent snapshot whenever `SNAPSHOT=true`.
+That is the same on Cloudflare, on celld, and for `npm run agent`: the
+config frame is the only prerequisite. The harness tars an allowlist of
+those files, encrypts the tar with AES-256-GCM (a random 12-byte nonce
+prefixed to the ciphertext), and PUTs the ciphertext as `tokens_tar`.
+The Agent DO mints the 32-byte key once, stores it next to the room
+bearer, and sends it on the config frame as `SNAPSHOT_KEY`. The Worker
+stores the object and never sees plaintext. If none of the token files
+exist, that PUT is skipped; a 404 on GET is a no-op. A missing key skips
+the archive and is logged once — plaintext is never uploaded. On celld,
+`/data` is also a volume, so the snapshot is a second copy.
 
 ---
 

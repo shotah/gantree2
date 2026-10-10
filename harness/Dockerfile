@@ -30,8 +30,9 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     ./cmd/gantry
 
 # Every module under mcp/*/ (its own go.mod). Missing or empty mcp/ still
-# produces an empty /opt/mcp. Catalog shapes land beside each binary when
-# that module implements `host-manifest`. mcp.lock is not consulted.
+# produces an empty /opt/mcp. One binary per plugin at /opt/mcp/<id>/<id>.
+# Catalog shapes land beside that binary when the module implements
+# `host-manifest`. mcp.lock is not consulted.
 FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS mcp
 WORKDIR /src
 
@@ -50,8 +51,8 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     sh scripts/build-mcp.sh
 
 # Runtime: distroless/static — ca-certs + tzdata, no shell, uid 65532.
-# MCP binaries are static (CGO off) under /opt/mcp/<id>/ and on PATH
-# via /usr/local/bin (id, plus the host-manifest "command" name).
+# MCP binaries are static (CGO off), one per plugin at /opt/mcp/<id>/<id>.
+# The harness resolves a bare mcp.toml command to that path.
 FROM gcr.io/distroless/static-debian12:nonroot
 
 ARG VERSION=dev
@@ -60,7 +61,6 @@ LABEL org.opencontainers.image.version="${VERSION}"
 LABEL org.opencontainers.image.revision="${COMMIT}"
 
 COPY --from=mcp /opt/mcp /opt/mcp
-COPY --from=mcp /export/bin/ /usr/local/bin/
 COPY --from=build /out/gantry /usr/local/bin/gantry
 
 USER nonroot

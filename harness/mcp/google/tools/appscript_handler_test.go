@@ -192,11 +192,11 @@ func TestAppScriptHandlerUpdateScriptContentMissingFiles(t *testing.T) {
 	}
 }
 
-// --- appscript_run_function ---
+// --- appscript_evaluate_function ---
 
 func TestAppScriptHandlerRunScriptFunctionMissingScriptID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "appscript_run_function", nil)
+	text, isError := callTool(t, s, "appscript_evaluate_function", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -207,7 +207,7 @@ func TestAppScriptHandlerRunScriptFunctionMissingScriptID(t *testing.T) {
 
 func TestAppScriptHandlerRunScriptFunctionMissingFunctionName(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "appscript_run_function", map[string]any{
+	text, isError := callTool(t, s, "appscript_evaluate_function", map[string]any{
 		"script_id": "abc123",
 	})
 	if !isError {

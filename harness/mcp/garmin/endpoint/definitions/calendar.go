@@ -24,10 +24,10 @@ var CalendarEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "calendar",
 		CLISubcommand: "get",
-		MCPTool:       "calendar_get",
-		Short:         "Calendar: workouts & activities",
-		Long: "Connect calendar items for a year/month/day: scheduled workouts, activities, weight entries. " +
-			"Use for 'what's on my calendar'. Params are hierarchical (month needs year; day needs month+start).",
+		MCPTool:       "training_calendar_get",
+		Short:         "Training calendar: workouts & activities",
+		Long: "Connect training-calendar items for a year/month/day: scheduled workouts, activities, weight entries. " +
+			"Use for 'what's on my training calendar'. Params are hierarchical (month needs year; day needs month+start).",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {

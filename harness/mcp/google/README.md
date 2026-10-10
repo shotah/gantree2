@@ -47,7 +47,7 @@ Built for **local, single-user** AI tool use over stdio — Claude Code, Cursor,
 3. **Credentials → Create Credentials → OAuth Client ID**:
    - **Desktop Application** — laptop `google-mcp auth` (`http://localhost:4100/oauth2callback`)
    - **Web application** — required for [ai-gantry](https://github.com/shotah/ai-gantry) `/auth google` (GitHub Pages catch URI). Authorized redirect URI **exactly**:
-     `https://shotah.github.io/ai-gantry/oauth-catch/`
+     `https://github.bldhosting.com/oauth-catch/`
      (trailing slash matters). Optional: also add the localhost URI on the same
      Web client. Forks may reuse that catch page or set `GOOGLE_OAUTH_REDIRECT_URI`
      to their own Pages copy — see
@@ -148,12 +148,12 @@ If OAuth env vars are already exported in the shell that launches your MCP clien
 
 | Goal | Enable | Notes |
 | --- | --- | --- |
-| Track stats / log rows in a Sheet | `sheets` (in `everyday`) | `sheets_create_spreadsheet`, then `sheets_modify_values` / `sheets_read_values` |
-| Draft / edit a Doc | `docs` (in `everyday`) | `docs_create` / `docs_get_content` / `docs_modify_text` |
-| Find a file / Doc by name or share URL | `drive` / `docs` / `sheets` (in `everyday`) | paste a share URL into `docs_get_content` / `sheets_read_values`, or `drive_search_files` / `docs_search` / `sheets_list_spreadsheets` by title |
+| Track stats / log rows in a Sheet | `sheets` (in `everyday`) | `sheets_create_spreadsheet`, then `sheets_update_values` / `sheets_get_values` |
+| Draft / edit a Doc | `docs` (in `everyday`) | `docs_create` / `docs_get_content` / `docs_update_text` |
+| Find a file / Doc by name or share URL | `drive` / `docs` / `sheets` (in `everyday`) | paste a share URL into `docs_get_content` / `sheets_get_values`, or `drive_search_files` / `docs_search` / `sheets_list_spreadsheets` by title |
 | Find a sheet by name (Sheets-only) | `sheets` + `--tool-tier extended` | `sheets_list_spreadsheets` (uses Drive API under the hood) |
 | Invite / email someone by name | `contacts` (in `everyday`) | `contacts_search` → email → calendar/gmail |
-| Find a time between people | `calendar` (in `everyday`) | `contacts_search` → `calendar_query_freebusy` (emails in `calendar_ids`) → `calendar_create_events` with `attendees` |
+| Find a time between people | `calendar` (in `everyday`) | `contacts_search` → `calendar_search_freebusy` (emails in `calendar_ids`) → `calendar_create_events` with `attendees` |
 | Tasks / todos | `tasks` (in `everyday`) | Use `task_list_id="@default"` for the account default list |
 
 OAuth already requests Drive + Docs + Sheets + People scopes on `google-mcp auth`. Trim with `--tools` if a persona needs a smaller surface.
@@ -164,7 +164,7 @@ Pick the flow that matches where the binary runs. Tokens land in
 `~/.google_workspace_mcp/credentials/{email}.json`, one file per Google account.
 Run auth again for each additional account; earlier files stay. The MCP server
 refreshes access tokens automatically — small models should not be asked to call
-`auth_start`. How a call chooses an account: [docs/multi-account.md](docs/multi-account.md).
+`auth_generate_url`. How a call chooses an account: [docs/multi-account.md](docs/multi-account.md).
 
 #### Laptop (local browser)
 
@@ -191,7 +191,7 @@ On a headless box (Telegram, no inbound ports) use [ai-gantry](https://github.co
    PKCE verifier on disk (~10 minutes).
 2. Open the URL, sign in, and approve access. Google redirects to the deployed
    GitHub Pages catch page:
-   [shotah.github.io/ai-gantry/oauth-catch/](https://shotah.github.io/ai-gantry/oauth-catch/).
+   [github.bldhosting.com/oauth-catch/](https://github.bldhosting.com/oauth-catch/).
    That page only displays the `?code=` value (copy button) — it stores nothing.
 3. Copy the code from the catch page and paste it back in chat:
 
@@ -211,7 +211,7 @@ google-mcp auth exchange <code>
 
 Full host guide: [ai-gantry docs/auth.md](https://github.com/shotah/ai-gantry/blob/main/docs/auth.md).
 
-> `auth_start` remains only as a rare re-auth escape hatch (gmail / complete tier). Lean surfaces omit it.
+> `auth_generate_url` remains only as a rare re-auth escape hatch (gmail / complete tier). Lean surfaces omit it.
 
 ## Configuration
 
@@ -255,7 +255,7 @@ Example: `--tools sheets --tool-tier core` → create/read/write cells. Need “
 | `edit` | Everyday create/modify/delete; blocks high-impact ops | 133 |
 | `complete` | Full surface including ownership transfer & bulk deletes | 139 |
 
-Withheld under `edit`: `drive_transfer_ownership`, `contacts_batch_delete`, `tasks_delete_tasklist`, `contacts_delete_group`, `appscript_delete_project`, `tasks_clear_completed`.
+Withheld under `edit`: `drive_update_ownership`, `contacts_batch_delete`, `tasks_delete_tasklist`, `contacts_delete_group`, `appscript_delete_project`, `tasks_delete_completed`.
 
 ### Environment variables
 
@@ -264,7 +264,7 @@ Withheld under `edit`: `drive_transfer_ownership`, `contacts_batch_delete`, `tas
 | `GOOGLE_OAUTH_CLIENT_ID` | Yes | OAuth 2.0 Client ID |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | Yes | OAuth 2.0 Client Secret |
 | `USER_GOOGLE_EMAIL` | No | Default account when a tool call omits `user_google_email`. Leave unset if more than one account is logged in and the caller should name the address every time. |
-| `GOOGLE_OAUTH_REDIRECT_URI` | No | Override catch-page redirect for `auth url` / `exchange` (default: `https://shotah.github.io/ai-gantry/oauth-catch/`) |
+| `GOOGLE_OAUTH_REDIRECT_URI` | No | Override catch-page redirect for `auth url` / `exchange` (default: `https://github.bldhosting.com/oauth-catch/`) |
 | `WORKSPACE_MCP_CREDENTIALS_DIR` | No | Override credential directory |
 | `GOOGLE_PSE_API_KEY` | No | Programmable Search Engine key |
 | `GOOGLE_PSE_ENGINE_ID` | No | Programmable Search Engine ID |
@@ -282,9 +282,9 @@ Every tool is `{service}_{verb}_{object}` (snake_case). The MCP server name is `
 | Calendar tomorrow | `google__calendar_list_events` |
 | Add meetings | `google__calendar_create_events` |
 | Search mail | `google__gmail_search_messages` |
-| Send mail | `google__gmail_send_message` |
+| Send mail | `google__gmail_create_message` |
 | Task list | `google__tasks_list_tasks` |
-| Chat post | `google__chat_send_message` |
+| Chat post | `google__chat_create_message` |
 
 ## Tools
 
@@ -298,25 +298,25 @@ Every tool is `{service}_{verb}_{object}` (snake_case). The MCP server name is `
 | `gmail_search_messages`             | core     | Search messages with Gmail query syntax |
 | `gmail_get_message`         | core     | Get full message content                |
 | `gmail_get_messages_batch`  | core     | Batch retrieve up to 25 messages        |
-| `gmail_send_message`                | core     | Send email with optional attachments    |
+| `gmail_create_message`                | core     | Send email with optional attachments    |
 | `gmail_get_attachment`      | extended | Download attachment content             |
 | `gmail_get_thread`          | extended | Get full conversation thread            |
-| `gmail_modify_message_labels`       | core     | Add/remove labels (trash/archive/spam)  |
+| `gmail_update_message_labels`       | core     | Add/remove labels (trash/archive/spam)  |
 | `gmail_list_labels`                 | extended | List all labels                         |
-| `gmail_manage_label`                | extended | Create, update, or delete labels        |
-| `gmail_draft_message`               | extended | Create draft email                      |
+| `gmail_update_label`                | extended | Create, update, or delete labels        |
+| `gmail_create_draft`               | extended | Create draft email                      |
 | `gmail_list_filters`                | extended | List mail filters                       |
 | `gmail_create_filter`               | extended | Create new mail filter                  |
 | `gmail_delete_filter`               | extended | Delete mail filter                      |
 | `gmail_get_threads_batch`   | complete | Batch retrieve up to 25 threads         |
-| `gmail_batch_modify_message_labels` | complete | Batch label operations                  |
+| `gmail_batch_update_message_labels` | complete | Batch label operations                  |
 
 **System tool** (registered with gmail, but not Gmail-specific):
 
 | Tool                | Tier     | Description                       |
 | ------------------- | -------- | --------------------------------- |
 | `auth_list_accounts` | core | Signed-in Google accounts (emails only) |
-| `auth_start` | complete | Rare re-auth escape hatch (prefer `google-mcp auth`) |
+| `auth_generate_url` | complete | Rare re-auth escape hatch (prefer `google-mcp auth`) |
 
 ### Google Drive (16 tools)
 
@@ -326,18 +326,18 @@ Every tool is `{service}_{verb}_{object}` (snake_case). The MCP server name is `
 | `drive_get_file_content`         | core     | Download file content                |
 | `drive_get_file_download_url`    | core     | Get download URL                     |
 | `drive_create_file`              | core     | Create new file                      |
-| `drive_import_to_doc`           | core     | Import file as Google Doc            |
-| `drive_share_file`               | core     | Share file with users                |
+| `drive_convert_to_doc`           | core     | Import file as Google Doc            |
+| `drive_create_permission`               | core     | Share file with users                |
 | `drive_get_shareable_link`       | core     | Generate shareable link              |
 | `drive_list_items`               | extended | List files in folder                 |
-| `drive_copy_file`                | extended | Duplicate file                       |
+| `drive_create_copy`                | extended | Duplicate file                       |
 | `drive_update_file`              | extended | Update file metadata/content         |
 | `drive_update_permission`        | extended | Modify sharing permissions           |
-| `drive_remove_permission`        | extended | Revoke access                        |
-| `drive_transfer_ownership`       | extended | Transfer file ownership              |
-| `drive_batch_share_file`         | extended | Batch sharing                        |
+| `drive_delete_permission`        | extended | Revoke access                        |
+| `drive_update_ownership`       | extended | Transfer file ownership              |
+| `drive_batch_create_permission`         | extended | Batch sharing                        |
 | `drive_get_file_permissions`     | complete | List all permissions                 |
-| `drive_check_file_public_access` | complete | Check public sharing status          |
+| `drive_get_file_public_access` | complete | Check public sharing status          |
 
 ### Google Calendar (7 tools)
 
@@ -349,7 +349,7 @@ Every tool is `{service}_{verb}_{object}` (snake_case). The MCP server name is `
 | `calendar_create_events`  | core     | Create one or many events in one call |
 | `calendar_update_events`  | core     | Update one or many events in one call |
 | `calendar_delete_event`   | core     | Delete event               |
-| `calendar_query_freebusy` | core     | Mutual free/busy (multi-calendar) |
+| `calendar_search_freebusy` | core     | Mutual free/busy (multi-calendar) |
 
 ### Google Docs (19 tools)
 
@@ -357,22 +357,22 @@ Every tool is `{service}_{verb}_{object}` (snake_case). The MCP server name is `
 | ---------------------------- | -------- | --------------------------- |
 | `docs_get_content`            | core     | Get document text content   |
 | `docs_create`                 | core     | Create new document         |
-| `docs_modify_text`            | core     | Edit document text          |
-| `docs_export_to_pdf`          | extended | Export as PDF               |
+| `docs_update_text`            | core     | Edit document text          |
+| `docs_convert_to_pdf`          | extended | Export as PDF               |
 | `docs_search`                | extended | Search documents            |
-| `docs_find_and_replace`       | extended | Find and replace text       |
+| `docs_update_replace`       | extended | Find and replace text       |
 | `docs_list_in_folder`        | extended | List docs in Drive folder   |
-| `docs_insert_elements`        | extended | Insert formatted elements   |
+| `docs_create_elements`        | extended | Insert formatted elements   |
 | `docs_update_paragraph_style`     | extended | Change paragraph formatting |
-| `docs_insert_image`           | complete | Insert image                |
+| `docs_create_image`           | complete | Insert image                |
 | `docs_update_headers_footers` | complete | Edit headers/footers        |
 | `docs_batch_update`           | complete | Batch document operations   |
-| `docs_inspect_structure`      | complete | Analyze document structure  |
+| `docs_get_structure`      | complete | Analyze document structure  |
 | `docs_create_table_with_data`     | complete | Create and populate table   |
-| `docs_debug_table_structure`      | complete | Inspect table layout        |
-| `docs_read_comments`     | complete | Read all comments           |
+| `docs_get_table_structure`      | complete | Inspect table layout        |
+| `docs_list_comments`     | complete | Read all comments           |
 | `docs_create_comment`    | complete | Add comment                 |
-| `docs_reply_to_comment`  | complete | Reply to comment            |
+| `docs_create_reply`  | complete | Reply to comment            |
 | `docs_resolve_comment`   | complete | Resolve comment             |
 
 ### Google Sheets (14 tools)
@@ -380,18 +380,18 @@ Every tool is `{service}_{verb}_{object}` (snake_case). The MCP server name is `
 | Tool                            | Tier     | Description                  |
 | ------------------------------- | -------- | ---------------------------- |
 | `sheets_create_spreadsheet`            | core     | Create new spreadsheet       |
-| `sheets_read_values`             | core     | Read cell values             |
-| `sheets_modify_values`           | core     | Write/update cells           |
+| `sheets_get_values`             | core     | Read cell values             |
+| `sheets_update_values`           | core     | Write/update cells           |
 | `sheets_list_spreadsheets`             | extended | List user's spreadsheets     |
 | `sheets_get_spreadsheet_info`          | extended | Get spreadsheet metadata     |
 | `sheets_create_sheet`                  | complete | Add worksheet tab            |
 | `sheets_format_range`            | complete | Format cell ranges           |
-| `sheets_add_conditional_formatting`    | complete | Add conditional format rules |
+| `sheets_create_conditional_formatting`    | complete | Add conditional format rules |
 | `sheets_update_conditional_formatting` | complete | Modify format rules          |
 | `sheets_delete_conditional_formatting` | complete | Remove format rules          |
-| `sheets_read_comments`     | complete | Read all comments            |
+| `sheets_list_comments`     | complete | Read all comments            |
 | `sheets_create_comment`    | complete | Add comment                  |
-| `sheets_reply_to_comment`  | complete | Reply to comment             |
+| `sheets_create_reply`  | complete | Reply to comment             |
 | `sheets_resolve_comment`   | complete | Resolve comment              |
 
 ### Google Slides (9 tools)
@@ -403,9 +403,9 @@ Every tool is `{service}_{verb}_{object}` (snake_case). The MCP server name is `
 | `slides_batch_update`     | extended | Batch slide operations   |
 | `slides_get_page`                      | extended | Get individual slide     |
 | `slides_get_page_thumbnail`            | extended | Get slide thumbnail      |
-| `slides_read_comments`    | complete | Read all comments        |
+| `slides_list_comments`    | complete | Read all comments        |
 | `slides_create_comment`   | complete | Add comment              |
-| `slides_reply_to_comment` | complete | Reply to comment         |
+| `slides_create_reply` | complete | Reply to comment         |
 | `slides_resolve_comment`  | complete | Resolve comment          |
 
 ### Google Forms (6 tools)
@@ -415,7 +415,7 @@ Every tool is `{service}_{verb}_{object}` (snake_case). The MCP server name is `
 | `forms_create`          | core     | Create new form         |
 | `forms_get`             | core     | Get form details        |
 | `forms_list_responses`  | extended | List all responses      |
-| `forms_set_publish_settings` | complete | Configure publishing    |
+| `forms_update_publish_settings` | complete | Configure publishing    |
 | `forms_get_response`    | complete | Get individual response |
 | `forms_batch_update`    | complete | Batch form updates      |
 
@@ -433,14 +433,14 @@ Every tool is `{service}_{verb}_{object}` (snake_case). The MCP server name is `
 | `tasks_create_tasklist`      | complete | Create task list        |
 | `tasks_update_tasklist`      | complete | Update task list        |
 | `tasks_delete_tasklist`      | complete | Delete task list        |
-| `tasks_move_task`             | complete | Move task between lists |
-| `tasks_clear_completed` | complete | Clear completed tasks   |
+| `tasks_update_task_position`             | complete | Move task between lists |
+| `tasks_delete_completed` | complete | Clear completed tasks   |
 
 ### Google Chat (4 tools)
 
 | Tool              | Tier     | Description       |
 | ----------------- | -------- | ----------------- |
-| `chat_send_message`    | core     | Send chat message |
+| `chat_create_message`    | core     | Send chat message |
 | `chat_list_messages`    | core     | Get messages      |
 | `chat_search_messages` | core     | Search messages   |
 | `chat_list_spaces`     | extended | List spaces/DMs   |
@@ -463,15 +463,15 @@ Every tool is `{service}_{verb}_{object}` (snake_case). The MCP server name is `
 | `contacts_create_group`         | complete | Create group         |
 | `contacts_update_group`         | complete | Update group         |
 | `contacts_delete_group`         | complete | Delete group         |
-| `contacts_modify_group_members` | complete | Manage group members |
+| `contacts_update_group_members` | complete | Manage group members |
 
 ### Google Custom Search (3 tools)
 
 | Tool                         | Tier     | Description                      |
 | ---------------------------- | -------- | -------------------------------- |
-| `search_query`              | core     | Programmable Search Engine query |
-| `search_query_siterestrict` | extended | Site-restricted search           |
-| `search_get_engine_info`     | complete | Get search engine config         |
+| `pse_search`              | core     | Programmable Search Engine query |
+| `pse_search_siterestrict` | extended | Site-restricted search           |
+| `pse_get_engine_info`     | complete | Get search engine config         |
 
 ### Google Apps Script (17 tools)
 
@@ -482,7 +482,7 @@ Every tool is `{service}_{verb}_{object}` (snake_case). The MCP server name is `
 | `appscript_get_content`    | core     | Get script source code  |
 | `appscript_create_project` | core     | Create new script       |
 | `appscript_update_content` | core     | Update script code      |
-| `appscript_run_function`   | core     | Execute script function |
+| `appscript_evaluate_function`   | core     | Execute script function |
 | `appscript_generate_trigger_code` | core     | Generate trigger code   |
 | `appscript_create_deployment`     | extended | Deploy script           |
 | `appscript_list_deployments`      | extended | List deployments        |

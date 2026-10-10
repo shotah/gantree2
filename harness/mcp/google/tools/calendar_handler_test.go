@@ -37,11 +37,11 @@ func TestCalendarHandlerGetEventsAuthFailure(t *testing.T) {
 	}
 }
 
-// --- calendar_query_freebusy ---
+// --- calendar_search_freebusy ---
 
 func TestCalendarHandlerQueryFreebusyMissingTimeMin(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "calendar_query_freebusy", nil)
+	text, isError := callTool(t, s, "calendar_search_freebusy", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -52,7 +52,7 @@ func TestCalendarHandlerQueryFreebusyMissingTimeMin(t *testing.T) {
 
 func TestCalendarHandlerQueryFreebusyMissingTimeMax(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "calendar_query_freebusy", map[string]any{
+	text, isError := callTool(t, s, "calendar_search_freebusy", map[string]any{
 		"time_min": "2026-01-01T00:00:00Z",
 	})
 	if !isError {
@@ -65,7 +65,7 @@ func TestCalendarHandlerQueryFreebusyMissingTimeMax(t *testing.T) {
 
 func TestCalendarHandlerQueryFreebusyAuthFailure(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "calendar_query_freebusy", map[string]any{
+	text, isError := callTool(t, s, "calendar_search_freebusy", map[string]any{
 		"time_min": "2026-01-01T00:00:00Z",
 		"time_max": "2026-01-02T00:00:00Z",
 	})

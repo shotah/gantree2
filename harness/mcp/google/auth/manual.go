@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	defaultRedirectURI = "https://shotah.github.io/ai-gantry/oauth-catch/"
+	defaultRedirectURI = "https://github.bldhosting.com/oauth-catch/"
 	googleTokenURL     = "https://oauth2.googleapis.com/token"
 )
 

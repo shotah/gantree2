@@ -7,8 +7,9 @@ name: pages
 # Pages source: branch gh-pages / (root). Enable once in Settings → Pages,
 # then "Enforce HTTPS" — the oauth-catch page needs a secure context to copy.
 #
-# Optional repository variables:
-#   PAGES_CUSTOM_DOMAIN       → writes CNAME (e.g. gantree.example.com)
+# The site lives at github.bldhosting.com (CNAME on gh-pages; the DNS CNAME
+# points at shotah.github.io). Optional repository variables:
+#   PAGES_CUSTOM_DOMAIN       → another host for a fork (default github.bldhosting.com)
 #   GOOGLE_SITE_VERIFICATION  → Search Console HTML-tag token, injected into index.html
 
 on:
@@ -45,17 +46,13 @@ jobs:
 
       - name: Site verification + custom domain
         env:
-          PAGES_CUSTOM_DOMAIN: ${{ vars.PAGES_CUSTOM_DOMAIN }}
+          PAGES_CUSTOM_DOMAIN: ${{ vars.PAGES_CUSTOM_DOMAIN || 'github.bldhosting.com' }}
           GOOGLE_SITE_VERIFICATION: ${{ vars.GOOGLE_SITE_VERIFICATION }}
         run: |
           if [ -n "${GOOGLE_SITE_VERIFICATION}" ]; then
             sed -i "s|</title>|</title>\n  <meta name=\"google-site-verification\" content=\"${GOOGLE_SITE_VERIFICATION}\">|" dist/pages/index.html
           fi
-          if [ -n "${PAGES_CUSTOM_DOMAIN}" ]; then
-            printf '%s\n' "${PAGES_CUSTOM_DOMAIN}" > dist/pages/CNAME
-          else
-            : > dist/pages/.no-cname
-          fi
+          printf '%s\n' "${PAGES_CUSTOM_DOMAIN}" > dist/pages/CNAME
 
       - name: Publish site to gh-pages
         env:
@@ -70,6 +67,6 @@ jobs:
             dist/pages/assets:assets
             dist/pages/oauth-catch:oauth-catch
             dist/pages/privacy:privacy
+            dist/pages/CNAME:CNAME
           )
-          [ -f dist/pages/CNAME ] && PAIRS+=(dist/pages/CNAME:CNAME)
           scripts/publish-pages.sh "chore: site [skip ci]" "${PAIRS[@]}"

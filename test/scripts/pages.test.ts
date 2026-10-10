@@ -74,6 +74,6 @@ describe("buildPages", () => {
     expect(html).toContain('name="robots" content="noindex"');
     expect(html).toContain("/auth &lt;server&gt; &lt;code&gt;");
     expect(html).not.toMatch(/fetch\(|XMLHttpRequest|localStorage/);
-    expect(readFileSync(join(out, "privacy/index.html"), "utf8")).toContain("shotah.github.io/gantree2/oauth-catch/");
+    expect(readFileSync(join(out, "privacy/index.html"), "utf8")).toContain("github.bldhosting.com/oauth-catch/");
   });
 });

@@ -132,7 +132,7 @@ func runAuthCommand(args []string) error {
 	fmt.Printf("Authenticated as %s\n", gotEmail)
 	fmt.Printf("Credentials saved to %s\n", path)
 	fmt.Println("Copy this file onto the agent host if needed, then start the MCP server (e.g. google-mcp --preset lean).")
-	fmt.Println("Access tokens refresh automatically; you do not need to call auth_start from the agent.")
+	fmt.Println("Access tokens refresh automatically; you do not need to call auth_generate_url from the agent.")
 	return nil
 }
 

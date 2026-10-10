@@ -9,11 +9,11 @@ import (
 // rather than Google OAuth / USER_GOOGLE_EMAIL. The first real error is
 // the missing PSE key.
 
-// --- search_query ---
+// --- pse_search ---
 
 func TestSearchHandlerSearchCustomMissingQuery(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "search_query", nil)
+	text, isError := callTool(t, s, "pse_search", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -27,7 +27,7 @@ func TestSearchHandlerSearchCustomMissingAPIKey(t *testing.T) {
 	t.Setenv("USER_GOOGLE_EMAIL", "")
 	t.Setenv("GOOGLE_PSE_API_KEY", "")
 	t.Setenv("GOOGLE_PSE_ENGINE_ID", "")
-	text, isError := callTool(t, s, "search_query", map[string]any{
+	text, isError := callTool(t, s, "pse_search", map[string]any{
 		"q": "test query",
 	})
 	if !isError {
@@ -35,21 +35,21 @@ func TestSearchHandlerSearchCustomMissingAPIKey(t *testing.T) {
 	}
 	lower := strings.ToLower(text)
 	if strings.Contains(lower, "user_google_email") {
-		t.Errorf("search_query must not require email, got %q", text)
+		t.Errorf("pse_search must not require email, got %q", text)
 	}
 	if !strings.Contains(lower, "google_pse_api_key") {
 		t.Errorf("expected error mentioning 'GOOGLE_PSE_API_KEY', got %q", text)
 	}
 }
 
-// --- search_get_engine_info ---
+// --- pse_get_engine_info ---
 // No required params beyond email; first real error is missing API key.
 
 func TestSearchHandlerGetSearchEngineInfoMissingAPIKey(t *testing.T) {
 	s := newToolTestServer(t)
 	t.Setenv("GOOGLE_PSE_API_KEY", "")
 	t.Setenv("GOOGLE_PSE_ENGINE_ID", "")
-	text, isError := callTool(t, s, "search_get_engine_info", nil)
+	text, isError := callTool(t, s, "pse_get_engine_info", nil)
 	if !isError {
 		t.Fatal("expected isError=true for missing API key")
 	}
@@ -59,11 +59,11 @@ func TestSearchHandlerGetSearchEngineInfoMissingAPIKey(t *testing.T) {
 	}
 }
 
-// --- search_query_siterestrict ---
+// --- pse_search_siterestrict ---
 
 func TestSearchHandlerSearchCustomSiterestrictMissingQuery(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "search_query_siterestrict", nil)
+	text, isError := callTool(t, s, "pse_search_siterestrict", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -74,7 +74,7 @@ func TestSearchHandlerSearchCustomSiterestrictMissingQuery(t *testing.T) {
 
 func TestSearchHandlerSearchCustomSiterestrictMissingSites(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "search_query_siterestrict", map[string]any{
+	text, isError := callTool(t, s, "pse_search_siterestrict", map[string]any{
 		"q": "test query",
 	})
 	if !isError {
@@ -89,7 +89,7 @@ func TestSearchHandlerSearchCustomSiterestrictMissingAPIKey(t *testing.T) {
 	s := newToolTestServer(t)
 	t.Setenv("GOOGLE_PSE_API_KEY", "")
 	t.Setenv("GOOGLE_PSE_ENGINE_ID", "")
-	text, isError := callTool(t, s, "search_query_siterestrict", map[string]any{
+	text, isError := callTool(t, s, "pse_search_siterestrict", map[string]any{
 		"q":     "test query",
 		"sites": []any{"example.com"},
 	})

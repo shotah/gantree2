@@ -101,11 +101,11 @@ func TestDriveHandlerGetFilePermissionsMissingFileID(t *testing.T) {
 	}
 }
 
-// --- drive_check_file_public_access ---
+// --- drive_get_file_public_access ---
 
 func TestDriveHandlerCheckPublicAccessMissingFileName(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "drive_check_file_public_access", nil)
+	text, isError := callTool(t, s, "drive_get_file_public_access", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -154,11 +154,11 @@ func TestDriveHandlerCreateFileMissingContentAndURL(t *testing.T) {
 	}
 }
 
-// --- drive_import_to_doc ---
+// --- drive_convert_to_doc ---
 
 func TestDriveHandlerImportToGoogleDocMissingFileName(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "drive_import_to_doc", nil)
+	text, isError := callTool(t, s, "drive_convert_to_doc", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -169,7 +169,7 @@ func TestDriveHandlerImportToGoogleDocMissingFileName(t *testing.T) {
 
 func TestDriveHandlerImportToGoogleDocMissingSource(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "drive_import_to_doc", map[string]any{
+	text, isError := callTool(t, s, "drive_convert_to_doc", map[string]any{
 		"file_name": "test.md",
 	})
 	if !isError {
@@ -194,11 +194,11 @@ func TestDriveHandlerUpdateFileMissingFileID(t *testing.T) {
 	}
 }
 
-// --- drive_copy_file ---
+// --- drive_create_copy ---
 
 func TestDriveHandlerCopyFileMissingFileID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "drive_copy_file", nil)
+	text, isError := callTool(t, s, "drive_create_copy", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -207,11 +207,11 @@ func TestDriveHandlerCopyFileMissingFileID(t *testing.T) {
 	}
 }
 
-// --- drive_share_file ---
+// --- drive_create_permission ---
 
 func TestDriveHandlerShareFileMissingFileID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "drive_share_file", nil)
+	text, isError := callTool(t, s, "drive_create_permission", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -224,7 +224,7 @@ func TestDriveHandlerShareFileMissingShareWith(t *testing.T) {
 	s := newToolTestServer(t)
 	// share_type defaults to "user", which requires share_with.
 	// This param check happens before auth.
-	text, isError := callTool(t, s, "drive_share_file", map[string]any{
+	text, isError := callTool(t, s, "drive_create_permission", map[string]any{
 		"file_id": "abc123",
 	})
 	if !isError {
@@ -236,11 +236,11 @@ func TestDriveHandlerShareFileMissingShareWith(t *testing.T) {
 	}
 }
 
-// --- drive_batch_share_file ---
+// --- drive_batch_create_permission ---
 
 func TestDriveHandlerBatchShareFileMissingFileID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "drive_batch_share_file", nil)
+	text, isError := callTool(t, s, "drive_batch_create_permission", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -251,7 +251,7 @@ func TestDriveHandlerBatchShareFileMissingFileID(t *testing.T) {
 
 func TestDriveHandlerBatchShareFileMissingRecipients(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "drive_batch_share_file", map[string]any{
+	text, isError := callTool(t, s, "drive_batch_create_permission", map[string]any{
 		"file_id": "abc123",
 	})
 	if !isError {
@@ -264,7 +264,7 @@ func TestDriveHandlerBatchShareFileMissingRecipients(t *testing.T) {
 
 func TestDriveHandlerBatchShareFileEmptyRecipients(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "drive_batch_share_file", map[string]any{
+	text, isError := callTool(t, s, "drive_batch_create_permission", map[string]any{
 		"file_id":    "abc123",
 		"recipients": []any{},
 	})
@@ -334,11 +334,11 @@ func TestDriveHandlerUpdatePermissionInvalidRole(t *testing.T) {
 	}
 }
 
-// --- drive_remove_permission ---
+// --- drive_delete_permission ---
 
 func TestDriveHandlerRemovePermissionMissingFileID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "drive_remove_permission", nil)
+	text, isError := callTool(t, s, "drive_delete_permission", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -349,7 +349,7 @@ func TestDriveHandlerRemovePermissionMissingFileID(t *testing.T) {
 
 func TestDriveHandlerRemovePermissionMissingPermissionID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "drive_remove_permission", map[string]any{
+	text, isError := callTool(t, s, "drive_delete_permission", map[string]any{
 		"file_id": "abc123",
 	})
 	if !isError {
@@ -360,11 +360,11 @@ func TestDriveHandlerRemovePermissionMissingPermissionID(t *testing.T) {
 	}
 }
 
-// --- drive_transfer_ownership ---
+// --- drive_update_ownership ---
 
 func TestDriveHandlerTransferOwnershipMissingFileID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "drive_transfer_ownership", nil)
+	text, isError := callTool(t, s, "drive_update_ownership", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -375,7 +375,7 @@ func TestDriveHandlerTransferOwnershipMissingFileID(t *testing.T) {
 
 func TestDriveHandlerTransferOwnershipMissingNewOwnerEmail(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "drive_transfer_ownership", map[string]any{
+	text, isError := callTool(t, s, "drive_update_ownership", map[string]any{
 		"file_id": "abc123",
 	})
 	if !isError {
@@ -390,7 +390,7 @@ func TestDriveHandlerTransferOwnershipMissingNewOwnerEmail(t *testing.T) {
 
 func TestDriveHandlerShareFileInvalidRole(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "drive_share_file", map[string]any{
+	text, isError := callTool(t, s, "drive_create_permission", map[string]any{
 		"file_id":    "abc123",
 		"share_with": "user@example.com",
 		"role":       "superadmin",
@@ -406,7 +406,7 @@ func TestDriveHandlerShareFileInvalidRole(t *testing.T) {
 
 func TestDriveHandlerShareFileInvalidShareType(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "drive_share_file", map[string]any{
+	text, isError := callTool(t, s, "drive_create_permission", map[string]any{
 		"file_id":    "abc123",
 		"share_with": "user@example.com",
 		"share_type": "martian",
@@ -422,7 +422,7 @@ func TestDriveHandlerShareFileInvalidShareType(t *testing.T) {
 
 func TestDriveHandlerImportToGoogleDocMultipleSources(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "drive_import_to_doc", map[string]any{
+	text, isError := callTool(t, s, "drive_convert_to_doc", map[string]any{
 		"file_name": "test.md",
 		"content":   "# Hello",
 		"file_path": "/tmp/test.md",
@@ -438,7 +438,7 @@ func TestDriveHandlerImportToGoogleDocMultipleSources(t *testing.T) {
 
 func TestDriveHandlerImportToGoogleDocUnsupportedFormat(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "drive_import_to_doc", map[string]any{
+	text, isError := callTool(t, s, "drive_convert_to_doc", map[string]any{
 		"file_name":     "test.xyz",
 		"content":       "some content",
 		"source_format": "xyz",

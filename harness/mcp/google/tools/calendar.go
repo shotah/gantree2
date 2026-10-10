@@ -1160,10 +1160,10 @@ func handleDeleteEvent(getClient httpClientFunc) mcpserver.ToolHandlerFunc {
 	}
 }
 
-// --- calendar_query_freebusy ---
+// --- calendar_search_freebusy ---
 
 func registerQueryFreebusy(s *mcpserver.MCPServer, getClient httpClientFunc) {
-	tool := newMCPTool("calendar_query_freebusy",
+	tool := newMCPTool("calendar_search_freebusy",
 		mcp.WithDescription("Busy blocks for one or more calendars (ids or person emails). Use for mutual availability / find a time between people. Titles → calendar_list_events. Book → calendar_create_events with attendees."),
 		mcp.WithString("user_google_email", mcp.Description("User Google email (or set USER_GOOGLE_EMAIL).")),
 		mcp.WithString("time_min", mcp.Required(), mcp.Description("Range start RFC3339.")),

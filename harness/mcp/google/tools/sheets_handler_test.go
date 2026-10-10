@@ -48,11 +48,11 @@ func TestSheetsHandlerGetSpreadsheetInfoAuthFailure(t *testing.T) {
 	}
 }
 
-// --- sheets_read_values ---
+// --- sheets_get_values ---
 
 func TestSheetsHandlerReadSheetValuesMissingSpreadsheetID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "sheets_read_values", nil)
+	text, isError := callTool(t, s, "sheets_get_values", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -61,11 +61,11 @@ func TestSheetsHandlerReadSheetValuesMissingSpreadsheetID(t *testing.T) {
 	}
 }
 
-// --- sheets_modify_values ---
+// --- sheets_update_values ---
 
 func TestSheetsHandlerModifySheetValuesMissingSpreadsheetID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "sheets_modify_values", nil)
+	text, isError := callTool(t, s, "sheets_update_values", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -76,7 +76,7 @@ func TestSheetsHandlerModifySheetValuesMissingSpreadsheetID(t *testing.T) {
 
 func TestSheetsHandlerModifySheetValuesMissingRangeName(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "sheets_modify_values", map[string]any{
+	text, isError := callTool(t, s, "sheets_update_values", map[string]any{
 		"spreadsheet_id": "sheet123",
 	})
 	if !isError {
@@ -128,11 +128,11 @@ func TestSheetsHandlerFormatSheetRangeMissingFormattingOptions(t *testing.T) {
 	}
 }
 
-// --- sheets_add_conditional_formatting ---
+// --- sheets_create_conditional_formatting ---
 
 func TestSheetsHandlerAddConditionalFormattingMissingSpreadsheetID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "sheets_add_conditional_formatting", nil)
+	text, isError := callTool(t, s, "sheets_create_conditional_formatting", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -143,7 +143,7 @@ func TestSheetsHandlerAddConditionalFormattingMissingSpreadsheetID(t *testing.T)
 
 func TestSheetsHandlerAddConditionalFormattingMissingRangeName(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "sheets_add_conditional_formatting", map[string]any{
+	text, isError := callTool(t, s, "sheets_create_conditional_formatting", map[string]any{
 		"spreadsheet_id": "sheet123",
 	})
 	if !isError {
@@ -156,7 +156,7 @@ func TestSheetsHandlerAddConditionalFormattingMissingRangeName(t *testing.T) {
 
 func TestSheetsHandlerAddConditionalFormattingMissingConditionType(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "sheets_add_conditional_formatting", map[string]any{
+	text, isError := callTool(t, s, "sheets_create_conditional_formatting", map[string]any{
 		"spreadsheet_id": "sheet123",
 		"range_name":     "A1:B2",
 	})
@@ -278,7 +278,7 @@ func TestSheetsHandlerCreateSheetMissingSheetName(t *testing.T) {
 
 func TestSheetsHandlerReadSpreadsheetCommentsMissingSpreadsheetID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "sheets_read_comments", nil)
+	text, isError := callTool(t, s, "sheets_list_comments", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -313,7 +313,7 @@ func TestSheetsHandlerCreateSpreadsheetCommentMissingContent(t *testing.T) {
 
 func TestSheetsHandlerReplyToSpreadsheetCommentMissingSpreadsheetID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "sheets_reply_to_comment", nil)
+	text, isError := callTool(t, s, "sheets_create_reply", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -324,7 +324,7 @@ func TestSheetsHandlerReplyToSpreadsheetCommentMissingSpreadsheetID(t *testing.T
 
 func TestSheetsHandlerReplyToSpreadsheetCommentMissingCommentID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "sheets_reply_to_comment", map[string]any{
+	text, isError := callTool(t, s, "sheets_create_reply", map[string]any{
 		"spreadsheet_id": "sheet123",
 	})
 	if !isError {
@@ -337,7 +337,7 @@ func TestSheetsHandlerReplyToSpreadsheetCommentMissingCommentID(t *testing.T) {
 
 func TestSheetsHandlerReplyToSpreadsheetCommentMissingReplyContent(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "sheets_reply_to_comment", map[string]any{
+	text, isError := callTool(t, s, "sheets_create_reply", map[string]any{
 		"spreadsheet_id": "sheet123",
 		"comment_id":     "comment123",
 	})

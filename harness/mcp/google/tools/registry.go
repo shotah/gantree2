@@ -79,7 +79,7 @@ func RegisterAllTools(s *mcpserver.MCPServer, cfg server.Config) {
 	// Signed-in accounts are useful on every surface, including calendar-only.
 	RegisterListAccountsTool(s)
 
-	// auth_start is under gmail/complete in tier config but is
+	// auth_generate_url is under gmail/complete in tier config but is
 	// registered independently. It loads when gmail is enabled or all tools are loaded.
 	if allTools || enabled["gmail"] {
 		RegisterAuthTools(s)

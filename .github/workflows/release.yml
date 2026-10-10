@@ -1,0 +1,49 @@
+name: release
+
+# GitHub Release for every v* tag, with generated notes. Tags come from
+# `npm run release` (scripts/release.mjs). A tag with a `-` (v1.2.0-rc1) is
+# marked pre-release; anything else becomes the latest release.
+#
+# eval.yml runs first via workflow_call. A failed eval blocks this
+# release. A skipped eval (missing LLM_* secrets) succeeds, so the
+# release still happens. Deploys are not here: deploy-cloudflare.yml
+# follows ci on main, and harness-image.yml publishes the container
+# image on its own.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  eval:
+    uses: ./.github/workflows/eval.yml
+    secrets: inherit
+
+  release:
+    needs: eval
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists"
+            exit 0
+          fi
+          extra=()
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+            extra+=(--prerelease)
+          else
+            extra+=(--latest)
+          fi
+          gh release create "$GITHUB_REF_NAME" --generate-notes "${extra[@]}"

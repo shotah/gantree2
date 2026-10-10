@@ -459,7 +459,8 @@ change and is **not** Phase 2.
 - `harness/mcp.lock` pins `{repo, tag, command}` for every catalog
   server (maps, math, image, pendant, strava, …).
 - `harness/Dockerfile` fetches those tarballs at **build** time into
-  `/opt/mcp` and puts it on `PATH`. Distroless stays distroless.
+  `/opt/mcp/<id>/<id>` (one binary per plugin; a bare command resolves
+  there). Distroless stays distroless.
 - `host-manifest` still comes from the binary; the image Action runs it
   for every baked server and ships the shapes with the image.
 - A custom server ([custom-mcp.md](custom-mcp.md)) is a row in
@@ -644,7 +645,7 @@ until Phase 4.
    `deploy` flags may change mid-merge — pin the version in
    [install.md](install.md#home-celld) and treat `npm run deploy:home`
    as the single place that knows how to invoke it. Tracked in
-   [todo.md](todo.md#0-decide).
+   [todo.md](todo_done.md#0-decide).
 1. **CPU/RAM graphs on Cloudflare.** No per-container stats API. Live
    without, or accept a tiny RSS sample in the harness's existing
    `turn perf` line. Default: live without.
@@ -671,7 +672,10 @@ until Phase 4.
 - A central user DB the harness reads. The agent's env is still its
   chat list.
 - Cloudflare Access on `/ws`.
-- Hosted multi-tenant gantree. One household per deploy.
+- ~~Hosted multi-tenant gantree. One household per deploy.~~ Flipped
+  2026-10-10 — see [todo.md](todo.md#hosted-phase-5--the-paid-door).
+  Still true for the migration itself: tenancy lands after cutover,
+  not during it.
 - Editing `gantree`, `gantry-pendant`, or `ai-gantry` for this
   migration. Side by side.
 - Anything that makes the Go loop slower so a chart looks nicer.

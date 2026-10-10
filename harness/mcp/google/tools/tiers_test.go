@@ -42,7 +42,7 @@ func newTestServer(t *testing.T, cfg server.Config) *mcpserver.MCPServer {
 func TestNoFilterLoadsAllTools(t *testing.T) {
 	s := newTestServer(t, server.Config{})
 	names := registeredToolNames(t, s)
-	// 12 comment tools + 15 Gmail + 16 Drive + 7 Calendar + 15 Docs + 10 Sheets + 4 Chat + 6 Forms + 5 Slides + 12 Tasks + 15 Contacts + 3 Search + 17 AppScript + 1 auth_list_accounts + 1 auth_start = 139.
+	// 12 comment tools + 15 Gmail + 16 Drive + 7 Calendar + 15 Docs + 10 Sheets + 4 Chat + 6 Forms + 5 Slides + 12 Tasks + 15 Contacts + 3 Search + 17 AppScript + 1 auth_list_accounts + 1 auth_generate_url = 139.
 	if len(names) != 139 {
 		t.Errorf("expected 139 tools with no filter, got %d: %v", len(names), names)
 	}
@@ -89,9 +89,9 @@ func TestReadOnlyFiltering(t *testing.T) {
 		t.Errorf("expected 61 tools in read-only mode, got %d: %v", len(names), names)
 	}
 	for _, expected := range []string{
-		"docs_read_comments",
-		"sheets_read_comments",
-		"slides_read_comments",
+		"docs_list_comments",
+		"sheets_list_comments",
+		"slides_list_comments",
 		"gmail_search_messages",
 		"gmail_get_message",
 		"gmail_get_messages_batch",
@@ -105,22 +105,22 @@ func TestReadOnlyFiltering(t *testing.T) {
 		"drive_get_file_download_url",
 		"drive_list_items",
 		"drive_get_file_permissions",
-		"drive_check_file_public_access",
+		"drive_get_file_public_access",
 		"drive_get_shareable_link",
 		"auth_list_accounts",
 		"calendar_list_calendars",
 		"calendar_list_events",
 		"calendar_get_event",
-		"calendar_query_freebusy",
+		"calendar_search_freebusy",
 		"docs_search",
 		"docs_get_content",
 		"docs_list_in_folder",
-		"docs_inspect_structure",
-		"docs_debug_table_structure",
-		"docs_export_to_pdf",
+		"docs_get_structure",
+		"docs_get_table_structure",
+		"docs_convert_to_pdf",
 		"sheets_list_spreadsheets",
 		"sheets_get_spreadsheet_info",
-		"sheets_read_values",
+		"sheets_get_values",
 		"chat_list_spaces",
 		"chat_list_messages",
 		"chat_search_messages",
@@ -139,9 +139,9 @@ func TestReadOnlyFiltering(t *testing.T) {
 		"contacts_list",
 		"contacts_list_groups",
 		"contacts_get_group",
-		"search_query",
-		"search_get_engine_info",
-		"search_query_siterestrict",
+		"pse_search",
+		"pse_get_engine_info",
+		"pse_search_siterestrict",
 		"appscript_list_projects",
 		"appscript_get_project",
 		"appscript_get_content",
@@ -166,10 +166,10 @@ func TestReadOnlyPlusTierComposition(t *testing.T) {
 	}
 
 	// Read-only + core tier: Gmail core read-only (3) + Drive core read-only (4)
-	// + Calendar core read-only (4, includes freebusy) + Docs core read-only (2: docs_get_content, docs_search) + Sheets core read-only (2: sheets_read_values, sheets_list_spreadsheets)
+	// + Calendar core read-only (4, includes freebusy) + Docs core read-only (2: docs_get_content, docs_search) + Sheets core read-only (2: sheets_get_values, sheets_list_spreadsheets)
 	// + Chat core read-only (2: chat_list_messages, chat_search_messages) + Forms core read-only (1: forms_get)
 	// + Slides core read-only (1: slides_get_presentation) + Tasks core read-only (3: tasks_get_task, tasks_list_tasks, tasks_list_tasklists)
-	// + Contacts core read-only (3: contacts_search, contacts_get, contacts_list) + Search core read-only (1: search_query)
+	// + Contacts core read-only (3: contacts_search, contacts_get, contacts_list) + Search core read-only (1: pse_search)
 	// + AppScript core read-only (3: appscript_list_projects, appscript_get_project, appscript_get_content) + auth_list_accounts = 30.
 	s2 := newTestServer(t, server.Config{ReadOnly: true, ToolTier: "core"})
 	names2 := registeredToolNames(t, s2)
@@ -206,12 +206,12 @@ func TestCapabilityEditFiltering(t *testing.T) {
 		t.Error("expected calendar_create_events under capability edit")
 	}
 	for _, destructive := range []string{
-		"drive_transfer_ownership",
+		"drive_update_ownership",
 		"contacts_batch_delete",
 		"tasks_delete_tasklist",
 		"contacts_delete_group",
 		"appscript_delete_project",
-		"tasks_clear_completed",
+		"tasks_delete_completed",
 	} {
 		if names[destructive] {
 			t.Errorf("%s must not appear under capability edit", destructive)
@@ -225,8 +225,8 @@ func TestCapabilityCompleteFiltering(t *testing.T) {
 	if len(names) != 139 {
 		t.Errorf("expected 139 tools with capability complete, got %d: %v", len(names), names)
 	}
-	if !names["drive_transfer_ownership"] {
-		t.Error("expected drive_transfer_ownership under capability complete")
+	if !names["drive_update_ownership"] {
+		t.Error("expected drive_update_ownership under capability complete")
 	}
 }
 
@@ -255,7 +255,7 @@ func TestReadOnlyOverridesCapability(t *testing.T) {
 }
 
 func TestLeanPresetSurface(t *testing.T) {
-	// --preset lean → gmail + calendar, core, edit ≈ 13 tools (auth_start is complete-tier only).
+	// --preset lean → gmail + calendar, core, edit ≈ 13 tools (auth_generate_url is complete-tier only).
 	s := newTestServer(t, server.Config{
 		Tools:      []string{"gmail", "calendar"},
 		ToolTier:   "core",
@@ -269,8 +269,8 @@ func TestLeanPresetSurface(t *testing.T) {
 		"gmail_search_messages",
 		"gmail_get_message",
 		"gmail_get_messages_batch",
-		"gmail_send_message",
-		"gmail_modify_message_labels",
+		"gmail_create_message",
+		"gmail_update_message_labels",
 		"auth_list_accounts",
 		"calendar_list_calendars",
 		"calendar_list_events",
@@ -278,14 +278,14 @@ func TestLeanPresetSurface(t *testing.T) {
 		"calendar_create_events",
 		"calendar_update_events",
 		"calendar_delete_event",
-		"calendar_query_freebusy",
+		"calendar_search_freebusy",
 	} {
 		if !names[expected] {
 			t.Errorf("expected lean tool %q", expected)
 		}
 	}
-	if names["auth_start"] {
-		t.Error("auth_start must not appear on lean (core) surface")
+	if names["auth_generate_url"] {
+		t.Error("auth_generate_url must not appear on lean (core) surface")
 	}
 	if names["drive_search_files"] {
 		t.Error("drive tools must not appear on lean surface")
@@ -304,15 +304,15 @@ func TestEverydayPresetSurface(t *testing.T) {
 		t.Errorf("expected 38 tools for everyday preset, got %d: %v", len(names), names)
 	}
 	for _, expected := range []string{
-		"gmail_modify_message_labels",
+		"gmail_update_message_labels",
 		"auth_list_accounts",
 		"docs_get_content",
 		"docs_create",
-		"docs_modify_text",
+		"docs_update_text",
 		"docs_search",
 		"sheets_create_spreadsheet",
-		"sheets_read_values",
-		"sheets_modify_values",
+		"sheets_get_values",
+		"sheets_update_values",
 		"sheets_list_spreadsheets",
 		"tasks_list_tasks",
 		"tasks_get_task",
@@ -326,8 +326,8 @@ func TestEverydayPresetSurface(t *testing.T) {
 		"contacts_create",
 		"drive_search_files",
 		"drive_get_file_content",
-		"drive_share_file",
-		"calendar_query_freebusy",
+		"drive_create_permission",
+		"calendar_search_freebusy",
 	} {
 		if !names[expected] {
 			t.Errorf("expected everyday tool %q", expected)
@@ -352,21 +352,21 @@ func TestToolsFilterComposesWithServiceFilter(t *testing.T) {
 		t.Errorf("expected 20 tools with --tools docs, got %d: %v", len(names), names)
 	}
 	for _, expected := range []string{
-		"docs_read_comments",
+		"docs_list_comments",
 		"docs_create_comment",
-		"docs_reply_to_comment",
+		"docs_create_reply",
 		"docs_resolve_comment",
 		"docs_search",
 		"docs_get_content",
 		"docs_list_in_folder",
 		"docs_create",
-		"docs_inspect_structure",
-		"docs_debug_table_structure",
-		"docs_export_to_pdf",
-		"docs_modify_text",
-		"docs_find_and_replace",
-		"docs_insert_elements",
-		"docs_insert_image",
+		"docs_get_structure",
+		"docs_get_table_structure",
+		"docs_convert_to_pdf",
+		"docs_update_text",
+		"docs_update_replace",
+		"docs_create_elements",
+		"docs_create_image",
 		"docs_update_headers_footers",
 		"docs_batch_update",
 		"docs_create_table_with_data",
@@ -379,7 +379,7 @@ func TestToolsFilterComposesWithServiceFilter(t *testing.T) {
 }
 
 func TestToolsFilterPlusTier(t *testing.T) {
-	// --tools docs --tool-tier core: docs_get_content + docs_create + docs_modify_text + docs_search = 4.
+	// --tools docs --tool-tier core: docs_get_content + docs_create + docs_update_text + docs_search = 4.
 	s := newTestServer(t, server.Config{Tools: []string{"docs"}, ToolTier: "core"})
 	names := registeredToolNames(t, s)
 	if len(names) != 5 {
@@ -388,20 +388,20 @@ func TestToolsFilterPlusTier(t *testing.T) {
 }
 
 func TestToolsFilterPlusReadOnly(t *testing.T) {
-	// --tools docs --read-only: 6 Docs read-only + docs_read_comments = 7.
+	// --tools docs --read-only: 6 Docs read-only + docs_list_comments = 7.
 	s := newTestServer(t, server.Config{Tools: []string{"docs"}, ReadOnly: true})
 	names := registeredToolNames(t, s)
 	if len(names) != 8 {
 		t.Errorf("expected 8 tools with --tools docs --read-only, got %d: %v", len(names), names)
 	}
 	for _, expected := range []string{
-		"docs_read_comments",
+		"docs_list_comments",
 		"docs_search",
 		"docs_get_content",
 		"docs_list_in_folder",
-		"docs_inspect_structure",
-		"docs_debug_table_structure",
-		"docs_export_to_pdf",
+		"docs_get_structure",
+		"docs_get_table_structure",
+		"docs_convert_to_pdf",
 	} {
 		if !names[expected] {
 			t.Errorf("expected tool %q to be present", expected)
@@ -410,7 +410,7 @@ func TestToolsFilterPlusReadOnly(t *testing.T) {
 }
 
 func TestToolsGmailFiltering(t *testing.T) {
-	// --tools gmail: all 15 Gmail tools (7 read + 8 write) + 1 auth_start = 16.
+	// --tools gmail: all 15 Gmail tools (7 read + 8 write) + 1 auth_generate_url = 16.
 	s := newTestServer(t, server.Config{Tools: []string{"gmail"}})
 	names := registeredToolNames(t, s)
 	if len(names) != 17 {
@@ -472,8 +472,8 @@ func TestToolsCalendarFiltering(t *testing.T) {
 	if !names2["calendar_delete_event"] {
 		t.Error("expected calendar_delete_event with --tools calendar --tool-tier core")
 	}
-	if !names2["calendar_query_freebusy"] {
-		t.Error("expected calendar_query_freebusy with --tools calendar --tool-tier core")
+	if !names2["calendar_search_freebusy"] {
+		t.Error("expected calendar_search_freebusy with --tools calendar --tool-tier core")
 	}
 
 	// --tools calendar --read-only: 4 Calendar read-only tools.
@@ -492,14 +492,14 @@ func TestToolsDocsFiltering(t *testing.T) {
 		t.Errorf("expected 20 tools with --tools docs, got %d: %v", len(names), names)
 	}
 
-	// --tools docs --tool-tier core: docs_get_content + docs_create + docs_modify_text + docs_search = 4.
+	// --tools docs --tool-tier core: docs_get_content + docs_create + docs_update_text + docs_search = 4.
 	s2 := newTestServer(t, server.Config{Tools: []string{"docs"}, ToolTier: "core"})
 	names2 := registeredToolNames(t, s2)
 	if len(names2) != 5 {
 		t.Errorf("expected 5 tools with --tools docs --tool-tier core, got %d: %v", len(names2), names2)
 	}
 
-	// --tools docs --read-only: 6 Docs read-only + docs_read_comments = 7.
+	// --tools docs --read-only: 6 Docs read-only + docs_list_comments = 7.
 	s3 := newTestServer(t, server.Config{Tools: []string{"docs"}, ReadOnly: true})
 	names3 := registeredToolNames(t, s3)
 	if len(names3) != 8 {
@@ -517,17 +517,17 @@ func TestToolsSheetsFiltering(t *testing.T) {
 	for _, expected := range []string{
 		"sheets_list_spreadsheets",
 		"sheets_get_spreadsheet_info",
-		"sheets_read_values",
-		"sheets_modify_values",
+		"sheets_get_values",
+		"sheets_update_values",
 		"sheets_format_range",
-		"sheets_add_conditional_formatting",
+		"sheets_create_conditional_formatting",
 		"sheets_update_conditional_formatting",
 		"sheets_delete_conditional_formatting",
 		"sheets_create_spreadsheet",
 		"sheets_create_sheet",
-		"sheets_read_comments",
+		"sheets_list_comments",
 		"sheets_create_comment",
-		"sheets_reply_to_comment",
+		"sheets_create_reply",
 		"sheets_resolve_comment",
 	} {
 		if !names[expected] {
@@ -542,7 +542,7 @@ func TestToolsSheetsFiltering(t *testing.T) {
 		t.Errorf("expected 5 tools with --tools sheets --tool-tier core, got %d: %v", len(names2), names2)
 	}
 
-	// --tools sheets --read-only: 3 Sheets read-only + sheets_read_comments = 4.
+	// --tools sheets --read-only: 3 Sheets read-only + sheets_list_comments = 4.
 	s3 := newTestServer(t, server.Config{Tools: []string{"sheets"}, ReadOnly: true})
 	names3 := registeredToolNames(t, s3)
 	if len(names3) != 5 {
@@ -560,7 +560,7 @@ func TestToolsChatFiltering(t *testing.T) {
 	for _, expected := range []string{
 		"chat_list_spaces",
 		"chat_list_messages",
-		"chat_send_message",
+		"chat_create_message",
 		"chat_search_messages",
 	} {
 		if !names[expected] {
@@ -568,7 +568,7 @@ func TestToolsChatFiltering(t *testing.T) {
 		}
 	}
 
-	// --tools chat --tool-tier core: 3 core Chat tools (chat_send_message, chat_list_messages, chat_search_messages).
+	// --tools chat --tool-tier core: 3 core Chat tools (chat_create_message, chat_list_messages, chat_search_messages).
 	s2 := newTestServer(t, server.Config{Tools: []string{"chat"}, ToolTier: "core"})
 	names2 := registeredToolNames(t, s2)
 	if len(names2) != 4 {
@@ -593,7 +593,7 @@ func TestToolsFormsFiltering(t *testing.T) {
 	for _, expected := range []string{
 		"forms_create",
 		"forms_get",
-		"forms_set_publish_settings",
+		"forms_update_publish_settings",
 		"forms_get_response",
 		"forms_list_responses",
 		"forms_batch_update",
@@ -631,9 +631,9 @@ func TestToolsSlidesFiltering(t *testing.T) {
 		"slides_batch_update",
 		"slides_get_page",
 		"slides_get_page_thumbnail",
-		"slides_read_comments",
+		"slides_list_comments",
 		"slides_create_comment",
-		"slides_reply_to_comment",
+		"slides_create_reply",
 		"slides_resolve_comment",
 	} {
 		if !names[expected] {
@@ -648,7 +648,7 @@ func TestToolsSlidesFiltering(t *testing.T) {
 		t.Errorf("expected 3 tools with --tools slides --tool-tier core, got %d: %v", len(names2), names2)
 	}
 
-	// --tools slides --read-only: 3 Slides read-only (slides_get_presentation, slides_get_page, slides_get_page_thumbnail) + slides_read_comments = 4.
+	// --tools slides --read-only: 3 Slides read-only (slides_get_presentation, slides_get_page, slides_get_page_thumbnail) + slides_list_comments = 4.
 	s3 := newTestServer(t, server.Config{Tools: []string{"slides"}, ReadOnly: true})
 	names3 := registeredToolNames(t, s3)
 	if len(names3) != 5 {
@@ -674,8 +674,8 @@ func TestToolsTasksFiltering(t *testing.T) {
 		"tasks_create_task",
 		"tasks_update_task",
 		"tasks_delete_task",
-		"tasks_move_task",
-		"tasks_clear_completed",
+		"tasks_update_task_position",
+		"tasks_delete_completed",
 	} {
 		if !names[expected] {
 			t.Errorf("expected tool %q to be present", expected)
@@ -722,7 +722,7 @@ func TestToolsContactsFiltering(t *testing.T) {
 		"contacts_create_group",
 		"contacts_update_group",
 		"contacts_delete_group",
-		"contacts_modify_group_members",
+		"contacts_update_group_members",
 	} {
 		if !names[expected] {
 			t.Errorf("expected tool %q to be present", expected)
@@ -752,16 +752,16 @@ func TestToolsSearchFiltering(t *testing.T) {
 		t.Errorf("expected 4 tools with --tools search, got %d: %v", len(names), names)
 	}
 	for _, expected := range []string{
-		"search_query",
-		"search_get_engine_info",
-		"search_query_siterestrict",
+		"pse_search",
+		"pse_get_engine_info",
+		"pse_search_siterestrict",
 	} {
 		if !names[expected] {
 			t.Errorf("expected tool %q to be present", expected)
 		}
 	}
 
-	// --tools search --tool-tier core: 1 core Search tool (search_query).
+	// --tools search --tool-tier core: 1 core Search tool (pse_search).
 	s2 := newTestServer(t, server.Config{Tools: []string{"search"}, ToolTier: "core"})
 	names2 := registeredToolNames(t, s2)
 	if len(names2) != 2 {
@@ -794,7 +794,7 @@ func TestToolsAppScriptFiltering(t *testing.T) {
 		"appscript_get_metrics",
 		"appscript_create_project",
 		"appscript_update_content",
-		"appscript_run_function",
+		"appscript_evaluate_function",
 		"appscript_create_deployment",
 		"appscript_update_deployment",
 		"appscript_delete_deployment",
@@ -823,26 +823,26 @@ func TestToolsAppScriptFiltering(t *testing.T) {
 }
 
 func TestStartGoogleAuthOAuth21Disabled(t *testing.T) {
-	// When MCP_ENABLE_OAUTH21 is not set, auth_start should be registered.
+	// When MCP_ENABLE_OAUTH21 is not set, auth_generate_url should be registered.
 	t.Setenv("MCP_ENABLE_OAUTH21", "")
 	s := newTestServer(t, server.Config{})
 	names := registeredToolNames(t, s)
-	if !names["auth_start"] {
-		t.Error("expected auth_start to be registered when MCP_ENABLE_OAUTH21 is not set")
+	if !names["auth_generate_url"] {
+		t.Error("expected auth_generate_url to be registered when MCP_ENABLE_OAUTH21 is not set")
 	}
 }
 
 func TestStartGoogleAuthOAuth21Enabled(t *testing.T) {
-	// When MCP_ENABLE_OAUTH21=true, auth_start should NOT be registered.
+	// When MCP_ENABLE_OAUTH21=true, auth_generate_url should NOT be registered.
 	t.Setenv("MCP_ENABLE_OAUTH21", "true")
 	s := server.New(server.Config{})
 	RegisterAllTools(s, server.Config{})
 	FilterTools(s, server.Config{})
 	names := registeredToolNames(t, s)
-	if names["auth_start"] {
-		t.Error("expected auth_start to NOT be registered when MCP_ENABLE_OAUTH21=true")
+	if names["auth_generate_url"] {
+		t.Error("expected auth_generate_url to NOT be registered when MCP_ENABLE_OAUTH21=true")
 	}
-	// Should have 138 tools (139 - 1 auth_start). auth_list_accounts stays.
+	// Should have 138 tools (139 - 1 auth_generate_url). auth_list_accounts stays.
 	if len(names) != 138 {
 		t.Errorf("expected 138 tools with MCP_ENABLE_OAUTH21=true, got %d", len(names))
 	}

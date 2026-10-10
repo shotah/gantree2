@@ -49,7 +49,7 @@ var MetricsEndpoints = []endpoint.Endpoint{
 		MCPTool:       "metrics_get_endurance_score",
 		Short:         "Endurance score + classification",
 		Long: "Endurance Score for one day: overall score, classification, and contributors. " +
-			"Use for 'endurance score', long-activity fitness. Not VO2 max snapshot — use metrics_get_vo2max.",
+			"Use for 'endurance score', long-activity fitness. Not VO2 max snapshot — use metrics_get_vo_two_max.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -211,7 +211,7 @@ var MetricsEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "metrics",
 		CLISubcommand: "vo2max",
-		MCPTool:       "metrics_get_vo2max",
+		MCPTool:       "metrics_get_vo_two_max",
 		Short:         "Latest VO2 max / fitness",
 		Long: "Latest VO2 max / MET values (generic and cycling when present). Use for 'VO2 max', 'cardio fitness'. " +
 			"Not training readiness (metrics_get_training_readiness) and not race predictions (metrics_get_race_predictions).",
@@ -350,7 +350,7 @@ var MetricsEndpoints = []endpoint.Endpoint{
 		MCPTool:       "metrics_get_race_predictions",
 		Short:         "Current race time predictions",
 		Long: "Latest predicted times for 5K, 10K, half marathon, and marathon from current fitness. " +
-			"Use for 'what pace can I race', 'marathon prediction'. Not VO2 max — use metrics_get_vo2max.",
+			"Use for 'what pace can I race', 'marathon prediction'. Not VO2 max — use metrics_get_vo_two_max.",
 		DependsOn: "GetSocialProfile",
 		ArgProvider: func(result any) map[string]any {
 			profile, ok := result.(*garmin.SocialProfile)

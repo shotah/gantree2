@@ -66,7 +66,7 @@ func newDriveServiceForScript(ctx context.Context, getClient httpClientFunc, ema
 
 func registerListScriptProjects(s *mcpserver.MCPServer, getClient httpClientFunc) {
 	tool := newMCPTool("appscript_list_projects",
-		mcp.WithDescription("List Apps Script projects (script_id, title). Then appscript_get_project. Not run — appscript_run_function."),
+		mcp.WithDescription("List Apps Script projects (script_id, title). Then appscript_get_project. Not run — appscript_evaluate_function."),
 		mcp.WithString("user_google_email", mcp.Description("User Google email (or set USER_GOOGLE_EMAIL).")),
 	)
 	RegisterTool(s, tool, makeListScriptProjectsHandler(getClient))
@@ -288,7 +288,7 @@ func makeGetScriptContentHandler(getClient httpClientFunc) mcpserver.ToolHandler
 
 func registerListDeployments(s *mcpserver.MCPServer, getClient httpClientFunc) {
 	tool := newMCPTool("appscript_list_deployments",
-		mcp.WithDescription("List deployments for script_id (deployment ids, entry points). Use before appscript_run_function or appscript_update_deployment."),
+		mcp.WithDescription("List deployments for script_id (deployment ids, entry points). Use before appscript_evaluate_function or appscript_update_deployment."),
 		mcp.WithString("user_google_email",
 			mcp.Required(),
 			mcp.Description("The user's Google email address."),
@@ -555,7 +555,7 @@ func makeGetVersionHandler(getClient httpClientFunc) mcpserver.ToolHandlerFunc {
 
 func registerGetScriptMetrics(s *mcpserver.MCPServer, getClient httpClientFunc) {
 	tool := newMCPTool("appscript_get_metrics",
-		mcp.WithDescription("Execution metrics for script_id (usage stats). Use for monitoring. Not live run — use appscript_run_function or appscript_list_processes."),
+		mcp.WithDescription("Execution metrics for script_id (usage stats). Use for monitoring. Not live run — use appscript_evaluate_function or appscript_list_processes."),
 		mcp.WithString("user_google_email",
 			mcp.Required(),
 			mcp.Description("The user's Google email address."),
@@ -720,7 +720,7 @@ func makeCreateScriptProjectHandler(getClient httpClientFunc) mcpserver.ToolHand
 
 func registerUpdateScriptContent(s *mcpserver.MCPServer, getClient httpClientFunc) {
 	tool := newMCPTool("appscript_update_content",
-		mcp.WithDescription("Create/update .gs files in script_id. Not execute — appscript_run_function."),
+		mcp.WithDescription("Create/update .gs files in script_id. Not execute — appscript_evaluate_function."),
 		mcp.WithString("user_google_email", mcp.Description("User Google email (or set USER_GOOGLE_EMAIL).")),
 		mcp.WithString("script_id", mcp.Required(), mcp.Description("Script id.")),
 		mcp.WithArray("files",
@@ -812,10 +812,10 @@ func makeUpdateScriptContentHandler(getClient httpClientFunc) mcpserver.ToolHand
 	}
 }
 
-// --- appscript_run_function ---
+// --- appscript_evaluate_function ---
 
 func registerRunScriptFunction(s *mcpserver.MCPServer, getClient httpClientFunc) {
-	tool := newMCPTool("appscript_run_function",
+	tool := newMCPTool("appscript_evaluate_function",
 		mcp.WithDescription("Run a deployed function (script_id + function_name). Confirm side effects. Deployments: appscript_list_deployments."),
 		mcp.WithString("user_google_email", mcp.Description("User Google email (or set USER_GOOGLE_EMAIL).")),
 		mcp.WithString("script_id", mcp.Required(), mcp.Description("Script id.")),
@@ -828,15 +828,15 @@ func makeRunScriptFunctionHandler(getClient httpClientFunc) mcpserver.ToolHandle
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		email, err := resolveEmail(request)
 		if err != nil {
-			return needArg("user_google_email", "appscript_run_function(script_id, function_name=…)"), nil
+			return needArg("user_google_email", "appscript_evaluate_function(script_id, function_name=…)"), nil
 		}
 		scriptID, err := request.RequireString("script_id")
 		if err != nil {
-			return needArg("script_id", "appscript_run_function(script_id, function_name=…)"), nil
+			return needArg("script_id", "appscript_evaluate_function(script_id, function_name=…)"), nil
 		}
 		functionName, err := request.RequireString("function_name")
 		if err != nil {
-			return needArg("function_name", "appscript_run_function(script_id, function_name=…)"), nil
+			return needArg("function_name", "appscript_evaluate_function(script_id, function_name=…)"), nil
 		}
 		devMode := getBool(request, "dev_mode", false)
 
@@ -898,7 +898,7 @@ func makeRunScriptFunctionHandler(getClient httpClientFunc) mcpserver.ToolHandle
 
 func registerCreateDeployment(s *mcpserver.MCPServer, getClient httpClientFunc) {
 	tool := newMCPTool("appscript_create_deployment",
-		mcp.WithDescription("Create new deployment of script_id (API executable, web app, etc.). Use after appscript_update_content. Not for run — use appscript_run_function."),
+		mcp.WithDescription("Create new deployment of script_id (API executable, web app, etc.). Use after appscript_update_content. Not for run — use appscript_evaluate_function."),
 		mcp.WithString("user_google_email",
 			mcp.Required(),
 			mcp.Description("The user's Google email address."),
@@ -1443,7 +1443,7 @@ func generateTriggerCodeHandler(_ context.Context, request mcp.CallToolRequest) 
 			strings.Repeat("=", 50),
 			"",
 			"1. Add this code to your script using appscript_update_content",
-			"2. Run the setup function ONCE (manually in Apps Script editor or via appscript_run_function)",
+			"2. Run the setup function ONCE (manually in Apps Script editor or via appscript_evaluate_function)",
 			"3. The trigger will then run automatically on schedule",
 			"",
 			"To check installed triggers: Apps Script editor > Triggers (clock icon)",

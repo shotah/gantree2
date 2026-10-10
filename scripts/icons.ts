@@ -26,10 +26,34 @@ export const APPS_BRAND = join(REPO_ROOT, "..", "gantree2-apps", "shared", "bran
 const CANVAS = "#0e1316";
 const FAVICON_INK = "#1c1814";
 
-const FONT_FILES = [
-  "/usr/share/fonts/TTF/DejaVuSans.ttf",
-  "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
-];
+const FONT_NAMES = ["DejaVuSans.ttf", "DejaVuSans-Bold.ttf"] as const;
+
+/** Where distros put DejaVu: Arch/SteamOS, Debian/Ubuntu (CI runners), Fedora. `GANTREE_FONT_DIR` wins. */
+export const FONT_DIRS = [
+  "/usr/share/fonts/TTF",
+  "/usr/share/fonts/truetype/dejavu",
+  "/usr/share/fonts/dejavu-sans-fonts",
+  "/usr/share/fonts/dejavu",
+] as const;
+
+/** The first directory holding both faces, or `null`. */
+export function fontDir(dirs: readonly string[] = FONT_DIRS, exists: (file: string) => boolean = existsSync): string | null {
+  for (const dir of dirs) {
+    if (FONT_NAMES.every((name) => exists(join(dir, name)))) {
+      return dir;
+    }
+  }
+  return null;
+}
+
+function fontFiles(): string[] {
+  const override = process.env.GANTREE_FONT_DIR;
+  const dir = fontDir(override ? [override, ...FONT_DIRS] : FONT_DIRS);
+  if (!dir) {
+    throw new Error(`missing font DejaVu Sans: looked in ${FONT_DIRS.join(", ")}; set GANTREE_FONT_DIR or install fonts-dejavu-core`);
+  }
+  return FONT_NAMES.map((name) => join(dir, name));
+}
 
 const ANDROID = [
   ["mipmap-mdpi/ic_launcher.png", 48],
@@ -57,7 +81,7 @@ function raster(svg: string, width: number, height: number, background?: string)
     shapeRendering: 2,
     textRendering: 1,
     font: {
-      fontFiles: FONT_FILES,
+      fontFiles: fontFiles(),
       loadSystemFonts: false,
       defaultFontFamily: "DejaVu Sans",
       sansSerifFamily: "DejaVu Sans",
@@ -133,11 +157,7 @@ export function generateIcons(outDir: string, options: GenerateIconsOptions = {}
   if (!outDir) {
     throw new Error("usage: icons.ts [--apps] [--out=dir]");
   }
-  for (const file of FONT_FILES) {
-    if (!existsSync(file)) {
-      throw new Error(`missing font ${file}`);
-    }
-  }
+  fontFiles();
   const logo = readFileSync(join(REPO_ROOT, "assets/logo.svg"), "utf8");
   const icon = readFileSync(join(REPO_ROOT, "public/icon.svg"), "utf8");
   const banner = readFileSync(join(REPO_ROOT, "assets/banner.svg"), "utf8");

@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -24,20 +25,39 @@ import (
 )
 
 // evalManifest lists the servers a tools_from fixture may name; the
-// integration run fetches and boots them for their real catalogs.
+// integration run builds and boots them for their real catalogs.
 var evalManifest = filepath.Join(evalFixtureDir, "mcp.toml")
 
-// evalLiveServers reads the eval manifest's server names (no network).
+// evalLiveServers reads the eval manifest and requires each server to be
+// a sibling module in mcp.lock (no network, no build).
 func evalLiveServers(t *testing.T) map[string]mcp.ServerSpec {
 	t.Helper()
 	m, err := mcp.LoadManifest(evalManifest)
 	if err != nil {
 		t.Fatal(err)
 	}
+	lock, err := loadMCPLock()
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, err := harnessRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
 	out := map[string]mcp.ServerSpec{}
 	for _, s := range m.Servers {
-		if s.DownloadURL == "" {
-			t.Errorf("%s: server %q needs download_url so the eval can fetch its latest release", evalManifest, s.Name)
+		row, rowErr := evalPluginRow(lock, s.Name)
+		if rowErr != nil {
+			t.Errorf("%s: %v", evalManifest, rowErr)
+			continue
+		}
+		if row.Binary != s.Command {
+			t.Errorf("%s: server %q command %q does not match mcp.lock binary %q", evalManifest, s.Name, s.Command, row.Binary)
+		}
+		dir, dirErr := row.moduleDir(root)
+		st, statErr := os.Stat(dir)
+		if dirErr != nil || statErr != nil || !st.IsDir() {
+			t.Errorf("tools_from %q: no sibling module at %s", s.Name, dir)
 		}
 		out[s.Name] = s
 	}

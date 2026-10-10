@@ -19,7 +19,7 @@ Shape: [architecture.md](architecture.md). Reporting a hole:
 | The chat thread | Agent DO storage, R2 (photos, boards) | Users on that agent's room |
 | The harness bearer (room token) | Agent DO; handed to the container at start | The Worker, that one container |
 | Model and tool keys (`LLM_API_KEY`, `GOOGLE_MAPS_API_KEY`, …) | Settings DO per agent → `config` frame → container env | Admins write, the container reads |
-| OAuth refresh tokens for tools (Google Workspace, Strava, Google Health) | Container data dir. **Not yet in the R2 snapshot** — a recreate loses them (todo §5) | That container only |
+| OAuth refresh tokens for tools (Google Workspace, Strava, Google Health, Garmin) | Container `DATA_DIR`, and ciphertext in the R2 snapshot (`tokens_tar`) | Plaintext in that container. The 32-byte key in the Agent DO. R2 and the Worker see ciphertext only |
 | The brain (`gantry.db`, `SELF.md`) | Container disk, R2 snapshot | That container only |
 | `SESSION_SECRET`, `GOOGLE_CLIENT_SECRET`, `CLOUDFLARE_API_TOKEN` | GitHub Actions secrets → Worker secrets; `.dev.vars` locally; `CELLD_VARS_FILE` at home | The operator |
 
@@ -101,7 +101,7 @@ with the bearer. There is no port to scan, no webhook URL to guess.
 | Secrets arrive in the `config` frame over the authenticated socket, not baked into the image | One image for every agent; keys never in a layer | Keys are in container memory and env; `docker inspect` on a home box shows them to root |
 | One OCI image, built in CI from this repo, MCP plugins compiled from `harness/mcp/<id>/` source | No binary we did not build; `mcp.lock` names every plugin | Go module supply chain is the remaining trust |
 | `host-manifest` shapes shipped in the image; the settings grid trusts the image, not a registry | Tool catalog cannot be swapped under the UI | — |
-| Brain snapshot (`gantry.db`, `SELF.md`) → **R2** via presigned PUT, restored via presigned GET on start; off unless `SNAPSHOT=true` | Containers have no durable disk; the person survives a restart | Today the snapshot holds memory, not OAuth tokens: safer bucket, but a recreate makes you re-paste a code. When tokens join it (register #4) the bucket becomes the crown jewel and must be encrypted per agent |
+| Brain snapshot (`gantry.db`, `SELF.md`) and the token archive (`tokens_tar`) → **R2** via presigned PUT, restored via presigned GET on start; off unless `SNAPSHOT=true` | Containers have no durable disk; the person and tool logins survive a restart on Cloudflare, celld, and `npm run agent` | `gantry.db` and `SELF.md` rely on Cloudflare's at-rest encryption. `tokens_tar` is AES-256-GCM with a per-agent key (register #4). No matching token files skips that PUT. A 404 on GET is a no-op. A missing key skips the archive; plaintext is never uploaded |
 | Per-agent log fan-out rate-capped; the harness never logs a key or a token body | A chatty log cannot become a leak | We rely on discipline in plugin code; name-lock tests do not scan log lines |
 
 Plugins run as child processes of the harness inside the same container.
@@ -117,15 +117,15 @@ The harness is headless. Connecting a Google account to an agent is a
 browser hop that ends on a **static page**:
 
 ```text
-https://shotah.github.io/gantree2/oauth-catch/
+https://github.bldhosting.com/oauth-catch/
 ```
 
 | Choice | Why |
 | --- | --- |
 | The catch page is static HTML on GitHub Pages (`site/oauth-catch/index.html`). It reads `?code=` from the URL, shows it, offers copy, strips it from history. **No server receives the code.** | Nothing to breach; nothing logged |
-| You paste the code into chat: `/auth <server> <code>`. The plugin exchanges it from inside the container with its own client secret | The code is one-time and short-lived; the refresh token never leaves the container |
+| You paste the code into chat: `/auth <server> <code>`. The plugin exchanges it from inside the container with its own client secret | The code is one-time and short-lived. Plaintext refresh tokens stay in the container; the snapshot copy is AES-256-GCM ciphertext |
 | Each plugin's `*_OAUTH_REDIRECT_URI` must equal the URL registered with the provider | Google rejects anything else |
-| The privacy policy Google's consent screen points at is `https://shotah.github.io/gantree2/privacy/` (`site/privacy/index.html`) | Required for verification; versioned with the code |
+| The privacy policy Google's consent screen points at is `https://github.bldhosting.com/privacy/` (`site/privacy/index.html`) | Required for verification; versioned with the code |
 | Garmin has no public OAuth: the operator signs in on their own machine and the session file lands in the data dir | We do not proxy a vendor login |
 
 This is a different Google OAuth client than the door's. The door's
@@ -183,7 +183,7 @@ Settings DO and are readable by admins only. Not a SIEM.
 | 1 | Stolen phone with a live session | Medium | Member reads their own rooms for ≤7 days | Role recomputed per request, so **removal on `/users` ends it at the next request**; no per-device revoke | Per-device sessions list — later |
 | 2 | `GANTREE_ADMINS` empty on deploy | Medium (first deploy) | None — 503 | Fail closed | No |
 | 3 | Admin adds the wrong email | Medium | Stranger with that address can sign in | Allowlist is exact-match; audit row; `/users` shows last sign-in | Confirm-scary on add — §2 todo |
-| 4 | R2 bucket exposure once snapshots carry OAuth refresh tokens (they do not yet) | Low | Every agent's tool tokens | Private bucket; presigned URLs ≤15 min; `CLOUDFLARE_API_TOKEN` scoped to this account | **Encrypt the snapshot with a per-agent key held in the DO before tokens are added to it** — or keep tokens on the DO instead. Decide before Phase 3 |
+| 4 | R2 copy of OAuth refresh tokens (`tokens_tar`) | Low | That agent's tool tokens, if the per-agent key is also taken | Ciphertext only in R2. AES-256-GCM, random 12-byte nonce prefixed to the body. Key is 32 bytes minted once in the Agent DO (`snapshot.key`, next to the room bearer) and sent on the config frame as `SNAPSHOT_KEY` (base64). Presigned GET/PUT ≤15 min. The Worker never decrypts. No token files skips the PUT; HTTP 404 on GET is a no-op; a missing key skips the archive and is logged once. Plaintext is never uploaded | No |
 | 5 | Malicious or vulnerable Go dependency in a plugin | Low–Medium | Keys of that agent | Built from source, `go.sum`, Dependabot on `harness/**` | Sandbox plugins (gVisor at home: `CELLD_CONTAINER_RUNTIME=runsc`) — later |
 | 6 | Harness bearer leaked from container env | Low | Someone speaks as the agent in that room | Bearer per box life; `recreate` rotates; the DO accepts one harness socket at a time | No |
 | 7 | OAuth code pasted into the wrong chat | Low | Code is one-time, 10-minute, useless without the plugin's client secret | Catch page strips URL; `/auth` only in the agent's own room | No |
@@ -201,8 +201,8 @@ Settings DO and are readable by admins only. Not a SIEM.
 - A second login (passphrase, magic link, SSO beyond Google).
 - Pairing codes in chat; MCP OAuth as a phone login.
 - CSRF tokens; `SameSite=Lax` and same-origin `POST` JSON.
-- Encrypting what Cloudflare already encrypts at rest, except the
-  snapshot (register #4).
+- Encrypting `gantry.db` and `SELF.md` beyond Cloudflare's at-rest
+  encryption. The token archive is the exception (register #4).
 - A 12-role RBAC. Three roles.
 
 ---

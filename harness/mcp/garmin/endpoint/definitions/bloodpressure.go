@@ -75,7 +75,7 @@ var BloodPressureEndpoints = []endpoint.Endpoint{
 		Body:          bloodPressureLogBodyConfig,
 		CLICommand:    "bp",
 		CLISubcommand: "log",
-		MCPTool:       "blood_pressure_log",
+		MCPTool:       "blood_pressure_create",
 		Short:         "Log a BP reading",
 		Long: "Log manual systolic/diastolic/pulse to Connect via JSON body. " +
 			"Use for 'log blood pressure'. --file, --json, or stdin; live API uses POST.",

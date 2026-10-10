@@ -28,7 +28,7 @@ The page is `site/oauth-catch/index.html` in this repo, published by
 The URI to register on every provider:
 
 ```text
-https://shotah.github.io/gantree2/oauth-catch/
+https://github.bldhosting.com/oauth-catch/
 ```
 
 Plugin binaries still default to the retired `ai-gantry` Pages URI
@@ -37,9 +37,9 @@ register the URI above on each client:
 
 | Provider | Env override | Set to |
 | --- | --- | --- |
-| Google Workspace | `GOOGLE_OAUTH_REDIRECT_URI` | `https://shotah.github.io/gantree2/oauth-catch/` |
-| Strava | `STRAVA_OAUTH_REDIRECT_URI` | `https://shotah.github.io/gantree2/oauth-catch/` |
-| Google Health | `GOOGLE_HEALTH_OAUTH_REDIRECT_URI` | `https://shotah.github.io/gantree2/oauth-catch/` |
+| Google Workspace | `GOOGLE_OAUTH_REDIRECT_URI` | `https://github.bldhosting.com/oauth-catch/` |
+| Strava | `STRAVA_OAUTH_REDIRECT_URI` | `https://github.bldhosting.com/oauth-catch/` |
+| Google Health | `GOOGLE_HEALTH_OAUTH_REDIRECT_URI` | `https://github.bldhosting.com/oauth-catch/` |
 
 Commented examples belong in `harness/.env.example` (lands with
 [todo.md](todo.md) §5). A fork hosts its own copy of the static page and
@@ -61,7 +61,7 @@ In [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/
 1. **Create OAuth client → Web application** (do not try to flip an existing Desktop client).
 2. Authorized redirect URIs — add **exactly** (trailing slash matters):
    ```text
-   https://shotah.github.io/gantree2/oauth-catch/
+   https://github.bldhosting.com/oauth-catch/
    ```
    Optional on the same Web client if you want one pair of secrets for both flows:
    ```text
@@ -89,12 +89,12 @@ itself only goes away with scope verification. That write-up is not carried.
 ### Strava: Authorization Callback Domain
 
 Strava’s app settings take **one domain** (not a path, not a list —
-`localhost; shotah.github.io` / commas do not work).
+`localhost; github.bldhosting.com` / commas do not work).
 
 For chat `/auth`, set:
 
 1. [Strava API settings](https://www.strava.com/settings/api) →
-   **Authorization Callback Domain** = `shotah.github.io`
+   **Authorization Callback Domain** = `github.bldhosting.com`
    (or your own catch-page host).
 2. Leave localhost alone — Strava always whitelists `localhost` /
    `127.0.0.1`, so laptop `gantry auth strava` still works with that domain set.
@@ -126,10 +126,11 @@ PKCE verifier/state (or Garmin MFA cookies) lives in a pending file next
 to that MCP's tokens, on the container disk, not in the harness process.
 Restarting `/auth <server>` replaces it. Pending files expire (~10 min).
 
-Tokens are not baked into the image and are **not in the R2 snapshot**
-today (`gantry.db` + `SELF.md` only), so a recreate means pasting a code
-again. Whether they join the snapshot encrypted or move to the Agent DO
-is open — [todo.md](todo.md) §5, [security.md](security.md) register #4.
+Tokens are not baked into the image. With `SNAPSHOT=true` they ride in
+the encrypted `tokens_tar` object of the agent snapshot, so a recreate
+does not make you paste a code again. The Worker never sees plaintext.
+How: [install.md](install.md#oauth-tokens-in-the-snapshot). The key lives
+on the Agent DO — [security.md](security.md) register #4.
 
 ---
 

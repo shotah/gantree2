@@ -1,8 +1,15 @@
-// Package snapshot restores gantry.db and SELF.md from presigned GET URLs
-// and PUTs them back on a timer and on process stop.
+// Package snapshot restores gantry.db, SELF.md, and an encrypted token
+// archive from presigned GET URLs and PUTs them back on a timer and on
+// process stop.
 //
 // It is off unless the caller constructs a Runner. An empty URL skips that
 // file. A GET that answers 404 is a fresh brain, not an error.
+//
+// tokens_tar is a tar of the allowlisted OAuth files under the data
+// directory, sealed with AES-256-GCM (random 12-byte nonce, then the
+// ciphertext and tag). No matching files skips the PUT. A missing or
+// invalid key skips the token archive and logs once; plaintext is never
+// uploaded.
 package snapshot
 
 import (
@@ -33,9 +40,11 @@ const (
 const maxSnapshotBytes = 256 << 20
 
 // URLs are presigned R2 addresses. Empty skips that file.
+// Tokens is the encrypted archive (wire id tokens_tar), not a plaintext tar.
 type URLs struct {
-	DB   string
-	Self string
+	DB     string
+	Self   string
+	Tokens string
 }
 
 // Result is one publish. Files is how many bodies were uploaded.
@@ -53,20 +62,25 @@ type Options struct {
 	Interval   time.Duration
 	Get        URLs
 	Put        URLs
-	Client     *http.Client
+	// Key is SNAPSHOT_KEY: standard base64 of 32 bytes. Empty or invalid
+	// skips the token archive so plaintext is never uploaded.
+	Key    string
+	Client *http.Client
 }
 
-// Runner downloads and uploads the two brain files.
+// Runner downloads and uploads the brain files and the encrypted token archive.
 type Runner struct {
 	dataDir    string
 	personaDir string
 	interval   time.Duration
 	client     *http.Client
+	key        []byte
 
-	mu  sync.Mutex
-	get URLs
-	put URLs
-	pub sync.Mutex
+	mu    sync.Mutex
+	get   URLs
+	put   URLs
+	pub   sync.Mutex
+	noKey sync.Once
 }
 
 // New returns a runner. It does not touch the network or the disk.
@@ -80,6 +94,7 @@ func New(opts Options) *Runner {
 		personaDir: opts.PersonaDir,
 		interval:   opts.Interval,
 		client:     c,
+		key:        decodeSnapshotKey(opts.Key),
 		get:        opts.Get,
 		put:        opts.Put,
 	}
@@ -99,11 +114,14 @@ func (r *Runner) SetPut(u URLs) {
 	if u.Self != "" {
 		r.put.Self = u.Self
 	}
+	if u.Tokens != "" {
+		r.put.Tokens = u.Tokens
+	}
 }
 
-// Restore writes gantry.db and SELF.md into the data directory when the GET
-// URLs are set. SELF.md is also copied into the persona directory when that
-// path is different, which is where the running agent reads it.
+// Restore writes gantry.db, SELF.md, and the token archive into the data
+// directory when the GET URLs are set. SELF.md is also copied into the persona
+// directory when that path is different, which is where the running agent reads it.
 func (r *Runner) Restore(ctx context.Context) (Result, error) {
 	if r == nil {
 		return Result{}, nil
@@ -134,11 +152,19 @@ func (r *Runner) Restore(ctx context.Context) (Result, error) {
 			return Result{}, err
 		}
 	}
+	wroteTokens, err := r.restoreTokens(ctx, get.Tokens, dataDir)
+	if err != nil {
+		return Result{}, err
+	}
+	if wroteTokens {
+		res.Files++
+	}
 	return res, nil
 }
 
 // Publish uploads whichever files exist to the PUT URLs.
-// A missing file is skipped. Nothing uploaded returns a zero Result.
+// A missing file is skipped. No token files skips the token PUT.
+// Nothing uploaded returns a zero Result.
 func (r *Runner) Publish(ctx context.Context) (Result, error) {
 	if r == nil {
 		return Result{}, nil
@@ -171,6 +197,14 @@ func (r *Runner) Publish(ctx context.Context) (Result, error) {
 		return Result{}, err
 	}
 	n, err = r.putFile(ctx, put.Self, selfBody)
+	if err != nil {
+		return Result{}, err
+	}
+	if n > 0 {
+		res.Files++
+		res.Bytes += n
+	}
+	n, err = r.publishTokens(ctx, put.Tokens, dataDir)
 	if err != nil {
 		return Result{}, err
 	}
@@ -221,39 +255,50 @@ func Place(path, body string) error {
 }
 
 func (r *Runner) fetch(ctx context.Context, rawURL, path string) (bool, error) {
-	rawURL = strings.TrimSpace(rawURL)
-	if rawURL == "" {
-		return false, nil
-	}
-	if err := checkURL(rawURL); err != nil {
+	body, ok, err := r.fetchBytes(ctx, rawURL, filepath.Base(path))
+	if err != nil || !ok {
 		return false, err
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
-	if err != nil {
-		return false, err
-	}
-	resp, err := r.client.Do(req)
-	if err != nil {
-		return false, fmt.Errorf("snapshot: get %s: %w", filepath.Base(path), err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusNotFound {
-		return false, nil
-	}
-	if resp.StatusCode != http.StatusOK {
-		return false, fmt.Errorf("snapshot: get %s: HTTP %d", filepath.Base(path), resp.StatusCode)
-	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxSnapshotBytes+1))
-	if err != nil {
-		return false, fmt.Errorf("snapshot: get %s: %w", filepath.Base(path), err)
-	}
-	if int64(len(body)) > maxSnapshotBytes {
-		return false, fmt.Errorf("snapshot: %s exceeds %d bytes", filepath.Base(path), maxSnapshotBytes)
 	}
 	if err := writeAtomic(path, body); err != nil {
 		return false, err
 	}
 	return true, nil
+}
+
+func (r *Runner) fetchBytes(ctx context.Context, rawURL, label string) ([]byte, bool, error) {
+	rawURL = strings.TrimSpace(rawURL)
+	if rawURL == "" {
+		return nil, false, nil
+	}
+	if label == "" {
+		label = "snapshot"
+	}
+	if err := checkURL(rawURL); err != nil {
+		return nil, false, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	if err != nil {
+		return nil, false, err
+	}
+	resp, err := r.client.Do(req)
+	if err != nil {
+		return nil, false, fmt.Errorf("snapshot: get %s: %w", label, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, false, nil
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, false, fmt.Errorf("snapshot: get %s: HTTP %d", label, resp.StatusCode)
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxSnapshotBytes+1))
+	if err != nil {
+		return nil, false, fmt.Errorf("snapshot: get %s: %w", label, err)
+	}
+	if int64(len(body)) > maxSnapshotBytes {
+		return nil, false, fmt.Errorf("snapshot: %s exceeds %d bytes", label, maxSnapshotBytes)
+	}
+	return body, true, nil
 }
 
 func (r *Runner) putFile(ctx context.Context, rawURL string, body []byte) (int64, error) {

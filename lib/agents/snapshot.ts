@@ -4,11 +4,20 @@
  * sig = HMAC-SHA256(roomBearer, `${slug}|${file}|${method}|${exp}`)
  * exp is ms epoch and must be at most 15 minutes ahead of now.
  * Keys: backups/<slug>/latest/<file> and backups/<slug>/<stamp>/<file>.
+ *
+ * `tokens_tar` is AES-256-GCM ciphertext (12-byte nonce, then the seal) of a
+ * tar of OAuth token files. This module stores the bytes and does not decrypt.
  */
 import { AGENT_SLUG } from "@/lib/agents/types";
 
-export const SNAPSHOT_FILES = ["gantry_db", "self_md"] as const;
+export const SNAPSHOT_FILES = ["gantry_db", "self_md", "tokens_tar"] as const;
 export type SnapshotFile = (typeof SNAPSHOT_FILES)[number];
+
+/** Agent DO storage row, beside the room bearer (`bearer`). Standard base64 of 32 bytes. */
+export const SNAPSHOT_KEY_STORE_KEY = "snapshot.key";
+
+const SNAPSHOT_KEY_BYTES = 32;
+const SNAPSHOT_KEY_B64 = /^[A-Za-z0-9+/]{43}=$/;
 
 /** UTC compact stamp the harness puts on a snapshot frame: YYYYMMDDThhmmssZ. */
 export const SNAPSHOT_STAMP = /^\d{8}T\d{6}Z$/;
@@ -20,7 +29,34 @@ export const MAX_SNAPSHOT_BYTES = 256 * 1024 * 1024;
 
 export const SNAPSHOT_CONTENT_TYPE = "application/octet-stream";
 
-export type SnapshotUrls = { gantry_db: string; self_md: string };
+export type SnapshotUrls = { gantry_db: string; self_md: string; tokens_tar: string };
+
+export function emptySnapshotUrls(): SnapshotUrls {
+  return { gantry_db: "", self_md: "", tokens_tar: "" };
+}
+
+/** True when `value` is standard base64 of exactly 32 bytes. */
+export function snapshotKeyOk(value: string): boolean {
+  if (!SNAPSHOT_KEY_B64.test(value)) {
+    return false;
+  }
+  try {
+    return atob(value).length === SNAPSHOT_KEY_BYTES;
+  } catch {
+    return false;
+  }
+}
+
+/** One-time per-agent AES-256 key, standard base64. */
+export function mintSnapshotKey(): string {
+  const bytes = new Uint8Array(SNAPSHOT_KEY_BYTES);
+  crypto.getRandomValues(bytes);
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary);
+}
 
 export type SnapshotStore = {
   get(key: string): Promise<{ arrayBuffer(): Promise<ArrayBuffer> } | null>;
@@ -32,7 +68,12 @@ export type SnapshotStore = {
 };
 
 export function isSnapshotFile(value: string): value is SnapshotFile {
-  return value === "gantry_db" || value === "self_md";
+  for (const file of SNAPSHOT_FILES) {
+    if (file === value) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function snapshotTooBig(bytes: number, max = MAX_SNAPSHOT_BYTES): boolean {
@@ -153,8 +194,8 @@ export async function signedSnapshotUrls(input: {
   if (!input.bearer || !AGENT_SLUG.test(input.slug) || !Number.isSafeInteger(input.exp)) {
     return null;
   }
-  const restore: SnapshotUrls = { gantry_db: "", self_md: "" };
-  const put: SnapshotUrls = { gantry_db: "", self_md: "" };
+  const restore = emptySnapshotUrls();
+  const put = emptySnapshotUrls();
   for (const file of SNAPSHOT_FILES) {
     const getSig = await signSnapshot(input.bearer, input.slug, file, "GET", input.exp);
     const putSig = await signSnapshot(input.bearer, input.slug, file, "PUT", input.exp);

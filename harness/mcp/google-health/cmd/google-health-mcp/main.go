@@ -34,6 +34,9 @@ func main() {
 }
 
 func run(args []string) int {
+	if len(args) > 0 && args[0] == "host-manifest" {
+		return writeHostManifest()
+	}
 	if len(args) > 0 && args[0] == "auth" {
 		return runAuthCmd(args[1:])
 	}

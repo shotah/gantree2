@@ -44,7 +44,7 @@ type ConfigFrame struct {
 	MCP string `json:"mcp,omitempty"`
 	// Persona is the PERSONA.md body. Empty means keep the file already on disk.
 	Persona string `json:"persona,omitempty"`
-	// Restore holds presigned GET URLs for gantry.db and SELF.md.
+	// Restore holds presigned GET URLs for gantry.db, SELF.md, and tokens_tar.
 	Restore SnapshotURLs `json:"restore,omitempty"`
 	// Put holds presigned PUT URLs. The harness uploads on a timer and on SIGTERM.
 	Put SnapshotURLs `json:"put,omitempty"`
@@ -52,10 +52,11 @@ type ConfigFrame struct {
 
 // SnapshotURLs are presigned R2 URLs. Empty skips that file.
 // GET during restore, PUT during publish. Content-Type on PUT is
-// application/octet-stream.
+// application/octet-stream. tokens_tar is AES-256-GCM ciphertext.
 type SnapshotURLs struct {
-	DB   string `json:"gantry_db,omitempty"`
-	Self string `json:"self_md,omitempty"`
+	DB     string `json:"gantry_db,omitempty"`
+	Self   string `json:"self_md,omitempty"`
+	Tokens string `json:"tokens_tar,omitempty"`
 }
 
 // StatusFrame lists MCP servers after boot.

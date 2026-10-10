@@ -130,7 +130,7 @@ var mcpTierExtended = func() map[string]struct{} {
 		"wellness_get_sleep_score_stats",
 		"wellness_get_intensity_minutes",
 		"metrics_get_training_status",
-		"metrics_get_vo2max",
+		"metrics_get_vo_two_max",
 		"activities_get_details",
 		"summary_get_daily",
 	} {

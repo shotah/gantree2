@@ -372,7 +372,7 @@ func registerSearchContacts(s *mcpserver.MCPServer, getClient httpClientFunc) {
 
 func registerListContactGroups(s *mcpserver.MCPServer, getClient httpClientFunc) {
 	tool := newMCPTool("contacts_list_groups",
-		mcp.WithDescription("List contact groups/labels (group ids + names). Use before contacts_modify_group_members. Not individual people — use contacts_list."),
+		mcp.WithDescription("List contact groups/labels (group ids + names). Use before contacts_update_group_members. Not individual people — use contacts_list."),
 		mcp.WithString("user_google_email", mcp.Description("The user's Google email address.")),
 		mcp.WithNumber("page_size", mcp.Description("Maximum number of groups to return (default: 100, max: 1000).")),
 		mcp.WithString("page_token", mcp.Description("Token for pagination.")),
@@ -1006,7 +1006,7 @@ func registerBatchDeleteContacts(s *mcpserver.MCPServer, getClient httpClientFun
 
 func registerCreateContactGroup(s *mcpserver.MCPServer, getClient httpClientFunc) {
 	tool := newMCPTool("contacts_create_group",
-		mcp.WithDescription("Create a contact group/label. Use for 'new group called…'. Add members with contacts_modify_group_members."),
+		mcp.WithDescription("Create a contact group/label. Use for 'new group called…'. Add members with contacts_update_group_members."),
 		mcp.WithString("user_google_email", mcp.Description("The user's Google email address.")),
 		mcp.WithString("name", mcp.Required(), mcp.Description("The name of the new contact group.")),
 	)
@@ -1059,7 +1059,7 @@ func registerCreateContactGroup(s *mcpserver.MCPServer, getClient httpClientFunc
 
 func registerUpdateContactGroup(s *mcpserver.MCPServer, getClient httpClientFunc) {
 	tool := newMCPTool("contacts_update_group",
-		mcp.WithDescription("Rename a contact group. Required group resource name. Not for membership — use contacts_modify_group_members."),
+		mcp.WithDescription("Rename a contact group. Required group resource name. Not for membership — use contacts_update_group_members."),
 		mcp.WithString("user_google_email", mcp.Description("The user's Google email address.")),
 		mcp.WithString("group_id", mcp.Required(), mcp.Description("The contact group ID to update.")),
 		mcp.WithString("name", mcp.Required(), mcp.Description("The new name for the contact group.")),
@@ -1156,11 +1156,11 @@ func registerDeleteContactGroup(s *mcpserver.MCPServer, getClient httpClientFunc
 }
 
 // ---------------------------------------------------------------------------
-// contacts_modify_group_members
+// contacts_update_group_members
 // ---------------------------------------------------------------------------
 
 func registerModifyContactGroupMembers(s *mcpserver.MCPServer, getClient httpClientFunc) {
-	tool := newMCPTool("contacts_modify_group_members",
+	tool := newMCPTool("contacts_update_group_members",
 		mcp.WithDescription("Add or remove contacts from a group. Required group id + contact resource names. Use after contacts_list_groups / contacts_search."),
 		mcp.WithString("user_google_email", mcp.Description("The user's Google email address.")),
 		mcp.WithString("group_id", mcp.Required(), mcp.Description("The contact group ID.")),

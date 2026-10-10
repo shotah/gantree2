@@ -1,7 +1,7 @@
 title: StravaMCP
 description: Production-grade MCP server for Strava API -- built in Go for agent frameworks
 
-url: https://shotah.github.io
+url: https://github.bldhosting.com
 baseurl: /go-strava-mcp
 
 # Enable GitHub Pages

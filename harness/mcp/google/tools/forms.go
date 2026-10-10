@@ -198,10 +198,10 @@ func handleGetForm(getClient httpClientFunc) mcpserver.ToolHandlerFunc {
 	}
 }
 
-// --- forms_set_publish_settings ---
+// --- forms_update_publish_settings ---
 
 func registerSetPublishSettings(s *mcpserver.MCPServer, getClient httpClientFunc) {
-	tool := newMCPTool("forms_set_publish_settings",
+	tool := newMCPTool("forms_update_publish_settings",
 		mcp.WithDescription("Change publish/accept-response settings for form_id. Use for 'open/close the form'. Not for editing questions — use forms_batch_update."),
 		mcp.WithString("user_google_email", mcp.Description("The user's Google email address.")),
 		mcp.WithString("form_id", mcp.Required(), mcp.Description("The ID of the form to update publish settings for.")),

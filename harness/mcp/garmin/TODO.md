@@ -67,7 +67,7 @@ Examples:
 | `get_activity_details` | `activities_get_details` |
 | `list_workouts` | `workouts_list` |
 | `get_workout` | `workouts_get` |
-| `get_vo2max` | `metrics_get_vo2max` |
+| `get_vo2max` | `metrics_get_vo_two_max` |
 | `get_daily_user_summary` | `summary_get_daily` |
 
 - [x] Full pass over `endpoint/definitions/`
@@ -81,14 +81,13 @@ Examples:
 - Changing OAuth / session paths
 - Growing the core tier count for Tim (keep ~10)
 
-## Agent-clarity: rename Connect “calendar” (steals Google Calendar) — still open
+## Agent-clarity: rename Connect “calendar” (steals Google Calendar)
 
-`calendar_get` / menstrual `*_calendar*` tools sound like Google Calendar.
-ai-gantry already **excludes** `calendar_*` / `*_calendar*` from the published
-catalog, but the bare names are still a footgun if someone runs `--tool-tier
-complete` without excludes.
+`training_calendar_get` is the Connect training calendar. Menstrual
+`periodic_health_get_menstrual_calendar` still contains a `calendar` token
+later in the name; the naming lock only rejects a `calendar_` prefix.
 
-- [ ] Rename `calendar_get` → `training_calendar_get` (or `connect_calendar_get`)
+- [x] Rename `calendar_get` → `training_calendar_get`
 - [ ] Rename `periodic_health_get_menstrual_calendar` → drop the bare `calendar`
       token (e.g. `periodic_health_get_menstrual_cycle`)
-- [ ] Soften Short/Long blurbs — never “what's on my calendar” (that’s Google)
+- [x] Soften Short/Long blurbs — never “what's on my calendar” (that’s Google)

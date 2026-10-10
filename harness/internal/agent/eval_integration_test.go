@@ -19,7 +19,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -111,11 +110,12 @@ func TestEval_Live(t *testing.T) {
 	t.Logf("all fixtures: %s", total.String())
 }
 
-// evalLiveCatalog fetches the latest release of every server in
-// testdata/eval/mcp.toml, boots them, and returns their published tool
-// defs. Once per process; the first tools_from fixture pays for it. The
-// binaries are closed as soon as tools/list is in hand — the defs are
-// data, and no fixture ever calls the real thing.
+// evalLiveCatalog builds each tools_from plugin from its sibling module
+// (harness/mcp.lock), boots it over stdio, and returns tools/list. Once
+// per process; the first tools_from fixture pays for the build. The
+// binaries are closed as soon as the catalog is in hand — the defs are
+// data, and no fixture ever calls the real thing. A server with no
+// sibling module fails here, naming that server.
 var (
 	liveCatalogOnce sync.Once
 	liveCatalogDefs []provider.ToolDef
@@ -132,25 +132,47 @@ func evalLiveCatalog(t *testing.T) []provider.ToolDef {
 }
 
 func fetchLiveCatalog(t *testing.T) ([]provider.ToolDef, error) {
+	t.Helper()
+	wanted := toolsFromServers(loadEvalFixtures(t, evalFixtureDir))
 	manifestPath := filepath.Join(evalFixtureDir, "mcp.toml")
 	m, err := mcp.LoadManifest(manifestPath)
 	if err != nil {
 		return nil, err
 	}
-	binDir := os.Getenv("EVAL_MCP_BIN")
-	if binDir == "" {
-		binDir = filepath.Join(os.TempDir(), "gantry-eval-mcp")
+	byName := make(map[string]mcp.ServerSpec, len(m.Servers))
+	for _, s := range m.Servers {
+		byName[s.Name] = s
 	}
-	res, err := mcp.FetchDownloads(m, mcp.FetchOptions{
-		OutDir: binDir,
-		GOOS:   runtime.GOOS,
-		GOARCH: runtime.GOARCH,
-		Logf:   func(format string, args ...any) { t.Logf("tools-fetch: "+format, args...) },
-	})
+	lock, err := loadMCPLock()
 	if err != nil {
-		return nil, fmt.Errorf("tools-fetch: %w", err)
+		return nil, err
 	}
-	t.Logf("live catalog: binaries in %s (installed %d, cached %d)", binDir, len(res.Installed), len(res.Skipped))
+	binDir, err := evalBinDir()
+	if err != nil {
+		return nil, err
+	}
+	for _, name := range wanted {
+		spec, ok := byName[name]
+		if !ok {
+			return nil, fmt.Errorf("tools_from %q is not a server in %s", name, manifestPath)
+		}
+		row, err := evalPluginRow(lock, name)
+		if err != nil {
+			return nil, err
+		}
+		if row.Binary != spec.Command {
+			return nil, fmt.Errorf("tools_from %q: mcp.toml command %q does not match mcp.lock binary %q", name, spec.Command, row.Binary)
+		}
+		built, err := ensureEvalPlugin(row, binDir)
+		if err != nil {
+			return nil, err
+		}
+		if built {
+			t.Logf("live catalog: built %s (%s) into %s", name, row.Path, binDir)
+		} else {
+			t.Logf("live catalog: using existing %s in %s", row.Binary, binDir)
+		}
+	}
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
@@ -163,12 +185,24 @@ func fetchLiveCatalog(t *testing.T) ([]provider.ToolDef, error) {
 		return nil, err
 	}
 	defer func() { _ = host.Close() }()
+	skipped := map[string]mcp.ServerStatus{}
 	for _, s := range host.ServerHealth() {
 		if s.State == mcp.ServerSkipped {
+			skipped[s.Name] = s
 			t.Logf("live catalog: %s skipped (%s): %s", s.Name, s.Reason, s.Note)
 		}
 	}
+	for _, name := range wanted {
+		if s, ok := skipped[name]; ok {
+			return nil, fmt.Errorf("tools_from %q did not start (%s): %s", name, s.Reason, s.Note)
+		}
+	}
 	defs := host.Tools()
+	for _, name := range wanted {
+		if len(liveNames(defs, name+"__")) == 0 {
+			return nil, fmt.Errorf("tools_from %q: server started but published no tools", name)
+		}
+	}
 	t.Logf("live catalog: %d tools from %s", len(defs), manifestPath)
 	return defs, nil
 }

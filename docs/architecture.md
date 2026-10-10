@@ -486,7 +486,7 @@ If a task fails one of these, it is later, or it is wrong.
   `no-explicit-any`; type it or delete the dead write.
 - Nothing new is written with the originals' wire names. `CHAT_*`,
   `CHANNEL=chat`, `agents`, `chat:<slug>:<sub>`, plugin `chat` are the
-  names ([todo.md](todo.md#0-decide)). `PENDANT_*`, `CHANNEL=pendant`,
+  names ([todo.md](todo_done.md#0-decide)). `PENDANT_*`, `CHANNEL=pendant`,
   `cranes` beside `agents` on `/api/auth/me` are accepted as aliases so
   cab, helm, and agents on the old stack keep working until the Phase 4
   cutover, then dropped. Marked as aliases wherever they appear.
@@ -500,8 +500,15 @@ watches and a tile catalog after one attention surface stops being
 enough; provider billing pull; harness write-through to DO SQLite;
 operator writes on boards. List: [todo.md](todo.md#later).
 
-**Not the product:** hosted SaaS, Kubernetes, Cloud Run / Lambda, a
-shared family brain, pairing the agent through settings, multi-tenant
-orgs, invite links, billing, a second login, Cloudflare Access in
-front of the Worker, anything that makes the harness slower so a
-dashboard looks nicer.
+**Hosted (decided 2026-10-10):** the same Worker sold as a door you
+do not deploy — one household per account, every key the customer's,
+Settings / Agent / Harness DOs named by household instead of by bare
+slug. Plan in [todo.md](todo.md#hosted-phase-5--the-paid-door),
+numbers in [monetize.md](monetize.md).
+
+**Not the product:** Kubernetes, Cloud Run / Lambda, a shared family
+brain, pairing the agent through settings, reselling LLM tokens, a
+shared Google client for the tools, orgs and invite links beyond one
+household per account, a second login, Cloudflare Access in front of
+the Worker, anything that makes the harness slower so a dashboard
+looks nicer.

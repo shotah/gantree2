@@ -30,27 +30,13 @@ import (
 
 const serverID = "garmin"
 
-// TODO(naming): tools that violate docs/mcp-naming.md. Do not rename them —
-// eval fixtures and the harness depend on the published names. Delete an
-// entry only when that tool is actually renamed; a new violation must fail.
-var namingAllowlist = map[string]string{
-	"blood_pressure_log":    "verb log is not in the stable set",
-	"calendar_get":          "calendar_ on garmin steals Google Calendar; use training_calendar_",
-	"metrics_get_vo2max":    "vo2max contains a digit; tool names are lowercase letters",
-	"summary_log_hydration": "verb log is not in the stable set",
-	"wellness_get_spo2":     "spo2 contains a digit; tool names are lowercase letters",
-	"workouts_schedule":     "verb schedule is not in the stable set",
-	"workouts_unschedule":   "verb unschedule is not in the stable set",
-}
+// namingAllowlist stays empty. A tool that violates docs/mcp-naming.md fails
+// the test; an entry whose name now follows the guide fails until removed.
+var namingAllowlist = map[string]string{}
 
-// TODO(naming): argument paths that are not snake_case. Same rule as above.
-// Body params are the Go type name with the first letter lowercased, so they
-// land as camelCase on the tool schema.
-var argAllowlist = map[string]string{
-	"blood_pressure_log bloodPressureLogRequest":           "body arg is camelCase",
-	"lifestyle_create_behaviour lifestyleBehaviourRequest": "body arg is camelCase",
-	"summary_log_hydration hydrationLogRequest":            "body arg is camelCase",
-}
+// argAllowlist stays empty. Argument names are snake_case, including JSON
+// body params derived from the Go type name.
+var argAllowlist = map[string]string{}
 
 func TestNamingLock(t *testing.T) {
 	var buf bytes.Buffer

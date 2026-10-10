@@ -1,13 +1,13 @@
 {
   "name": "denver_flight",
-  "why": "A trip with no flight is legwork: the real flights catalog is published and the search is called this turn (their search is free when they asked), real options come back with one question, [wait]. Never “let me know when you want me to look.” Spend discipline on a metered API: offers_search at most twice (“next Friday” can mean two dates), no dates_search when the date is fixed, no booking_options_get before the human picks. What the tool returned goes in the reply — carriers, times, prices.",
+  "why": "A trip with no flight is legwork: the search is called this turn (their search is free when they asked), real options come back with one question, [wait]. Never “let me know when you want me to look.” Spend discipline on a metered API: offers_search at most twice (“next Friday” can mean two dates), no dates_search when the date is fixed, no booking_options_get before the human picks. What the tool returned goes in the reply — carriers, times, prices. flights-search-mcp is not in this repo, so flights tools stay canned and tools_from does not name flights; google calendar tools still come from the sibling module.",
   "inbound": "I need to be in Denver next Friday for a client thing.",
   "memory": [
     { "kind": "insight", "subject": "aim/business", "content": "land two new clients this quarter" },
     { "kind": "preference", "subject": "pref/hours", "content": "sleep: 23:00-06:00\nwork: 07:00-15:00" }
   ],
   "force": ["flights", "google"],
-  "tools_from": ["flights", "google"],
+  "tools_from": ["google"],
   "tools": [
     {
       "name": "flights__account_get",

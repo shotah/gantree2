@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Static GitHub Pages tree: shotah.github.io/gantree2
+ * Static GitHub Pages tree: github.bldhosting.com (custom domain on gh-pages)
  *
  *   npm run pages                      → dist/pages
  *   npm run pages -- --out=/tmp/pages
@@ -15,7 +15,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Marked } from "marked";
 
-export const PAGES_ORIGIN = "https://shotah.github.io/gantree2";
+export const PAGES_ORIGIN = "https://github.bldhosting.com";
 export const REPO = "https://github.com/shotah/gantree2";
 export const APPS_REPO = "https://github.com/shotah/gantree2-apps";
 

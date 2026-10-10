@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" role="img" aria-labelledby="title desc">
+  <title id="title">flights-search-mcp</title>
+  <desc id="desc">Night-sky banner with a flight path between airports for the flights-search-mcp project.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#071018"/>
+      <stop offset="55%" stop-color="#0E2430"/>
+      <stop offset="100%" stop-color="#163445"/>
+    </linearGradient>
+    <linearGradient id="horizon" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F0A35E" stop-opacity="0"/>
+      <stop offset="70%" stop-color="#E08A3C" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#C96B28" stop-opacity="0.35"/>
+    </linearGradient>
+    <linearGradient id="pathGlow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#7ED0C5" stop-opacity="0"/>
+      <stop offset="40%" stop-color="#7ED0C5" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#F0A35E" stop-opacity="0.9"/>
+    </linearGradient>
+    <radialGradient id="nodeGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#7ED0C5" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#7ED0C5" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="stars" width="120" height="80" patternUnits="userSpaceOnUse">
+      <circle cx="12" cy="18" r="1.1" fill="#D7E7EF" opacity="0.55"/>
+      <circle cx="68" cy="10" r="0.8" fill="#D7E7EF" opacity="0.4"/>
+      <circle cx="98" cy="42" r="1" fill="#D7E7EF" opacity="0.5"/>
+      <circle cx="40" cy="56" r="0.7" fill="#D7E7EF" opacity="0.35"/>
+      <circle cx="110" cy="68" r="0.9" fill="#D7E7EF" opacity="0.45"/>
+    </pattern>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1.2"/>
+    </filter>
+  </defs>
+
+  <!-- Full-bleed sky -->
+  <rect width="1200" height="320" fill="url(#sky)"/>
+  <rect width="1200" height="320" fill="url(#horizon)"/>
+  <rect width="1200" height="220" fill="url(#stars)" opacity="0.85"/>
+
+  <!-- Soft latitude arcs -->
+  <g fill="none" stroke="#8FB4C4" stroke-opacity="0.12" stroke-width="1">
+    <path d="M-40 210 C 260 150, 540 150, 840 210 S 1240 270, 1240 270"/>
+    <path d="M-40 250 C 280 200, 560 200, 860 250 S 1240 300, 1240 300"/>
+  </g>
+
+  <!-- Route path -->
+  <path d="M 170 195 C 380 70, 820 70, 1030 195"
+        fill="none" stroke="url(#pathGlow)" stroke-width="3.5"
+        stroke-linecap="round"/>
+  <path d="M 170 195 C 380 70, 820 70, 1030 195"
+        fill="none" stroke="#E8F6F3" stroke-width="1"
+        stroke-dasharray="3 10" stroke-opacity="0.55" filter="url(#soft)"/>
+
+  <!-- Origin / destination nodes -->
+  <circle cx="170" cy="195" r="22" fill="url(#nodeGlow)"/>
+  <circle cx="170" cy="195" r="7" fill="#0B1C24" stroke="#7ED0C5" stroke-width="2.5"/>
+  <circle cx="170" cy="195" r="2.5" fill="#7ED0C5"/>
+  <text x="170" y="230" text-anchor="middle"
+        font-family="'Segoe UI', 'Avenir Next', 'Helvetica Neue', sans-serif"
+        font-size="15" font-weight="700" letter-spacing="0.18em" fill="#9FD0C8">SEA</text>
+
+  <circle cx="1030" cy="195" r="22" fill="url(#nodeGlow)"/>
+  <circle cx="1030" cy="195" r="7" fill="#0B1C24" stroke="#F0A35E" stroke-width="2.5"/>
+  <circle cx="1030" cy="195" r="2.5" fill="#F0A35E"/>
+  <text x="1030" y="230" text-anchor="middle"
+        font-family="'Segoe UI', 'Avenir Next', 'Helvetica Neue', sans-serif"
+        font-size="15" font-weight="700" letter-spacing="0.18em" fill="#E7B07A">NRT</text>
+
+  <!-- Small plane on arc (near apex) -->
+  <g transform="translate(600 95) rotate(-2)">
+    <path d="M -18 0 L 20 0 L 8 -7 Z" fill="#F4F7F8" opacity="0.95"/>
+    <path d="M -4 0 L 6 10 L 10 0 Z" fill="#7ED0C5"/>
+    <path d="M -4 0 L 6 -10 L 10 0 Z" fill="#7ED0C5" opacity="0.85"/>
+    <circle cx="16" cy="0" r="2" fill="#F0A35E"/>
+  </g>
+
+  <!-- Brand -->
+  <text x="600" y="268" text-anchor="middle"
+        font-family="'Segoe UI', 'Avenir Next', 'Helvetica Neue', sans-serif"
+        font-size="42" font-weight="700" letter-spacing="-0.02em" fill="#F4F7F8">flights-search-mcp</text>
+  <text x="600" y="298" text-anchor="middle"
+        font-family="'IBM Plex Mono', 'SF Mono', 'Cascadia Mono', ui-monospace, monospace"
+        font-size="16" letter-spacing="0.28em" fill="#9BB6C2">SEARCH � RECOMMEND � CHECKOUT</text>
+</svg>

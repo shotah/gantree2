@@ -107,7 +107,7 @@ import {
   startedEnvFor,
 } from "@/lib/agents/config";
 import { houseEnv, houseKeys } from "@/lib/agents/house";
-import { archiveLatest, signedSnapshotUrls, SNAPSHOT_TTL_MS } from "@/lib/agents/snapshot";
+import { archiveLatest, emptySnapshotUrls, mintSnapshotKey, signedSnapshotUrls, SNAPSHOT_KEY_STORE_KEY, SNAPSHOT_TTL_MS, snapshotKeyOk } from "@/lib/agents/snapshot";
 import {
   applyHarnessFrame,
   harnessKind,
@@ -1093,14 +1093,25 @@ export class Agent extends DurableObject<AgentEnv> {
     return parseLog(await this.ctx.storage.get(LOG_STORE_KEY));
   }
 
+  /** 32-byte AES key, minted once and kept beside the room bearer. */
+  private async ensureSnapshotKey(): Promise<string> {
+    const cur = await this.ctx.storage.get<string>(SNAPSHOT_KEY_STORE_KEY);
+    if (typeof cur === "string" && snapshotKeyOk(cur)) {
+      return cur;
+    }
+    const key = mintSnapshotKey();
+    await this.ctx.storage.put(SNAPSHOT_KEY_STORE_KEY, key);
+    return key;
+  }
+
   /** Config is the first frame on a harness socket. Phones never see it. */
   private async sendConfig(ws: WebSocket, request: Request): Promise<void> {
     try {
       const { config } = await this.loadConfig();
       const slug = parseStoredSlug(await this.ctx.storage.get<string>(SLUG_STORE_KEY)) ?? "";
       const bearer = await this.ctx.storage.get<string>(BEARER_STORE_KEY);
-      const blank = { gantry_db: "", self_md: "" };
-      let urls = { restore: blank, put: { gantry_db: "", self_md: "" } };
+      const snapKey = await this.ensureSnapshotKey();
+      let urls = { restore: emptySnapshotUrls(), put: emptySnapshotUrls() };
       if (slug && typeof bearer === "string" && bearer) {
         const signed = await signedSnapshotUrls({
           origin: new URL(request.url).origin,
@@ -1112,7 +1123,7 @@ export class Agent extends DurableObject<AgentEnv> {
           urls = signed;
         }
       }
-      ws.send(configFrame(config, urls, houseEnv(this.env)));
+      ws.send(configFrame(config, urls, houseEnv(this.env), snapKey));
     } catch {
       // the harness redials
     }

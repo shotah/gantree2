@@ -156,6 +156,37 @@ func TestLoad_MissingRequiredLLM(t *testing.T) {
 	}
 }
 
+// Under SNAPSHOT the config frame supplies LLM_*, so Load must get far
+// enough to dial; RequireLLM is the later check.
+func TestLoad_SnapshotDefersLLM(t *testing.T) {
+	t.Setenv("CHANNEL", "chat")
+	t.Setenv("CHAT_MAILBOX_URL", "wss://example.com/ws/kit")
+	t.Setenv("CHAT_BEARER", "tok")
+	t.Setenv("SNAPSHOT", "true")
+	t.Setenv("LLM_BASE_URL", "")
+	t.Setenv("LLM_API_KEY", "")
+	t.Setenv("LLM_MODEL", "")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load with SNAPSHOT=true and no LLM_*: %v", err)
+	}
+	if err := cfg.RequireLLM(); err == nil {
+		t.Fatal("RequireLLM: expected error with empty LLM_*")
+	}
+
+	t.Setenv("LLM_BASE_URL", "https://example.com/v1")
+	t.Setenv("LLM_API_KEY", "from-frame")
+	t.Setenv("LLM_MODEL", "from-frame")
+	cfg, err = config.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := cfg.RequireLLM(); err != nil {
+		t.Fatalf("RequireLLM after the frame: %v", err)
+	}
+}
+
 func TestLoad_InvalidChannel(t *testing.T) {
 	setRequiredLLM(t)
 	t.Setenv("CHANNEL", "irc")
@@ -427,6 +458,46 @@ func TestLoad_SnapshotIntervalNegative(t *testing.T) {
 	_, err := config.Load()
 	if err == nil || !strings.Contains(err.Error(), "SNAPSHOT_INTERVAL") {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestLoad_SnapshotTokenEnv(t *testing.T) {
+	setRequiredLLM(t)
+	t.Setenv("CHANNEL", "stdio")
+	t.Setenv("SNAPSHOT_GET_TOKENS", "https://r2.example/get-tokens")
+	t.Setenv("SNAPSHOT_PUT_TOKENS", "https://r2.example/put-tokens")
+	t.Setenv("SNAPSHOT_KEY", "abc")
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.SnapshotGetTokens != "https://r2.example/get-tokens" {
+		t.Fatalf("get %q", cfg.SnapshotGetTokens)
+	}
+	if cfg.SnapshotPutTokens != "https://r2.example/put-tokens" {
+		t.Fatalf("put %q", cfg.SnapshotPutTokens)
+	}
+	if cfg.SnapshotKey != "abc" {
+		t.Fatal("key not loaded")
+	}
+}
+
+func TestApplyEnv_SnapshotKey(t *testing.T) {
+	setRequiredLLM(t)
+	t.Setenv("CHANNEL", "stdio")
+	cfg, err := config.ApplyEnv(map[string]string{"SNAPSHOT_KEY": "bbbb"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.SnapshotKey != "bbbb" {
+		t.Fatal("key not applied")
+	}
+	cfg, err = config.ApplyEnv(map[string]string{"SNAPSHOT_KEY": ""})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.SnapshotKey != "bbbb" {
+		t.Fatal("empty overlay wiped the key")
 	}
 }
 

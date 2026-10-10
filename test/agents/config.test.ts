@@ -77,8 +77,8 @@ describe("config", () => {
   it("builds a config frame and drops empty snapshot urls", () => {
     const frame = JSON.parse(configFrame(
       { env: { LLM_API_KEY: "sekrit" }, mcp: "", persona: "be brief", updatedAt: 1 },
-      { restore: { gantry_db: "https://r2.example/db", self_md: "" }, put: { gantry_db: "", self_md: "" } },
-    )) as { kind: string; env: { LLM_API_KEY: string }; restore: { gantry_db?: string; self_md?: string }; put: Record<string, string> };
+      { restore: { gantry_db: "https://r2.example/db", self_md: "", tokens_tar: "" }, put: { gantry_db: "", self_md: "", tokens_tar: "" } },
+    )) as { kind: string; env: { LLM_API_KEY: string }; restore: { gantry_db?: string; self_md?: string; tokens_tar?: string }; put: Record<string, string> };
     expect(frame.kind).toBe("config");
     expect(frame.env.LLM_API_KEY).toBe("sekrit");
     expect(frame.restore.gantry_db).toBe("https://r2.example/db");
@@ -89,9 +89,22 @@ describe("config", () => {
   it("lays the house floor under the agent env; the agent's own key wins", () => {
     const frame = JSON.parse(configFrame(
       { env: { LLM_MODEL: "mine" }, mcp: "", persona: "", updatedAt: 1 },
-      { restore: { gantry_db: "", self_md: "" }, put: { gantry_db: "", self_md: "" } },
+      { restore: { gantry_db: "", self_md: "", tokens_tar: "" }, put: { gantry_db: "", self_md: "", tokens_tar: "" } },
       { LLM_MODEL: "house", LLM_API_KEY: "house-key" },
     )) as { env: Record<string, string> };
     expect(frame.env).toEqual({ LLM_MODEL: "mine", LLM_API_KEY: "house-key" });
+  });
+
+  it("sends the DO snapshot key and drops an empty token url", () => {
+    const frame = JSON.parse(configFrame(
+      { env: { SNAPSHOT_KEY: "user-key", LLM_API_KEY: "sekrit" }, mcp: "", persona: "", updatedAt: 1 },
+      { restore: { gantry_db: "", self_md: "", tokens_tar: "https://r2.example/tokens" }, put: { gantry_db: "", self_md: "", tokens_tar: "" } },
+      { SNAPSHOT_KEY: "house-key" },
+      "minted-key",
+    )) as { env: Record<string, string>; restore: { tokens_tar?: string }; put: Record<string, string> };
+    expect(frame.env.SNAPSHOT_KEY).toBe("minted-key");
+    expect(frame.env.LLM_API_KEY).toBe("sekrit");
+    expect(frame.restore.tokens_tar).toBe("https://r2.example/tokens");
+    expect(frame.put.tokens_tar).toBeUndefined();
   });
 });

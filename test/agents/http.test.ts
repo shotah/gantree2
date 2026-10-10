@@ -432,6 +432,28 @@ describe("snapshot http", () => {
       { now },
     );
     expect(missing.status).toBe(404);
+    const tokenPutSig = await signSnapshot("room-secret", "kit", "tokens_tar", "PUT", exp);
+    const tokenPut = await handleSnapshot(
+      new Request(`https://g.test/api/agents/kit/snapshot/tokens_tar?exp=${exp}&sig=${tokenPutSig}`, {
+        method: "PUT",
+        body: new Uint8Array([9, 9, 9]),
+      }),
+      env,
+      "kit",
+      "tokens_tar",
+      { now },
+    );
+    expect(tokenPut.status).toBe(204);
+    expect(bucket.objects.has("backups/kit/latest/tokens_tar")).toBe(true);
+    const tokenGet = await handleSnapshot(
+      new Request(`https://g.test/api/agents/kit/snapshot/tokens_tar?exp=${exp}&sig=${await signSnapshot("room-secret", "kit", "tokens_tar", "GET", exp)}`),
+      env,
+      "kit",
+      "tokens_tar",
+      { now },
+    );
+    expect(tokenGet.status).toBe(200);
+    expect(new Uint8Array(await tokenGet.arrayBuffer())).toEqual(new Uint8Array([9, 9, 9]));
     const bad = await handleSnapshot(
       new Request(`https://g.test/api/agents/kit/snapshot/gantry_db?exp=${exp}&sig=abcd`, { method: "GET" }),
       env,

@@ -102,11 +102,11 @@ func TestDocsHandlerCreateDocAuthFailure(t *testing.T) {
 	}
 }
 
-// --- docs_inspect_structure ---
+// --- docs_get_structure ---
 
 func TestDocsHandlerInspectDocStructureMissingDocumentID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "docs_inspect_structure", nil)
+	text, isError := callTool(t, s, "docs_get_structure", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -115,11 +115,11 @@ func TestDocsHandlerInspectDocStructureMissingDocumentID(t *testing.T) {
 	}
 }
 
-// --- docs_debug_table_structure ---
+// --- docs_get_table_structure ---
 
 func TestDocsHandlerDebugTableStructureMissingDocumentID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "docs_debug_table_structure", nil)
+	text, isError := callTool(t, s, "docs_get_table_structure", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -128,11 +128,11 @@ func TestDocsHandlerDebugTableStructureMissingDocumentID(t *testing.T) {
 	}
 }
 
-// --- docs_export_to_pdf ---
+// --- docs_convert_to_pdf ---
 
 func TestDocsHandlerExportDocToPDFMissingDocumentID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "docs_export_to_pdf", nil)
+	text, isError := callTool(t, s, "docs_convert_to_pdf", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -141,11 +141,11 @@ func TestDocsHandlerExportDocToPDFMissingDocumentID(t *testing.T) {
 	}
 }
 
-// --- docs_modify_text ---
+// --- docs_update_text ---
 
 func TestDocsHandlerModifyDocTextMissingDocumentID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "docs_modify_text", nil)
+	text, isError := callTool(t, s, "docs_update_text", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -156,7 +156,7 @@ func TestDocsHandlerModifyDocTextMissingDocumentID(t *testing.T) {
 
 func TestDocsHandlerModifyDocTextMissingTextAndFormatting(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "docs_modify_text", map[string]any{
+	text, isError := callTool(t, s, "docs_update_text", map[string]any{
 		"document_id": "doc123",
 		"start_index": 1,
 	})
@@ -172,11 +172,11 @@ func TestDocsHandlerModifyDocTextMissingTextAndFormatting(t *testing.T) {
 	}
 }
 
-// --- docs_find_and_replace ---
+// --- docs_update_replace ---
 
 func TestDocsHandlerFindAndReplaceDocMissingDocumentID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "docs_find_and_replace", nil)
+	text, isError := callTool(t, s, "docs_update_replace", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -187,7 +187,7 @@ func TestDocsHandlerFindAndReplaceDocMissingDocumentID(t *testing.T) {
 
 func TestDocsHandlerFindAndReplaceDocMissingFindText(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "docs_find_and_replace", map[string]any{
+	text, isError := callTool(t, s, "docs_update_replace", map[string]any{
 		"document_id": "doc123",
 	})
 	if !isError {
@@ -200,7 +200,7 @@ func TestDocsHandlerFindAndReplaceDocMissingFindText(t *testing.T) {
 
 func TestDocsHandlerFindAndReplaceDocMissingReplaceText(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "docs_find_and_replace", map[string]any{
+	text, isError := callTool(t, s, "docs_update_replace", map[string]any{
 		"document_id": "doc123",
 		"find_text":   "hello",
 	})
@@ -212,11 +212,11 @@ func TestDocsHandlerFindAndReplaceDocMissingReplaceText(t *testing.T) {
 	}
 }
 
-// --- docs_insert_elements ---
+// --- docs_create_elements ---
 
 func TestDocsHandlerInsertDocElementsMissingDocumentID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "docs_insert_elements", nil)
+	text, isError := callTool(t, s, "docs_create_elements", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -227,7 +227,7 @@ func TestDocsHandlerInsertDocElementsMissingDocumentID(t *testing.T) {
 
 func TestDocsHandlerInsertDocElementsMissingElementType(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "docs_insert_elements", map[string]any{
+	text, isError := callTool(t, s, "docs_create_elements", map[string]any{
 		"document_id": "doc123",
 	})
 	if !isError {
@@ -238,11 +238,11 @@ func TestDocsHandlerInsertDocElementsMissingElementType(t *testing.T) {
 	}
 }
 
-// --- docs_insert_image ---
+// --- docs_create_image ---
 
 func TestDocsHandlerInsertDocImageMissingDocumentID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "docs_insert_image", nil)
+	text, isError := callTool(t, s, "docs_create_image", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -253,7 +253,7 @@ func TestDocsHandlerInsertDocImageMissingDocumentID(t *testing.T) {
 
 func TestDocsHandlerInsertDocImageMissingImageSource(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "docs_insert_image", map[string]any{
+	text, isError := callTool(t, s, "docs_create_image", map[string]any{
 		"document_id": "doc123",
 	})
 	if !isError {
@@ -405,7 +405,7 @@ func TestDocsHandlerUpdateParagraphStyleInvalidEndIndex(t *testing.T) {
 
 func TestDocsHandlerReadDocumentCommentsMissingDocumentID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "docs_read_comments", nil)
+	text, isError := callTool(t, s, "docs_list_comments", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -440,7 +440,7 @@ func TestDocsHandlerCreateDocumentCommentMissingContent(t *testing.T) {
 
 func TestDocsHandlerReplyToDocumentCommentMissingDocumentID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "docs_reply_to_comment", nil)
+	text, isError := callTool(t, s, "docs_create_reply", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -451,7 +451,7 @@ func TestDocsHandlerReplyToDocumentCommentMissingDocumentID(t *testing.T) {
 
 func TestDocsHandlerReplyToDocumentCommentMissingCommentID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "docs_reply_to_comment", map[string]any{
+	text, isError := callTool(t, s, "docs_create_reply", map[string]any{
 		"document_id": "doc123",
 	})
 	if !isError {

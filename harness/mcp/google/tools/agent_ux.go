@@ -21,9 +21,8 @@ func newMCPTool(name string, opts ...mcp.ToolOption) mcp.Tool {
 func isDestructiveToolName(name string) bool {
 	switch {
 	case strings.Contains(name, "_delete_"),
-		strings.Contains(name, "_clear_"),
 		strings.HasSuffix(name, "_delete"),
-		strings.Contains(name, "transfer_ownership"),
+		strings.Contains(name, "update_ownership"),
 		strings.Contains(name, "batch_delete"),
 		strings.Contains(name, "_resolve_comment"):
 		return true

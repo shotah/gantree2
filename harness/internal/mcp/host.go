@@ -731,12 +731,13 @@ func defaultDial(ctx context.Context, spec ServerSpec, stderr io.Writer) (Conn, 
 			Err:    fmt.Errorf("missing env %s", strings.Join(missing, ", ")),
 		}
 	}
-	if _, err := exec.LookPath(spec.Command); err != nil {
+	bin, err := resolveExecutable(spec, spec.Command)
+	if err != nil {
 		return nil, &ClassifiedError{Reason: ReasonNoBinary, Err: err}
 	}
 	// Do not bind the child to the boot/signal context: SIGTERM must let the
 	// agent finish the in-flight turn before Host.Close kills MCP children.
-	cmd := exec.Command(spec.Command, spec.Args...) //nolint:gosec // G204: command comes from operator mcp.toml
+	cmd := exec.Command(bin, spec.Args...) //nolint:gosec // G204: command comes from operator mcp.toml
 	cmd.Env = append(os.Environ(), spec.Env...)
 	cmd.Stderr = stderr
 

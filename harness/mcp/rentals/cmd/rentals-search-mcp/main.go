@@ -25,6 +25,9 @@ func main() {
 }
 
 func run(args []string) int {
+	if len(args) > 0 && args[0] == "host-manifest" {
+		return writeHostManifest()
+	}
 	fs := flag.NewFlagSet("rentals-search-mcp", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	showVersion := fs.Bool("version", false, "print version and exit")

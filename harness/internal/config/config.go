@@ -39,9 +39,9 @@ func IsChatChannel(name string) bool {
 // Config is the complete env-driven configuration surface.
 // Secrets and scalars live here; structure (persona, MCP manifest) is mounts.
 type Config struct {
-	LLMBaseURL string `env:"LLM_BASE_URL,required"`
-	LLMAPIKey  string `env:"LLM_API_KEY,required"`
-	LLMModel   string `env:"LLM_MODEL,required"`
+	LLMBaseURL string `env:"LLM_BASE_URL"`
+	LLMAPIKey  string `env:"LLM_API_KEY"`
+	LLMModel   string `env:"LLM_MODEL"`
 	// LLMMaxTokens caps completion output (incl. tool-call args). 0 = provider default.
 	LLMMaxTokens int `env:"LLM_MAX_TOKENS" envDefault:"4096"`
 	// LLMReasoningEffort is sent as reasoning_effort when non-empty (Ollama/Qwen:
@@ -165,10 +165,15 @@ type Config struct {
 	SnapshotInterval time.Duration `env:"SNAPSHOT_INTERVAL" envDefault:"5m"`
 	// Presigned URLs from the process env. A config frame overrides any
 	// non-empty field after the mailbox handshake.
-	SnapshotGetDB   string `env:"SNAPSHOT_GET_DB"`
-	SnapshotGetSelf string `env:"SNAPSHOT_GET_SELF"`
-	SnapshotPutDB   string `env:"SNAPSHOT_PUT_DB"`
-	SnapshotPutSelf string `env:"SNAPSHOT_PUT_SELF"`
+	SnapshotGetDB     string `env:"SNAPSHOT_GET_DB"`
+	SnapshotGetSelf   string `env:"SNAPSHOT_GET_SELF"`
+	SnapshotGetTokens string `env:"SNAPSHOT_GET_TOKENS"`
+	SnapshotPutDB     string `env:"SNAPSHOT_PUT_DB"`
+	SnapshotPutSelf   string `env:"SNAPSHOT_PUT_SELF"`
+	SnapshotPutTokens string `env:"SNAPSHOT_PUT_TOKENS"`
+	// SnapshotKey is standard base64 of 32 bytes (AES-256-GCM). Empty skips
+	// the token archive. Plaintext token files are never uploaded.
+	SnapshotKey string `env:"SNAPSHOT_KEY"`
 }
 
 // Load parses environment variables into Config and validates channel-specific
@@ -386,6 +391,25 @@ func (c *Config) Validate() error {
 	if strings.TrimSpace(c.MCPManifest) == "" {
 		return fmt.Errorf("MCP_MANIFEST: must not be empty")
 	}
+	// Under SNAPSHOT the Agent DO's config frame lays the LLM_* keys under
+	// the container env, so they are checked by RequireLLM after the frame
+	// is applied, not here — a bare image must still boot far enough to dial.
+	if !c.Snapshot {
+		if err := c.RequireLLM(); err != nil {
+			return err
+		}
+	}
+	if c.SnapshotInterval < 0 {
+		return fmt.Errorf("SNAPSHOT_INTERVAL: must be >= 0, got %s", c.SnapshotInterval)
+	}
+
+	return nil
+}
+
+// RequireLLM checks the three LLM_* values the provider needs. Validate
+// calls it unless SNAPSHOT is on; the harness calls it itself once the
+// config frame has had its chance to supply them.
+func (c *Config) RequireLLM() error {
 	if strings.TrimSpace(c.LLMBaseURL) == "" {
 		return fmt.Errorf("LLM_BASE_URL: must not be empty")
 	}
@@ -395,10 +419,6 @@ func (c *Config) Validate() error {
 	if strings.TrimSpace(c.LLMModel) == "" {
 		return fmt.Errorf("LLM_MODEL: must not be empty")
 	}
-	if c.SnapshotInterval < 0 {
-		return fmt.Errorf("SNAPSHOT_INTERVAL: must be >= 0, got %s", c.SnapshotInterval)
-	}
-
 	return nil
 }
 

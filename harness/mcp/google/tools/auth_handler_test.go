@@ -7,11 +7,11 @@ import (
 	"testing"
 )
 
-// --- auth_start ---
+// --- auth_generate_url ---
 
 func TestAuthHandlerStartGoogleAuthMissingServiceName(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "auth_start", nil)
+	text, isError := callTool(t, s, "auth_generate_url", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}

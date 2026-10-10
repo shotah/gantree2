@@ -159,7 +159,7 @@ func TestRunAuthExchangeSuccess(t *testing.T) {
 	pending := pendingAuth{
 		Verifier:    "test-verifier",
 		State:       "test-state",
-		RedirectURI: "https://shotah.github.io/ai-gantry/oauth-catch/",
+		RedirectURI: "https://github.bldhosting.com/oauth-catch/",
 		ExpiresAt:   time.Now().Add(5 * time.Minute),
 	}
 	pPath := pendingPath(tokenPath)

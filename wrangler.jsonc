@@ -4,6 +4,9 @@
   "compatibility_date": "2026-10-10",
   "compatibility_flags": ["nodejs_compat"],
   "main": "./worker/index.ts",
+  // The real URL. Cloudflare creates the DNS record and certificate for a
+  // custom domain on deploy; the zone (bldhosting.com) must be on this account.
+  "routes": [{ "pattern": "gantree2.bldhosting.com", "custom_domain": true }],
   "assets": {
     "directory": "dist/client",
     "not_found_handling": "none",

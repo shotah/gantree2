@@ -25,9 +25,14 @@
  * Snapshot — no cookie; the harness does a bare GET / PUT on a URL the Agent
  * DO minted into the `config` frame (`restore.*` / `put.*`):
  *
- *   GET/PUT /api/agents/:slug/snapshot/:file?exp=<ms>&sig=<hex>   file ∈ gantry_db | self_md
+ *   GET/PUT /api/agents/:slug/snapshot/:file?exp=<ms>&sig=<hex>   file ∈ gantry_db | self_md | tokens_tar
  *   sig = HMAC-SHA256(roomBearer, `${slug}|${file}|${method}|${exp}`), exp ≤ 15 min ahead.
  *   R2 keys: backups/<slug>/latest/<file> and backups/<slug>/<stamp>/<file>.
+ *   `tokens_tar` is AES-256-GCM ciphertext (12-byte nonce, then the seal) of a tar of
+ *   OAuth token files. The Worker stores the object and does not decrypt it.
+ *   The key is config-frame env `SNAPSHOT_KEY` (base64, 32 bytes), minted once by the
+ *   Agent DO and stored beside the room bearer. No token files skips the PUT; a 404
+ *   on GET is a no-op. A missing key skips the token archive; plaintext is never uploaded.
  *
  * Errors are `{ error: string }` with the status. `401` = door (see app/lib/api.ts), `403` = role.
  */
@@ -139,7 +144,7 @@ export type LogPage = { lines: LogLine[]; next: number };
 export type ToolEntry = {
   /** Server id = `mcp.lock` id = `[[server]] name`. */
   id: string;
-  /** Binary on `/opt/mcp/<id>/`. */
+  /** mcp.toml command. The image file is `/opt/mcp/<id>/<id>`. */
   binary: string;
   /** Required env keys; empty when none. */
   needs: string[];

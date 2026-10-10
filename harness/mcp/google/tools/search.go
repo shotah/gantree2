@@ -111,11 +111,11 @@ func executeSearch(ctx context.Context, q string, num, start int, safe string, s
 	return sb.String(), nil
 }
 
-// --- search_query ---
+// --- pse_search ---
 
 func registerSearchCustom(s *mcpserver.MCPServer) {
-	tool := newMCPTool("search_query",
-		mcp.WithDescription("Programmable Search (needs GOOGLE_PSE_API_KEY + GOOGLE_PSE_ENGINE_ID). General web: use web_search. Not Gmail — use gmail_search_messages. Site-limited: search_query_siterestrict."),
+	tool := newMCPTool("pse_search",
+		mcp.WithDescription("Programmable Search (needs GOOGLE_PSE_API_KEY + GOOGLE_PSE_ENGINE_ID). General web: use web_search. Not Gmail — use gmail_search_messages. Site-limited: pse_search_siterestrict."),
 		mcp.WithString("q", mcp.Required(), mcp.Description("Search query.")),
 	)
 	RegisterTool(s, tool, handleSearchCustom)
@@ -124,7 +124,7 @@ func registerSearchCustom(s *mcpserver.MCPServer) {
 func handleSearchCustom(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	q, err := request.RequireString("q")
 	if err != nil {
-		return needArg("q", `search_query(q="…")`), nil
+		return needArg("q", `pse_search(q="…")`), nil
 	}
 
 	// Optional filters still accepted if a client sends them (not in lean schema).
@@ -146,11 +146,11 @@ func handleSearchCustom(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 	return mcp.NewToolResultText(text), nil
 }
 
-// --- search_get_engine_info ---
+// --- pse_get_engine_info ---
 
 func registerGetSearchEngineInfo(s *mcpserver.MCPServer) {
-	tool := newMCPTool("search_get_engine_info",
-		mcp.WithDescription("Metadata about the configured Programmable Search Engine (cx). Needs GOOGLE_PSE_API_KEY + GOOGLE_PSE_ENGINE_ID. Not for running a query — use search_query."),
+	tool := newMCPTool("pse_get_engine_info",
+		mcp.WithDescription("Metadata about the configured Programmable Search Engine (cx). Needs GOOGLE_PSE_API_KEY + GOOGLE_PSE_ENGINE_ID. Not for running a query — use pse_search."),
 	)
 	RegisterTool(s, tool, handleGetSearchEngineInfo)
 }
@@ -271,11 +271,11 @@ func valueOrDefault(value, fallback string) string {
 	return value
 }
 
-// --- search_query_siterestrict ---
+// --- pse_search_siterestrict ---
 
 func registerSearchCustomSiterestrict(s *mcpserver.MCPServer) {
-	tool := newMCPTool("search_query_siterestrict",
-		mcp.WithDescription("Web search limited to specific site(s) via Programmable Search. Needs GOOGLE_PSE_API_KEY + GOOGLE_PSE_ENGINE_ID. Broader web: web_search or search_query."),
+	tool := newMCPTool("pse_search_siterestrict",
+		mcp.WithDescription("Web search limited to specific site(s) via Programmable Search. Needs GOOGLE_PSE_API_KEY + GOOGLE_PSE_ENGINE_ID. Broader web: web_search or pse_search."),
 		mcp.WithString("q",
 			mcp.Required(),
 			mcp.Description("The search query."),
@@ -302,11 +302,11 @@ func registerSearchCustomSiterestrict(s *mcpserver.MCPServer) {
 func handleSearchCustomSiterestrict(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	q, err := request.RequireString("q")
 	if err != nil {
-		return needArg("q", `search_query_siterestrict(q="…", sites=[…])`), nil
+		return needArg("q", `pse_search_siterestrict(q="…", sites=[…])`), nil
 	}
 	sites, err := request.RequireStringSlice("sites")
 	if err != nil {
-		return needArg("sites", `search_query_siterestrict(q="…", sites=["example.com"])`), nil
+		return needArg("sites", `pse_search_siterestrict(q="…", sites=["example.com"])`), nil
 	}
 
 	num := request.GetInt("num", 10)

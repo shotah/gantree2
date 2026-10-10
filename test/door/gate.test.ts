@@ -26,6 +26,7 @@ describe("public paths", () => {
     expect(isPublicPath("/agents/kit")).toBe(false);
     expect(isPublicPath("/api/agents/kit/snapshot/gantry_db")).toBe(true);
     expect(isPublicPath("/api/agents/kit/snapshot/self_md")).toBe(true);
+    expect(isPublicPath("/api/agents/kit/snapshot/tokens_tar")).toBe(true);
     expect(isPublicPath("/api/agents/kit/snapshot/other")).toBe(false);
     expect(isPublicPath("/api/agents/kit/config")).toBe(false);
     expect(isPublicPath("/api/agents/Kit/snapshot/gantry_db")).toBe(false);

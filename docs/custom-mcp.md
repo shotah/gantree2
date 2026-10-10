@@ -79,9 +79,10 @@ path = "mcp/rentals"            # in-repo plugin: built from source in the image
 # tag  = "v0.3.1"
 ```
 
-`harness/Dockerfile` builds (or fetches) every row into `/opt/mcp` at
-**image build**, puts it on `PATH`, and runs `host-manifest` for each so
-the shapes ship with the image. Distroless stays distroless. Push to
+`harness/Dockerfile` builds (or fetches) every row into `/opt/mcp/<id>/<id>`
+at **image build** — one binary, not a second copy on `PATH` — and runs
+`host-manifest` for each so the shape sits beside it. Inside the image a
+bare `command` resolves to that path. Distroless stays distroless. Push to
 `main`; `harness-image.yml` publishes the new tag.
 
 Then on `/agents/<slug>`:

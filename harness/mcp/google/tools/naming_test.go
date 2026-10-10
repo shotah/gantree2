@@ -28,55 +28,12 @@ import (
 
 const serverID = "google"
 
-// TODO(naming): tools that violate docs/mcp-naming.md. Do not rename them —
-// eval fixtures and the harness depend on the published names. Delete an
-// entry only when that tool is actually renamed; a new violation must fail.
-//
-// These use a synonym (send, copy, read, …) or put the verb somewhere other
-// than the service_verb_object slot. search_query and search_query_siterestrict
-// are also verb-first.
-var namingAllowlist = map[string]string{
-	"appscript_run_function":            "verb run is not in the stable set",
-	"auth_start":                        "verb start is not in the stable set",
-	"calendar_query_freebusy":           "verb query is not in the stable set",
-	"chat_send_message":                 "verb send is not in the stable set",
-	"contacts_modify_group_members":     "verb modify is not in the stable set",
-	"docs_debug_table_structure":        "verb debug is not in the stable set",
-	"docs_export_to_pdf":                "verb export is not in the stable set",
-	"docs_find_and_replace":             "verb find is not in the stable set",
-	"docs_insert_elements":              "verb insert is not in the stable set",
-	"docs_insert_image":                 "verb insert is not in the stable set",
-	"docs_inspect_structure":            "verb inspect is not in the stable set",
-	"docs_modify_text":                  "verb modify is not in the stable set",
-	"docs_read_comments":                "verb read is not in the stable set",
-	"docs_reply_to_comment":             "verb reply is not in the stable set",
-	"drive_batch_share_file":            "verb share is not in the stable set",
-	"drive_check_file_public_access":    "verb check is not in the stable set",
-	"drive_copy_file":                   "verb copy is not in the stable set",
-	"drive_import_to_doc":               "verb import is not in the stable set",
-	"drive_remove_permission":           "verb remove is not in the stable set",
-	"drive_share_file":                  "verb share is not in the stable set",
-	"drive_transfer_ownership":          "verb transfer is not in the stable set",
-	"forms_set_publish_settings":        "verb set is not in the stable set",
-	"gmail_batch_modify_message_labels": "verb modify is not in the stable set",
-	"gmail_draft_message":               "verb draft is not in the stable set",
-	"gmail_manage_label":                "verb manage is not in the stable set",
-	"gmail_modify_message_labels":       "verb modify is not in the stable set",
-	"gmail_send_message":                "verb send is not in the stable set",
-	"search_query":                      "verb-first and verb query is not in the stable set",
-	"search_query_siterestrict":         "verb-first and verb query is not in the stable set",
-	"sheets_add_conditional_formatting": "verb add is not in the stable set",
-	"sheets_modify_values":              "verb modify is not in the stable set",
-	"sheets_read_comments":              "verb read is not in the stable set",
-	"sheets_read_values":                "verb read is not in the stable set",
-	"sheets_reply_to_comment":           "verb reply is not in the stable set",
-	"slides_read_comments":              "verb read is not in the stable set",
-	"slides_reply_to_comment":           "verb reply is not in the stable set",
-	"tasks_clear_completed":             "verb clear is not in the stable set",
-	"tasks_move_task":                   "verb move is not in the stable set",
-}
+// namingAllowlist is empty: every registered tool follows docs/mcp-naming.md.
+// A new violation must fail this test. Rename the tool; do not add an entry.
+var namingAllowlist = map[string]string{}
 
-// TODO(naming): argument paths that are not snake_case. Same rule as above.
+// argAllowlist is empty: every argument path is snake_case.
+// A new violation must fail this test. Rename the argument; do not add an entry.
 var argAllowlist = map[string]string{}
 
 func TestNamingLock(t *testing.T) {

@@ -88,7 +88,7 @@ var UserSummaryEndpoints = []endpoint.Endpoint{
 		Body:          hydrationLogBodyConfig,
 		CLICommand:    "summary",
 		CLISubcommand: "log-hydration",
-		MCPTool:       "summary_log_hydration",
+		MCPTool:       "summary_update_hydration",
 		Short:         "Log water intake",
 		Long: "Add or adjust hydration (ml) on Connect for a calendar day via JSON body. " +
 			"Use for 'log water', 'add 250ml'. Use --file, --json, or stdin; live API uses PUT.",

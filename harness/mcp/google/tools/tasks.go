@@ -859,10 +859,10 @@ func handleDeleteTask(getClient httpClientFunc) mcpserver.ToolHandlerFunc {
 	}
 }
 
-// --- tasks_move_task ---
+// --- tasks_update_task_position ---
 
 func registerMoveTask(s *mcpserver.MCPServer, getClient httpClientFunc) {
-	tool := newMCPTool("tasks_move_task",
+	tool := newMCPTool("tasks_update_task_position",
 		mcp.WithDescription("Reorder a task or move it to another tasklist_id / parent task. Required tasklist_id + task_id. Use after tasks_list_tasks when reorganizing."),
 		mcp.WithString("user_google_email", mcp.Description("The user's Google email address. Required.")),
 		mcp.WithString("task_list_id", mcp.Required(), mcp.Description("The ID of the current task list containing the task.")),
@@ -946,10 +946,10 @@ func handleMoveTask(getClient httpClientFunc) mcpserver.ToolHandlerFunc {
 	}
 }
 
-// --- tasks_clear_completed ---
+// --- tasks_delete_completed ---
 
 func registerClearCompletedTasks(s *mcpserver.MCPServer, getClient httpClientFunc) {
-	tool := newMCPTool("tasks_clear_completed",
+	tool := newMCPTool("tasks_delete_completed",
 		mcp.WithDescription("Clear/hide all completed tasks in a tasklist_id. Required tasklist_id. Confirm when unclear — removes completed items from the active view."),
 		mcp.WithString("user_google_email", mcp.Description("The user's Google email address. Required.")),
 		mcp.WithString("task_list_id", mcp.Required(), mcp.Description("The ID of the task list to clear completed tasks from.")),

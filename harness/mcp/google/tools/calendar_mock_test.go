@@ -634,7 +634,7 @@ func TestCalendarMockDeleteEvent(t *testing.T) {
 	})
 }
 
-// --- calendar_query_freebusy ---
+// --- calendar_search_freebusy ---
 
 func TestCalendarMockQueryFreebusy(t *testing.T) {
 	t.Run("success_with_busy_periods", func(t *testing.T) {

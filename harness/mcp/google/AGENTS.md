@@ -8,11 +8,11 @@ Every MCP tool name is **service-first**:
 {service}_{verb}_{object}[_{qualifier}]
 ```
 
-Examples: `calendar_list_events`, `gmail_search_messages`, `chat_send_message`, `tasks_list_tasks`.
+Examples: `calendar_list_events`, `gmail_search_messages`, `chat_create_message`, `tasks_list_tasks`.
 
 Rules:
 
-1. **Service first** — one of: `gmail`, `calendar`, `drive`, `docs`, `sheets`, `slides`, `tasks`, `contacts`, `chat`, `forms`, `appscript`, `search` (auth is `auth_start`).
+1. **Service first** — one of: `gmail`, `calendar`, `drive`, `docs`, `sheets`, `slides`, `tasks`, `contacts`, `chat`, `forms`, `appscript`, `pse` (Programmable Search; `--tools search`), `auth` (`auth_generate_url`).
 2. **No bare verbs** — never `get_events`, `send_message`, `list_tasks`.
 3. **Server id** — MCP `ServerName` is `google`. Hosts expose `google__{tool}`; do not put `google__` inside the tool name.
 4. **Agent clarity > Python parity** — do not rename tools back to match the Python server.

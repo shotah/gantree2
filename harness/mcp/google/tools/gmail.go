@@ -64,7 +64,7 @@ func newGmailService(ctx context.Context, getClient httpClientFunc, email string
 
 func registerSearchGmailMessages(s *mcpserver.MCPServer, getClient httpClientFunc) {
 	tool := newMCPTool("gmail_search_messages",
-		mcp.WithDescription("Search Gmail (from:, subject:, newer_than:, is:unread, …). Returns message/thread ids. Then gmail_get_message or gmail_get_messages_batch. Send → gmail_send_message."),
+		mcp.WithDescription("Search Gmail (from:, subject:, newer_than:, is:unread, …). Returns message/thread ids. Then gmail_get_message or gmail_get_messages_batch. Send → gmail_create_message."),
 		mcp.WithString("query", mcp.Required(), mcp.Description("Gmail search query.")),
 		mcp.WithString("user_google_email", mcp.Description("User Google email (or set USER_GOOGLE_EMAIL).")),
 		mcp.WithNumber("page_size", mcp.Description("Max messages. Default: 10.")),
@@ -559,11 +559,11 @@ func handleListGmailLabels(getClient httpClientFunc) mcpserver.ToolHandlerFunc {
 	}
 }
 
-// --- gmail_send_message ---
+// --- gmail_create_message ---
 
 func registerSendGmailMessage(s *mcpserver.MCPServer, getClient httpClientFunc) {
-	tool := newMCPTool("gmail_send_message",
-		mcp.WithDescription("Send email now. Confirm with user unless they explicitly said send. Draft → gmail_draft_message. Read → gmail_search_messages / gmail_get_message."),
+	tool := newMCPTool("gmail_create_message",
+		mcp.WithDescription("Send email now. Confirm with user unless they explicitly said send. Draft → gmail_create_draft. Read → gmail_search_messages / gmail_get_message."),
 		mcp.WithString("user_google_email", mcp.Description("User Google email (or set USER_GOOGLE_EMAIL).")),
 		mcp.WithString("to", mcp.Required(), mcp.Description("Recipient email.")),
 		mcp.WithString("subject", mcp.Required(), mcp.Description("Subject.")),
@@ -583,19 +583,19 @@ func handleSendGmailMessage(getClient httpClientFunc) mcpserver.ToolHandlerFunc 
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		email, err := resolveEmail(request)
 		if err != nil {
-			return needArg("user_google_email", "gmail_send_message(to, subject, body)"), nil
+			return needArg("user_google_email", "gmail_create_message(to, subject, body)"), nil
 		}
 		to, err := request.RequireString("to")
 		if err != nil {
-			return needArg("to", "gmail_send_message(to, subject, body)"), nil
+			return needArg("to", "gmail_create_message(to, subject, body)"), nil
 		}
 		subject, err := request.RequireString("subject")
 		if err != nil {
-			return needArg("subject", "gmail_send_message(to, subject, body)"), nil
+			return needArg("subject", "gmail_create_message(to, subject, body)"), nil
 		}
 		body, err := request.RequireString("body")
 		if err != nil {
-			return needArg("body", "gmail_send_message(to, subject, body)"), nil
+			return needArg("body", "gmail_create_message(to, subject, body)"), nil
 		}
 
 		bodyFormat := request.GetString("body_format", "plain")
@@ -640,11 +640,11 @@ func handleSendGmailMessage(getClient httpClientFunc) mcpserver.ToolHandlerFunc 
 	}
 }
 
-// --- gmail_draft_message ---
+// --- gmail_create_draft ---
 
 func registerDraftGmailMessage(s *mcpserver.MCPServer, getClient httpClientFunc) {
-	tool := newMCPTool("gmail_draft_message",
-		mcp.WithDescription("Create a Gmail DRAFT (not sent). Use for 'draft a reply', prepare mail for later. To send immediately use gmail_send_message after confirmation."),
+	tool := newMCPTool("gmail_create_draft",
+		mcp.WithDescription("Create a Gmail DRAFT (not sent). Use for 'draft a reply', prepare mail for later. To send immediately use gmail_create_message after confirmation."),
 		mcp.WithString("user_google_email", mcp.Description("The user's Google email address.")),
 		mcp.WithString("subject", mcp.Required(), mcp.Description("Email subject.")),
 		mcp.WithString("body", mcp.Required(), mcp.Description("Email body content (plain text or HTML).")),
@@ -724,11 +724,11 @@ func handleDraftGmailMessage(getClient httpClientFunc) mcpserver.ToolHandlerFunc
 	}
 }
 
-// --- gmail_manage_label ---
+// --- gmail_update_label ---
 
 func registerManageGmailLabel(s *mcpserver.MCPServer, getClient httpClientFunc) {
-	tool := newMCPTool("gmail_manage_label",
-		mcp.WithDescription("Create/update/delete Gmail labels (label definitions). Use for 'make a label called…'. To apply labels to messages use gmail_modify_message_labels."),
+	tool := newMCPTool("gmail_update_label",
+		mcp.WithDescription("Create/update/delete Gmail labels (label definitions). Use for 'make a label called…'. To apply labels to messages use gmail_update_message_labels."),
 		mcp.WithString("user_google_email", mcp.Description("The user's Google email address.")),
 		mcp.WithString("action", mcp.Required(), mcp.Description("Action to perform."), mcp.Enum("create", "update", "delete")),
 		mcp.WithString("name", mcp.Description("Label name. Required for create, optional for update.")),
@@ -1087,11 +1087,11 @@ func describeGmailFilterCriteria(criteria *gmail.FilterCriteria) string {
 	return strings.Join(parts, ", ")
 }
 
-// --- gmail_modify_message_labels ---
+// --- gmail_update_message_labels ---
 
 func registerModifyGmailMessageLabels(s *mcpserver.MCPServer, getClient httpClientFunc) {
-	tool := newMCPTool("gmail_modify_message_labels",
-		mcp.WithDescription("Add/remove labels on one message. Trash spam: add TRASH. Archive: remove INBOX. Mark spam: add SPAM. After gmail_search_messages. Many ids → gmail_batch_modify_message_labels."),
+	tool := newMCPTool("gmail_update_message_labels",
+		mcp.WithDescription("Add/remove labels on one message. Trash spam: add TRASH. Archive: remove INBOX. Mark spam: add SPAM. After gmail_search_messages. Many ids → gmail_batch_update_message_labels."),
 		mcp.WithString("user_google_email", mcp.Description("The user's Google email address.")),
 		mcp.WithString("message_id", mcp.Required(), mcp.Description("ID of the message to modify.")),
 		mcp.WithArray("add_label_ids",
@@ -1155,11 +1155,11 @@ func handleModifyGmailMessageLabels(getClient httpClientFunc) mcpserver.ToolHand
 	}
 }
 
-// --- gmail_batch_modify_message_labels ---
+// --- gmail_batch_update_message_labels ---
 
 func registerBatchModifyGmailMessageLabels(s *mcpserver.MCPServer, getClient httpClientFunc) {
-	tool := newMCPTool("gmail_batch_modify_message_labels",
-		mcp.WithDescription("Batch add/remove labels on many message IDs. Use for bulk archive/label. Prefer gmail_modify_message_labels for one message."),
+	tool := newMCPTool("gmail_batch_update_message_labels",
+		mcp.WithDescription("Batch add/remove labels on many message IDs. Use for bulk archive/label. Prefer gmail_update_message_labels for one message."),
 		mcp.WithString("user_google_email", mcp.Description("The user's Google email address.")),
 		mcp.WithArray("message_ids",
 			mcp.Required(),

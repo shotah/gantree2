@@ -25,6 +25,9 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
+      # scripts/icons.ts rasters the banner with DejaVu Sans (test/scripts/icons.test.ts runs it).
+      - name: DejaVu fonts
+        run: ls /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf >/dev/null 2>&1 || sudo apt-get install -y --no-install-recommends fonts-dejavu-core
       # Thresholds live in vitest.config.ts; a drop below them fails here.
       - run: npm run test:coverage
       - run: npm run lint

@@ -59,11 +59,11 @@ func TestFormsHandlerGetFormAuthFailure(t *testing.T) {
 	}
 }
 
-// --- forms_set_publish_settings ---
+// --- forms_update_publish_settings ---
 
 func TestFormsHandlerSetPublishSettingsMissingFormID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "forms_set_publish_settings", nil)
+	text, isError := callTool(t, s, "forms_update_publish_settings", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}

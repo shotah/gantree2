@@ -16,8 +16,8 @@ func TestDOFrames_RoundTrip(t *testing.T) {
 		Env:     map[string]string{"LLM_MODEL": "gemini-3.5-flash"},
 		MCP:     "[[server]]\nname = \"math\"\n",
 		Persona: "be brief\n",
-		Restore: SnapshotURLs{DB: "https://r2.example/get-db", Self: "https://r2.example/get-self"},
-		Put:     SnapshotURLs{DB: "https://r2.example/put-db", Self: "https://r2.example/put-self"},
+		Restore: SnapshotURLs{DB: "https://r2.example/get-db", Self: "https://r2.example/get-self", Tokens: "https://r2.example/get-tokens"},
+		Put:     SnapshotURLs{DB: "https://r2.example/put-db", Self: "https://r2.example/put-self", Tokens: "https://r2.example/put-tokens"},
 	}
 	raw, err := EncodeConfig(cfg)
 	if err != nil {
@@ -32,6 +32,9 @@ func TestDOFrames_RoundTrip(t *testing.T) {
 	}
 	if got.Restore != cfg.Restore || got.Put != cfg.Put {
 		t.Fatalf("urls %+v %+v", got.Restore, got.Put)
+	}
+	if !strings.Contains(string(raw), `"tokens_tar":"https://r2.example/get-tokens"`) {
+		t.Fatalf("wire name: %s", raw)
 	}
 
 	status := StatusFrame{

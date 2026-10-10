@@ -51,11 +51,11 @@ func TestChatHandlerGetMessagesAuthFailure(t *testing.T) {
 	}
 }
 
-// --- chat_send_message ---
+// --- chat_create_message ---
 
 func TestChatHandlerSendMessageMissingSpaceID(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "chat_send_message", nil)
+	text, isError := callTool(t, s, "chat_create_message", nil)
 	if !isError {
 		t.Fatal("expected isError=true")
 	}
@@ -69,7 +69,7 @@ func TestChatHandlerSendMessageMissingSpaceID(t *testing.T) {
 
 func TestChatHandlerSendMessageMissingMessageText(t *testing.T) {
 	s := newToolTestServer(t)
-	text, isError := callTool(t, s, "chat_send_message", map[string]any{
+	text, isError := callTool(t, s, "chat_create_message", map[string]any{
 		"space_id": "spaces/abc123",
 	})
 	if !isError {

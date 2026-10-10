@@ -80,11 +80,11 @@ type evalFixture struct {
 	// days from the turn (yesterday is -1) in America/Los_Angeles.
 	Ledger []evalLedger `json:"ledger,omitempty"`
 	// ToolsFrom names servers in testdata/eval/mcp.toml whose real catalog —
-	// names, descriptions, schemas from the latest release binary's
-	// tools/list — replaces hand-written defs. Every tool the server
-	// publishes is published here; fixture Tools for those servers carry
-	// only name + canned result, and a name the live catalog lacks fails
-	// before any model call. Needs the integration tag (network).
+	// names, descriptions, schemas from the sibling module's tools/list —
+	// replaces hand-written defs. Every tool the server publishes is
+	// published here; fixture Tools for those servers carry only name +
+	// canned result, and a name the live catalog lacks fails before any
+	// model call. Needs the integration tag (the test builds the plugin).
 	ToolsFrom []string `json:"tools_from,omitempty"`
 	// Force lists MCP prefixes published without mcp_enable (like MCP_ENABLE_FORCE).
 	Force []string `json:"force,omitempty"`
@@ -293,15 +293,15 @@ func evalInboundText(fx evalFixture, now time.Time) string {
 }
 
 // evalLiveTools returns the real catalogs of testdata/eval/mcp.toml servers.
-// Set by the integration test (network: tools-fetch + boot); nil in plain
-// `go test`, where a tools_from fixture is a hard error rather than a
-// silently faked schema.
+// Set by the integration test (build the sibling module, then boot); nil
+// in plain `go test`, where a tools_from fixture is a hard error rather
+// than a silently faked schema.
 var evalLiveTools func(t *testing.T) []provider.ToolDef
 
 // mergeLiveTools builds the canned set for a tools_from fixture: every tool
 // the live servers publish, with the fixture's canned result where it gave
 // one and "{}" where it did not. A fixture result for a tool the live
-// catalog does not have is the drift signal — a sibling release renamed
+// catalog does not have is the drift signal — the sibling module renamed
 // or dropped it — and fails here, before a single model call. Fixture
 // tools on other servers pass through hand-written.
 func mergeLiveTools(live []provider.ToolDef, servers []string, fixture []evalTool) ([]evalTool, error) {

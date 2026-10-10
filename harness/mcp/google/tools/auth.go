@@ -39,7 +39,7 @@ func RegisterListAccountsTool(s *mcpserver.MCPServer) {
 	)
 }
 
-// RegisterAuthTools registers the auth_start meta-tool.
+// RegisterAuthTools registers the auth_generate_url meta-tool.
 // It is filtered out when MCP_ENABLE_OAUTH21=true.
 func RegisterAuthTools(s *mcpserver.MCPServer) {
 	if isOAuth21Enabled() {
@@ -49,7 +49,7 @@ func RegisterAuthTools(s *mcpserver.MCPServer) {
 	store := auth.NewCredentialStore()
 
 	s.AddTool(
-		newMCPTool("auth_start",
+		newMCPTool("auth_generate_url",
 			mcp.WithDescription(
 				"Rare re-auth escape hatch. Prefer human CLI setup: `google-mcp auth` (or login) once; MCP tools refresh tokens automatically. Returns an auth URL if re-auth is needed. Disabled when MCP_ENABLE_OAUTH21=true. Requires service_name (e.g. Gmail).",
 			),

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CONFIG_STORE_KEY } from "@/lib/agents/config";
-import { verifySnapshot } from "@/lib/agents/snapshot";
+import { mintSnapshotKey, SNAPSHOT_KEY_STORE_KEY, snapshotKeyOk, verifySnapshot } from "@/lib/agents/snapshot";
 import { HELD_DRAFT_TTL_MS } from "@/lib/chat/draft";
 import type { WireFrame } from "@/lib/chat/frame";
 import { QUEUE_STORE_PREFIX, type Queued } from "@/lib/chat/queue";
@@ -948,6 +948,7 @@ describe("Agent harness ops", () => {
     });
     await state.storage.put("bearer", "room-secret");
     await state.storage.put("slug", "kit");
+    await state.storage.put(SNAPSHOT_KEY_STORE_KEY, "nope");
     await state.storage.put(CONFIG_STORE_KEY, { env: { LLM_API_KEY: "sekrit" }, mcp: "toml", persona: "be brief", updatedAt: 5 });
     store.set("backups/kit/latest/gantry_db", new Uint8Array([1, 2, 3]));
     crane.close();
@@ -967,13 +968,25 @@ describe("Agent harness ops", () => {
     if (!fresh) {
       throw new Error("missing crane");
     }
-    const first = JSON.parse(fresh.sent[0] ?? "{}") as { kind?: string; env?: { LLM_API_KEY?: string }; restore?: { gantry_db?: string } };
+    const first = JSON.parse(fresh.sent[0] ?? "{}") as {
+      kind?: string;
+      env?: { LLM_API_KEY?: string; SNAPSHOT_KEY?: string };
+      restore?: { gantry_db?: string; tokens_tar?: string };
+    };
     expect(first.kind).toBe("config");
     expect(first.env?.LLM_API_KEY).toBe("sekrit");
+    const snap = first.env?.SNAPSHOT_KEY ?? "";
+    expect(snapshotKeyOk(snap)).toBe(true);
+    expect(snap).not.toBe("nope");
+    expect(await state.storage.get(SNAPSHOT_KEY_STORE_KEY)).toBe(snap);
     expect(fresh.sent[1]).toContain("ping");
     expect(ada.sent.join("")).not.toContain("sekrit");
+    expect(ada.sent.join("")).not.toContain(snap);
     expect(ada.sent.join("")).not.toContain("\"kind\":\"config\"");
     const restore = new URL(first.restore?.gantry_db ?? "https://invalid");
+    const tokens = new URL(first.restore?.tokens_tar ?? "https://invalid");
+    expect(tokens.pathname).toBe("/api/agents/kit/snapshot/tokens_tar");
+    expect(await verifySnapshot("room-secret", "kit", "tokens_tar", "GET", tokens.searchParams.get("exp") ?? "", tokens.searchParams.get("sig") ?? "", Date.now())).toBe(true);
     const exp = Number(restore.searchParams.get("exp"));
     expect(exp).toBeLessThanOrEqual(Date.now() + 15 * 60 * 1000);
     expect(await verifySnapshot("room-secret", "kit", "gantry_db", "GET", restore.searchParams.get("exp") ?? "", restore.searchParams.get("sig") ?? "", Date.now())).toBe(true);
@@ -1028,6 +1041,7 @@ describe("Agent harness ops", () => {
     const viewBody = await view.json<{ envKeys: string[]; recreate: boolean }>();
     expect(viewBody.envKeys).toEqual(["LLM_API_KEY"]);
     expect(JSON.stringify(viewBody)).not.toContain("sekrit");
+    expect(JSON.stringify(viewBody)).not.toContain(snap);
     expect(viewBody.recreate).toBe(false);
 
     const patched = await box.fetch(new Request("https://agent/config", {
@@ -1054,6 +1068,8 @@ describe("Agent harness ops", () => {
   it("lays the house LLM keys under the agent env on the config frame and names them on the view", async () => {
     installPairs();
     const { state, box, crane } = room({ LLM_MODEL: "house-model", LLM_API_KEY: "house-key", LLM_BASE_URL: " " });
+    const kept = mintSnapshotKey();
+    await state.storage.put(SNAPSHOT_KEY_STORE_KEY, kept);
     await state.storage.put("slug", "kit");
     await state.storage.put(CONFIG_STORE_KEY, { env: { LLM_MODEL: "mine" }, mcp: "", persona: "be brief", updatedAt: 5 });
     crane.close();
@@ -1063,7 +1079,7 @@ describe("Agent harness ops", () => {
     expect(res.status).toBe(101);
     const fresh = state.getWebSockets("role:crane").find((socket) => socket.sent.some((line) => line.includes("\"kind\":\"config\"")));
     const first = JSON.parse(fresh?.sent[0] ?? "{}") as { env?: Record<string, string> };
-    expect(first.env).toEqual({ LLM_MODEL: "mine", LLM_API_KEY: "house-key" });
+    expect(first.env).toEqual({ LLM_MODEL: "mine", LLM_API_KEY: "house-key", SNAPSHOT_KEY: kept });
 
     const view = await box.fetch(new Request("https://agent/config", { headers: { "X-Chat-Op": "config" } }));
     const body = await view.text();

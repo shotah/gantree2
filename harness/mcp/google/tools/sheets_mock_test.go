@@ -185,7 +185,7 @@ func TestSheetsMockGetSpreadsheetInfo(t *testing.T) {
 	})
 }
 
-// --- sheets_read_values ---
+// --- sheets_get_values ---
 
 func TestSheetsMockReadSheetValues(t *testing.T) {
 	t.Run("success_with_data", func(t *testing.T) {
@@ -200,7 +200,7 @@ func TestSheetsMockReadSheetValues(t *testing.T) {
 			},
 		})
 		s := sheetsTestServer(t, []func(*mcpserver.MCPServer, httpClientFunc){registerReadSheetValues}, testClientFunc(ts))
-		text, isError := callTool(t, s, "sheets_read_values", map[string]any{
+		text, isError := callTool(t, s, "sheets_get_values", map[string]any{
 			"spreadsheet_id":    "ss001",
 			"range_name":        "Sheet1!A1:C3",
 			"user_google_email": "test@example.com",
@@ -223,7 +223,7 @@ func TestSheetsMockReadSheetValues(t *testing.T) {
 			},
 		})
 		s := sheetsTestServer(t, []func(*mcpserver.MCPServer, httpClientFunc){registerReadSheetValues}, testClientFunc(ts))
-		text, isError := callTool(t, s, "sheets_read_values", map[string]any{
+		text, isError := callTool(t, s, "sheets_get_values", map[string]any{
 			"spreadsheet_id":    "ss001",
 			"range_name":        "Sheet1!A1:C3",
 			"user_google_email": "test@example.com",
@@ -237,7 +237,7 @@ func TestSheetsMockReadSheetValues(t *testing.T) {
 	})
 }
 
-// --- sheets_modify_values ---
+// --- sheets_update_values ---
 
 func TestSheetsMockModifySheetValues(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
@@ -248,7 +248,7 @@ func TestSheetsMockModifySheetValues(t *testing.T) {
 			},
 		})
 		s := sheetsTestServer(t, []func(*mcpserver.MCPServer, httpClientFunc){registerModifySheetValues}, testClientFunc(ts))
-		text, isError := callTool(t, s, "sheets_modify_values", map[string]any{
+		text, isError := callTool(t, s, "sheets_update_values", map[string]any{
 			"spreadsheet_id":    "ss001",
 			"range_name":        "Sheet1!A1:B2",
 			"values":            []any{[]any{"a", "b"}, []any{"c", "d"}},
@@ -292,7 +292,7 @@ func TestSheetsMockFormatSheetRange(t *testing.T) {
 	}
 }
 
-// --- sheets_add_conditional_formatting ---
+// --- sheets_create_conditional_formatting ---
 
 func TestSheetsMockAddConditionalFormatting(t *testing.T) {
 	ts := driveFakeServer(t, map[string]any{
@@ -306,7 +306,7 @@ func TestSheetsMockAddConditionalFormatting(t *testing.T) {
 		},
 	})
 	s := sheetsTestServer(t, []func(*mcpserver.MCPServer, httpClientFunc){registerAddConditionalFormatting}, testClientFunc(ts))
-	text, isError := callTool(t, s, "sheets_add_conditional_formatting", map[string]any{
+	text, isError := callTool(t, s, "sheets_create_conditional_formatting", map[string]any{
 		"spreadsheet_id":    "ss001",
 		"range_name":        "Budget!B2:B10",
 		"condition_type":    "NUMBER_GREATER",
