@@ -111,7 +111,7 @@ describe("NotifyEnable", () => {
     });
     expect(request).toHaveBeenCalledOnce();
     expect(screen.getByText("Blocked — enable in system settings.")).toBeTruthy();
-    expect((screen.getByRole("button", { name: "Enable notifications" }) as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "Enable notifications" }).disabled).toBe(false);
   });
 
   it("prompts when the OS said denied but requestPermission grants", async () => {
@@ -134,6 +134,6 @@ describe("NotifyEnable", () => {
     });
     render(<NotifyEnable />);
     expect(screen.getByText("Install the app first, then enable.")).toBeTruthy();
-    expect((screen.getByRole("button", { name: "Enable notifications" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "Enable notifications" }).disabled).toBe(true);
   });
 });

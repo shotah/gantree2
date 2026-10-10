@@ -1,4 +1,3 @@
-import type { Root } from "mdast";
 import { toString as mdastText } from "mdast-util-to-string";
 import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";

@@ -4,6 +4,11 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SettingsScreen, type ApiClient } from "@/app/components/settings/SettingsScreen";
 
+/** The URL a fetch-shaped mock was called with, whatever form the caller used. */
+function urlOf(input: RequestInfo | URL): string {
+  return typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+}
+
 afterEach(() => {
   cleanup();
   localStorage.clear();
@@ -50,7 +55,7 @@ describe("SettingsScreen", () => {
     render(<SettingsScreen client={client} />);
     expect(await screen.findByRole("heading", { name: "Spend" })).toBeTruthy();
     expect(screen.queryByRole("region", { name: "Who can be here" })).toBeNull();
-    const urls = vi.mocked(client).mock.calls.map((call) => String(call[0]));
+    const urls = vi.mocked(client).mock.calls.map((call) => urlOf(call[0]));
     expect(urls.some((url) => url.includes("agent=kit"))).toBe(true);
   });
 

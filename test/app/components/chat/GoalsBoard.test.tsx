@@ -56,7 +56,7 @@ describe("GoalsSheet", () => {
   });
 
   it("every button is a /aims turn and closes the sheet", () => {
-    const onAsk = vi.fn();
+    const onAsk = vi.fn<(command: string) => void>();
     const onClose = vi.fn();
     render(<GoalsSheet aims={SAMPLE_AIMS} onClose={onClose} onAsk={onAsk} />);
     fireEvent.click(screen.getByRole("button", { name: "Ask Kit about training" }));

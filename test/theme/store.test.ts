@@ -42,6 +42,7 @@ describe("encodeThemeState", () => {
     const raw = JSON.parse(encodeThemeState("rain")) as { theme: string; themes: unknown[] };
     expect(raw.theme).toBe("rain");
     expect(raw.themes).toEqual(themeCards());
-    expect(JSON.parse(encodeThemeState(null)).theme).toBeNull();
+    const cleared = JSON.parse(encodeThemeState(null)) as { theme: string | null };
+    expect(cleared.theme).toBeNull();
   });
 });

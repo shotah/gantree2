@@ -50,7 +50,7 @@ function agentTokens(raw: string): string[] {
 
 async function errorCode(res: Response): Promise<string> {
   try {
-    const body = await res.json() as { error?: unknown };
+    const body = await res.json<{ error?: unknown }>();
     return typeof body.error === "string" ? body.error : "request_failed";
   } catch {
     return "request_failed";
@@ -140,7 +140,7 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
         setPhase("ready");
         return;
       }
-      const body = await res.json() as { users?: UserRow[]; audit?: AuditEvent[] };
+      const body = await res.json<{ users?: UserRow[]; audit?: AuditEvent[] }>();
       if (!mounted.current) {
         return;
       }

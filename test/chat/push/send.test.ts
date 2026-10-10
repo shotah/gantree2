@@ -20,7 +20,9 @@ describe("send web push", () => {
       VAPID_PRIVATE_KEY: JSON.stringify(keys.privateJwk),
       VAPID_SUBJECT: "mailto:ada@example.com",
     });
-    expect(vapid).toBeTruthy();
+    if (!vapid) {
+      throw new Error("expected vapid credentials");
+    }
     const subscription = await fakeClientSub();
     const fetchOk = vi.fn(async (url: string, init?: RequestInit) => {
       expect(url).toBe(subscription.endpoint);
@@ -32,7 +34,7 @@ describe("send web push", () => {
       return new Response(null, { status: 201 });
     });
     expect(await sendWebPush({
-      vapid: vapid!,
+      vapid,
       subscription,
       payload: { title: "Kit", body: "yo" },
       fetch: fetchOk as unknown as typeof fetch,
@@ -40,25 +42,25 @@ describe("send web push", () => {
     expect(fetchOk).toHaveBeenCalledOnce();
 
     expect(await sendWebPush({
-      vapid: vapid!,
+      vapid,
       subscription,
       payload: { title: "Kit", body: "yo" },
       fetch: vi.fn(async () => new Response(null, { status: 410 })),
     })).toBe("gone");
     expect(await sendWebPush({
-      vapid: vapid!,
+      vapid,
       subscription,
       payload: { title: "Kit", body: "yo" },
       fetch: vi.fn(async () => new Response(null, { status: 404 })),
     })).toBe("gone");
     expect(await sendWebPush({
-      vapid: vapid!,
+      vapid,
       subscription,
       payload: { title: "Kit", body: "yo" },
       fetch: vi.fn(async () => new Response(null, { status: 500 })),
     })).toBe("fail");
     expect(await sendWebPush({
-      vapid: vapid!,
+      vapid,
       subscription,
       payload: { title: "Kit", body: "yo" },
       fetch: vi.fn(async () => {
@@ -73,8 +75,11 @@ describe("send web push", () => {
       VAPID_PUBLIC_KEY: keys.publicKey,
       VAPID_PRIVATE_KEY: JSON.stringify(keys.privateJwk),
     });
+    if (!vapid) {
+      throw new Error("expected vapid credentials");
+    }
     expect(await sendWebPush({
-      vapid: vapid!,
+      vapid,
       subscription: {
         endpoint: "https://fcm.googleapis.com/fcm/send/bad",
         keys: { p256dh: "nope", auth: "nope" },

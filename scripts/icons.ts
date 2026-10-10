@@ -20,7 +20,8 @@ import { Resvg } from "@resvg/resvg-js";
 
 export const REPO_ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 
-export const APPS_BRAND = "/home/deck/repos/gantree/repos/gantree2-apps/shared/brand";
+/** The apps repo sits beside this one; `generateIcons(out, { appsDir })` overrides. */
+export const APPS_BRAND = join(REPO_ROOT, "..", "gantree2-apps", "shared", "brand");
 
 const CANVAS = "#0e1316";
 const FAVICON_INK = "#1c1814";
@@ -46,7 +47,11 @@ export type GenerateIconsOptions = {
   appsDir?: string;
 };
 
-function raster(svg: string, width: number, height: number, background?: string): Buffer {
+function toBytes(data: ArrayLike<number>): Uint8Array {
+  return Uint8Array.from(data);
+}
+
+function raster(svg: string, width: number, height: number, background?: string): Uint8Array {
   const image = new Resvg(svg, {
     fitTo: { mode: "width", value: width },
     shapeRendering: 2,
@@ -62,7 +67,7 @@ function raster(svg: string, width: number, height: number, background?: string)
   if (image.width !== width || image.height !== height) {
     throw new Error(`raster ${image.width}x${image.height}, want ${width}x${height}`);
   }
-  return image.asPng();
+  return toBytes(image.asPng());
 }
 
 /** Drop width/height on the root so the placed copy can take a new size. */
@@ -79,31 +84,49 @@ function plate(markSvg: string, size: number, pad: number): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><rect width="${size}" height="${size}" fill="${CANVAS}"/>${placed(markSvg, pad, pad, inner)}</svg>`;
 }
 
-function write(path: string, data: Buffer): string {
+function write(path: string, data: Uint8Array): string {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, data);
   return path;
 }
 
+function writeU16(buf: Uint8Array, offset: number, n: number) {
+  buf[offset] = n & 255;
+  buf[offset + 1] = (n >> 8) & 255;
+}
+
+function writeU32(buf: Uint8Array, offset: number, n: number) {
+  buf[offset] = n & 255;
+  buf[offset + 1] = (n >> 8) & 255;
+  buf[offset + 2] = (n >> 16) & 255;
+  buf[offset + 3] = (n >> 24) & 255;
+}
+
 /** ICO directory (6 bytes) plus one 16-byte entry per image, then PNG payloads. */
-function packIco(images: { size: number; png: Buffer }[]): Buffer {
-  const header = Buffer.alloc(6 + 16 * images.length);
-  header.writeUInt16LE(0, 0);
-  header.writeUInt16LE(1, 2);
-  header.writeUInt16LE(images.length, 4);
+function packIco(images: { size: number; png: Uint8Array }[]): Uint8Array {
+  const header = new Uint8Array(6 + 16 * images.length);
+  writeU16(header, 2, 1);
+  writeU16(header, 4, images.length);
   let offset = header.length;
   images.forEach((img, i) => {
     const entry = 6 + i * 16;
     const dim = img.size >= 256 ? 0 : img.size;
-    header.writeUInt8(dim, entry);
-    header.writeUInt8(dim, entry + 1);
-    header.writeUInt16LE(1, entry + 4);
-    header.writeUInt16LE(32, entry + 6);
-    header.writeUInt32LE(img.png.length, entry + 8);
-    header.writeUInt32LE(offset, entry + 12);
+    header[entry] = dim;
+    header[entry + 1] = dim;
+    writeU16(header, entry + 4, 1);
+    writeU16(header, entry + 6, 32);
+    writeU32(header, entry + 8, img.png.length);
+    writeU32(header, entry + 12, offset);
     offset += img.png.length;
   });
-  return Buffer.concat([header, ...images.map((img) => img.png)]);
+  const out = new Uint8Array(offset);
+  out.set(header, 0);
+  let cursor = header.length;
+  for (const img of images) {
+    out.set(img.png, cursor);
+    cursor += img.png.length;
+  }
+  return out;
 }
 
 export function generateIcons(outDir: string, options: GenerateIconsOptions = {}): string[] {

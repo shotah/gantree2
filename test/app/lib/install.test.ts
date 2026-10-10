@@ -7,6 +7,7 @@ import {
   listenInstallPrompt,
   signInHint,
   writeInstallHint,
+  type InstallChoice,
 } from "@/app/lib/install";
 
 describe("install", () => {
@@ -27,15 +28,19 @@ describe("install", () => {
 
   it("stashes beforeinstallprompt and clears after prompt()", async () => {
     const target = new EventTarget();
-    const onChange = vi.fn();
+    const onChange = vi.fn<(choice: InstallChoice | null) => void>();
     const stop = listenInstallPrompt(onChange, target);
-    const prompt = vi.fn().mockResolvedValue({ outcome: "accepted" });
+    const prompt = vi.fn<() => Promise<{ outcome: string }>>().mockResolvedValue({ outcome: "accepted" });
     const ev = new Event("beforeinstallprompt", { cancelable: true });
     Object.assign(ev, { prompt });
     target.dispatchEvent(ev);
     expect(ev.defaultPrevented).toBe(true);
     expect(onChange).toHaveBeenCalledTimes(1);
-    await onChange.mock.calls[0][0].prompt();
+    const choice = onChange.mock.calls[0]?.[0];
+    if (!choice) {
+      throw new Error("expected an install prompt");
+    }
+    await choice.prompt();
     expect(prompt).toHaveBeenCalledOnce();
     expect(onChange).toHaveBeenLastCalledWith(null);
     target.dispatchEvent(new Event("appinstalled"));

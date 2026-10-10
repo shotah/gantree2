@@ -1,6 +1,5 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import type { AgentEnv } from "@/lib/chat/env";
 import { roomsFor } from "@/lib/chat/membership";
 import { principalFromHeaders, type Principal } from "@/lib/door/gate";
 import { agentUnion, landing } from "@/lib/door/landing";
@@ -20,7 +19,7 @@ async function chatAgents(who: Principal): Promise<string[]> {
     if (!env) {
       return agentUnion(who.agents, []);
     }
-    return agentUnion(who.agents, await roomsFor(env as typeof env & AgentEnv)(who));
+    return agentUnion(who.agents, await roomsFor(env)(who));
   } catch {
     return agentUnion(who.agents, []);
   }

@@ -33,11 +33,31 @@ describe("authorizeUrl", () => {
   });
 });
 
+function requestUrl(input: Parameters<typeof fetch>[0]): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  if (input instanceof URL) {
+    return input.href;
+  }
+  return input.url;
+}
+
+function formBody(body: BodyInit | null | undefined): string {
+  if (typeof body === "string") {
+    return body;
+  }
+  if (body instanceof URLSearchParams) {
+    return body.toString();
+  }
+  throw new Error("expected a form body");
+}
+
 describe("exchangeCode", () => {
   it("posts the form and returns the id_token", async () => {
-    let seen: { url: string; body: string } | null = null;
+    const calls: { url: string; body: string }[] = [];
     const fetchFn: typeof fetch = async (input, init) => {
-      seen = { url: String(input), body: String(init?.body) };
+      calls.push({ url: requestUrl(input), body: formBody(init?.body) });
       return new Response(JSON.stringify({ id_token: "idt" }), { status: 200 });
     };
     const got = await exchangeCode({
@@ -48,8 +68,12 @@ describe("exchangeCode", () => {
       fetchFn,
     });
     expect(got).toEqual({ ok: true, idToken: "idt" });
-    const body = new URLSearchParams(seen!.body);
-    expect(seen!.url).toBe("https://oauth2.googleapis.com/token");
+    const seen = calls[0];
+    if (!seen) {
+      throw new Error("token endpoint was not called");
+    }
+    const body = new URLSearchParams(seen.body);
+    expect(seen.url).toBe("https://oauth2.googleapis.com/token");
     expect(body.get("grant_type")).toBe("authorization_code");
     expect(body.get("code")).toBe("c0de");
     expect(body.get("code_verifier")).toBe("ver");

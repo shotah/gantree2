@@ -107,7 +107,7 @@ describe("getUsers", () => {
     store.events = [{ id: 1, at: 5, who: ADA_SUB, action: "user.add", detail: "{\"entry\":\"eve@example.com\"}" }];
     const res = await getUsers(await ada("/api/users"), env, store);
     expect(res.status).toBe(200);
-    const body = await res.json() as { users: UserRow[]; audit: { id: number }[] };
+    const body = await res.json<{ users: UserRow[]; audit: { id: number }[] }>();
     expect(body.users.map((row) => [row.entry.email, row.role, row.locked])).toEqual([
       ["ada@example.com", "admin", true],
       ["bob@example.com", "member", true],
@@ -137,7 +137,7 @@ describe("getUsers", () => {
     const dev = { ...env, GANTREE_DEV_USER: `${ADA_SUB}:ada@example.com` };
     const ok = await getUsers(new Request("http://127.0.0.1/api/users"), dev, memoryStore());
     expect(ok.status).toBe(200);
-    const body = await ok.json() as { users: UserRow[]; audit: unknown[] };
+    const body = await ok.json<{ users: UserRow[]; audit: unknown[] }>();
     expect(body.users.map((row) => row.entry.email)).toEqual(["ada@example.com", "bob@example.com"]);
     expect(body.audit).toEqual([]);
     expect((await getUsers(new Request("https://g.test/api/users"), dev, memoryStore())).status).toBe(401);

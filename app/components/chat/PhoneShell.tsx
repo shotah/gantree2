@@ -312,8 +312,8 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
   useEffect(() => {
     void (async () => {
       const [c, m, voiceUp] = await Promise.all([
-        fetch("/api/auth/config").then(async (r) => r.ok ? r.json() as Promise<AuthCfg> : null).catch(() => null),
-        fetch("/api/auth/me").then(async (r) => r.ok ? r.json() as Promise<Me> : null).catch(() => null),
+        fetch("/api/auth/config").then(async (r) => r.ok ? r.json<AuthCfg>() : null).catch(() => null),
+        fetch("/api/auth/me").then(async (r) => r.ok ? r.json<Me>() : null).catch(() => null),
         fetch("/api/chat/tts", { method: "GET" }).then((r) => r.ok).catch(() => false),
       ]);
       // No pendant config route on this origin: a door session is oidc.
@@ -604,7 +604,7 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
           }
           setMeWait(false);
           delay = ME_POLL_MS;
-          return r.ok ? r.json() as Promise<Me> : null;
+          return r.ok ? r.json<Me>() : null;
         })
         .then((m) => {
           if (dead || !m) {

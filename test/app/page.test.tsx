@@ -2,10 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { principalHeaders, type Principal } from "@/lib/door/gate";
 import type { Role } from "@/lib/door/users";
 
-const state = vi.hoisted(() => ({
-  mode: "ok" as "ok" | "throw" | "missing",
-  rows: {} as Record<string, string>,
-}));
+const state = vi.hoisted(() => {
+  /** KV rows the fake DIRECTORY serves; the value `"throw"` makes that read fail. */
+  const rows: Record<string, string | undefined> = {};
+  return { mode: "ok", rows };
+});
 
 const headerState = vi.hoisted(() => ({ current: new Headers() }));
 

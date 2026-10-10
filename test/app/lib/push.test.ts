@@ -17,6 +17,23 @@ function granted() {
   vi.stubGlobal("PushManager", class PushManager {});
 }
 
+function requestUrl(input: RequestInfo | URL): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  if (input instanceof URL) {
+    return input.href;
+  }
+  return input.url;
+}
+
+function textBody(body: BodyInit | null | undefined): string {
+  if (typeof body !== "string") {
+    throw new Error("expected a string body");
+  }
+  return body;
+}
+
 function fakeSubscription(endpoint: string) {
   const pub = new Uint8Array(65);
   pub[0] = 0x04;
@@ -38,13 +55,13 @@ describe("browserRegisterPush", () => {
     const keys = await generateVapidKeys();
     const subscription = fakeSubscription("https://fcm.googleapis.com/fcm/send/ada");
     const subscribe = vi.fn(async () => ({ toJSON: () => subscription }));
-    const fetchMock = vi.fn(async (input: RequestInfo, init?: RequestInit) => {
-      const url = String(input);
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = requestUrl(input);
       if (!init?.method && url.includes("/api/chat/push")) {
         return Response.json({ publicKey: keys.publicKey });
       }
       if (init?.method === "PUT") {
-        const body = JSON.parse(String(init.body)) as { slug?: string };
+        const body = JSON.parse(textBody(init.body)) as { slug?: string };
         expect(body.slug).toBe("kit");
         return Response.json({ ok: true });
       }
@@ -108,7 +125,7 @@ describe("browserRegisterPush", () => {
     granted();
     vi.stubGlobal("fetch", vi.fn(async (_input: RequestInfo, init?: RequestInit) => {
       if (init?.method === "PUT") {
-        put = JSON.parse(String(init.body)) as typeof put;
+        put = JSON.parse(textBody(init.body)) as typeof put;
         return Response.json({ ok: true });
       }
       return Response.json({ publicKey: keys.publicKey });
@@ -169,7 +186,7 @@ describe("browserTestPush", () => {
   it("POSTs the slug and returns the Worker's counts", async () => {
     const fetchMock = vi.fn(async (_input: RequestInfo, init?: RequestInit) => {
       expect(init?.method).toBe("POST");
-      expect(JSON.parse(String(init?.body))).toEqual({ slug: "kit" });
+      expect(JSON.parse(textBody(init?.body))).toEqual({ slug: "kit" });
       return Response.json({ rows: 2, ok: 1, gone: 0, fail: 1, statuses: [403] });
     });
     vi.stubGlobal("fetch", fetchMock);

@@ -41,6 +41,14 @@ class FakeRecognizer implements Recognizer {
   }
 }
 
+function lastRec(): FakeRecognizer {
+  const rec = FakeRecognizer.last;
+  if (!rec) {
+    throw new Error("recognizer was not constructed");
+  }
+  return rec;
+}
+
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
@@ -60,7 +68,7 @@ describe("HoldToTalk", () => {
     const onText = vi.fn();
     render(<HoldToTalk onText={onText} recognizer={FakeRecognizer} />);
     const btn = hold();
-    const rec = FakeRecognizer.last!;
+    const rec = lastRec();
     expect(rec.start).toHaveBeenCalledOnce();
     expect(rec.continuous).toBe(true);
     expect(btn.getAttribute("aria-pressed")).toBe("true");
@@ -82,7 +90,7 @@ describe("HoldToTalk", () => {
     const onText = vi.fn();
     render(<HoldToTalk onText={onText} recognizer={FakeRecognizer} />);
     const btn = hold();
-    FakeRecognizer.last!.hear("how is it doing");
+    lastRec().hear("how is it doing");
     fireEvent.pointerUp(btn, { pointerId: 1, clientX: 0, clientY: 0 });
     expect(btn.textContent).toBe("…");
     expect(onText).not.toHaveBeenCalled();
@@ -99,7 +107,7 @@ describe("HoldToTalk", () => {
     render(<HoldToTalk onText={onText} recognizer={FakeRecognizer} />);
     const btn = hold();
     fireEvent.pointerUp(btn, { pointerId: 1, clientX: 0, clientY: 0 });
-    FakeRecognizer.last!.end();
+    lastRec().end();
     expect(onText).not.toHaveBeenCalled();
     expect(btn.textContent).toBe("Hold to talk");
   });
@@ -108,7 +116,7 @@ describe("HoldToTalk", () => {
     const onText = vi.fn();
     render(<HoldToTalk onText={onText} recognizer={FakeRecognizer} />);
     const btn = hold();
-    const rec = FakeRecognizer.last!;
+    const rec = lastRec();
     rec.hear("that was the radio");
     fireEvent.pointerMove(btn, { pointerId: 1, clientX: 500, clientY: 500 });
     fireEvent.pointerUp(btn, { pointerId: 1, clientX: 500, clientY: 500 });
@@ -122,16 +130,16 @@ describe("HoldToTalk", () => {
     const onText = vi.fn();
     render(<HoldToTalk onText={onText} recognizer={FakeRecognizer} />);
     const btn = hold();
-    FakeRecognizer.last!.hear("half a");
+    lastRec().hear("half a");
     fireEvent.pointerCancel(btn, { pointerId: 1 });
-    expect(FakeRecognizer.last!.abort).toHaveBeenCalledOnce();
+    expect(lastRec().abort).toHaveBeenCalledOnce();
     expect(onText).not.toHaveBeenCalled();
   });
 
   it("shows Mic blocked after a permission refusal and re-arms on the next press", () => {
     render(<HoldToTalk onText={vi.fn()} recognizer={FakeRecognizer} />);
     const btn = hold();
-    const rec = FakeRecognizer.last!;
+    const rec = lastRec();
     rec.refuse();
     fireEvent.pointerUp(btn, { pointerId: 1, clientX: 0, clientY: 0 });
     rec.end();
@@ -153,9 +161,9 @@ describe("HoldToTalk", () => {
     });
     expect(btn.textContent).toBe("Hold to talk");
     fireEvent.pointerDown(btn, { button: 0, pointerId: 1, clientX: 0, clientY: 0 });
-    FakeRecognizer.last!.refuse();
+    lastRec().refuse();
     fireEvent.pointerUp(btn, { pointerId: 1, clientX: 0, clientY: 0 });
-    FakeRecognizer.last!.end();
+    lastRec().end();
     expect(btn.textContent).toBe("Mic blocked");
     await act(async () => {
       status.state = "granted";
@@ -179,7 +187,7 @@ describe("HoldToTalk", () => {
     render(<HoldToTalk onText={onText} recognizer={FakeRecognizer} />);
     const btn = screen.getByRole("button", { name: "Hold to talk" });
     fireEvent.keyDown(btn, { key: " " });
-    const rec = FakeRecognizer.last!;
+    const rec = lastRec();
     expect(rec.start).toHaveBeenCalledOnce();
     fireEvent.keyDown(btn, { key: " ", repeat: true });
     expect(rec.start).toHaveBeenCalledOnce();
@@ -194,7 +202,7 @@ describe("HoldToTalk", () => {
     const { unmount } = render(<HoldToTalk onText={vi.fn()} recognizer={FakeRecognizer} />);
     hold();
     unmount();
-    expect(FakeRecognizer.last!.abort).toHaveBeenCalledOnce();
+    expect(lastRec().abort).toHaveBeenCalledOnce();
   });
 
   it("says Kit is talking while idle, and a press still listens", () => {
@@ -208,7 +216,7 @@ describe("HoldToTalk", () => {
     expect(btn.textContent).toBe("Release to send");
     rerender(<HoldToTalk onText={vi.fn()} recognizer={FakeRecognizer} speaking="idle" />);
     fireEvent.pointerUp(btn, { pointerId: 1, clientX: 0, clientY: 0 });
-    FakeRecognizer.last!.end();
+    lastRec().end();
     expect(btn.textContent).toBe("Hold to talk");
   });
 

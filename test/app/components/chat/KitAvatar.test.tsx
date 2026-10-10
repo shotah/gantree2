@@ -65,7 +65,11 @@ describe("KitAvatar", () => {
     const input = document.querySelector("input[type=file]") as HTMLInputElement;
     fireEvent.change(input, { target: { files: [pngFile()] } });
     await waitFor(() => expect(onRev).toHaveBeenCalledWith(9));
-    expect(upload).toHaveBeenCalledWith({ slug: "ada", file: expect.any(File), secret: "s", bearer: undefined });
+    const uploaded = upload.mock.calls[0]?.[0];
+    expect(uploaded?.slug).toBe("ada");
+    expect(uploaded?.file).toBeInstanceOf(File);
+    expect(uploaded?.secret).toBe("s");
+    expect(uploaded?.bearer).toBeUndefined();
     expect(onError).toHaveBeenCalledWith("");
     expect(screen.getByRole("dialog", { name: "Ada's photo" })).toBeTruthy();
   });

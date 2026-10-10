@@ -16,10 +16,20 @@ afterEach(() => {
   Reflect.deleteProperty(URL, "revokeObjectURL");
 });
 
+function requestUrl(input: RequestInfo | URL): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  if (input instanceof URL) {
+    return input.href;
+  }
+  return input.url;
+}
+
 function stubFetch(status: number) {
   const calls: string[] = [];
-  vi.stubGlobal("fetch", async (input: RequestInfo) => {
-    calls.push(String(input));
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+    calls.push(requestUrl(input));
     // Bytes, not a jsdom Blob: Node's Response cannot stream jsdom's Blob.
     return status === 200
       ? new Response(new Uint8Array([0xff, 0xd8, 0xff]), { status, headers: { "Content-Type": "image/jpeg" } })

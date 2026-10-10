@@ -44,7 +44,10 @@ function voiceOn() {
 function holdAndSay(text: string) {
   const hold = screen.getByRole("button", { name: "Hold to talk" });
   fireEvent.pointerDown(hold, { button: 0, pointerId: 1, clientX: 0, clientY: 0 });
-  const rec = FakeRecognizer.last!;
+  const rec = FakeRecognizer.last;
+  if (!rec) {
+    throw new Error("recognizer was not constructed");
+  }
   rec.onresult?.({ results: [{ isFinal: true, length: 1, 0: { transcript: text } }] });
   fireEvent.pointerUp(hold, { pointerId: 1, clientX: 0, clientY: 0 });
   act(() => rec.onend?.());
@@ -52,7 +55,7 @@ function holdAndSay(text: string) {
 
 function stubAuth(dev: boolean, extra: { voice?: boolean } = {}) {
   vi.stubGlobal("fetch", async (input: RequestInfo) => {
-    const url = String(input);
+    const url = requestUrl(input);
     if (url.includes("/api/auth/config")) {
       return Response.json({ mode: "spike", google: false, dev, voice: extra.voice === true });
     }
@@ -333,7 +336,7 @@ describe("PhoneShell", () => {
 
   it("says a crane is missing instead of offering Google", async () => {
     vi.stubGlobal("fetch", async (input: RequestInfo) => {
-      const url = String(input);
+      const url = requestUrl(input);
       if (url.includes("/api/auth/config")) {
         return Response.json({ mode: null, google: true, dev: false, gap: "crane" });
       }
@@ -382,7 +385,7 @@ describe("PhoneShell", () => {
     expect(screen.getByText(RELEASE)).toBeTruthy();
     expect(screen.getByText(/Cast, save and share/)).toBeTruthy();
     expect(screen.getByLabelText("Agent name")).toBeTruthy();
-    expect((screen.getByLabelText("Agent name") as HTMLInputElement).value).toBe("kit");
+    expect(screen.getByLabelText<HTMLInputElement>("Agent name").value).toBe("kit");
     expect(screen.getByLabelText("Agent access secret")).toBeTruthy();
     expect(screen.getByRole("button", { name: "color theme" })).toBeTruthy();
     expect((screen.getByLabelText("Font size") as unknown as HTMLSelectElement).value).toBe("sm");
@@ -392,7 +395,7 @@ describe("PhoneShell", () => {
     expect(screen.queryByRole("button", { name: "Enable microphone" })).toBeNull();
     expect(screen.getByRole("link", { name: "Open agent stand-in" })).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Agent name"), { target: { value: "Ada" } });
-    expect((screen.getByLabelText("Agent name") as HTMLInputElement).value).toBe("ada");
+    expect(screen.getByLabelText<HTMLInputElement>("Agent name").value).toBe("ada");
     expect(screen.getByText("Ada")).toBeTruthy();
   });
 
@@ -723,7 +726,14 @@ describe("PhoneShell", () => {
     act(() => {
       ws.deliver(JSON.stringify({ id: "r1", kind: "reply", text: "雨です。", seq: 1, at: 10 }));
     });
-    expect(browserSpeak).toHaveBeenCalledExactlyOnceWith("雨です。", { lang: "ja", onPhase: expect.any(Function) });
+    expect(browserSpeak).toHaveBeenCalledOnce();
+    const spoken = vi.mocked(browserSpeak).mock.calls[0];
+    if (!spoken) {
+      throw new Error("browserSpeak was not called");
+    }
+    expect(spoken[0]).toBe("雨です。");
+    expect(spoken[1]?.lang).toBe("ja");
+    expect(typeof spoken[1]?.onPhase).toBe("function");
   });
 
   it("reads Settings → Language back from storage on load and shrugs off junk", async () => {
@@ -801,7 +811,14 @@ describe("PhoneShell", () => {
     act(() => {
       ws.deliver(JSON.stringify({ id: "r1", kind: "reply", text: "**Clear** and 62.", seq: 3, at: 30 }));
     });
-    expect(browserSpeak).toHaveBeenCalledExactlyOnceWith("**Clear** and 62.", { lang: "en", onPhase: expect.any(Function) });
+    expect(browserSpeak).toHaveBeenCalledOnce();
+    const spoken = vi.mocked(browserSpeak).mock.calls[0];
+    if (!spoken) {
+      throw new Error("browserSpeak was not called");
+    }
+    expect(spoken[0]).toBe("**Clear** and 62.");
+    expect(spoken[1]?.lang).toBe("en");
+    expect(typeof spoken[1]?.onPhase).toBe("function");
 
     act(() => {
       ws.deliver(JSON.stringify({ id: "r2", kind: "reply", text: "Anything else?", seq: 4, at: 40 }));
@@ -1049,7 +1066,7 @@ describe("PhoneShell", () => {
       ws.open();
     });
     vi.useFakeTimers();
-    const box = screen.getByPlaceholderText(/Message Kit/) as HTMLTextAreaElement;
+    const box = screen.getByPlaceholderText<HTMLTextAreaElement>(/Message Kit/);
     fireEvent.focus(box);
     fireEvent.change(box, { target: { value: "first" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
@@ -1071,7 +1088,7 @@ describe("PhoneShell", () => {
     act(() => {
       ws.open();
     });
-    const box = screen.getByPlaceholderText(/Message Kit/) as HTMLTextAreaElement;
+    const box = screen.getByPlaceholderText<HTMLTextAreaElement>(/Message Kit/);
     expect(box.disabled).toBe(false);
     act(() => {
       ws.onerror?.(new Event("error"));
@@ -1175,7 +1192,7 @@ describe("PhoneShell", () => {
     const input = document.querySelector("form input[type=file]") as HTMLInputElement;
     fireEvent.change(input, { target: { files: [new File([new Uint8Array([1])], "IMG_0002.jpg", { type: "image/jpeg" })] } });
     // Attach stages; nothing is on the wire until Send.
-    const staged = await screen.findByAltText("Photo to send") as HTMLImageElement;
+    const staged = await screen.findByAltText<HTMLImageElement>("Photo to send");
     expect(staged.src.startsWith("data:image/jpeg;base64,")).toBe(true);
     expect(widths).toEqual([640]);
     expect(ws.send).not.toHaveBeenCalledWith(expect.stringContaining("images"));
@@ -1206,7 +1223,7 @@ describe("PhoneShell", () => {
     expect(await screen.findByAltText("Photo to send")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Remove photo" }));
     expect(screen.queryByAltText("Photo to send")).toBeNull();
-    expect((screen.getByRole("button", { name: "Send" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "Send" }).disabled).toBe(true);
     fireEvent.change(input, { target: { files: [shot] } });
     expect(await screen.findByAltText("Photo to send")).toBeTruthy();
     fireEvent.change(screen.getByPlaceholderText(/Message Kit/), { target: { value: "this hatch?" } });
@@ -1306,7 +1323,7 @@ describe("PhoneShell", () => {
     const fetches: string[] = [];
     const inner = globalThis.fetch;
     vi.stubGlobal("fetch", async (input: RequestInfo) => {
-      fetches.push(String(input));
+      fetches.push(requestUrl(input));
       return inner(input);
     });
     act(() => {
@@ -1332,7 +1349,7 @@ describe("PhoneShell", () => {
     const fetches: string[] = [];
     const inner = globalThis.fetch;
     vi.stubGlobal("fetch", async (input: RequestInfo) => {
-      fetches.push(String(input));
+      fetches.push(requestUrl(input));
       return inner(input);
     });
     act(() => {
@@ -1342,7 +1359,7 @@ describe("PhoneShell", () => {
       ws.deliver(JSON.stringify({ kind: "backdrop", rev: 42 }));
     });
     fireEvent.click(screen.getByRole("button", { name: "settings" }));
-    const toggle = screen.getByLabelText("Backdrop") as HTMLInputElement;
+    const toggle = screen.getByLabelText<HTMLInputElement>("Backdrop");
     expect(toggle.checked).toBe(false);
     expect(fetches.some((u) => u.includes("/api/chat/backdrop"))).toBe(false);
     fireEvent.click(toggle);
@@ -1382,7 +1399,7 @@ describe("PhoneShell", () => {
       ws.open();
     });
     fireEvent.click(screen.getByRole("button", { name: "settings" }));
-    const toggle = screen.getByLabelText("Follow the agent's mood") as HTMLInputElement;
+    const toggle = screen.getByLabelText<HTMLInputElement>("Follow the agent's mood");
     expect(toggle.checked).toBe(false);
     act(() => {
       ws.deliver(JSON.stringify({ kind: "theme", theme: "siren" }));
@@ -1404,13 +1421,13 @@ describe("PhoneShell", () => {
     });
     expect(document.documentElement.getAttribute("data-theme")).toBe("siren");
     fireEvent.click(screen.getByRole("button", { name: "settings" }));
-    expect((screen.getByLabelText("Follow the agent's mood") as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByLabelText<HTMLInputElement>("Follow the agent's mood").checked).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "color theme" }));
     fireEvent.click(screen.getByRole("option", { name: "Flare" }));
     expect(document.documentElement.getAttribute("data-theme")).toBe("flare");
     expect(window.localStorage.getItem("gantree.theme")).toBe("flare");
     expect(window.localStorage.getItem("gantree.followTheme")).toBe("off");
-    expect((screen.getByLabelText("Follow the agent's mood") as HTMLInputElement).checked).toBe(false);
+    expect(screen.getByLabelText<HTMLInputElement>("Follow the agent's mood").checked).toBe(false);
   });
 
   it("swallows a junk theme id instead of painting a bubble", async () => {
@@ -1861,7 +1878,7 @@ describe("PhoneShell", () => {
     const fetches: string[] = [];
     const inner = globalThis.fetch;
     vi.stubGlobal("fetch", async (input: RequestInfo) => {
-      fetches.push(String(input));
+      fetches.push(requestUrl(input));
       return inner(input);
     });
     render(<PhoneShell />);
@@ -1881,7 +1898,7 @@ describe("PhoneShell", () => {
     const fetches: string[] = [];
     const inner = globalThis.fetch;
     vi.stubGlobal("fetch", async (input: RequestInfo) => {
-      fetches.push(String(input));
+      fetches.push(requestUrl(input));
       return inner(input);
     });
     render(<PhoneShell />);
@@ -1895,7 +1912,7 @@ describe("PhoneShell", () => {
 
   it("dials a typed slug after /me admits it", async () => {
     vi.stubGlobal("fetch", async (input: RequestInfo) => {
-      const url = String(input);
+      const url = requestUrl(input);
       if (url.includes("/api/auth/config")) {
         return Response.json({ mode: "oidc", google: true, dev: false });
       }
@@ -1920,7 +1937,7 @@ describe("PhoneShell", () => {
   it("paints give it a minute when /me is rate-limited", async () => {
     let meCalls = 0;
     vi.stubGlobal("fetch", async (input: RequestInfo) => {
-      const url = String(input);
+      const url = requestUrl(input);
       if (url.includes("/api/auth/config")) {
         return Response.json({ mode: "oidc", google: true, dev: false });
       }
@@ -1941,9 +1958,19 @@ describe("PhoneShell", () => {
   });
 });
 
+function requestUrl(input: RequestInfo | URL): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  if (input instanceof URL) {
+    return input.href;
+  }
+  return input.url;
+}
+
 function stubOidc(me: { sub: string; email?: string; cranes: string[] } | null) {
   vi.stubGlobal("fetch", async (input: RequestInfo) => {
-    const url = String(input);
+    const url = requestUrl(input);
     if (url.includes("/api/auth/config")) {
       return Response.json({ mode: "oidc", google: true, dev: false });
     }

@@ -110,9 +110,8 @@ describe("downloadImage", () => {
       return new Response(new Uint8Array([1]), { headers: { "Content-Type": "image/jpeg" } });
     });
     const clicked: HTMLAnchorElement[] = [];
-    const orig = document.createElement.bind(document);
-    vi.spyOn(document, "createElement").mockImplementation((tag: string, options?: ElementCreationOptions) => {
-      const el = orig(tag, options);
+    vi.spyOn(document, "createElement").mockImplementation((tag: string, _options?: ElementCreationOptions) => {
+      const el = document.createElementNS("http://www.w3.org/1999/xhtml", tag);
       if (tag === "a") {
         vi.spyOn(el, "click").mockImplementation(() => {
           clicked.push(el as HTMLAnchorElement);
@@ -132,11 +131,21 @@ describe("downloadImage", () => {
   });
 });
 
+function requestUrl(input: RequestInfo | URL): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  if (input instanceof URL) {
+    return input.href;
+  }
+  return input.url;
+}
+
 describe("uploadAvatarFile", () => {
   it("posts multipart avatar.jpg and returns the rev", async () => {
     vi.stubGlobal("createImageBitmap", async () => ({ width: 64, height: 64, close() {} }));
-    vi.stubGlobal("fetch", async (input: RequestInfo, init?: RequestInit) => {
-      expect(String(input)).toContain("/api/chat/avatar?slug=kit");
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+      expect(requestUrl(input)).toContain("/api/chat/avatar?slug=kit");
       expect(init?.method).toBe("POST");
       expect(init?.body).toBeInstanceOf(FormData);
       return Response.json({ ok: true, rev: 9, detail: "saved avatar.jpg" });

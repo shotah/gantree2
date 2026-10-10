@@ -21,6 +21,7 @@ import {
 import { isAgentStatus } from "@/lib/agents/status";
 import type { AgentCard, AgentRow, AgentStatus, AgentsEnv, ContainerInfo } from "@/lib/agents/types";
 import { fetchRoomBearer } from "@/lib/chat/bearer";
+import { randomToken } from "@/lib/door/google";
 import { agentStub } from "@/lib/chat/location";
 import { fromStub } from "@/lib/chat/slugRoute";
 import { principalFromHeaders, type Principal } from "@/lib/door/gate";
@@ -209,7 +210,30 @@ export async function postAgent(req: Request, env: AgentsHttpEnv): Promise<Respo
     const status = outcome.error === "exists" ? 409 : 400;
     return json({ error: outcome.error }, status);
   }
+  await mintBearer(env, outcome.agent.slug);
   return json({ agent: await cardFor(env, who, outcome.agent) }, 201);
+}
+
+/**
+ * A new room gets its bearer at birth, so the `config` frame can sign snapshot
+ * URLs and the container start has a token to hand the harness. Keeps an
+ * existing one (a re-create after delete). Best effort: a room without the
+ * AGENT binding (local dev) is still created.
+ */
+async function mintBearer(env: AgentsHttpEnv, slug: string): Promise<void> {
+  try {
+    const stub = agentStub(env, slug);
+    if (!stub || await fetchRoomBearer(stub)) {
+      return;
+    }
+    await stub.fetch(new Request("https://agent/bearer", {
+      method: "PUT",
+      headers: { "X-Chat-Op": "bearer", "content-type": "application/json" },
+      body: JSON.stringify({ bearer: randomToken() }),
+    }));
+  } catch {
+    // The room is still listed; the bearer can be minted on first container start.
+  }
 }
 
 export async function getAgent(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {

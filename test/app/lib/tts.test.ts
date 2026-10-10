@@ -35,6 +35,13 @@ class FakeAudio {
   }
 }
 
+function textBody(body: BodyInit | null | undefined): string {
+  if (typeof body !== "string") {
+    throw new Error("expected a string body");
+  }
+  return body;
+}
+
 const audio = () => new FakeAudio() as unknown as HTMLAudioElement;
 
 const createObjectURL = vi.fn(() => "blob:kit/1");
@@ -65,7 +72,7 @@ describe("browserSpeak", () => {
     expect(path).toBe(TTS_PATH);
     expect(init.method).toBe("POST");
     expect(init.credentials).toBe("include");
-    expect(JSON.parse(String(init.body))).toEqual({ text: "On my way. See you in 10." });
+    expect(JSON.parse(textBody(init.body))).toEqual({ text: "On my way. See you in 10." });
     expect(createObjectURL).toHaveBeenCalledOnce();
     expect(a.src).toBe("blob:kit/1");
     expect((a as unknown as FakeAudio).play).toHaveBeenCalledOnce();
@@ -77,7 +84,7 @@ describe("browserSpeak", () => {
     const fetchFn = vi.fn(async () => mp3());
     await browserSpeak("今夜は**雨**です。", { fetch: fetchFn as unknown as typeof fetch, audio: audio(), lang: "ja" });
     const [, init] = fetchFn.mock.calls[0] as unknown as [string, RequestInit];
-    expect(JSON.parse(String(init.body))).toEqual({ text: "今夜は雨です。", lang: "ja" });
+    expect(JSON.parse(textBody(init.body))).toEqual({ text: "今夜は雨です。", lang: "ja" });
   });
 
   it("says nothing for markdown-only or blank replies and never hits the Worker", async () => {

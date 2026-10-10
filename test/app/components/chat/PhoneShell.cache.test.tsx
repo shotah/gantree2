@@ -17,9 +17,19 @@ import { clearGeoCache } from "@/lib/phone/geo";
 const KIT = threadCacheKey("kit", DEV_USER.sub);
 const ADA = threadCacheKey("ada", DEV_USER.sub);
 
+function requestUrl(input: RequestInfo | URL): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  if (input instanceof URL) {
+    return input.href;
+  }
+  return input.url;
+}
+
 function stubAuth(mode: "spike" | "oidc", cranes: string[] = ["kit"]) {
-  vi.stubGlobal("fetch", async (input: RequestInfo) => {
-    const url = String(input);
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+    const url = requestUrl(input);
     if (url.includes("/api/auth/config")) {
       return mode === "spike"
         ? Response.json({ mode: "spike", google: false, dev: true })

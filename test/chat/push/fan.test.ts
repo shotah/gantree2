@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { fanWebPush, pushPayload, testWebPush } from "@/lib/chat/push/fan";
 import { PushSend } from "@/lib/chat/push/send";
-import type { StoredPush } from "@/lib/chat/push/subscription";
+import type { PushSub, StoredPush } from "@/lib/chat/push/subscription";
 import { encodeBase64Url } from "@/lib/chat/push/vapid";
 
 function row(userId: string, n: number): StoredPush {
@@ -48,7 +48,7 @@ describe("fan web push", () => {
   });
 
   it("sends a cron broadcast to stored phones and drops gone endpoints", async () => {
-    const send = vi.fn(async (sub) => sub.endpoint.includes("bob") ? "gone" as const : "ok" as const);
+    const send = vi.fn(async (sub: PushSub): Promise<"gone" | "ok"> => sub.endpoint.includes("bob") ? "gone" : "ok");
     const ada = row("ada", 1);
     const bob = row("bob", 2);
     const result = await fanWebPush({

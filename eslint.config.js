@@ -78,6 +78,11 @@ export default tseslint.config(
       "@typescript-eslint/no-unnecessary-type-assertion": "error",
       "@typescript-eslint/no-non-null-assertion": "error",
       "@typescript-eslint/consistent-type-imports": ["error", { fixStyle: "inline-type-imports" }],
+      // @cloudflare/workers-types declares the global `Buffer` as `any`. The import is typed.
+      "no-restricted-globals": ["error", {
+        name: "Buffer",
+        message: "Global Buffer is `any` under @cloudflare/workers-types. Use `import { Buffer } from \"node:buffer\"`.",
+      }],
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
     },
   },

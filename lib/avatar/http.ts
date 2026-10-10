@@ -153,7 +153,7 @@ export async function readChatUser(
   if (res.status !== 200) {
     return { response: res };
   }
-  const body = await res.json() as Partial<ChatUser>;
+  const body = await res.json<Partial<ChatUser>>();
   if (typeof body.sub !== "string" || !body.sub) {
     return { response: Response.json({ error: "unauthorized" }, { status: 401 }) };
   }

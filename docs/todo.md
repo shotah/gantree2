@@ -3,16 +3,18 @@
 The plan is [proposal.md](proposal.md); the pictures are
 [architecture.md](architecture.md). This is the backlog, honest.
 
-**State today (Phase 2a, code-complete; not yet run):** the door with
-the Settings DO and `/users` (§2 done), the chat room as the Agent DO
-and the chat PWA at `/chat/[slug]` (§3 done), `worker/index.ts` wiring
-both DOs and `/ws/<slug>`, 813 Vitest tests at 93.7 % lines, the
-Worker builds. Fifteen MCP plugins under `harness/mcp/` (§6 copied).
-The harness copy itself (§5) is landing. Docs site, security,
-contributing. **Still not run locally with a real Google client** —
-§1 is the next thing a human does. Nothing from gantree's settings
-screens (§4). A box is done when a stranger can do the walk with this
-repo alone.
+**State today (Phase 2b, code-complete; not yet run):** the door with
+the Settings DO and `/users` (§2), the chat room as the Agent DO and
+the chat PWA at `/chat/[slug]` (§3), the agent registry, `/agents`
+board, build wizard, dashboard folds, container binding, tools
+catalog, `/settings`, `/profile`, spend (§4), the harness under
+`harness/` with the `chat` channel and eleven plugins (§5, §6), the
+tree mark and every icon rasterised from it (§7). `worker/index.ts`
+exports `Settings`, `Agent`, `Harness`. 1013 Vitest tests, type-aware
+ESLint clean, `tsc` clean, the Worker builds. **Still not run locally
+with a real Google client** — §1 is the next thing a human does; the
+Dockerfile has never been built. A box is done when a stranger can do
+the walk with this repo alone.
 
 Legend: `[ ]` open · `[x]` done · **D** a decision, not code
 
@@ -81,8 +83,9 @@ Legend: `[ ]` open · `[x]` done · **D** a decision, not code
       `test/app/components/users/`.
 - [x] `/api/auth/me` returns `agents` = Settings grants ∪ room
       admission (`lib/chat/membership.ts`), `cranes` alias copy.
-- [ ] The DO has no `addSample` RPC yet; `samples` is schema only
-      (spend lands with §4).
+- [x] `addSample` / `listSamples` RPCs on the Settings DO; the Agent DO
+      writes `tokens_prompt`, `tokens_completion`, `turn` from each
+      `perf` frame; `/api/samples` reads them for spend.
 - [ ] Walk: add Bob on `/users`; he gets in; remove; `401` next click.
 
 ## 3. Pendant → chat PWA (Phase 2a)
@@ -109,10 +112,11 @@ Source `repos/gantry-pendant`. Copy, re-path, rename storage keys to
 - [x] `app/components/chat/*`, `app/chat/[slug]/{layout,page}.tsx`.
 - [x] Tests: `test/chat/*`, `test/edge/agent.do.test.ts`,
       `test/app/components/chat/*`, `test/pwa/sw.test.ts`.
-- [ ] `AGENT_BEARERS` env is the only way to mint a room bearer until
-      §4's agent create writes it on the DO (`X-Chat-Op: bearer`).
+- [x] Agent create mints the room bearer on the DO (`X-Chat-Op:
+      bearer`), so a new agent's `config` frame carries signed snapshot
+      URLs from birth. `AGENT_BEARERS` env stays as the override.
 - [ ] Harness memory id is still `pendant:<slug>:<sub>` on the Go side;
-      the Worker does not mint it. Flip with the `chat` plugin rename.
+      the Worker does not mint it. Flip with the folder rename in §5.
 - [ ] Walk: harness dials `/ws/kit?role=agent` with a bearer; phone
       chats at `/chat/kit`; theme follows; push arrives.
 
@@ -136,31 +140,40 @@ Contract for the pieces below: [`lib/agents/types.ts`](../lib/agents/types.ts)
 (HTTP routes, DO shapes, snapshot URL signing). Stubs `lib/agents/
 container.ts` and `lib/agents/mcpToml.ts` are replaced, not re-shaped.
 
-- [ ] `lib/yard/door/` — **drop** (passphrase, sessions, operators).
+- [x] `lib/yard/door/` — **dropped** (passphrase, sessions, operators).
       `operators` table → Settings DO `users`.
-- [ ] `lib/yard/crane/` → `lib/agents/`: inventory → Settings DO
-      `agents`; build → Agent DO create; run → container binding
-      start/stop/recreate; doctor → `status` frame; pendant →
-      room-list editor on the Agent DO; `pendantShape` → already
-      `lib/door/allowlist.ts`.
-- [ ] `lib/yard/host/` — **drop** dockerode, compose, stats, files,
-      logs. Replace with `lib/agents/container.ts` (binding state) and
-      the `perf` / `log` frame sinks on the Agent DO.
-- [ ] `lib/yard/tools/` → `lib/agents/tools.ts`: catalog comes from the
-      image's shipped `host-manifest` shapes, not `packages.ts`; grant
-      = `[[server]]` in `config.mcp`.
-- [ ] `lib/yard/observe/` → Settings DO `samples`; spend rollup as-is.
-- [ ] `lib/yard/pendant/` — **drop** (Worker-secret pushing; the Agent
-      DO holds the bearer).
-- [ ] `app/components/yard/*` → `app/components/agents/` (board,
-      build wizard, spend). `app/components/crane/*` →
-      `app/components/agents/[slug]/` (dashboard folds, charts, logs).
-      `host/` → **drop**. `operators/` → `app/components/users/` +
-      `settings/`. `boards/` → **drop** (plugin not carried, §6).
-- [ ] Routes: `/` board, `/agents/new`, `/agents/[slug]`, `/users`,
-      `/settings`, `/profile`. `/setup`, `/login` (passphrase),
-      `/boards` — **drop**.
-- [ ] Screens under `test/app/components/<screen>/` as they land.
+- [x] `lib/yard/crane/` → `lib/agents/`: `registry.ts` (Settings DO
+      `agents` rows, slug grammar shared with `lib/chat/slug.ts`, 32
+      chars), `config.ts` (Agent DO `X-Chat-Op: config` GET/PATCH/POST
+      started), `status.ts` (`status` frame → card colour), room-list
+      editor via `allow`, `snapshot.ts` (HMAC-signed R2 URLs).
+- [x] `lib/yard/host/` — **dropped**. `lib/agents/container.ts` talks
+      to the `HARNESS` binding (`X-Harness-Op: start|stop|recreate|
+      info`, start body `{origin, bearer}`); `edge/harness.do.ts`
+      extends `@cloudflare/containers` `Container`; `perf` / `log`
+      frames are stored on the Agent DO, never fanned to phones.
+- [x] `lib/yard/tools/` → `lib/agents/{lock,catalog,needs,mcpToml}.ts`:
+      catalog from `harness/mcp.lock` (`?raw` import), needs from env
+      keys, grant = `[[server]]` in `config.mcp`; `GET /api/tools`.
+- [x] `lib/yard/observe/` → Settings DO `samples`; `app/lib/spend.ts`
+      rollup with a pasted $/1M rate in `localStorage`.
+- [x] `lib/yard/pendant/` — **dropped** (the Agent DO holds the bearer).
+- [x] `app/components/agents/` — `AgentsBoard`, `NewAgent` wizard,
+      `AgentDashboard` with `Status`/`Persona`/`Secrets`/`Tools`/
+      `Users`/`Log` folds. `app/components/settings/` —
+      `SettingsScreen`, `SpendCard`, `ProfileCard`. `host/`,
+      `boards/` — **dropped**.
+- [x] Routes: `/` router (`lib/door/landing.ts`), `/agents`,
+      `/agents/new`, `/agents/[slug]`, `/chat` picker, `/users`,
+      `/settings`, `/profile`; API under `/api/agents/**`,
+      `/api/tools`, `/api/samples`. `/setup`, passphrase `/login`,
+      `/boards` — **dropped**.
+- [x] Screens under `test/app/components/<screen>/`; middleware strips
+      client-sent `x-gantree-*` and forwards the principal
+      (`test/door/forward.test.ts`).
+- [ ] Navigation uses `window.location.assign` (full reloads) — swap
+      for the router once the walk works.
+- [ ] Compare fold and backup loop — see "Carried over" below.
 - [ ] Walk: build Kit on `/agents/new`; grant maps; put the key in;
       Kit's card goes green; Kit's log fold streams.
 
@@ -200,9 +213,14 @@ container.ts` and `lib/agents/mcpToml.ts` are replaced, not re-shaped.
       `channels`, `contract`, `troubleshooting`. `design` / `features`
       / `architecture` folded into [architecture.md](architecture.md);
       deploy docs not carried.
-- [ ] Rename `internal/channel/pendant` → `internal/channel/chat` and
-      `PENDANT_*` → `CHAT_*` (old names read as aliases) with the `chat`
-      plugin; one PR, eval fixtures updated together.
+- [x] `CHAT_MAILBOX_URL` / `CHAT_BEARER` / `CHAT_ALLOWED_USERS` are
+      canonical; `PENDANT_*` read as aliases with a one-time warning;
+      `CHANNEL=chat` ≡ `pendant`. Empty allowlist is valid under the
+      chat channel with `SNAPSHOT=true` (the room admits; no `allow`
+      frame published). `harness/.env.example` on the new names.
+- [ ] Rename the folder `internal/channel/pendant` → `internal/channel/
+      chat`, flip the memory id to `chat:<slug>:<sub>`, update eval
+      fixtures together; one PR.
 - [ ] Eval fixtures + `mcp.toml` → `harness/internal/agent/testdata/eval/`;
       `tools_from` builds the sibling plugin, no release fetch.
       `eval.yml` turns real.
@@ -243,13 +261,16 @@ each `naming_test.go`) so the eval fixtures keep matching.
 | [x] `rentals` | `rentals-search-mcp` | 80 % | `RENTCAST_API_KEY` | spend fixture |
 
 - [x] `harness/mcp.lock` with every row (`id ./mcp/<id> module binary needs`).
-- [ ] Dockerfile builds them all (harness agent's stage globs `./mcp/*/`).
+- [x] Dockerfile builds them all (`scripts/build-mcp.sh` globs
+      `mcp/*/go.mod`); `harness-image.yml` builds the image, runs
+      `gantry version` inside it, pushes to GHCR on `main`. **Not yet
+      run** — first push is the proof.
 - [x] `scripts/coverage-harness.sh` end to end: 68.2 % with fifteen,
       **69.4 %** with eleven; floor raised to 69.
-- [ ] Harness internals still carry `youtube` / `cast` / `boards`
-      strings as test fixtures and seeds (`internal/examples/seeds.go`
-      `youtube-*`, `internal/agent/authcmd.go` device-flow branch).
-      Harmless; prune with the `chat` rename PR.
+- [ ] Seeds pruned of `youtube-*`. Harness internals still carry
+      `youtube` / `cast` / `boards` strings in test fixtures
+      (`internal/mcp/*_test.go`, `internal/agent/spinup_notes.go`,
+      `channel/pendant`). Harmless; prune with the folder rename PR.
 - [ ] Naming debt: burn down the allowlists in `google` and `garmin`
       with aliases in the eval fixtures, one plugin per PR.
 - [ ] Garmin coverage 33 % → 60 % before `HARNESS_COVERAGE_MIN` rises.
@@ -261,46 +282,54 @@ each `naming_test.go`) so the eval fixtures keep matching.
 New name is the old name; the mark is new: **a tree**. Fresh look; the
 shipping-yard art is gone, not restyled.
 
-**D — The mark (2026-10-10).** A tree that is also the gantry: one
-strong bough reaching out level, a string hanging from it, an **apple**
-on the string. The tree is the harness (roots, trunk), the bough is the
-hoist, the apple is what it hands you. Round canopy, flat ground line,
-no leaves drawn one by one — it has to survive 16 px. Palette from
-`lib/theme/catalog.ts`: canopy and trunk in the theme foreground, apple
-in the accent, string one hairline. Monochrome variant for favicons
-and the Paper theme. No gradients, no text in the mark. Wordmark
-`gantree` lowercase beside it on the banner only.
+**D — The mark (2026-10-10, revised the same day).** A tree that is
+also the gantry, drawn as a **silhouette in the White Tree of Gondor
+family**: one filled compound path, flared trunk, a central leader and
+rising branches that arc upward and end in round leaf caps, no two
+mirrored; one long lower bough reaches out **level** — that is the
+hoist — with a hairline string and a small **apple** in the accent
+hanging from it. The tree is the harness, the bough is the hoist, the
+apple is what it hands you. No ground line, no canopy blob, no leaves
+drawn one by one, no stars, no text in the mark. First cut (a disc on
+a post) was rejected: "a ball and a yoyo". Judged only from rasters at
+512/64/32/16 — at 16 it has to read as a tree plus a warm dot.
+Palette from `lib/theme/catalog.ts`: ink in the theme foreground,
+apple in the accent. Monochrome variant (`currentColor`) for favicons
+and the Paper theme. Wordmark `gantree` lowercase beside it on the
+banner only.
 
-- [ ] `assets/logo.svg` (mark), `assets/logo-mono.svg`; `assets/banner.svg`
-      + `assets/banner.png` (mark + wordmark + one line: "a few people,
-      a few agents, one door"). Boom canvas background on the PNG.
-- [ ] `app/icon.svg` = the mark on the Boom canvas; `public/icon.svg`
-      same; `app/favicon.ico` from the mono mark. PWA PNGs (`192`, `512`,
-      `maskable-512` with safe-zone padding, `apple-touch-icon` 180)
-      **rasterised from the SVG** (`@resvg/resvg-js`, `scripts/icons.ts`),
-      replacing the hand-painted pixels in `lib/pwa/iconPng.ts`. A test
-      asserts each PNG's header size and that `npm run icons` is
-      idempotent.
-- [ ] `/manifest.webmanifest`: name `gantree`, short name `gantree`,
+- [x] `assets/logo.svg` (mark), `assets/logo-mono.svg`; `assets/banner.svg`
+      + `assets/banner.png` (mark + wordmark + "a few people, a few
+      agents, one door"), Boom canvas on the PNG. Banner text is DejaVu
+      Sans from the box's font dir — `scripts/icons.ts` `FONT_FILES`
+      must grow a fallback before CI regenerates it.
+- [x] `app/icon.svg`, `public/icon.svg`, `app/favicon.ico` (mono, Paper
+      ink). PWA PNGs (`192`, `512`, `maskable-512` with 20 % safe zone,
+      `apple-touch-icon` 180) rasterised by `scripts/icons.ts`
+      (`@resvg/resvg-js`, `npm run icons`); `lib/pwa/iconPng.ts` only
+      reads them now. `test/scripts/icons.test.ts` asserts sizes and
+      idempotence.
+- [x] `/manifest.webmanifest`: name and short name `gantree`,
       `theme_color` / `background_color` = Boom canvas, icons above.
-      `lib/pwa` validity test keeps passing.
-- [ ] Site: `site/home.html` hero uses the banner; `scripts/pages.mjs`
-      copies `assets/`; favicon on every page.
-- [ ] Apps: `../gantree2-apps/{cab,helm}` launcher icons and splash from
-      the same SVG — tracked in that repo's todo, generated by
-      `scripts/icons.ts --apps` here.
+- [x] Site: `site/home.html` hero uses the banner; `scripts/pages.mjs`
+      copies `assets/`; mono favicon linked.
+- [x] Apps: `npm run icons -- --apps` writes Android mipmaps and iOS
+      AppIcon PNGs into `../gantree2-apps/shared/brand/` (path derived
+      from this repo's root). Wiring them into cab/helm is that repo's
+      todo.
+- [ ] Owner's eye on the mark at 16 px on a real home screen before it
+      ships; the branch tips still lean toward hooks at 512.
 - [x] Docs site (`site/`, `scripts/pages.mjs`, `pages.yml`) — home,
       docs, `oauth-catch/`, `privacy/`, Mermaid client-side; additive
       beside the badges on `gh-pages`. **Enable Pages once** (Settings →
-      Pages → branch `gh-pages` / root, Enforce HTTPS). Banner/logo are
-      the old placeholders until the tree mark lands (above).
+      Pages → branch `gh-pages` / root, Enforce HTTPS).
 - [ ] OAuth clients: register `https://shotah.github.io/gantree2/oauth-catch/`
       as the redirect on the **tools** Google client, Strava, Google
       Health; privacy URL `https://shotah.github.io/gantree2/privacy/`
       on the consent screen. Plugin defaults (`*_OAUTH_REDIRECT_URI` in
       `harness/mcp/{google,strava,google-health}`) still say
       `shotah.github.io/ai-gantry/oauth-catch/` — flip them.
-- [ ] Screenshots, **after §4 lands** (the pages must exist first):
+- [ ] Screenshots — §4 has landed, the pages exist; this is next:
       port `scripts/shot.mjs` (headless Chrome over CDP, no puppeteer;
       flatpak Chrome path on the dev box) with a shot table for `/login`,
       `/agents`, `/agents/kit`, `/agents/new`, `/users`, `/settings`,

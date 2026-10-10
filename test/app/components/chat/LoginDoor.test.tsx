@@ -12,9 +12,19 @@ afterEach(() => {
   window.history.replaceState({}, "", "/");
 });
 
+function requestUrl(input: RequestInfo | URL): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  if (input instanceof URL) {
+    return input.href;
+  }
+  return input.url;
+}
+
 function stubMe(body: unknown, ok = true) {
-  vi.stubGlobal("fetch", async (input: RequestInfo) => {
-    if (String(input).includes("/api/auth/me")) {
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+    if (requestUrl(input).includes("/api/auth/me")) {
       return ok ? Response.json(body) : new Response(null, { status: 401 });
     }
     return new Response(null, { status: 404 });

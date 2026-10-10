@@ -13,7 +13,7 @@ export type NotifyPayload = {
 
 export type NotifyApi = {
   permission?: unknown;
-  requestPermission?: () => Promise<unknown> | unknown;
+  requestPermission?: () => unknown;
 };
 
 export type NotifyShower = {

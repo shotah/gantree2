@@ -1,4 +1,3 @@
-import type { AgentEnv } from "@/lib/chat/env";
 import { roomsFor } from "@/lib/chat/membership";
 import { me } from "@/lib/door/http";
 import { doorEnv, userStore } from "@/lib/door/runtime";

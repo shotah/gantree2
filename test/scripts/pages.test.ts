@@ -2,7 +2,6 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-// @ts-expect-error plain ESM script outside the TS project
 import { buildPages, DOC_PAGES, githubSlug, markdownToHtml, parsePagesArgs, rewriteHref, titleFromMarkdown } from "../../scripts/pages.mjs";
 
 const ROOT = resolve(import.meta.dirname, "../..");
@@ -44,7 +43,7 @@ describe("pages helpers", () => {
 
 describe("buildPages", () => {
   const out = mkdtempSync(join(tmpdir(), "pages-"));
-  const built = buildPages(ROOT, out) as string[];
+  const built = buildPages(ROOT, out);
 
   it("writes home, 404, docs, catch page, privacy, assets", () => {
     for (const f of ["index.html", "404.html", "style.css", ".nojekyll", "oauth-catch/index.html", "privacy/index.html", "assets/logo.svg", "assets/banner.png"]) {

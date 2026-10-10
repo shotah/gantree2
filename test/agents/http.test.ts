@@ -175,6 +175,21 @@ describe("agents http", () => {
     expect((await getAgents(new Request("https://g.test/api/agents"), env)).status).toBe(401);
   });
 
+  it("mints a room bearer on create when the room has none, keeps an existing one", async () => {
+    const { env, calls, setBearer } = world();
+    setBearer(null);
+    expect((await postAgent(asRole("admin", "/api/agents", [], "POST", JSON.stringify({ slug: "kit" })), env)).status).toBe(201);
+    const minted = calls.filter((c) => c.op === "bearer" && c.method === "PUT");
+    expect(minted).toHaveLength(1);
+    const body = JSON.parse(minted[0]?.body ?? "{}") as { bearer?: string };
+    expect(body.bearer).toMatch(/^[A-Za-z0-9_-]{32,}$/);
+
+    calls.length = 0;
+    setBearer("room-secret");
+    expect((await postAgent(asRole("admin", "/api/agents", [], "POST", JSON.stringify({ slug: "ada" })), env)).status).toBe(201);
+    expect(calls.filter((c) => c.op === "bearer" && c.method === "PUT")).toHaveLength(0);
+  });
+
   it("creates for an admin, refuses an operator, and deletes after stopping the container", async () => {
     const { env, agents, bucket, users } = world();
     bucket.objects.set("backups/kit/latest/gantry_db", new Uint8Array([1]));

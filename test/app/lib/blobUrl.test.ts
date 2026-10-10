@@ -27,10 +27,20 @@ afterEach(async () => {
 
 type Call = { url: string; ifNoneMatch: string | null };
 
+function requestUrl(input: RequestInfo | URL): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  if (input instanceof URL) {
+    return input.href;
+  }
+  return input.url;
+}
+
 function stubFetch(status: number, rev = 7) {
   const calls: Call[] = [];
-  vi.stubGlobal("fetch", async (input: RequestInfo, init?: RequestInit) => {
-    calls.push({ url: String(input), ifNoneMatch: new Headers(init?.headers).get("If-None-Match") });
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+    calls.push({ url: requestUrl(input), ifNoneMatch: new Headers(init?.headers).get("If-None-Match") });
     // Bytes, not a jsdom Blob: Node's Response cannot stream jsdom's Blob.
     if (status === 200) {
       return new Response(new Uint8Array([0xff, 0xd8, 0xff]), {

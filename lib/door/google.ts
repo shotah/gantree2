@@ -86,7 +86,7 @@ export async function exchangeCode(opts: {
   if (!res.ok) {
     return { ok: false, error: `token endpoint ${res.status}` };
   }
-  const json = (await res.json()) as { id_token?: unknown };
+  const json = await res.json<{ id_token?: unknown }>();
   if (typeof json.id_token !== "string") {
     return { ok: false, error: "no id_token" };
   }

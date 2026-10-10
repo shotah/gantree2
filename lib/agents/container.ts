@@ -8,7 +8,7 @@
  * otherwise the optional `origin` argument (the HTTP route passes the request).
  */
 import { fetchRoomBearer } from "@/lib/chat/bearer";
-import { agentStub, type AgentBinding } from "@/lib/chat/location";
+import { agentStub } from "@/lib/chat/location";
 import type { AgentsEnv, ContainerAction, ContainerInfo, ContainerState } from "./types";
 
 export const UNKNOWN_CONTAINER: ContainerInfo = { state: "unknown", since: null, lastError: null, image: null };
@@ -48,7 +48,7 @@ export async function containerAct(
     if (!dial) {
       return failed("no origin");
     }
-    const agent = agentStub(env as AgentBinding, slug);
+    const agent = agentStub(env, slug);
     const bearer = agent ? await fetchRoomBearer(agent) : null;
     if (!bearer) {
       return failed("no bearer");
@@ -107,7 +107,7 @@ async function harnessOp(env: AgentsEnv, slug: string, op: string, body?: { orig
  * Either way the container is already up — ignore the miss.
  */
 async function noteStarted(env: AgentsEnv, slug: string): Promise<void> {
-  const agent = agentStub(env as AgentBinding, slug);
+  const agent = agentStub(env, slug);
   if (!agent) {
     return;
   }

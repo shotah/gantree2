@@ -35,8 +35,8 @@ import type { SampleRow } from "@/lib/door/settingsStore";
 
 export type { RoomUser, SampleRow };
 
-/** Same shape the Settings store enforces for `users.agents`. */
-export const AGENT_SLUG = /^[a-z][a-z0-9-]{0,62}$/;
+/** One slug grammar everywhere: letter first, then letters, digits, hyphen, max 32 (`lib/chat/slug.ts`, `/ws/<slug>`). */
+export const AGENT_SLUG = /^[a-z][a-z0-9-]{0,31}$/;
 
 /** Settings DO `agents` row — the inventory. Never secrets. */
 export type AgentRow = {

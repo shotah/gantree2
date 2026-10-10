@@ -9,8 +9,10 @@ function failMsg(r: ParseResult): string {
 describe("frame", () => {
   it("parses text both ways", () => {
     const got = parseFrame(JSON.stringify({ text: "hi" }));
-    expect(got).toEqual({ ok: true, frame: { text: "hi" }, bytes: expect.any(Number) });
+    expect(got.ok).toBe(true);
     if (got.ok) {
+      expect(got.frame).toEqual({ text: "hi" });
+      expect(got.bytes).toBeTypeOf("number");
       expect(encodeFrame(got.frame)).toBe('{"text":"hi"}');
     }
   });

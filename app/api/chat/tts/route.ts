@@ -1,6 +1,5 @@
 import { doorEnv, userStore } from "@/lib/door/runtime";
-import { handleTts, type TtsEnv } from "@/lib/tts/http";
-import type { DoorEnv } from "@/lib/door/http";
+import { handleTts } from "@/lib/tts/http";
 
 export const dynamic = "force-dynamic";
 

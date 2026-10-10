@@ -45,7 +45,7 @@ async function requireAdmin(req: Request, env: DoorEnv, store: UserStore): Promi
   if (!profile.ok) {
     return profile;
   }
-  const body = await profile.json() as { sub?: unknown; role?: unknown };
+  const body = await profile.json<{ sub?: unknown; role?: unknown }>();
   if (body.role !== "admin" || typeof body.sub !== "string" || body.sub.length === 0) {
     return fail("forbidden");
   }
@@ -62,7 +62,7 @@ function mutations(store: UserStore): (UserStore & UserMutations) | null {
 
 async function readJson(req: Request): Promise<Record<string, unknown> | null> {
   try {
-    const value = await req.json() as unknown;
+    const value = await req.json<unknown>();
     if (!value || typeof value !== "object" || Array.isArray(value)) {
       return null;
     }

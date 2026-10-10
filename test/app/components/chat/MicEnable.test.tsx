@@ -78,6 +78,6 @@ describe("MicEnable", () => {
     });
     expect(screen.getByText("Blocked — enable in system settings.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Enable microphone" })).toBeTruthy();
-    expect((screen.getByRole("button", { name: "Enable microphone" }) as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "Enable microphone" }).disabled).toBe(false);
   });
 });

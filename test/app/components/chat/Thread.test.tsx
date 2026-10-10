@@ -146,16 +146,22 @@ describe("Thread reactions", () => {
     const bubble = screen.getByText("Rain at 6.");
     fireEvent.pointerDown(bubble, { clientX: 10, clientY: 10 });
     fireEvent.pointerUp(bubble);
-    act(() => vi.advanceTimersByTime(REACT_HOLD_MS + 50));
+    act(() => {
+      vi.advanceTimersByTime(REACT_HOLD_MS + 50);
+    });
     expect(screen.queryByRole("group", { name: "React" })).toBeNull();
 
     fireEvent.pointerDown(bubble, { clientX: 10, clientY: 10 });
     fireEvent.pointerMove(bubble, { clientX: 40, clientY: 10 }); // scrolling, not holding
-    act(() => vi.advanceTimersByTime(REACT_HOLD_MS + 50));
+    act(() => {
+      vi.advanceTimersByTime(REACT_HOLD_MS + 50);
+    });
     expect(screen.queryByRole("group", { name: "React" })).toBeNull();
 
     fireEvent.pointerDown(bubble, { clientX: 10, clientY: 10 });
-    act(() => vi.advanceTimersByTime(REACT_HOLD_MS + 50));
+    act(() => {
+      vi.advanceTimersByTime(REACT_HOLD_MS + 50);
+    });
     expect(screen.getByRole("group", { name: "React" })).toBeTruthy();
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("group", { name: "React" })).toBeNull();

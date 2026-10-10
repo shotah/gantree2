@@ -81,11 +81,11 @@ describe("Compose", () => {
     const onPhotoClear = vi.fn();
     const url = "data:image/jpeg;base64,/9j/";
     const { rerender } = render(<Compose onSend={onSend} onPhoto={vi.fn()} />);
-    const send = screen.getByRole("button", { name: "Send" }) as HTMLButtonElement;
+    const send = screen.getByRole<HTMLButtonElement>("button", { name: "Send" });
     expect(send.disabled).toBe(true);
     expect(screen.queryByAltText("Photo to send")).toBeNull();
     rerender(<Compose onSend={onSend} onPhoto={vi.fn()} photo={url} onPhotoClear={onPhotoClear} />);
-    expect((screen.getByAltText("Photo to send") as HTMLImageElement).src).toBe(url);
+    expect(screen.getByAltText<HTMLImageElement>("Photo to send").src).toBe(url);
     expect(send.disabled).toBe(false);
     fireEvent.click(screen.getByRole("button", { name: "Remove photo" }));
     expect(onPhotoClear).toHaveBeenCalledTimes(1);
@@ -162,7 +162,7 @@ describe("Compose", () => {
     expect(screen.queryByRole("option", { name: /^\/new / })).toBeNull();
     fireEvent.click(screen.getByRole("option", { name: /^\/tools / }));
     expect(onSend).not.toHaveBeenCalled();
-    expect((screen.getByPlaceholderText("Message Kit") as HTMLTextAreaElement).value).toBe("/tools");
+    expect(screen.getByPlaceholderText<HTMLTextAreaElement>("Message Kit").value).toBe("/tools");
     expect(screen.queryByRole("listbox", { name: "Harness commands" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     expect(onSend).toHaveBeenCalledWith("/tools");
@@ -241,7 +241,7 @@ describe("Compose", () => {
     rerender(
       <Compose onSend={vi.fn()} onPin={onPin} gpsOn={false} onGpsToggle={onGpsToggle} gpsHint="GPS off" />,
     );
-    expect((screen.getByRole("button", { name: "drop pin" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "drop pin" }).disabled).toBe(true);
   });
 
   it("warms GPS when the composer is focused", () => {
@@ -298,7 +298,10 @@ describe("Compose", () => {
     expect(hold.className.split(/\s+/)).toEqual(expect.arrayContaining(["w-full", "min-h-11", "touch-none", "select-none"]));
 
     fireEvent.pointerDown(hold, { button: 0, pointerId: 1, clientX: 0, clientY: 0 });
-    const rec = FakeRecognizer.last!;
+    const rec = FakeRecognizer.last;
+    if (!rec) {
+      throw new Error("recognizer was not constructed");
+    }
     rec.onresult?.({ results: [{ isFinal: true, length: 1, 0: { transcript: "on my way" } }] });
     fireEvent.pointerUp(hold, { pointerId: 1, clientX: 0, clientY: 0 });
     rec.onend?.();
@@ -342,7 +345,7 @@ describe("Compose", () => {
 
   it("disables the hold bar with the rest of compose while the socket is down", () => {
     render(<Compose onSend={vi.fn()} onVoice={vi.fn()} voice recognizer={FakeRecognizer} disabled />);
-    const hold = screen.getByRole("button", { name: "Hold to talk" }) as HTMLButtonElement;
+    const hold = screen.getByRole<HTMLButtonElement>("button", { name: "Hold to talk" });
     expect(hold.disabled).toBe(true);
     fireEvent.pointerDown(hold, { button: 0, pointerId: 1 });
     expect(FakeRecognizer.last).toBeNull();

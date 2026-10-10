@@ -2,7 +2,6 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-// @ts-expect-error scripts/*.mjs sits outside the TS project
 import { badgeColor, badgeSvg, main, pctFromGoFunc, pctFromVitestSummary } from "../../scripts/badge.mjs";
 
 describe("badge inputs", () => {
@@ -41,7 +40,14 @@ describe("badgeSvg", () => {
     expect(app).toContain('fill="#4c1"');
     const harness = badgeSvg({ label: "harness coverage", pct: 62 });
     expect(harness).toContain("<title>harness coverage: 62%</title>");
-    const w = (svg: string) => Number(/width="(\d+)"/.exec(svg)![1]);
+    const w = (svg: string): number => {
+      const match = /width="(\d+)"/.exec(svg);
+      const width = match?.[1];
+      if (!width) {
+        throw new Error("badge svg has no width");
+      }
+      return Number(width);
+    };
     expect(w(harness)).toBeGreaterThan(w(app));
   });
 });

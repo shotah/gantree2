@@ -22,5 +22,5 @@ export function pngSize(bytes: Uint8Array): { width: number; height: number } | 
 
 /** Bytes of a committed icon. `dir` defaults to `public/` from the process cwd. */
 export function readPwaIcon(name: PwaIconName, dir = "public"): Uint8Array {
-  return new Uint8Array(readFileSync(join(dir, name)));
+  return Uint8Array.from(readFileSync(join(dir, name)) as ArrayLike<number>);
 }

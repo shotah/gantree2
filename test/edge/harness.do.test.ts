@@ -16,7 +16,6 @@ vi.mock("cloudflare:workers", () => ({
 
 import { HARNESS_IMAGE, HARNESS_PORT, Harness, harnessProcessEnv } from "@/edge/harness.do";
 import type { ContainerInfo } from "@/lib/agents/types";
-import type { AgentEnv } from "@/lib/chat/env";
 
 class FakeContainer {
   running = false;
@@ -110,7 +109,7 @@ function ctxFor(storage: FakeStorage, container: FakeContainer, name = "kit") {
 async function boot(name = "kit", storage = new FakeStorage(), container = new FakeContainer()) {
   const harness = new Harness(
     ctxFor(storage, container, name) as unknown as ConstructorParameters<typeof Harness>[0],
-    {} as AgentEnv,
+    {},
   );
   await Promise.resolve();
   await Promise.resolve();
@@ -129,7 +128,7 @@ function op(name: string, body?: unknown): Request {
 }
 
 async function read(res: Response): Promise<ContainerInfo> {
-  return res.json() as Promise<ContainerInfo>;
+  return res.json<ContainerInfo>();
 }
 
 describe("harnessProcessEnv", () => {

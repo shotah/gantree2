@@ -13,6 +13,14 @@ function setCookies(res: Response): string[] {
   return res.headers.getSetCookie();
 }
 
+function header(res: Response, name: string): string {
+  const value = res.headers.get(name);
+  if (!value) {
+    throw new Error(`missing ${name}`);
+  }
+  return value;
+}
+
 function cookieValue(res: Response, name: string): string | null {
   const line = setCookies(res).find((c) => c.startsWith(`${name}=`));
   return line ? line.slice(name.length + 1).split(";")[0] : null;
@@ -35,10 +43,13 @@ describe("startGoogle", () => {
   it("302s to Google and seals state/nonce/verifier/next in the oauth cookie", async () => {
     const res = await startGoogle(new Request("https://g.test/api/auth/google?next=/agents/kit"), env);
     expect(res.status).toBe(302);
-    const to = new URL(res.headers.get("location")!);
+    const to = new URL(header(res, "location"));
     expect(to.hostname).toBe("accounts.google.com");
     const raw = cookieValue(res, OAUTH_COOKIE);
-    const claims = await openOAuth(await sessionKey(SECRET), raw!);
+    if (!raw) {
+      throw new Error("missing oauth cookie");
+    }
+    const claims = await openOAuth(await sessionKey(SECRET), raw);
     expect(claims?.state).toBe(to.searchParams.get("state"));
     expect(claims?.nonce).toBe(to.searchParams.get("nonce"));
     expect(claims?.next).toBe("/agents/kit");
@@ -72,7 +83,10 @@ describe("finishGoogle", () => {
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe("https://g.test/agents/kit");
     const session = cookieValue(res, SESSION_COOKIE);
-    expect(await openSession(await sessionKey(SECRET), session!)).toEqual({ sub: ADA_SUB, email: "ada@example.com" });
+    if (!session) {
+      throw new Error("missing session cookie");
+    }
+    expect(await openSession(await sessionKey(SECRET), session)).toEqual({ sub: ADA_SUB, email: "ada@example.com" });
     expect(setCookies(res).find((c) => c.startsWith(`${OAUTH_COOKIE}=`))).toContain("Max-Age=0");
   });
 
@@ -92,7 +106,7 @@ describe("finishGoogle", () => {
     for (const [req, deps, code] of cases) {
       const res = await finishGoogle(req, env, memoryStore(), deps);
       expect(res.status).toBe(302);
-      const to = new URL(res.headers.get("location")!);
+      const to = new URL(header(res, "location"));
       expect(to.pathname).toBe("/login");
       expect(to.searchParams.get("error")).toBe(code);
       expect(cookieValue(res, SESSION_COOKIE)).toBeNull();
@@ -101,7 +115,7 @@ describe("finishGoogle", () => {
 
   it("bounces not_configured without touching Google", async () => {
     const res = await finishGoogle(new Request("https://g.test/api/auth/callback/google?code=c&state=st"), { SESSION_SECRET: SECRET }, memoryStore());
-    expect(new URL(res.headers.get("location")!).searchParams.get("error")).toBe("not_configured");
+    expect(new URL(header(res, "location")).searchParams.get("error")).toBe("not_configured");
   });
 });
 
@@ -127,7 +141,7 @@ describe("me / logout / guard", () => {
     expect(res.status).toBe(303);
     expect(res.headers.get("location")).toBe("https://g.test/login");
     expect(res.headers.get("set-cookie")).toContain(`${SESSION_COOKIE}=;`);
-    expect(readCookie(new Request("https://g.test/", { headers: { cookie: res.headers.get("set-cookie")! } }), SESSION_COOKIE)).toBe("");
+    expect(readCookie(new Request("https://g.test/", { headers: { cookie: header(res, "set-cookie") } }), SESSION_COOKIE)).toBe("");
   });
 
   it("guard: null for public and pass, redirect for pages, json for api", async () => {

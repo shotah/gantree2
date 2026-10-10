@@ -21,6 +21,23 @@ const AUDIT: AuditEvent = {
   detail: JSON.stringify({ entry: "bob@example.com", role: "operator", agents: ["kit"] }),
 };
 
+function requestUrl(input: RequestInfo | URL): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  if (input instanceof URL) {
+    return input.href;
+  }
+  return input.url;
+}
+
+function textBody(body: BodyInit | null | undefined): string {
+  if (typeof body !== "string") {
+    throw new Error("expected a string body");
+  }
+  return body;
+}
+
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -50,11 +67,11 @@ describe("UsersScreen", () => {
   it("adds an operator and keeps a rejected entry in the field", async () => {
     const users = [ADA];
     const calls: { url: string; body?: string }[] = [];
-    const client: ApiClient = vi.fn(async (input, init) => {
+    const client: ApiClient = vi.fn(async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
       const method = init?.method ?? "GET";
-      calls.push({ url: String(input), body: typeof init?.body === "string" ? init.body : undefined });
+      calls.push({ url: requestUrl(input), body: typeof init?.body === "string" ? init.body : undefined });
       if (method === "POST") {
-        const body = JSON.parse(String(init?.body)) as { entry: string; role: string; agents: string[] };
+        const body = JSON.parse(textBody(init?.body)) as { entry: string; role: string; agents: string[] };
         if (body.entry === "bad") {
           return json(400, { error: "bad_entry" });
         }
@@ -70,7 +87,7 @@ describe("UsersScreen", () => {
     fireEvent.change(within(form).getByLabelText("Email or sub:email"), { target: { value: "bad" } });
     fireEvent.click(within(form).getByRole("button", { name: "Add user" }));
     expect((await screen.findByRole("alert")).textContent).toContain("Use an email or sub:email.");
-    expect((within(form).getByLabelText("Email or sub:email") as HTMLInputElement).value).toBe("bad");
+    expect(within(form).getByLabelText<HTMLInputElement>("Email or sub:email").value).toBe("bad");
 
     fireEvent.change(within(form).getByLabelText("Role"), { target: { value: "operator" } });
     fireEvent.change(within(form).getByLabelText("Email or sub:email"), { target: { value: "eve@example.com" } });
@@ -81,20 +98,20 @@ describe("UsersScreen", () => {
     expect(screen.getByRole("status").textContent).toContain("Saved eve@example.com.");
     const posted = calls.filter((call) => call.body?.includes("eve@example.com")).pop();
     expect(JSON.parse(posted?.body ?? "{}")).toEqual({ entry: "eve@example.com", role: "operator", agents: ["kit", "ada"] });
-    expect((within(form).getByLabelText("Email or sub:email") as HTMLInputElement).value).toBe("");
+    expect(within(form).getByLabelText<HTMLInputElement>("Email or sub:email").value).toBe("");
   });
 
   it("saves a role change and confirms a remove", async () => {
     let users = [ADA, BOB];
     let deleted = "";
-    const client: ApiClient = vi.fn(async (input, init) => {
+    const client: ApiClient = vi.fn(async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
       const method = init?.method ?? "GET";
       if (method === "POST") {
         users = users.map((user) => user.entry.email === "bob@example.com" ? { ...user, role: "admin" as const, agents: [] } : user);
         return json(200, { user: users[1] });
       }
       if (method === "DELETE") {
-        deleted = String(input);
+        deleted = requestUrl(input);
         users = users.filter((user) => user.entry.email !== "bob@example.com");
         return json(200, { ok: true });
       }
@@ -137,7 +154,7 @@ describe("UsersScreen", () => {
   });
 
   it("shows a non-JSON failure and a raw audit detail", async () => {
-    const client: ApiClient = vi.fn(async (input, init) => {
+    const client: ApiClient = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
       if ((init?.method ?? "GET") === "GET") {
         return json(200, {
           users: [BOB],

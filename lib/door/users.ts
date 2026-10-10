@@ -55,7 +55,7 @@ export function hasAdmins(env: UsersEnv): boolean {
 }
 
 export const memoryStore = (rows: UserRow[] = []): UserStore => ({
-  list: async () => rows,
+  list: () => Promise.resolve(rows),
 });
 
 /**

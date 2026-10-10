@@ -23,7 +23,7 @@ export function LoginDoor() {
       retry: false,
     }));
     void fetch("/api/auth/me")
-      .then(async (r) => (r.ok ? r.json() as Promise<Me> : null))
+      .then(async (r) => (r.ok ? r.json<Me>() : null))
       .then((body) => {
         setMe(body);
         setReady(true);

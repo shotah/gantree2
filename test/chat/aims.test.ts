@@ -15,7 +15,6 @@ import {
   phoneMustNotPublishAims,
   signed,
   statsLine,
-  type AimRow,
 } from "@/lib/chat/aims";
 import { parseFrame } from "@/lib/chat/frame";
 import { shouldQueue } from "@/lib/chat/queue";

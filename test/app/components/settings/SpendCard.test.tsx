@@ -5,6 +5,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { SpendCard, type ApiClient } from "@/app/components/settings/SpendCard";
 import { SPEND_RATE_KEY } from "@/app/lib/spend";
 
+/** The URL a fetch-shaped mock was called with, whatever form the caller used. */
+function urlOf(input: RequestInfo | URL): string {
+  return typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+}
+
 afterEach(() => {
   cleanup();
   localStorage.clear();
@@ -44,11 +49,12 @@ describe("SpendCard", () => {
     expect(screen.queryByRole("listitem", { name: "ada" })).toBeNull();
     expect(screen.queryByText(/424\.2k/)).toBeNull();
 
-    const url = String(vi.mocked(client).mock.calls[0]?.[0]);
+    const first = vi.mocked(client).mock.calls[0]?.[0];
+    const url = first === undefined ? "" : urlOf(first);
     expect(url.startsWith("/api/samples?")).toBe(true);
     expect(url).toContain("since=");
     expect(url).not.toContain("agent=");
-    expect((screen.getByLabelText("$ / 1M tokens") as HTMLInputElement).value).toBe("4");
+    expect(screen.getByLabelText<HTMLInputElement>("$ / 1M tokens").value).toBe("4");
 
     fireEvent.click(screen.getByRole("button", { name: "30d" }));
     expect(screen.getByRole("button", { name: "30d" }).getAttribute("aria-pressed")).toBe("true");
@@ -78,7 +84,7 @@ describe("SpendCard", () => {
     const { unmount } = render(<SpendCard agents={["kit", "ada"]} client={client} />);
     expect(await screen.findByRole("listitem", { name: "kit" })).toBeTruthy();
     expect(screen.getByRole("listitem", { name: "ada" })).toBeTruthy();
-    const urls = vi.mocked(client).mock.calls.map((call) => String(call[0]));
+    const urls = vi.mocked(client).mock.calls.map((call) => urlOf(call[0]));
     expect(urls.some((url) => url.includes("agent=kit"))).toBe(true);
     expect(urls.some((url) => url.includes("agent=ada"))).toBe(true);
     unmount();

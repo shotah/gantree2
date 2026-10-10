@@ -337,8 +337,7 @@ export function Compose({
     boxRef.current?.focus();
   }
 
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
+  function sendDraft() {
     const t = applyEmoji(text, text.length, "send").text.trim();
     if ((!t && !photo) || disabled) {
       return;
@@ -346,6 +345,11 @@ export function Compose({
     onSend(t);
     setEmojiOpen(false);
     setDraft("");
+  }
+
+  function submit(e: React.SubmitEvent<HTMLFormElement>) {
+    e.preventDefault();
+    sendDraft();
   }
 
   function toggleCommands() {
@@ -550,7 +554,7 @@ export function Compose({
                     }
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
-                      submit(e);
+                      sendDraft();
                     }
                   }}
                 />

@@ -1,4 +1,4 @@
-import type { Geo, PhoneContext } from "../chat/frame";
+import type { PhoneContext } from "../chat/frame";
 
 export type GeoFix = {
   lat: number;

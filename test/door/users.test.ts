@@ -39,13 +39,19 @@ describe("resolveUser", () => {
     ]);
     const eve = await resolveUser(env, store, EVE);
     expect(eve).toMatchObject({ role: "operator", agents: ["ada", "kit"] });
-    expect(canRunAgent(eve!, "kit")).toBe(true);
-    expect(canRunAgent(eve!, "zed")).toBe(false);
+    if (!eve) {
+      return;
+    }
+    expect(canRunAgent(eve, "kit")).toBe(true);
+    expect(canRunAgent(eve, "zed")).toBe(false);
     const bob = await resolveUser(env, store, BOB);
     expect(bob).toMatchObject({ role: "operator", agents: ["kit"] });
     const ada = await resolveUser(env, store, ADA);
     expect(ada?.role).toBe("admin");
-    expect(canRunAgent(ada!, "anything")).toBe(true);
+    if (!ada) {
+      return;
+    }
+    expect(canRunAgent(ada, "anything")).toBe(true);
   });
 
   it("a removed store row is a miss on the next resolve", async () => {
