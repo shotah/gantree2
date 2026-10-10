@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Eval setup — gantree</title>
   <meta name="description" content="Eval setup">
-  <link rel="canonical" href="https://shotah.github.io/gantree2/docs/eval_setup.html">
+  <link rel="canonical" href="https://github.bldhosting.com/docs/eval_setup.html">
   <meta name="theme-color" content="#0e1316">
   <meta property="og:title" content="Eval setup — gantree">
   <meta property="og:description" content="Eval setup">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://shotah.github.io/gantree2/docs/eval_setup.html">
-  <meta property="og:image" content="https://shotah.github.io/gantree2/assets/banner.png">
+  <meta property="og:url" content="https://github.bldhosting.com/docs/eval_setup.html">
+  <meta property="og:image" content="https://github.bldhosting.com/assets/banner.png">
   <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="../style.css">
@@ -46,9 +46,9 @@ Fixtures: <code>harness/internal/agent/testdata/eval/</code></p>
 </blockquote>
 <p>Three values, two places. The eval replays each fixture against a live
 model with the shipped persona seed; it needs the same three <code>LLM_*</code> the
-harness needs and nothing else. No MCP servers running, no chat room,
-no Google — every tool is canned, or its catalog is read from the
-binary already baked into the image.</p>
+harness needs. Tool results stay canned. Where a fixture sets
+<code>tools_from</code>, the test builds that sibling plugin and reads <code>tools/list</code>;
+it does not call the tool.</p>
 <table>
 <thead>
 <tr>
@@ -60,12 +60,12 @@ binary already baked into the image.</p>
 <tbody><tr>
 <td><code>LLM_BASE_URL</code></td>
 <td><code>harness/.env</code></td>
-<td>Repository <strong>variable</strong></td>
+<td>Repository <strong>secret</strong></td>
 </tr>
 <tr>
 <td><code>LLM_MODEL</code></td>
 <td><code>harness/.env</code></td>
-<td>Repository <strong>variable</strong></td>
+<td>Repository <strong>secret</strong></td>
 </tr>
 <tr>
 <td><code>LLM_API_KEY</code></td>
@@ -119,35 +119,36 @@ session and run the <code>go test</code> line from <code>harness/Makefile</code>
 </li>
 </ol>
 <h2 id="2-github">2. GitHub</h2>
-<p>The release gate reads the key from a <strong>secret</strong> and the endpoint and
-model from <strong>variables</strong> — the endpoint and model are not sensitive,
-and variables show up in the run log so a wrong one is visible.</p>
-<p><strong>Settings → Secrets and variables → Actions</strong></p>
+<p>The release gate reads all three from <strong>secrets</strong>. The workflow checks
+that each one is set and, if any is missing, prints a notice and
+succeeds without running the model. It does not print the values.</p>
+<p><strong>Settings → Secrets and variables → Actions → Secrets</strong></p>
 <ul>
-<li><strong>Secrets</strong> → <code>LLM_API_KEY</code></li>
-<li><strong>Variables</strong> → <code>LLM_BASE_URL</code>, <code>LLM_MODEL</code></li>
+<li><code>LLM_API_KEY</code></li>
+<li><code>LLM_BASE_URL</code></li>
+<li><code>LLM_MODEL</code></li>
 </ul>
 <p>Or with the <code>gh</code> CLI from the repo:</p>
 <pre><code class="language-sh">gh secret set LLM_API_KEY
-gh variable set LLM_BASE_URL --body 'https://generativelanguage.googleapis.com/v1beta/openai'
-gh variable set LLM_MODEL --body 'gemini-3.8-flash'</code></pre>
+gh secret set LLM_BASE_URL --body 'https://generativelanguage.googleapis.com/v1beta/openai'
+gh secret set LLM_MODEL --body 'gemini-3.8-flash'</code></pre>
 <p>Two workflows read them:</p>
 <ul>
 <li><p><strong><code>eval.yml</code></strong> — <em>Actions → eval → Run workflow</em>. Inputs: <code>runs</code>
 (default 3) and <code>only</code> (a fixture name, blank = all). By hand:</p>
 <pre><code class="language-sh">gh workflow run eval.yml -f runs=5 -f only=scoop_at_2</code></pre>
 </li>
-<li><p><strong><code>release.yml</code></strong> — on a <code>v*</code> tag the <code>eval</code> job runs first and the
-release <code>needs</code> it. Eval fails → no release, no image tag. Fix the
-fixture or the seed, then re-run the failed job (or push the next
-tag).</p>
+<li><p><strong><code>release.yml</code></strong> — on a <code>v*</code> tag it calls <code>eval.yml</code>
+(<code>workflow_call</code>) and the release job <code>needs</code> that run. Eval fails →
+the GitHub Release is not created. Fix the fixture or the seed, then
+re-run the failed job (or push the next tag). A skipped eval (missing
+secrets) still lets the release through.</p>
 </li>
 </ul>
-<p>Without the secret the eval job skips and stays green, so a fork with
-no key still releases. <code>ci.yml</code> and <code>harness.yml</code> do not call the eval
-— the free goldens and the coverage floors are the PR gate; this is the
-release gate. Until <code>harness/go.mod</code> lands (Phase 2) the job skips with
-a notice, like <code>harness.yml</code>.</p>
+<p>Without any of the three secrets the eval job skips and stays green, so
+a fork with no key still releases. <code>ci.yml</code> and <code>harness.yml</code> do not
+call the eval — the free goldens and the coverage floors are the PR
+gate; this is the release gate.</p>
 <h2 id="3-reading-a-failure">3. Reading a failure</h2>
 <p>Every failed run prints what the model did, then the reply:</p>
 <pre><code class="language-text">run 2/3 FAIL: expected tool cron_schedule; waiting_for_reply=false, want true
@@ -347,12 +348,15 @@ Nothing is called: results stay canned, so a placeholder key never
 reaches a vendor.</p>
 <p><strong>In this repo the binary is already there.</strong> Plugins live under
 <code>harness/mcp/&lt;name&gt;/</code>, so the eval runs <code>go build</code> on the sibling
-module (or uses the one in <code>/opt/mcp</code> when run inside the image) — no
-GitHub release lookup, no rate limit, no <code>GITHUB_TOKEN</code>. A fixture
-<code>tools</code> entry whose name the live server does not publish fails before
-any model call, and so does a <code>tools_from</code> server with no <code>mcp.lock</code>
-row. That is the naming contract (<a href="mcp-naming.html">mcp-naming.md</a>)
-enforced by the eval.</p>
+module (or uses the one in <code>/opt/mcp</code> when run inside the image, or a
+prebuild in <code>EVAL_MCP_BIN</code>) — no GitHub release lookup, no rate limit,
+no <code>GITHUB_TOKEN</code>. A fixture <code>tools</code> entry whose name the live server
+does not publish fails before any model call, and so does a
+<code>tools_from</code> server with no <code>mcp.lock</code> row. That is the naming contract
+(<a href="mcp-naming.html">mcp-naming.md</a>) enforced by the eval.</p>
+<p>The fixtures that set <code>tools_from</code> name <code>rentals</code>, <code>flights</code>, and
+<code>google</code>. Each is a row in <code>harness/mcp.lock</code> and is built from
+<code>harness/mcp/&lt;id&gt;/</code>.</p>
 <p>Then:</p>
 <pre><code class="language-sh">cd harness &amp;&amp; go test ./internal/agent/ -run TestEvalFixtures_WellFormed   # parses, regexes compile
 npm run eval -- EVAL_ARGS='-eval.n=1 -eval.only=&lt;name&gt;'                      # first live read</code></pre>

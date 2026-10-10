@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Auth from chat (remote OAuth, no inbound ports) — gantree</title>
   <meta name="description" content="Auth from chat (remote OAuth, no inbound ports)">
-  <link rel="canonical" href="https://shotah.github.io/gantree2/docs/auth.html">
+  <link rel="canonical" href="https://github.bldhosting.com/docs/auth.html">
   <meta name="theme-color" content="#0e1316">
   <meta property="og:title" content="Auth from chat (remote OAuth, no inbound ports) — gantree">
   <meta property="og:description" content="Auth from chat (remote OAuth, no inbound ports)">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://shotah.github.io/gantree2/docs/auth.html">
-  <meta property="og:image" content="https://shotah.github.io/gantree2/assets/banner.png">
+  <meta property="og:url" content="https://github.bldhosting.com/docs/auth.html">
+  <meta property="og:image" content="https://github.bldhosting.com/assets/banner.png">
   <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="../style.css">
@@ -73,7 +73,7 @@ harness dials out; nothing listens. Pictures:
 <code>pages.yml</code> to the docs site. Why it is static and what it never does:
 <a href="security.html#oauth-for-tools-google-workspace-strava-google-health-">security.md</a>.
 The URI to register on every provider:</p>
-<pre><code class="language-text">https://shotah.github.io/gantree2/oauth-catch/</code></pre>
+<pre><code class="language-text">https://github.bldhosting.com/oauth-catch/</code></pre>
 <p>Plugin binaries still default to the retired <code>ai-gantry</code> Pages URI
 (<a href="todo.html">todo.md</a> §7 flips them). Until then set the env override and
 register the URI above on each client:</p>
@@ -88,17 +88,17 @@ register the URI above on each client:</p>
 <tbody><tr>
 <td>Google Workspace</td>
 <td><code>GOOGLE_OAUTH_REDIRECT_URI</code></td>
-<td><code>https://shotah.github.io/gantree2/oauth-catch/</code></td>
+<td><code>https://github.bldhosting.com/oauth-catch/</code></td>
 </tr>
 <tr>
 <td>Strava</td>
 <td><code>STRAVA_OAUTH_REDIRECT_URI</code></td>
-<td><code>https://shotah.github.io/gantree2/oauth-catch/</code></td>
+<td><code>https://github.bldhosting.com/oauth-catch/</code></td>
 </tr>
 <tr>
 <td>Google Health</td>
 <td><code>GOOGLE_HEALTH_OAUTH_REDIRECT_URI</code></td>
-<td><code>https://shotah.github.io/gantree2/oauth-catch/</code></td>
+<td><code>https://github.bldhosting.com/oauth-catch/</code></td>
 </tr>
 </tbody></table>
 <p>Commented examples belong in <code>harness/.env.example</code> (lands with
@@ -115,7 +115,7 @@ sign-in client in <a href="install.html#google-oauth-client">install.md</a>.</p>
 <p>In <a href="https://console.cloud.google.com/apis/credentials">Google Cloud Console → Credentials</a>:</p>
 <ol>
 <li><strong>Create OAuth client → Web application</strong> (do not try to flip an existing Desktop client).</li>
-<li>Authorized redirect URIs — add <strong>exactly</strong> (trailing slash matters):<pre><code class="language-text">https://shotah.github.io/gantree2/oauth-catch/</code></pre>
+<li>Authorized redirect URIs — add <strong>exactly</strong> (trailing slash matters):<pre><code class="language-text">https://github.bldhosting.com/oauth-catch/</code></pre>
 Optional on the same Web client if you want one pair of secrets for both flows:<pre><code class="language-text">http://localhost:4100/oauth2callback</code></pre>
 </li>
 <li>Put that Web client’s ID/secret in <code>GOOGLE_OAUTH_CLIENT_ID</code> /
@@ -136,11 +136,11 @@ current catch domain names <strong>gantree</strong> with its logo; the interstit
 itself only goes away with scope verification. That write-up is not carried.</p>
 <h3 id="strava-authorization-callback-domain">Strava: Authorization Callback Domain</h3>
 <p>Strava’s app settings take <strong>one domain</strong> (not a path, not a list —
-<code>localhost; shotah.github.io</code> / commas do not work).</p>
+<code>localhost; github.bldhosting.com</code> / commas do not work).</p>
 <p>For chat <code>/auth</code>, set:</p>
 <ol>
 <li><a href="https://www.strava.com/settings/api">Strava API settings</a> →
-<strong>Authorization Callback Domain</strong> = <code>shotah.github.io</code>
+<strong>Authorization Callback Domain</strong> = <code>github.bldhosting.com</code>
 (or your own catch-page host).</li>
 <li>Leave localhost alone — Strava always whitelists <code>localhost</code> /
 <code>127.0.0.1</code>, so laptop <code>gantry auth strava</code> still works with that domain set.</li>
@@ -164,10 +164,11 @@ yet — confirm the authorize URL lands on the catch page and
 <p>PKCE verifier/state (or Garmin MFA cookies) lives in a pending file next
 to that MCP&#39;s tokens, on the container disk, not in the harness process.
 Restarting <code>/auth &lt;server&gt;</code> replaces it. Pending files expire (~10 min).</p>
-<p>Tokens are not baked into the image and are <strong>not in the R2 snapshot</strong>
-today (<code>gantry.db</code> + <code>SELF.md</code> only), so a recreate means pasting a code
-again. Whether they join the snapshot encrypted or move to the Agent DO
-is open — <a href="todo.html">todo.md</a> §5, <a href="security.html">security.md</a> register #4.</p>
+<p>Tokens are not baked into the image. With <code>SNAPSHOT=true</code> they ride in
+the encrypted <code>tokens_tar</code> object of the agent snapshot, so a recreate
+does not make you paste a code again. The Worker never sees plaintext.
+How: <a href="install.html#oauth-tokens-in-the-snapshot">install.md</a>. The key lives
+on the Agent DO — <a href="security.html">security.md</a> register #4.</p>
 <hr>
 <h2 id="mcp-cli-contract-for-authors">MCP CLI contract (for authors)</h2>
 <p>Additive subcommands next to interactive <code>auth</code> / <code>login</code>:</p>

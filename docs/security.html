@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Security — risks and choices — gantree</title>
   <meta name="description" content="Security — risks and choices">
-  <link rel="canonical" href="https://shotah.github.io/gantree2/docs/security.html">
+  <link rel="canonical" href="https://github.bldhosting.com/docs/security.html">
   <meta name="theme-color" content="#0e1316">
   <meta property="og:title" content="Security — risks and choices — gantree">
   <meta property="og:description" content="Security — risks and choices">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://shotah.github.io/gantree2/docs/security.html">
-  <meta property="og:image" content="https://shotah.github.io/gantree2/assets/banner.png">
+  <meta property="og:url" content="https://github.bldhosting.com/docs/security.html">
+  <meta property="og:image" content="https://github.bldhosting.com/assets/banner.png">
   <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="../style.css">
@@ -81,9 +81,9 @@ Shape: <a href="architecture.html">architecture.md</a>. Reporting a hole:
 <td>Admins write, the container reads</td>
 </tr>
 <tr>
-<td>OAuth refresh tokens for tools (Google Workspace, Strava, Google Health)</td>
-<td>Container data dir. <strong>Not yet in the R2 snapshot</strong> — a recreate loses them (todo §5)</td>
-<td>That container only</td>
+<td>OAuth refresh tokens for tools (Google Workspace, Strava, Google Health, Garmin)</td>
+<td>Container <code>DATA_DIR</code>, and ciphertext in the R2 snapshot (<code>tokens_tar</code>)</td>
+<td>Plaintext in that container. The 32-byte key in the Agent DO. R2 and the Worker see ciphertext only</td>
 </tr>
 <tr>
 <td>The brain (<code>gantry.db</code>, <code>SELF.md</code>)</td>
@@ -275,9 +275,9 @@ with the bearer. There is no port to scan, no webhook URL to guess.</p>
 <td>—</td>
 </tr>
 <tr>
-<td>Brain snapshot (<code>gantry.db</code>, <code>SELF.md</code>) → <strong>R2</strong> via presigned PUT, restored via presigned GET on start; off unless <code>SNAPSHOT=true</code></td>
-<td>Containers have no durable disk; the person survives a restart</td>
-<td>Today the snapshot holds memory, not OAuth tokens: safer bucket, but a recreate makes you re-paste a code. When tokens join it (register #4) the bucket becomes the crown jewel and must be encrypted per agent</td>
+<td>Brain snapshot (<code>gantry.db</code>, <code>SELF.md</code>) and the token archive (<code>tokens_tar</code>) → <strong>R2</strong> via presigned PUT, restored via presigned GET on start; off unless <code>SNAPSHOT=true</code></td>
+<td>Containers have no durable disk; the person and tool logins survive a restart on Cloudflare, celld, and <code>npm run agent</code></td>
+<td><code>gantry.db</code> and <code>SELF.md</code> rely on Cloudflare&#39;s at-rest encryption. <code>tokens_tar</code> is AES-256-GCM with a per-agent key (register #4). No matching token files skips that PUT. A 404 on GET is a no-op. A missing key skips the archive; plaintext is never uploaded</td>
 </tr>
 <tr>
 <td>Per-agent log fan-out rate-capped; the harness never logs a key or a token body</td>
@@ -293,7 +293,7 @@ into one image instead of running fifteen sidecars.</p>
 <h2 id="oauth-for-tools-google-workspace-strava-google-health">OAuth for tools (Google Workspace, Strava, Google Health, …)</h2>
 <p>The harness is headless. Connecting a Google account to an agent is a
 browser hop that ends on a <strong>static page</strong>:</p>
-<pre><code class="language-text">https://shotah.github.io/gantree2/oauth-catch/</code></pre>
+<pre><code class="language-text">https://github.bldhosting.com/oauth-catch/</code></pre>
 <table>
 <thead>
 <tr>
@@ -307,14 +307,14 @@ browser hop that ends on a <strong>static page</strong>:</p>
 </tr>
 <tr>
 <td>You paste the code into chat: <code>/auth &lt;server&gt; &lt;code&gt;</code>. The plugin exchanges it from inside the container with its own client secret</td>
-<td>The code is one-time and short-lived; the refresh token never leaves the container</td>
+<td>The code is one-time and short-lived. Plaintext refresh tokens stay in the container; the snapshot copy is AES-256-GCM ciphertext</td>
 </tr>
 <tr>
 <td>Each plugin&#39;s <code>*_OAUTH_REDIRECT_URI</code> must equal the URL registered with the provider</td>
 <td>Google rejects anything else</td>
 </tr>
 <tr>
-<td>The privacy policy Google&#39;s consent screen points at is <code>https://shotah.github.io/gantree2/privacy/</code> (<code>site/privacy/index.html</code>)</td>
+<td>The privacy policy Google&#39;s consent screen points at is <code>https://github.bldhosting.com/privacy/</code> (<code>site/privacy/index.html</code>)</td>
 <td>Required for verification; versioned with the code</td>
 </tr>
 <tr>
@@ -468,11 +468,11 @@ Settings DO and are readable by admins only. Not a SIEM.</p>
 </tr>
 <tr>
 <td>4</td>
-<td>R2 bucket exposure once snapshots carry OAuth refresh tokens (they do not yet)</td>
+<td>R2 copy of OAuth refresh tokens (<code>tokens_tar</code>)</td>
 <td>Low</td>
-<td>Every agent&#39;s tool tokens</td>
-<td>Private bucket; presigned URLs ≤15 min; <code>CLOUDFLARE_API_TOKEN</code> scoped to this account</td>
-<td><strong>Encrypt the snapshot with a per-agent key held in the DO before tokens are added to it</strong> — or keep tokens on the DO instead. Decide before Phase 3</td>
+<td>That agent&#39;s tool tokens, if the per-agent key is also taken</td>
+<td>Ciphertext only in R2. AES-256-GCM, random 12-byte nonce prefixed to the body. Key is 32 bytes minted once in the Agent DO (<code>snapshot.key</code>, next to the room bearer) and sent on the config frame as <code>SNAPSHOT_KEY</code> (base64). Presigned GET/PUT ≤15 min. The Worker never decrypts. No token files skips the PUT; HTTP 404 on GET is a no-op; a missing key skips the archive and is logged once. Plaintext is never uploaded</td>
+<td>No</td>
 </tr>
 <tr>
 <td>5</td>
@@ -532,8 +532,8 @@ Settings DO and are readable by admins only. Not a SIEM.</p>
 <li>A second login (passphrase, magic link, SSO beyond Google).</li>
 <li>Pairing codes in chat; MCP OAuth as a phone login.</li>
 <li>CSRF tokens; <code>SameSite=Lax</code> and same-origin <code>POST</code> JSON.</li>
-<li>Encrypting what Cloudflare already encrypts at rest, except the
-snapshot (register #4).</li>
+<li>Encrypting <code>gantry.db</code> and <code>SELF.md</code> beyond Cloudflare&#39;s at-rest
+encryption. The token archive is the exception (register #4).</li>
 <li>A 12-role RBAC. Three roles.</li>
 </ul>
 <hr>

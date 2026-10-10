@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Architecture — gantree</title>
   <meta name="description" content="Architecture">
-  <link rel="canonical" href="https://shotah.github.io/gantree2/docs/architecture.html">
+  <link rel="canonical" href="https://github.bldhosting.com/docs/architecture.html">
   <meta name="theme-color" content="#0e1316">
   <meta property="og:title" content="Architecture — gantree">
   <meta property="og:description" content="Architecture">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://shotah.github.io/gantree2/docs/architecture.html">
-  <meta property="og:image" content="https://shotah.github.io/gantree2/assets/banner.png">
+  <meta property="og:url" content="https://github.bldhosting.com/docs/architecture.html">
+  <meta property="og:image" content="https://github.bldhosting.com/assets/banner.png">
   <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="../style.css">
@@ -524,7 +524,7 @@ plain TypeScript Vitest can run.</li>
 <code>no-explicit-any</code>; type it or delete the dead write.</li>
 <li>Nothing new is written with the originals&#39; wire names. <code>CHAT_*</code>,
 <code>CHANNEL=chat</code>, <code>agents</code>, <code>chat:&lt;slug&gt;:&lt;sub&gt;</code>, plugin <code>chat</code> are the
-names (<a href="todo.html#0-decide">todo.md</a>). <code>PENDANT_*</code>, <code>CHANNEL=pendant</code>,
+names (<a href="todo_done.html#0-decide">todo.md</a>). <code>PENDANT_*</code>, <code>CHANNEL=pendant</code>,
 <code>cranes</code> beside <code>agents</code> on <code>/api/auth/me</code> are accepted as aliases so
 cab, helm, and agents on the old stack keep working until the Phase 4
 cutover, then dropped. Marked as aliases wherever they appear.
@@ -536,11 +536,17 @@ Harness-side detail: <a href="channels.html">channels.md</a>,
 watches and a tile catalog after one attention surface stops being
 enough; provider billing pull; harness write-through to DO SQLite;
 operator writes on boards. List: <a href="todo.html#later">todo.md</a>.</p>
-<p><strong>Not the product:</strong> hosted SaaS, Kubernetes, Cloud Run / Lambda, a
-shared family brain, pairing the agent through settings, multi-tenant
-orgs, invite links, billing, a second login, Cloudflare Access in
-front of the Worker, anything that makes the harness slower so a
-dashboard looks nicer.</p>
+<p><strong>Hosted (decided 2026-10-10):</strong> the same Worker sold as a door you
+do not deploy — one household per account, every key the customer&#39;s,
+Settings / Agent / Harness DOs named by household instead of by bare
+slug. Plan in <a href="todo.html#hosted-phase-5--the-paid-door">todo.md</a>,
+numbers in <a href="monetize.html">monetize.md</a>.</p>
+<p><strong>Not the product:</strong> Kubernetes, Cloud Run / Lambda, a shared family
+brain, pairing the agent through settings, reselling LLM tokens, a
+shared Google client for the tools, orgs and invite links beyond one
+household per account, a second login, Cloudflare Access in front of
+the Worker, anything that makes the harness slower so a dashboard
+looks nicer.</p>
 </article>
   </main>
   <footer class="foot">

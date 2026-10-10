@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Custom MCP servers — gantree</title>
   <meta name="description" content="Custom MCP servers">
-  <link rel="canonical" href="https://shotah.github.io/gantree2/docs/custom-mcp.html">
+  <link rel="canonical" href="https://github.bldhosting.com/docs/custom-mcp.html">
   <meta name="theme-color" content="#0e1316">
   <meta property="og:title" content="Custom MCP servers — gantree">
   <meta property="og:description" content="Custom MCP servers">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://shotah.github.io/gantree2/docs/custom-mcp.html">
-  <meta property="og:image" content="https://shotah.github.io/gantree2/assets/banner.png">
+  <meta property="og:url" content="https://github.bldhosting.com/docs/custom-mcp.html">
+  <meta property="og:image" content="https://github.bldhosting.com/assets/banner.png">
   <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="../style.css">
@@ -122,9 +122,10 @@ path = &quot;mcp/rentals&quot;            # in-repo plugin: built from source in
 # or, for a server that lives elsewhere:
 # repo = &quot;github.com/you/rentals-search-mcp&quot;
 # tag  = &quot;v0.3.1&quot;</code></pre>
-<p><code>harness/Dockerfile</code> builds (or fetches) every row into <code>/opt/mcp</code> at
-<strong>image build</strong>, puts it on <code>PATH</code>, and runs <code>host-manifest</code> for each so
-the shapes ship with the image. Distroless stays distroless. Push to
+<p><code>harness/Dockerfile</code> builds (or fetches) every row into <code>/opt/mcp/&lt;id&gt;/&lt;id&gt;</code>
+at <strong>image build</strong> — one binary, not a second copy on <code>PATH</code> — and runs
+<code>host-manifest</code> for each so the shape sits beside it. Inside the image a
+bare <code>command</code> resolves to that path. Distroless stays distroless. Push to
 <code>main</code>; <code>harness-image.yml</code> publishes the new tag.</p>
 <p>Then on <code>/agents/&lt;slug&gt;</code>:</p>
 <ol>

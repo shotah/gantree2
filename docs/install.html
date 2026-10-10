@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Install — local, Cloudflare, or home — gantree</title>
   <meta name="description" content="Install — local, Cloudflare, or home">
-  <link rel="canonical" href="https://shotah.github.io/gantree2/docs/install.html">
+  <link rel="canonical" href="https://github.bldhosting.com/docs/install.html">
   <meta name="theme-color" content="#0e1316">
   <meta property="og:title" content="Install — local, Cloudflare, or home — gantree">
   <meta property="og:description" content="Install — local, Cloudflare, or home">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://shotah.github.io/gantree2/docs/install.html">
-  <meta property="og:image" content="https://shotah.github.io/gantree2/assets/banner.png">
+  <meta property="og:url" content="https://github.bldhosting.com/docs/install.html">
+  <meta property="og:image" content="https://github.bldhosting.com/assets/banner.png">
   <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="../style.css">
@@ -60,7 +60,7 @@
 <td>Cloudflare</td>
 <td><code>wrangler deploy</code> (CI)</td>
 <td>Workers · DO · KV · R2 · Containers</td>
-<td>your <code>workers.dev</code> or custom domain</td>
+<td><code>https://gantree2.bldhosting.com</code> (custom domain in <code>wrangler.jsonc</code>; a fork edits <code>routes</code> or drops it for <code>workers.dev</code>)</td>
 </tr>
 <tr>
 <td>Home (Mini / NUC / VM)</td>
@@ -108,7 +108,7 @@ Create credentials → OAuth client ID</strong>.</p>
 </tr>
 <tr>
 <td>Cloudflare</td>
-<td><code>https://&lt;worker-origin&gt;/api/auth/callback/google</code></td>
+<td><code>https://gantree2.bldhosting.com/api/auth/callback/google</code> (a fork: its own <code>routes</code> host or <code>workers.dev</code> origin)</td>
 </tr>
 <tr>
 <td>Home</td>
@@ -165,7 +165,8 @@ persona, MCP manifest, secrets, and presigned snapshot URLs. Memory,
 self-notes, cron, aims, and the snapshot restore/publish loop are the
 real ones; state lives in <code>local/run/&lt;slug&gt;/</code> (git-ignored) and the
 snapshot in the local R2 bucket, so stopping and restarting the runner
-restores the brain. With no slug it runs every agent on the board;
+restores the brain and, encrypted, the tool logins
+(<a href="#oauth-tokens-in-the-snapshot">below</a>). With no slug it runs every agent on the board;
 <code>--build</code> forces a rebuild; <code>--base=</code> points at another origin.</p>
 <p>House keys: <code>LLM_BASE_URL</code>, <code>LLM_API_KEY</code>, <code>LLM_MODEL</code>, and
 <code>BRAVE_SEARCH_API_KEY</code> in the Worker env are laid under every agent&#39;s
@@ -196,58 +197,156 @@ opens <code>/chat</code> as the dev user. A member picker needs
 no <code>GANTREE_DEV_USER</code> (seed writes the member cookie).</p>
 <p><img src="../assets/docs/login.png" alt="Sign-in page with Continue with Google"></p>
 <hr>
-<h2 id="cloudflare">Cloudflare</h2>
-<p>CI does it. Repository → <strong>Settings → Secrets and variables → Actions</strong>:</p>
+<h2 id="github-settings-the-whole-list">GitHub settings — the whole list</h2>
+<p>Everything any workflow in <code>.github/workflows/</code> reads. Repository →
+<strong>Settings → Secrets and variables → Actions</strong>. Variables are plain
+text and show in logs; Secrets are masked. This is the only list —
+if a workflow grows a new <code>vars.X</code> or <code>secrets.X</code>, it is added here.</p>
 <table>
 <thead>
 <tr>
 <th>Kind</th>
 <th>Name</th>
+<th>Used by</th>
 <th>Value</th>
+<th>Required</th>
 </tr>
 </thead>
 <tbody><tr>
-<td>Variable</td>
-<td><code>GOOGLE_CLIENT_ID</code></td>
-<td>from GCP</td>
-</tr>
-<tr>
-<td>Variable</td>
-<td><code>GANTREE_ADMINS</code></td>
-<td><code>you@example.com</code> (grammar: <a href="access.html#allowlist-entry-grammar">access.md</a>)</td>
-</tr>
-<tr>
-<td>Variable</td>
-<td><code>GANTREE_ALLOW</code></td>
-<td>optional members</td>
-</tr>
-<tr>
-<td>Secret</td>
-<td><code>GOOGLE_CLIENT_SECRET</code></td>
-<td>from GCP</td>
-</tr>
-<tr>
-<td>Secret</td>
-<td><code>SESSION_SECRET</code></td>
-<td><code>openssl rand -base64 48</code></td>
-</tr>
-<tr>
 <td>Secret</td>
 <td><code>CLOUDFLARE_API_TOKEN</code></td>
-<td>Workers Scripts Edit · Workers KV Storage Edit · Workers R2 Storage Edit · Account Settings Read</td>
+<td><code>deploy-cloudflare</code></td>
+<td>API token with Workers Scripts Edit · Workers KV Storage Edit · Workers R2 Storage Edit · Account Settings Read</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>Secret</td>
 <td><code>CLOUDFLARE_ACCOUNT_ID</code></td>
+<td><code>deploy-cloudflare</code></td>
 <td>dashboard sidebar</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Variable</td>
+<td><code>GOOGLE_CLIENT_ID</code></td>
+<td><code>deploy-cloudflare</code></td>
+<td>the sign-in client, from GCP</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Secret</td>
+<td><code>GOOGLE_CLIENT_SECRET</code></td>
+<td><code>deploy-cloudflare</code></td>
+<td>same client</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Secret</td>
+<td><code>SESSION_SECRET</code></td>
+<td><code>deploy-cloudflare</code></td>
+<td><code>openssl rand -base64 48</code> (≥ 32 chars)</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Variable</td>
+<td><code>GANTREE_ADMINS</code></td>
+<td><code>deploy-cloudflare</code></td>
+<td><code>you@example.com</code> (grammar: <a href="access.html#allowlist-entry-grammar">access.md</a>)</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Variable</td>
+<td><code>GANTREE_ALLOW</code></td>
+<td><code>deploy-cloudflare</code></td>
+<td>members, comma list; may be empty</td>
+<td>set, may be blank</td>
+</tr>
+<tr>
+<td>Variable</td>
+<td><code>VAPID_SUBJECT</code></td>
+<td><code>deploy-cloudflare</code></td>
+<td><code>mailto:you@example.com</code></td>
+<td>only with push</td>
+</tr>
+<tr>
+<td>Secret</td>
+<td><code>VAPID_PUBLIC_KEY</code></td>
+<td><code>deploy-cloudflare</code></td>
+<td><code>npx web-push generate-vapid-keys</code></td>
+<td>only with push</td>
+</tr>
+<tr>
+<td>Secret</td>
+<td><code>VAPID_PRIVATE_KEY</code></td>
+<td><code>deploy-cloudflare</code></td>
+<td>same pair</td>
+<td>only with push</td>
+</tr>
+<tr>
+<td>Secret</td>
+<td><code>LLM_BASE_URL</code></td>
+<td><code>eval</code></td>
+<td>the model the eval drives, e.g. <code>https://generativelanguage.googleapis.com/v1beta/openai</code></td>
+<td>eval skips without all three</td>
+</tr>
+<tr>
+<td>Secret</td>
+<td><code>LLM_API_KEY</code></td>
+<td><code>eval</code></td>
+<td></td>
+<td>eval skips without all three</td>
+</tr>
+<tr>
+<td>Secret</td>
+<td><code>LLM_MODEL</code></td>
+<td><code>eval</code></td>
+<td>e.g. <code>gemini-3.8-flash</code></td>
+<td>eval skips without all three</td>
+</tr>
+<tr>
+<td>Variable</td>
+<td><code>PAGES_CUSTOM_DOMAIN</code></td>
+<td><code>pages</code></td>
+<td>defaults to <code>github.bldhosting.com</code>; a fork sets its own or empties it</td>
+<td>no</td>
+</tr>
+<tr>
+<td>Variable</td>
+<td><code>GOOGLE_SITE_VERIFICATION</code></td>
+<td><code>pages</code></td>
+<td>Search Console token for the docs site</td>
+<td>no</td>
 </tr>
 </tbody></table>
-<p>Push to <code>main</code>. <code>ci.yml</code> runs tests, lint, typecheck, build.
-<code>deploy-cloudflare.yml</code> then runs <code>wrangler deploy --var …</code> and
-<code>wrangler secret bulk</code>. It fails fast if any of the four auth values is
-empty. Add the Worker origin to the Google client&#39;s redirect list.</p>
-<p>By hand from a laptop (same token in your shell):</p>
-<pre><code class="language-bash">npm run deploy
+<p><code>GITHUB_TOKEN</code> is automatic (<code>ci</code>, <code>harness</code>, <code>harness-image</code>, <code>pages</code>,
+<code>release</code>). The <code>deploy-cloudflare</code> job fails fast if any of the four
+auth values (<code>GOOGLE_CLIENT_ID</code>, <code>GOOGLE_CLIENT_SECRET</code>,
+<code>SESSION_SECRET</code>, <code>GANTREE_ADMINS</code>) is empty.</p>
+<p><strong>Not in GitHub.</strong> The house keys that let a new agent run with no
+keys of its own (<code>LLM_BASE_URL</code>, <code>LLM_API_KEY</code>, <code>LLM_MODEL</code>,
+<code>BRAVE_SEARCH_API_KEY</code>) are Worker secrets, set once from a laptop
+with the same Cloudflare token:</p>
+<pre><code class="language-bash">npx wrangler secret put LLM_BASE_URL     # and LLM_API_KEY, LLM_MODEL, BRAVE_SEARCH_API_KEY</code></pre>
+<p>Never set in production: <code>GANTREE_DEV_USER</code> (loopback dev door) and
+<code>CHAT_SECRET</code> (loopback two-tab spike). <code>AGENT_BEARERS</code> is an
+override; the Agent DO mints bearers itself.</p>
+<p>Outside GitHub and Cloudflare, the remaining owner steps are the
+Google client redirect URIs (<a href="#google-oauth-client">above</a>) and the
+tools&#39; provider consoles (<a href="auth.html">auth.md</a>).</p>
+<hr>
+<h2 id="cloudflare">Cloudflare</h2>
+<p>CI does it, with the GitHub settings <a href="#github-settings--the-whole-list">above</a>.
+Push to <code>main</code>. <code>ci.yml</code> runs tests, lint, typecheck, build.
+<code>deploy-cloudflare.yml</code> then creates the <code>DIRECTORY</code> KV namespace and
+the <code>gantree-store</code> R2 bucket if they are missing (the <code>TODO</code> id in
+<code>wrangler.jsonc</code> is patched for that run only), runs
+<code>wrangler deploy --var …</code> and <code>wrangler secret bulk</code>. It fails fast if
+any of the four auth values is empty. Add the Worker origin to the
+Google client&#39;s redirect list.</p>
+<p>By hand from a laptop (same token in your shell), once:</p>
+<pre><code class="language-bash">npx wrangler kv namespace create DIRECTORY   # paste the id over &quot;TODO&quot; in wrangler.jsonc
+npx wrangler r2 bucket create gantree-store
+npm run deploy
 npx wrangler secret bulk &lt; secrets.json   # {&quot;GOOGLE_CLIENT_SECRET&quot;:&quot;…&quot;,&quot;SESSION_SECRET&quot;:&quot;…&quot;}</code></pre>
 <p>The Worker itself runs on the free tier. Containers need Workers Paid —
 see <a href="#containers">below</a>.</p>
@@ -301,6 +400,19 @@ dials out and does not listen.</p>
 <code>PENDANT_ALLOWED_USERS</code>. The start body does not carry that list — the
 room lives on the Agent DO — so a real container exits until the harness
 takes the room from the <code>config</code> frame.</p>
+<h3 id="oauth-tokens-in-the-snapshot">OAuth tokens in the snapshot</h3>
+<p>Refresh tokens for Google Workspace, Strava, Google Health, and Garmin
+live under <code>DATA_DIR</code> and join the agent snapshot whenever <code>SNAPSHOT=true</code>.
+That is the same on Cloudflare, on celld, and for <code>npm run agent</code>: the
+config frame is the only prerequisite. The harness tars an allowlist of
+those files, encrypts the tar with AES-256-GCM (a random 12-byte nonce
+prefixed to the ciphertext), and PUTs the ciphertext as <code>tokens_tar</code>.
+The Agent DO mints the 32-byte key once, stores it next to the room
+bearer, and sends it on the config frame as <code>SNAPSHOT_KEY</code>. The Worker
+stores the object and never sees plaintext. If none of the token files
+exist, that PUT is skipped; a 404 on GET is a no-op. A missing key skips
+the archive and is logged once — plaintext is never uploaded. On celld,
+<code>/data</code> is also a volume, so the snapshot is a second copy.</p>
 <hr>
 <h2 id="home-celld">Home (celld)</h2>
 <p><a href="https://github.com/denoland/celld">celld</a> runs the Workers platform on
@@ -334,13 +446,16 @@ deploys to Cloudflare deploys here, or tells you exactly why not.</p>
 and should not.</p>
 <hr>
 <h2 id="harness-image">Harness image</h2>
-<p>Agents run <code>ghcr.io/shotah/gantree-harness:&lt;tag&gt;</code> — the Go harness plus
-every MCP server in <code>harness/mcp.lock</code> baked into <code>/opt/mcp</code>.
-<code>harness-image.yml</code> builds it when <code>harness/**</code> changes, smokes
-<code>gantry version</code>, and on <code>main</code> pushes
-<code>ghcr.io/shotah/gantree-harness:&lt;sha&gt;</code>. <code>wrangler deploy</code> builds the
-same Dockerfile into the account&#39;s container registry. <strong>Recreate</strong>
-picks up a newly deployed image.</p>
+<p>One image, <code>harness/Dockerfile</code>: the Go harness plus every MCP server in
+<code>harness/mcp.lock</code> baked into <code>/opt/mcp/&lt;id&gt;/&lt;id&gt;</code>. Neither deploy
+target pulls it from a registry — <code>wrangler deploy</code> builds it into the
+account&#39;s container registry and celld builds it on the box — so
+<strong>Recreate</strong> picks up whatever was last deployed. <code>harness-image.yml</code>
+builds and smokes (<code>gantry version</code>) the same file on every
+<code>harness/**</code> change and publishes the prebuilt copy for anyone who
+wants <code>docker run</code> without the build: <code>main</code> →
+<code>ghcr.io/shotah/gantree-harness:&lt;sha&gt;</code>, a release tag →
+<code>:vX.Y.Z</code> and <code>:latest</code>.</p>
 <p>Build it yourself with any Docker-API engine: <code>cd harness &amp;&amp; docker build -t gantree-harness:local .</code> (~70 s warm). Rootless podman is
 enough — <code>systemctl --user enable --now podman.socket</code> and
 <code>DOCKER_HOST=unix:///run/user/$UID/podman/podman.sock</code> make the
