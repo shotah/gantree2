@@ -138,9 +138,10 @@ export function upsertAssignment(text: string, key: string, value: string): stri
   return joined.endsWith("\n") ? joined : `${joined}\n`;
 }
 
-export function mergeAdminValue(current: string, email: string): string {
+/** Append `email` unless an entry already names that email or that sub. */
+export function mergeAdminValue(current: string, email: string, sub?: string): string {
   const entries = parseAllowlist(current);
-  if (entries.some((entry) => entry.email === email)) {
+  if (entries.some((entry) => entry.email === email || (sub !== undefined && entry.sub === sub))) {
     return current;
   }
   const trimmed = current.trim();
@@ -205,8 +206,10 @@ export function ensureShotVars(text: string, freshBearers: string): { text: stri
     next = upsertAssignment(next, "GANTREE_DEV_USER", DEV_USER);
     added.push("GANTREE_DEV_USER");
   }
+  // Admin whoever the dev user actually is — a real person's entry stays theirs.
+  const who = parseEntry(dev || DEV_USER);
   const admins = parseDevVars(next).get("GANTREE_ADMINS") ?? "";
-  const merged = mergeAdminValue(admins, DEV_EMAIL);
+  const merged = who?.email ? mergeAdminValue(admins, who.email, who.sub ?? undefined) : admins;
   if (merged !== admins) {
     next = upsertAssignment(next, "GANTREE_ADMINS", merged);
     added.push("GANTREE_ADMINS");

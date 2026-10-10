@@ -292,9 +292,11 @@ shipping-yard art is gone, not restyled.
 **D — The mark (2026-10-10, settled the same day).** A bare tree with
 roots — the owner's traced silhouette, **`assets/tree.svg`** (one black
 path, SVG 1.0, 1264×1280 pt) — recoloured to the theme foreground and
-scaled into the 64-box, with a hairline string and a small **apple** in
-the accent hanging from the right bough. The tree is the harness, the
-bough is the hoist, the apple is what it hands you. No ground line, no
+scaled into the 64-box, with a hairline string and a small **orange** in
+the accent hanging from the right bough (it was briefed as an apple; the
+accent made it an orange and the owner kept it — more ours). The tree is
+the harness, the bough is the hoist, the orange is what it hands you. No
+ground line, no
 text in the mark. Two generated attempts were rejected first: a disc on
 a post ("a ball and a yoyo") and a Gondor-style ribbon tree whose tips
 read as hooks. `tree.svg` is the source of truth; `assets/logo.svg`
@@ -367,8 +369,11 @@ on the banner only.
 - [x] `pages.yml`: docs site → `gh-pages` beside `badges/`.
 - [x] `docs/security.md` (risks, choices, register), root `SECURITY.md`
       and `CONTRIBUTING.md` for GitHub's tabs.
-- [ ] `README.md` rewritten as the product README: tree banner, badge
-      row, three paragraphs, the install table, the docs list.
+- [x] `README.md` rewritten as the product README: banner, mark before
+      the title (`<picture>` — ink mark in dark mode, mono in light),
+      badge row, the pitch ("Why this one"), shot tables, a Mermaid
+      flow, run/deploy table, the eleven tools, reliability, docs,
+      layout, lineage.
 - [ ] Walk: a stranger with **one** README stands up Kit for two
       humans, yanks one, never opens the Cloudflare dashboard after the
       token.
