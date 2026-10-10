@@ -376,9 +376,9 @@ Cloud so revoking one does not break the other.</p>
 </tr>
 <tr>
 <td>Per-agent keys (<code>LLM_API_KEY</code>, tool keys)</td>
-<td>Settings DO</td>
-<td>Settings DO</td>
-<td>Settings DO</td>
+<td>Agent DO (config record)</td>
+<td>Agent DO</td>
+<td>Agent DO</td>
 <td>env of the Worker; a plugin&#39;s log</td>
 </tr>
 <tr>
@@ -392,6 +392,160 @@ Cloud so revoking one does not break the other.</p>
 <p><code>.dev.vars</code> and <code>harness/.env</code> are gitignored. <code>.dev.vars.example</code> and
 <code>harness/.env.example</code> carry names, never values. CI fails if a test
 fixture contains a string that looks like a live Google secret.</p>
+<hr>
+<h2 id="what-the-service-holds-the-inventory">What the service holds — the inventory</h2>
+<p>Everything a deployment stores about the people and agents on it, read
+off the code on 2026-10-10. This is the list a Terms of Service and a
+privacy policy describe; nothing else is written anywhere. In one
+line: <strong>credentials, chat, and who-may-talk-to-whom.</strong> The credentials
+are the heavy part.</p>
+<h3 id="settings-durable-object-one-per-deployment">Settings Durable Object — one per deployment</h3>
+<table>
+<thead>
+<tr>
+<th>Table / key</th>
+<th>What is in it</th>
+<th>Kept</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>users</code></td>
+<td>Google <code>sub</code>, email, role (<code>admin</code> / <code>operator</code> / <code>member</code>), which agents the person may reach, who added them and when</td>
+<td>until removed on <code>/users</code></td>
+</tr>
+<tr>
+<td><code>agents</code></td>
+<td>slug, display name, creator, created-at, tags</td>
+<td>until the agent is retired</td>
+</tr>
+<tr>
+<td><code>audit</code></td>
+<td>time, who (sub), action (<code>user.add</code>, <code>agent.remove</code>, …), detail (slug or email) — the admin history</td>
+<td>indefinitely</td>
+</tr>
+<tr>
+<td><code>samples</code></td>
+<td>per agent, per turn: <code>tokens_prompt</code>, <code>tokens_completion</code>, <code>turn</code> ms — numbers only, no text, no person</td>
+<td>indefinitely (spend chart)</td>
+</tr>
+</tbody></table>
+<h3 id="agent-durable-object-one-per-agent">Agent Durable Object — one per agent</h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What is in it</th>
+<th>Kept</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>config</code></td>
+<td><strong>Every secret pasted on the Keys or Tools fold, in plaintext</strong>: <code>LLM_API_KEY</code>, <code>GOOGLE_OAUTH_CLIENT_ID</code> / <code>_SECRET</code>, <code>RENTCAST_API_KEY</code>, <code>STRAVA_CLIENT_SECRET</code>, … plus the persona text and the list of granted tools</td>
+<td>until changed or the agent is retired</td>
+</tr>
+<tr>
+<td><code>bearer</code></td>
+<td>the room bearer the harness authenticates with</td>
+<td>until retire</td>
+</tr>
+<tr>
+<td><code>snapshot.key</code></td>
+<td>the 32-byte key that decrypts the agent&#39;s <code>tokens_tar</code> — so <strong>the deployment can read the OAuth refresh tokens it stores in R2</strong></td>
+<td>until retire</td>
+</tr>
+<tr>
+<td><code>allow</code> + hash</td>
+<td>who is in the room (sub, <code>sub:email</code>, or email)</td>
+<td>until edited</td>
+</tr>
+<tr>
+<td><code>q:*</code> message queue</td>
+<td>the chat itself: the last <strong>50 messages</strong> or <strong>8 MiB</strong> per side, each dropped after <strong>1 hour</strong> — a reconnect backlog, not an archive</td>
+<td>≤ 1 h</td>
+</tr>
+<tr>
+<td><code>aims</code>, <code>todo</code>, <code>cmds</code> (per user and per room)</td>
+<td>the agent&#39;s goals and task boards written from chat — plain text people typed or the agent wrote</td>
+<td>until edited</td>
+</tr>
+<tr>
+<td><code>theme</code>, avatar / backdrop blobs</td>
+<td>how the chat looks; the avatar and backdrop are JPEGs people or the agent uploaded</td>
+<td>until replaced</td>
+</tr>
+<tr>
+<td>push subscriptions</td>
+<td>per user: the browser&#39;s push endpoint and keys</td>
+<td>until unsubscribed</td>
+</tr>
+<tr>
+<td><code>log</code> (folded), <code>perf</code>, <code>status</code></td>
+<td>the harness&#39;s own log lines (rate-capped, bodies off), timing, which plugins came up</td>
+<td>rolling</td>
+</tr>
+</tbody></table>
+<h3 id="kv-directory">KV <code>DIRECTORY</code></h3>
+<p><code>sub → [slugs]</code>: which rooms each person may enter, mirrored from the
+Agent DOs so <code>/api/auth/me</code> answers without waking them. No names, no
+text.</p>
+<h3 id="r2-store-backupsltsluggtlatest-and-backupsltsluggtltstampgt">R2 <code>STORE</code> — <code>backups/&lt;slug&gt;/latest/</code> and <code>backups/&lt;slug&gt;/&lt;stamp&gt;/</code></h3>
+<table>
+<thead>
+<tr>
+<th>Object</th>
+<th>What is in it</th>
+<th>Encrypted</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>gantry_db</code></td>
+<td>the harness&#39;s SQLite: <code>session</code> / <code>session_message</code> (<strong>the full chat history</strong> per person, as the model saw it, including tool calls and results), <code>memory</code> (what the agent chose to remember about people), self-notes, cron jobs, aims</td>
+<td>no — R2 at rest only</td>
+</tr>
+<tr>
+<td><code>self_md</code></td>
+<td>the agent&#39;s own persona notes</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>tokens_tar</code></td>
+<td><strong>OAuth refresh tokens</strong> for Google Workspace, Strava, Google Health, Garmin — the keys to someone&#39;s Gmail, Drive, Calendar, health data</td>
+<td>AES-256-GCM with the Agent DO&#39;s <code>snapshot.key</code></td>
+</tr>
+</tbody></table>
+<p>Every 5 minutes and on shutdown a new stamp lands; nothing prunes them
+yet (<a href="todo.html">todo.md</a> backup loop).</p>
+<h3 id="in-flight-and-on-the-box">In flight and on the box</h3>
+<ul>
+<li><strong>Session cookie</strong>: an encrypted token carrying <code>sub</code> and email, 7
+days, <code>HttpOnly</code>. Role is not in it.</li>
+<li><strong>Harness container</strong>: while running it holds all of the above
+decrypted in memory and under <code>DATA_DIR</code> — keys, tokens, the full
+SQLite. On Cloudflare that disk is gone on stop; on celld <code>/data</code> is
+a volume and keeps it.</li>
+<li><strong>LLM provider</strong>: every turn&#39;s prompt — persona, memory, the
+person&#39;s messages, tool results — goes to whichever model endpoint
+the agent&#39;s <code>LLM_BASE_URL</code> names, under the key they pasted. We do
+not see that traffic; the provider&#39;s terms apply to it.</li>
+<li><strong>Plugins&#39; vendors</strong>: Google, Strava, RentCast, SerpAPI, … receive
+exactly the tool calls the agent makes, under the person&#39;s own
+client or key.</li>
+</ul>
+<h3 id="not-held">Not held</h3>
+<p>Google passwords (sign-in is OpenID Connect; <code>lib/door/google.ts</code> reads
+<code>sub</code> and <code>email</code> off the ID token and nothing else — no name, no
+picture). Card or billing data (a merchant of record
+would hold it). The person&#39;s Google data itself — mail, files, events
+are fetched per call and live in the chat and the SQLite above only as
+far as the agent repeated them.</p>
+<h3 id="what-hosting-changes">What hosting changes</h3>
+<p>Self-hosted, every row above is in <strong>your</strong> Cloudflare account or on
+<strong>your</strong> box. Hosted (<a href="monetize.html">monetize.md</a>), the same rows are in
+ours, which is why the Hosted plan needs a Terms of Service, a privacy
+policy that says this list, and an entity to sign them — and why the
+tool OAuth clients stay the customer&#39;s: we hold the refresh tokens
+encrypted, but a shared client would make us the party Google holds
+responsible for them.</p>
 <hr>
 <h2 id="supply-chain">Supply chain</h2>
 <table>

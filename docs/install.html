@@ -337,15 +337,15 @@ tools&#39; provider consoles (<a href="auth.html">auth.md</a>).</p>
 <h2 id="cloudflare">Cloudflare</h2>
 <p>CI does it, with the GitHub settings <a href="#github-settings--the-whole-list">above</a>.
 Push to <code>main</code>. <code>ci.yml</code> runs tests, lint, typecheck, build.
-<code>deploy-cloudflare.yml</code> then creates the <code>DIRECTORY</code> KV namespace and
-the <code>gantree-store</code> R2 bucket if they are missing (the <code>TODO</code> id in
+<code>deploy-cloudflare.yml</code> then creates the <code>gantree2-directory</code> KV namespace and
+the <code>gantree2-store</code> R2 bucket if they are missing (the <code>TODO</code> id in
 <code>wrangler.jsonc</code> is patched for that run only), runs
 <code>wrangler deploy --var …</code> and <code>wrangler secret bulk</code>. It fails fast if
 any of the four auth values is empty. Add the Worker origin to the
 Google client&#39;s redirect list.</p>
 <p>By hand from a laptop (same token in your shell), once:</p>
-<pre><code class="language-bash">npx wrangler kv namespace create DIRECTORY   # paste the id over &quot;TODO&quot; in wrangler.jsonc
-npx wrangler r2 bucket create gantree-store
+<pre><code class="language-bash">npx wrangler kv namespace create gantree2-directory   # paste the id over &quot;TODO&quot; in wrangler.jsonc
+npx wrangler r2 bucket create gantree2-store
 npm run deploy
 npx wrangler secret bulk &lt; secrets.json   # {&quot;GOOGLE_CLIENT_SECRET&quot;:&quot;…&quot;,&quot;SESSION_SECRET&quot;:&quot;…&quot;}</code></pre>
 <p>The Worker itself runs on the free tier. Containers need Workers Paid —
@@ -356,7 +356,7 @@ see <a href="#containers">below</a>.</p>
 enabled (Workers Paid). <code>wrangler deploy</code> builds <code>harness/Dockerfile</code>
 (context is the <code>harness/</code> directory, which is where that file&#39;s
 <code>COPY</code> expects to run) and ships the image with the Worker.
-<code>wrangler.jsonc</code> names the application <code>gantree-harness</code>, class
+<code>wrangler.jsonc</code> names the application <code>gantree2-harness</code>, class
 <code>Harness</code>, five instances, plus a <code>v2</code> migration for the <code>Harness</code>
 Durable Object.</p>
 <p>The process env is the dial-back. Everything else (LLM keys, <code>mcp.toml</code>,
