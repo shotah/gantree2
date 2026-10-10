@@ -141,7 +141,12 @@ func TestMakeHandler_AllowlistAndReply(t *testing.T) {
 	if got.Text != "hi" || got.UserID != "42" || got.SessionID != channel.AgentSession {
 		t.Fatalf("got %+v", got)
 	}
-	// typing + reply
+	// typing + reply. startTyping sends from its own goroutine, so a fast
+	// handler can return before the first action reaches the mock.
+	deadline := time.Now().Add(2 * time.Second)
+	for api.count("sendChatAction") < 1 && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
 	if api.count("sendChatAction") < 1 {
 		t.Fatal("expected typing action")
 	}

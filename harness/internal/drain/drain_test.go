@@ -43,12 +43,16 @@ func TestGate_WaitDrains(t *testing.T) {
 func TestGate_WaitTimeout(t *testing.T) {
 	g := &drain.Gate{}
 	block := make(chan struct{})
+	entered := make(chan struct{})
 	h := g.Handler(func(_ context.Context, _ channel.Message) (string, error) {
+		close(entered)
 		<-block
 		return "", nil
 	})
 	go func() { _, _ = h(context.Background(), channel.Message{}) }()
-	time.Sleep(20 * time.Millisecond)
+	// The handler is in flight (its Add happened-before this receive);
+	// a sleep gives no such edge and the race detector flags Add vs Wait.
+	<-entered
 	if g.Wait(30 * time.Millisecond) {
 		t.Fatal("expected timeout")
 	}

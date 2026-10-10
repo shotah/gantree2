@@ -58,8 +58,24 @@ type mockSession struct {
 }
 
 func (m *mockSession) AddHandler(handler interface{}) func() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.handlers = append(m.handlers, handler)
 	return func() {}
+}
+
+// messageHandler returns the MessageCreate handler Run registered, or nil
+// while it is still starting. Run registers from its own goroutine, so
+// tests must read handlers under the lock.
+func (m *mockSession) messageHandler() func(*discordgo.Session, *discordgo.MessageCreate) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, h := range m.handlers {
+		if fn, ok := h.(func(*discordgo.Session, *discordgo.MessageCreate)); ok {
+			return fn
+		}
+	}
+	return nil
 }
 
 func (m *mockSession) Open() error { return m.openErr }
@@ -154,22 +170,12 @@ func TestChannel_RunHandlesDM(t *testing.T) {
 		})
 	}()
 
-	// Wait for handlers to register.
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) {
-		if len(mock.handlers) >= 2 {
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	if len(mock.handlers) < 2 {
-		t.Fatal("handlers not registered")
-	}
-
+	// Wait for Run to register its handlers.
 	var msgHandler func(*discordgo.Session, *discordgo.MessageCreate)
-	for _, h := range mock.handlers {
-		if fn, ok := h.(func(*discordgo.Session, *discordgo.MessageCreate)); ok {
-			msgHandler = fn
+	deadline := time.Now().Add(2 * time.Second)
+	for msgHandler == nil && time.Now().Before(deadline) {
+		if msgHandler = mock.messageHandler(); msgHandler == nil {
+			time.Sleep(10 * time.Millisecond)
 		}
 	}
 	if msgHandler == nil {

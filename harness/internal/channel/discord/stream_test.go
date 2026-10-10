@@ -72,17 +72,11 @@ func TestChannel_StreamRepliesUsesWriter(t *testing.T) {
 		})
 	}()
 
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) {
-		if len(mock.handlers) >= 2 {
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
 	var msgHandler func(*discordgo.Session, *discordgo.MessageCreate)
-	for _, h := range mock.handlers {
-		if fn, ok := h.(func(*discordgo.Session, *discordgo.MessageCreate)); ok {
-			msgHandler = fn
+	deadline := time.Now().Add(2 * time.Second)
+	for msgHandler == nil && time.Now().Before(deadline) {
+		if msgHandler = mock.messageHandler(); msgHandler == nil {
+			time.Sleep(10 * time.Millisecond)
 		}
 	}
 	if msgHandler == nil {

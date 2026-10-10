@@ -49,6 +49,10 @@ type editStream struct {
 	flushDone        chan struct{}
 	flushOnce        sync.Once
 	flushCtx         context.Context
+	// Captured from streamFlushEvery at construction so the flusher never
+	// reads the package var: tests override it and restore it in Cleanup
+	// while a flushLoop from the same test may still be starting.
+	flushEvery time.Duration
 }
 
 func newEditStream(b *bot.Bot, chatID int64, threadID, chunkMax int) *editStream {
@@ -56,7 +60,7 @@ func newEditStream(b *bot.Bot, chatID int64, threadID, chunkMax int) *editStream
 		chunkMax = telegramMaxMessageRunes
 	}
 	// showThinking defaults on for unit tests; Channel overrides from SHOW_THINKING.
-	return &editStream{bot: b, chatID: chatID, threadID: threadID, chunkMax: chunkMax, showThinking: true}
+	return &editStream{bot: b, chatID: chatID, threadID: threadID, chunkMax: chunkMax, showThinking: true, flushEvery: streamFlushEvery}
 }
 
 func (s *editStream) remember(msgID int, text string) {
@@ -304,7 +308,7 @@ func (s *editStream) flushLoop() {
 	defer close(s.flushDone)
 	// Push ASAP so the bubble appears, then on a steady cadence.
 	s.flushOnceAPI(false)
-	t := time.NewTicker(streamFlushEvery)
+	t := time.NewTicker(s.flushEvery)
 	defer t.Stop()
 	for {
 		s.mu.Lock()

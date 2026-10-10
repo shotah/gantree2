@@ -37,7 +37,6 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
-      - run: npm run build
 
       - name: Fail fast on missing config
         env:
@@ -86,6 +85,12 @@ jobs:
           grep -q "\"id\": \"$id\"" wrangler.jsonc || { echo "KV id not patched" >&2; exit 1; }
           npx wrangler r2 bucket list | grep -qw "gantree2-store" \
             || npx wrangler r2 bucket create gantree2-store
+
+      # Build AFTER provisioning. vinext writes dist/server/wrangler.json and
+      # a .wrangler/deploy/config.json redirect, and `wrangler deploy` reads
+      # that generated copy — so it must be generated from the patched file,
+      # or it ships the literal "TODO" id.
+      - run: npm run build
 
       - name: wrangler deploy
         env:
