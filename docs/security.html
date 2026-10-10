@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Security — risks and choices — gantree</title>
+  <meta name="description" content="Security — risks and choices">
+  <link rel="canonical" href="https://shotah.github.io/gantree2/docs/security.html">
+  <meta name="theme-color" content="#0e1316">
+  <meta property="og:title" content="Security — risks and choices — gantree">
+  <meta property="og:description" content="Security — risks and choices">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://shotah.github.io/gantree2/docs/security.html">
+  <meta property="og:image" content="https://shotah.github.io/gantree2/assets/banner.png">
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body class="">
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="top">
+    <a class="brand" href="../index.html">
+      <img src="../assets/logo.svg" width="28" height="28" alt="">
+      gantree
+    </a>
+    <nav class="nav" aria-label="Site">
+        <a href="../index.html">Home</a>
+        <a href="../docs/install.html">Install</a>
+        <a href="../docs/access.html">Access</a>
+        <a href="../docs/architecture.html">Architecture</a>
+        <a href="../docs/security.html" aria-current="page">Security</a>
+        <a href="../docs/auth.html">Accounts</a>
+        <a href="../docs/mcp.html">MCP</a>
+        <a href="../docs/custom-mcp.html">Custom MCP</a>
+        <a href="../docs/mcp-naming.html">Naming</a>
+        <a href="../docs/eval_setup.html">Evals</a>
+        <a href="https://github.com/shotah/gantree2">GitHub</a>
+    </nav>
+  </header>
+  <main id="content" class="wrap">
+    <article class="prose"><h1 id="security-risks-and-choices">Security — risks and choices</h1>
+<p>What can go wrong, what we chose, and what we did not. One page, so a
+reviewer can disagree with a line instead of a feeling.</p>
+<p>Code: <code>lib/door/</code> (the door), <code>edge/agent.do.ts</code> + <code>lib/chat/</code> (the
+room), <code>harness/</code> (the agent). People and roles: <a href="access.html">access.md</a>.
+Shape: <a href="architecture.html">architecture.md</a>. Reporting a hole:
+<a href="https://github.com/shotah/gantree2/blob/main/SECURITY.md"><code>SECURITY.md</code></a> at the repo root.</p>
+<hr>
+<h2 id="what-we-are-protecting">What we are protecting</h2>
+<table>
+<thead>
+<tr>
+<th>Asset</th>
+<th>Where it lives</th>
+<th>Who may hold it</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Your Google identity (<code>sub</code>, email)</td>
+<td>Session cookie (encrypted), Settings DO <code>users</code></td>
+<td>You, the Worker</td>
+</tr>
+<tr>
+<td>The allowlist and roles</td>
+<td><code>GANTREE_ADMINS</code> / <code>GANTREE_ALLOW</code> env, Settings DO</td>
+<td>Admins</td>
+</tr>
+<tr>
+<td>The chat thread</td>
+<td>Agent DO storage, R2 (photos, boards)</td>
+<td>Users on that agent&#39;s room</td>
+</tr>
+<tr>
+<td>The harness bearer (room token)</td>
+<td>Agent DO; handed to the container at start</td>
+<td>The Worker, that one container</td>
+</tr>
+<tr>
+<td>Model and tool keys (<code>LLM_API_KEY</code>, <code>GOOGLE_MAPS_API_KEY</code>, …)</td>
+<td>Settings DO per agent → <code>config</code> frame → container env</td>
+<td>Admins write, the container reads</td>
+</tr>
+<tr>
+<td>OAuth refresh tokens for tools (Google Workspace, Strava, Google Health)</td>
+<td>Container data dir. <strong>Not yet in the R2 snapshot</strong> — a recreate loses them (todo §5)</td>
+<td>That container only</td>
+</tr>
+<tr>
+<td>The brain (<code>gantry.db</code>, <code>SELF.md</code>)</td>
+<td>Container disk, R2 snapshot</td>
+<td>That container only</td>
+</tr>
+<tr>
+<td><code>SESSION_SECRET</code>, <code>GOOGLE_CLIENT_SECRET</code>, <code>CLOUDFLARE_API_TOKEN</code></td>
+<td>GitHub Actions secrets → Worker secrets; <code>.dev.vars</code> locally; <code>CELLD_VARS_FILE</code> at home</td>
+<td>The operator</td>
+</tr>
+</tbody></table>
+<p>The failures that matter: a stranger reads a thread, a member gains
+admin, a key leaves the box, a stolen phone keeps talking, a plugin we
+built ships code we did not read.</p>
+<hr>
+<h2 id="threat-model">Threat model</h2>
+<p>In scope: anyone on the internet who finds the hostname; a signed-in
+member trying to reach another agent or an admin screen; a lost or
+stolen phone with a live session; a compromised MCP plugin dependency;
+a misconfigured deploy (no admins, wrong redirect URI, secret in a
+public var).</p>
+<p>Out of scope: Cloudflare or Google themselves; a compromised operator
+laptop with the GitHub token; volumetric floods (that is the edge&#39;s
+job); a model provider that keeps what it is sent (you chose it).</p>
+<hr>
+<h2 id="the-door">The door</h2>
+<p>One login: Google. No passphrase, no magic link, no second IdP.</p>
+<table>
+<thead>
+<tr>
+<th>Choice</th>
+<th>Why</th>
+<th>Risk accepted</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Google OAuth, authorization code + <strong>PKCE S256</strong> (<code>lib/door/google.ts</code>)</td>
+<td>No client-side secret, no code interception</td>
+<td>Google is a single point of trust</td>
+</tr>
+<tr>
+<td><strong>Allowlist</strong>, not open sign-up. Env floor <code>GANTREE_ADMINS</code> ∪ <code>GANTREE_ALLOW</code> ∪ Settings DO rows (<code>lib/door/allowlist.ts</code>)</td>
+<td>A stranger with a Google account gets <code>not_allowed</code>, nothing else</td>
+<td>Admin typo locks a person out; fix is a redeploy or a <code>/users</code> edit</td>
+</tr>
+<tr>
+<td>Env rows are <strong>locked</strong> in <code>/users</code></td>
+<td>A DO wipe cannot remove the owner</td>
+<td>Env is the floor, not the ceiling</td>
+</tr>
+<tr>
+<td><strong>No admins → 503</strong> on every non-public path (<code>lib/door/gate.ts</code>)</td>
+<td>A deploy with no <code>GANTREE_ADMINS</code> serves nothing instead of everything</td>
+<td>First deploy fails loudly; that is the point</td>
+</tr>
+<tr>
+<td>Role <strong>recomputed every request</strong>, never read from the cookie</td>
+<td>Demotion and removal take effect on the next click</td>
+<td>One DO read per request</td>
+</tr>
+<tr>
+<td>Principal travels to handlers as <code>x-gantree-*</code> <strong>request headers that only the middleware writes</strong>; any the client sent are stripped first (<code>forwardHeaders</code>)</td>
+<td>Handlers read four headers instead of re-opening the cookie and the user list</td>
+<td>Those header names are a trust boundary — a handler reachable without the middleware (none today; <code>/ws/</code> authenticates itself) would trust the client. <code>test/door/forward.test.ts</code> pins the strip</td>
+</tr>
+<tr>
+<td>Cookie <code>gantree_session</code>: <strong>JWE</strong> dir/A256GCM, key = SHA-256 of <code>SESSION_SECRET</code> (≥32 chars)</td>
+<td>Opaque to the browser, tamper-evident, no server session table</td>
+<td>Rotating <code>SESSION_SECRET</code> logs everyone out; no per-session revoke list</td>
+</tr>
+<tr>
+<td><code>HttpOnly</code>, <code>SameSite=Lax</code>, <code>Secure</code> except plain-http loopback, <code>Max-Age</code> 7 days hard</td>
+<td>Standard; no JWT in <code>localStorage</code></td>
+<td>7-day window on a stolen phone — see below</td>
+</tr>
+<tr>
+<td><code>gantree_oauth</code> state cookie, 10 minutes, carries the PKCE verifier</td>
+<td>Binds callback to the browser that started</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Public paths are an explicit list (<code>PUBLIC_EXACT</code> / <code>PUBLIC_PREFIX</code>)</td>
+<td>Everything else is gated by default</td>
+<td>A new asset route must be added deliberately</td>
+</tr>
+<tr>
+<td><code>GANTREE_DEV_USER</code> honored <strong>only</strong> when the request host is loopback</td>
+<td>Dev convenience that cannot leak to a LAN or a tunnel</td>
+<td>A dev who proxies loopback through a tunnel defeats it; do not</td>
+</tr>
+</tbody></table>
+<p>Not a CSRF-token system: cookie is <code>SameSite=Lax</code>, mutating routes are
+<code>POST</code> same-origin JSON. Not a rate limiter: Google does the guessing
+defense; the allowlist makes a correct password useless anyway.</p>
+<h3 id="roles">Roles</h3>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Can</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>admin</strong></td>
+<td>Everything: users, every agent, keys, retire</td>
+</tr>
+<tr>
+<td><strong>operator</strong></td>
+<td>Assigned agents: config, grants, keys, restart. Not users, not other agents</td>
+</tr>
+<tr>
+<td><strong>member</strong></td>
+<td>Assigned agents: chat. Not settings</td>
+</tr>
+</tbody></table>
+<p>Three named roles, one field. Not a permission matrix.</p>
+<hr>
+<h2 id="the-room-agent-durable-object">The room (Agent Durable Object)</h2>
+<table>
+<thead>
+<tr>
+<th>Choice</th>
+<th>Why</th>
+<th>Risk accepted</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>One DO per agent slug; the room list (<code>sub</code> / email) decides who may join</td>
+<td>Isolation is the object boundary, not a <code>WHERE</code> clause</td>
+<td>A slug typo creates an empty room, not a shared one</td>
+</tr>
+<tr>
+<td>Phones authenticate with the <strong>session cookie</strong>; the harness with a <strong>bearer</strong> the DO minted</td>
+<td>Two credentials, two audiences; a phone cannot impersonate the agent</td>
+<td>Bearer lives in the container env for the life of the box</td>
+</tr>
+<tr>
+<td>Bearer rotates on <code>recreate</code>; the old one dies with the box</td>
+<td>No long-lived agent credential</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Payload caps, per-socket rate limit, slug validation (<code>lib/chat/caps.ts</code>, <code>rate.ts</code>, <code>slug.ts</code>)</td>
+<td>A member cannot fill storage or flood the harness</td>
+<td>Slow phone drops oldest and says so</td>
+</tr>
+<tr>
+<td>Backlog bounded; photos and boards in R2 under the slug prefix</td>
+<td>Storage is per agent</td>
+<td>R2 keys are not encrypted at rest beyond Cloudflare&#39;s own</td>
+</tr>
+<tr>
+<td>Theme and typing notices are broadcast; <strong>text is only sent to sockets on the room list</strong></td>
+<td>A dropped member stops seeing new turns immediately</td>
+<td>They keep what their phone already cached</td>
+</tr>
+</tbody></table>
+<p>The harness never listens. Cloud or home, the container dials the Worker
+with the bearer. There is no port to scan, no webhook URL to guess.</p>
+<hr>
+<h2 id="the-harness-container">The harness container</h2>
+<table>
+<thead>
+<tr>
+<th>Choice</th>
+<th>Why</th>
+<th>Risk accepted</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Outbound only; no inbound ports on either target</td>
+<td>Unchanged from the first design; the whole product rests on it</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Secrets arrive in the <code>config</code> frame over the authenticated socket, not baked into the image</td>
+<td>One image for every agent; keys never in a layer</td>
+<td>Keys are in container memory and env; <code>docker inspect</code> on a home box shows them to root</td>
+</tr>
+<tr>
+<td>One OCI image, built in CI from this repo, MCP plugins compiled from <code>harness/mcp/&lt;id&gt;/</code> source</td>
+<td>No binary we did not build; <code>mcp.lock</code> names every plugin</td>
+<td>Go module supply chain is the remaining trust</td>
+</tr>
+<tr>
+<td><code>host-manifest</code> shapes shipped in the image; the settings grid trusts the image, not a registry</td>
+<td>Tool catalog cannot be swapped under the UI</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Brain snapshot (<code>gantry.db</code>, <code>SELF.md</code>) → <strong>R2</strong> via presigned PUT, restored via presigned GET on start; off unless <code>SNAPSHOT=true</code></td>
+<td>Containers have no durable disk; the person survives a restart</td>
+<td>Today the snapshot holds memory, not OAuth tokens: safer bucket, but a recreate makes you re-paste a code. When tokens join it (register #4) the bucket becomes the crown jewel and must be encrypted per agent</td>
+</tr>
+<tr>
+<td>Per-agent log fan-out rate-capped; the harness never logs a key or a token body</td>
+<td>A chatty log cannot become a leak</td>
+<td>We rely on discipline in plugin code; name-lock tests do not scan log lines</td>
+</tr>
+</tbody></table>
+<p>Plugins run as child processes of the harness inside the same container.
+A compromised plugin has the harness&#39;s keys for that agent — not other
+agents, not the Worker. That is the blast radius we chose by baking them
+into one image instead of running fifteen sidecars.</p>
+<hr>
+<h2 id="oauth-for-tools-google-workspace-strava-google-health">OAuth for tools (Google Workspace, Strava, Google Health, …)</h2>
+<p>The harness is headless. Connecting a Google account to an agent is a
+browser hop that ends on a <strong>static page</strong>:</p>
+<pre><code class="language-text">https://shotah.github.io/gantree2/oauth-catch/</code></pre>
+<table>
+<thead>
+<tr>
+<th>Choice</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>The catch page is static HTML on GitHub Pages (<code>site/oauth-catch/index.html</code>). It reads <code>?code=</code> from the URL, shows it, offers copy, strips it from history. <strong>No server receives the code.</strong></td>
+<td>Nothing to breach; nothing logged</td>
+</tr>
+<tr>
+<td>You paste the code into chat: <code>/auth &lt;server&gt; &lt;code&gt;</code>. The plugin exchanges it from inside the container with its own client secret</td>
+<td>The code is one-time and short-lived; the refresh token never leaves the container</td>
+</tr>
+<tr>
+<td>Each plugin&#39;s <code>*_OAUTH_REDIRECT_URI</code> must equal the URL registered with the provider</td>
+<td>Google rejects anything else</td>
+</tr>
+<tr>
+<td>The privacy policy Google&#39;s consent screen points at is <code>https://shotah.github.io/gantree2/privacy/</code> (<code>site/privacy/index.html</code>)</td>
+<td>Required for verification; versioned with the code</td>
+</tr>
+<tr>
+<td>Garmin has no public OAuth: the operator signs in on their own machine and the session file lands in the data dir</td>
+<td>We do not proxy a vendor login</td>
+</tr>
+</tbody></table>
+<p>This is a different Google OAuth client than the door&#39;s. The door&#39;s
+redirect is <code>/api/auth/callback/google</code> on <strong>your</strong> Worker hostname and
+asks for identity only. The tool client asks for Gmail/Calendar/Drive
+scopes and redirects to the catch page. Keep them separate in Google
+Cloud so revoking one does not break the other.</p>
+<hr>
+<h2 id="secrets-where-each-one-is-allowed-to-be">Secrets — where each one is allowed to be</h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Local</th>
+<th>Cloudflare</th>
+<th>Home (celld)</th>
+<th>Never</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GOOGLE_CLIENT_ID</code></td>
+<td><code>.dev.vars</code></td>
+<td>Actions <strong>var</strong> → Worker var</td>
+<td><code>CELLD_VARS_FILE</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>GOOGLE_CLIENT_SECRET</code></td>
+<td><code>.dev.vars</code></td>
+<td>Actions <strong>secret</strong> → Worker secret</td>
+<td><code>CELLD_VARS_FILE</code></td>
+<td>a var, a commit, a log</td>
+</tr>
+<tr>
+<td><code>SESSION_SECRET</code></td>
+<td><code>.dev.vars</code></td>
+<td>Actions <strong>secret</strong></td>
+<td><code>CELLD_VARS_FILE</code></td>
+<td>shorter than 32 chars; reused across deployments</td>
+</tr>
+<tr>
+<td><code>GANTREE_ADMINS</code>, <code>GANTREE_ALLOW</code></td>
+<td><code>.dev.vars</code></td>
+<td>Actions <strong>var</strong></td>
+<td><code>CELLD_VARS_FILE</code></td>
+<td>— (emails are not secrets, but they are PII — keep them out of the README)</td>
+</tr>
+<tr>
+<td><code>CLOUDFLARE_API_TOKEN</code>, <code>CLOUDFLARE_ACCOUNT_ID</code></td>
+<td>—</td>
+<td>Actions <strong>secret</strong></td>
+<td>—</td>
+<td>the Worker&#39;s env</td>
+</tr>
+<tr>
+<td>Per-agent keys (<code>LLM_API_KEY</code>, tool keys)</td>
+<td>Settings DO</td>
+<td>Settings DO</td>
+<td>Settings DO</td>
+<td>env of the Worker; a plugin&#39;s log</td>
+</tr>
+<tr>
+<td><code>VAPID_*</code> (push)</td>
+<td><code>.dev.vars</code></td>
+<td>Actions secret</td>
+<td><code>CELLD_VARS_FILE</code></td>
+<td>—</td>
+</tr>
+</tbody></table>
+<p><code>.dev.vars</code> and <code>harness/.env</code> are gitignored. <code>.dev.vars.example</code> and
+<code>harness/.env.example</code> carry names, never values. CI fails if a test
+fixture contains a string that looks like a live Google secret.</p>
+<hr>
+<h2 id="supply-chain">Supply chain</h2>
+<table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>Control</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>npm</td>
+<td><code>package-lock.json</code>; <code>npm ci</code> in CI; ncu is a deliberate PR, not a bot</td>
+</tr>
+<tr>
+<td>Go</td>
+<td><code>go.sum</code> per module; <code>harness/mcp.lock</code> names every plugin and its module path; name-lock tests pin server ids and tool names</td>
+</tr>
+<tr>
+<td>Image</td>
+<td>Built in this repo&#39;s Actions from source; tagged by release; published to GHCR under the repo&#39;s identity</td>
+</tr>
+<tr>
+<td>GitHub Pages</td>
+<td>Only <code>pages.yml</code>, <code>ci.yml</code>, <code>harness.yml</code> write <code>gh-pages</code>, each to its own paths, serialized by a concurrency group</td>
+</tr>
+<tr>
+<td>Actions</td>
+<td>Pinned major versions; <code>persist-credentials: false</code>; <code>contents: write</code> only where a push is needed</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="logging">Logging</h2>
+<p>The Worker logs method, path, status, <code>sub</code> (not email), duration.
+Never a cookie, a bearer, a code, a key. The harness mirrors slog over
+the socket at a bounded rate; the DO stores a ring, not forever. Audit
+rows (who/what/when) for every user and key mutation live in the
+Settings DO and are readable by admins only. Not a SIEM.</p>
+<hr>
+<h2 id="risk-register">Risk register</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Risk</th>
+<th>Likelihood</th>
+<th>Impact</th>
+<th>Choice</th>
+<th>Open?</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>Stolen phone with a live session</td>
+<td>Medium</td>
+<td>Member reads their own rooms for ≤7 days</td>
+<td>Role recomputed per request, so <strong>removal on <code>/users</code> ends it at the next request</strong>; no per-device revoke</td>
+<td>Per-device sessions list — later</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>GANTREE_ADMINS</code> empty on deploy</td>
+<td>Medium (first deploy)</td>
+<td>None — 503</td>
+<td>Fail closed</td>
+<td>No</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Admin adds the wrong email</td>
+<td>Medium</td>
+<td>Stranger with that address can sign in</td>
+<td>Allowlist is exact-match; audit row; <code>/users</code> shows last sign-in</td>
+<td>Confirm-scary on add — §2 todo</td>
+</tr>
+<tr>
+<td>4</td>
+<td>R2 bucket exposure once snapshots carry OAuth refresh tokens (they do not yet)</td>
+<td>Low</td>
+<td>Every agent&#39;s tool tokens</td>
+<td>Private bucket; presigned URLs ≤15 min; <code>CLOUDFLARE_API_TOKEN</code> scoped to this account</td>
+<td><strong>Encrypt the snapshot with a per-agent key held in the DO before tokens are added to it</strong> — or keep tokens on the DO instead. Decide before Phase 3</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Malicious or vulnerable Go dependency in a plugin</td>
+<td>Low–Medium</td>
+<td>Keys of that agent</td>
+<td>Built from source, <code>go.sum</code>, Dependabot on <code>harness/**</code></td>
+<td>Sandbox plugins (gVisor at home: <code>CELLD_CONTAINER_RUNTIME=runsc</code>) — later</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Harness bearer leaked from container env</td>
+<td>Low</td>
+<td>Someone speaks as the agent in that room</td>
+<td>Bearer per box life; <code>recreate</code> rotates; the DO accepts one harness socket at a time</td>
+<td>No</td>
+</tr>
+<tr>
+<td>7</td>
+<td>OAuth code pasted into the wrong chat</td>
+<td>Low</td>
+<td>Code is one-time, 10-minute, useless without the plugin&#39;s client secret</td>
+<td>Catch page strips URL; <code>/auth</code> only in the agent&#39;s own room</td>
+<td>No</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>GANTREE_DEV_USER</code> set in production</td>
+<td>Low</td>
+<td>None unless the host is loopback</td>
+<td>Loopback check on the request URL</td>
+<td>No</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Prompt injection via a tool result (email, web page) makes the agent call a destructive tool</td>
+<td>Medium</td>
+<td>Whatever the granted tools can do</td>
+<td>Grants are per agent and explicit; destructive tools are not granted by default; the eval suite includes injection fixtures</td>
+<td>Per-tool confirm in chat — later</td>
+</tr>
+<tr>
+<td>10</td>
+<td>celld repo/binary churn after the Cloudflare acquisition</td>
+<td>Medium</td>
+<td>Home deploy breaks</td>
+<td>Version pinned in <code>install.md</code>; <code>npm run deploy:home</code> is the only invocation site</td>
+<td>Watch</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="not-this">Not this</h2>
+<ul>
+<li>A WAN-open home box. celld sits behind Tailscale HTTPS or a Tunnel.</li>
+<li>Cloudflare Access in front of the Worker. The door is the product.</li>
+<li>Role or permissions in the cookie.</li>
+<li>A second login (passphrase, magic link, SSO beyond Google).</li>
+<li>Pairing codes in chat; MCP OAuth as a phone login.</li>
+<li>CSRF tokens; <code>SameSite=Lax</code> and same-origin <code>POST</code> JSON.</li>
+<li>Encrypting what Cloudflare already encrypts at rest, except the
+snapshot (register #4).</li>
+<li>A 12-role RBAC. Three roles.</li>
+</ul>
+<hr>
+<h2 id="operator-checklist">Operator checklist</h2>
+<ol>
+<li>Two Google OAuth clients: <strong>door</strong> (redirect <code>/api/auth/callback/google</code>
+on your hostname, identity scopes) and <strong>tools</strong> (redirect the catch
+page URL, the scopes you grant). Privacy policy URL = the <code>privacy/</code>
+page.</li>
+<li><code>GANTREE_ADMINS</code> set before the first deploy. <code>SESSION_SECRET</code> ≥32
+random chars, generated once, stored only as a secret.</li>
+<li>Home: Tailscale or Tunnel. No router port.</li>
+<li>A partner needs keys for one agent → <strong>operator</strong> on that agent, not
+admin.</li>
+<li>Someone leaves → <code>/users</code> → remove. Their next request is 401.</li>
+<li>Rotate <code>SESSION_SECRET</code> if you suspect a leak; everyone logs in
+again, nothing else breaks.</li>
+<li>Never set <code>GANTREE_DEV_USER</code> outside <code>.dev.vars</code>.</li>
+</ol>
+<p>Tests: <code>test/door/*</code> (gate, session, allowlist, Google flow, bounces),
+<code>test/chat/*</code> (caps, rate, slug, admission), <code>test/edge/*</code> (DO glue),
+<code>harness/**/*_test.go</code> (frames, snapshot round-trip, plugin name locks).</p>
+</article>
+  </main>
+  <footer class="foot">
+    <div class="wrap">
+      <span>MIT</span>
+      <span>
+        <a href="../privacy/">privacy</a>
+        · <a href="../oauth-catch/">oauth code</a>
+        · <a href="https://github.com/shotah/gantree2-apps">apps</a>
+      </span>
+      <span><a href="https://github.com/shotah/gantree2">github.com/shotah/gantree2</a></span>
+    </div>
+  </footer>
+  
+</body>
+</html>

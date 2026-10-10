@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MCP host — gantree</title>
+  <meta name="description" content="MCP host">
+  <link rel="canonical" href="https://shotah.github.io/gantree2/docs/mcp.html">
+  <meta name="theme-color" content="#0e1316">
+  <meta property="og:title" content="MCP host — gantree">
+  <meta property="og:description" content="MCP host">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://shotah.github.io/gantree2/docs/mcp.html">
+  <meta property="og:image" content="https://shotah.github.io/gantree2/assets/banner.png">
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body class="">
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="top">
+    <a class="brand" href="../index.html">
+      <img src="../assets/logo.svg" width="28" height="28" alt="">
+      gantree
+    </a>
+    <nav class="nav" aria-label="Site">
+        <a href="../index.html">Home</a>
+        <a href="../docs/install.html">Install</a>
+        <a href="../docs/access.html">Access</a>
+        <a href="../docs/architecture.html">Architecture</a>
+        <a href="../docs/security.html">Security</a>
+        <a href="../docs/auth.html">Accounts</a>
+        <a href="../docs/mcp.html" aria-current="page">MCP</a>
+        <a href="../docs/custom-mcp.html">Custom MCP</a>
+        <a href="../docs/mcp-naming.html">Naming</a>
+        <a href="../docs/eval_setup.html">Evals</a>
+        <a href="https://github.com/shotah/gantree2">GitHub</a>
+    </nav>
+  </header>
+  <main id="content" class="wrap">
+    <article class="prose"><h1 id="mcp-host">MCP host</h1>
+<p>How the harness loads tools, names them for the model, recovers from common
+hallucinations, and how to exercise that path locally.</p>
+<p>Capabilities live in <strong>external MCP stdio binaries</strong>, plus a few harness
+builtins (memory, cron, watch, <code>self_note</code>, <code>web_search</code>). The harness
+supervises MCP children inside its container: spawn → list → call →
+truncate → restart. The process around that container is
+<a href="architecture.html">architecture.md</a>; this page is the contract for naming
+and local use.</p>
+<p>Long-horizon planning uses tools over days (cron, watches). The host has to
+repair names and finish turns or the horizon collapses into ERROR.</p>
+<hr>
+<h2 id="why-mcp-and-nothing-else">Why MCP (and nothing else)</h2>
+<table>
+<thead>
+<tr>
+<th>Goal</th>
+<th>How MCP helps</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Keep the harness small</td>
+<td>Calendar, Cast, etc. stay out of the <code>gantry</code> binary. Web search is a builtin.</td>
+</tr>
+<tr>
+<td>Clear grant model</td>
+<td>A server in <code>mcp.toml</code> is granted; omit it and it does not exist</td>
+</tr>
+<tr>
+<td>Distroless-friendly</td>
+<td>Static Go binaries over stdio — no shell, no npm in the image</td>
+</tr>
+<tr>
+<td>Swappable brains</td>
+<td>Same tool schemas work for Gemini, ChatGPT, Ollama — OpenAI-compat tool calls</td>
+</tr>
+</tbody></table>
+<p>Chat, memory, cron, and web search work with <strong>zero</strong> MCP servers. Other tools are optional.</p>
+<hr>
+<h2 id="naming-servertool">Naming: <code>{server}__{tool}</code></h2>
+<p><strong>Authoring new MCP tools?</strong> Follow the shared package contract:
+<a href="mcp-naming.html">mcp-naming.md</a> (<code>{service}_{verb}_{object}</code>, no server-id in the
+tool name, stable verbs, sibling nouns). This section is the <strong>host</strong> side.</p>
+<p>Every published tool reaches the model as:</p>
+<pre><code class="language-text">{server_or_tools_prefix}__{original_tool_name}</code></pre>
+<p>Examples:</p>
+<table>
+<thead>
+<tr>
+<th>Manifest <code>name</code></th>
+<th>MCP tool</th>
+<th>Name the model must call</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><em>(builtin)</em></td>
+<td><code>web_search</code></td>
+<td><code>web_search</code> (always on; no prefix)</td>
+</tr>
+<tr>
+<td><code>google</code></td>
+<td><code>calendar_list_events</code></td>
+<td><code>google__calendar_list_events</code></td>
+</tr>
+<tr>
+<td><code>math</code></td>
+<td><code>expression_evaluate</code></td>
+<td><code>math__expression_evaluate</code></td>
+</tr>
+<tr>
+<td><code>garmin</code></td>
+<td><code>sleep_get</code></td>
+<td><code>garmin__sleep_get</code></td>
+</tr>
+<tr>
+<td><code>strava</code></td>
+<td><code>activities_list</code>, <code>urls_resolve</code></td>
+<td><code>strava__activities_list</code></td>
+</tr>
+<tr>
+<td><code>feeds</code></td>
+<td><code>items_list</code></td>
+<td><code>feeds__items_list</code></td>
+</tr>
+<tr>
+<td><code>twitter</code></td>
+<td><code>posts_list</code></td>
+<td><code>twitter__posts_list</code></td>
+</tr>
+<tr>
+<td><code>maps</code></td>
+<td><code>place_search</code>, <code>route_eta</code></td>
+<td><code>maps__place_search</code></td>
+</tr>
+<tr>
+<td><code>image</code></td>
+<td><code>photo_generate</code>, <code>photo_edit</code></td>
+<td><code>image__photo_generate</code></td>
+</tr>
+<tr>
+<td><code>chat</code></td>
+<td><code>avatar_update</code>, <code>theme_list</code></td>
+<td><code>chat__avatar_update</code></td>
+</tr>
+</tbody></table>
+<p>MCP <code>ImageContent</code> (image-generation-mcp) is <strong>not</strong> stuffed into the model
+prompt — the harness truncates tool results. The JSON summary stays; Telegram /
+Discord / Slack <code>SendPhoto</code> the PNG; chat puts <code>images: [{ url }]</code> on the
+room reply (same shape as inbound). Grant prefix <code>image</code> (not fat <code>google</code>).
+Image bytes that another tool must read go to disk via <code>IMAGE_OUTPUT_DIR</code>;
+downstream tools (chat <code>avatar_update</code> / <code>backdrop_update</code>) take <code>source_path</code>.</p>
+<p><strong>Why the prefix?</strong> OpenAI-safe characters, no collisions across servers, and
+obvious provenance in logs / collapsed history markers.</p>
+<p>Optional override in <code>mcp.toml</code>:</p>
+<pre><code class="language-toml">[[server]]
+name = &quot;garmin&quot;
+tools_prefix = &quot;garm&quot;   # tools become garm__sleep_get, …</code></pre>
+<p>Default prefix is the server <code>name</code>. Prefer short, stable prefixes when a
+hyphenated product name fights the model (see below).</p>
+<p>Inspect what the running agent sees:</p>
+<ul>
+<li>Telegram / Discord / Slack / stdio: <code>/tools</code> (total + per-server <code>schema_est_tokens</code>)</li>
+<li><code>/status</code> includes <code>schema_est_tokens</code> alongside history size</li>
+<li>Boot logs: <code>mcp server connected</code> (<code>tools_listed</code> vs <code>tools_published</code>), then
+<code>tool schema estimate</code> + one <code>tool schema by server</code> line per prefix</li>
+<li><strong>Fail-soft boot:</strong> if one <code>[[server]]</code> fails to spawn/initialize (missing API
+key, broken binary, EOF), the harness logs <code>mcp server boot skipped</code> with a stable
+<code>reason</code> (<code>no_binary</code> / <code>no_key</code> / <code>no_oauth</code> / <code>connect</code>) and continues.
+Calling a skipped prefix returns <code>tool error [&lt;reason&gt;]: … is skipped — do not invent &lt;name&gt;__* names</code>. A single optional tool must not take down the
+agent. The <code>status</code> JSON: <a href="contract.html">contract.md</a>.</li>
+</ul>
+<p>Plugins are baked into the image under <code>harness/mcp/&lt;id&gt;/</code>
+(<a href="custom-mcp.html">custom-mcp.md</a>). The <code>chat</code> plugin is the face / wallpaper /
+mood server; <a href="mcp-naming.html">mcp-naming.md</a> still lists that row as <code>pendant</code>
+until Phase 4.</p>
+<hr>
+<h2 id="local-models-and-hyphenated-prefixes">Local models and hyphenated prefixes</h2>
+<p>Server names can use hyphens. Tool <em>suffixes</em> use underscores. Small local
+models (e.g. Qwen via Ollama) frequently <strong>normalize the whole name to
+underscores</strong> and invent nearby names.</p>
+<p>Web search is the unprefixed builtin <code>web_search</code> (Brave Search HTTP —
+titles, URLs, snippets). Leftover MCP names (<code>google-search__web_search</code>,
+<code>google_search__web_search</code>) still call that builtin; they are not a second
+model.</p>
+<p>Typical hyphen-prefix failure spiral (why search is a builtin now):</p>
+<ol>
+<li>Model calls <code>google-search__google_search</code> → unknown tool (invented suffix)</li>
+<li>Host suggests a catalog name; model rewrites the prefix to underscores</li>
+<li>Hint degrades to a bare prefix list → more guessing → think-stall</li>
+</ol>
+<p>That is a <strong>runtime</strong> problem, not a persona typo. Exact names come from the
+live catalog (tool schemas + <code>[mcp prefixes]</code> + <code>/tools</code>); the host also
+hardens the call path.</p>
+<h3 id="alias-resolve-automatic">Alias resolve (automatic)</h3>
+<p>On <code>Call</code>, if the exact name is missing, the harness rewrites <strong>only the server
+prefix</strong> so underscores become hyphens, then retries lookup:</p>
+<pre><code class="language-text">google_search__web_search  →  builtin web_search   ✅ called</code></pre>
+<p>Tool suffixes are <strong>not</strong> rewritten (<code>calendar_list_events</code> stays
+<code>calendar_list_events</code>). Search aliases are handled by the builtin, not by
+prefix rewrite.</p>
+<p>A real tool name wearing an invented or missing prefix is repaired the same way,
+because a bounced call costs a full model round-trip — the most expensive thing
+in a local-model turn:</p>
+<pre><code class="language-text">mcp__hrv_get  →  garmin__hrv_get   ✅ called
+hrv_get       →  garmin__hrv_get   ✅ called</code></pre>
+<p>Two cases are left to the model on purpose:</p>
+<ul>
+<li><strong>Real prefix, wrong tool</strong> (<code>garmin__athlete_get</code> when only Strava has it).
+The model chose that server deliberately, so it gets that server&#39;s catalog
+rather than a silent hop to a different server.</li>
+<li><strong>Two servers publish the name</strong> (<code>activities_get</code> on both Garmin and Strava).
+Guessing is a coin flip, so both real names go back as a hint.</li>
+</ul>
+<p>When any repair fires, logs show:</p>
+<pre><code class="language-text">mcp tool name aliased  requested=…  resolved=…</code></pre>
+<h3 id="unknown-tool-suggestions">Unknown-tool suggestions</h3>
+<p>If lookup still fails, the error string is model-facing and catalog-aware:</p>
+<table>
+<thead>
+<tr>
+<th>Mistake</th>
+<th>Hint shape</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Wrong tool, real prefix</td>
+<td><code>valid garmin tools are: garmin__hrv_get — retry with one of these exact names</code></td>
+</tr>
+<tr>
+<td>Underscored prefix, wrong tool</td>
+<td><code>did you mean &quot;garmin&quot;?</code> + that server’s exact tool list</td>
+</tr>
+<tr>
+<td>Invented name (fake prefix, merged suffix)</td>
+<td><code>closest real names are: garmin__wellness_get_body_battery, garmin__hrv_get — retry with one of these exact names</code></td>
+</tr>
+<tr>
+<td>Unknown prefix, nothing close</td>
+<td><code>available server prefixes are: garmin, google, maps, …</code></td>
+</tr>
+</tbody></table>
+<p>The agent loop feeds that error back as a tool result so the next iteration
+can self-correct (same pattern as argument/schema failures).</p>
+<p>Closest-name ranking scores shared name tokens, ignoring generic verbs (<code>get</code>,
+<code>list</code>, <code>set</code>, …) that would otherwise match everything. A model that invents a
+tool tends to stitch real fragments together — <code>mcp__get_hrv_and_body_battery</code>
+is <code>get_hrv</code> plus <code>get_body_battery</code> under a prefix that does not exist — so the
+fragments identify what it was reaching for even when neither prefix nor suffix
+is real.</p>
+<h3 id="printed-tool-calls">Printed tool calls</h3>
+<p>A model can also skip the <code>tool_calls</code> field entirely and <em>print</em> the call:</p>
+<pre><code class="language-json">{ &quot;name&quot;: &quot;garmin__get_daily_activity&quot;, &quot;parameters&quot;: { &quot;date&quot;: &quot;2026-07-28&quot; } }</code></pre>
+<p>Without handling, that JSON is just assistant text, so it becomes the visible
+reply — the agent answering in wire format. The harness parses it back into a real
+call and runs it, accepting the object bare, fenced, inside <code>&lt;tool_call&gt;</code> tags,
+or embedded in prose, with arguments under <code>arguments</code>, <code>parameters</code>, <code>args</code>, or
+<code>input</code> (models pick all of them).</p>
+<pre><code class="language-text">model printed a tool call instead of emitting one; executing it  name=… chars=90</code></pre>
+<p>The name must look like a tool — published, or at least carrying a <code>server__</code>
+prefix — so an ordinary reply that happens to contain JSON is never hijacked. An
+unpublished but prefixed name is still run on purpose: the host&#39;s answer is what
+names the real tools, which feeds the retry below.</p>
+<h3 id="grammar-constrained-retry">Grammar-constrained retry</h3>
+<p>A hint only works if the model reads it. When a name cannot be resolved <em>and</em>
+there are real candidates, the next model call is constrained instead: the harness
+sends <code>response_format</code> with a JSON schema whose <code>name</code> is an <code>enum</code> of those
+candidates. Ollama compiles that to a GBNF grammar and masks every token that
+would spell anything else, so a bad name stops being unlikely and becomes
+impossible.</p>
+<pre><code class="language-text">tool call failed        name=mcp__get_hrv_and_body_battery
+constraining retry …    requested=mcp__get_hrv_and_body_battery candidates=2
+model call              iteration=2 forced_tool_names=2</code></pre>
+<p>Three details make it work:</p>
+<ul>
+<li><strong><code>tools</code> stays in the request.</strong> The model reads real parameter schemas from
+there. Drop it and the name is still legal but the arguments are invented
+(measured on Qwen: <code>start_date</code>/<code>end_date</code> instead of <code>date</code>).</li>
+<li><strong>The call arrives in <code>content</code>, not <code>tool_calls</code>.</strong> Ollama omits <code>tool_calls</code>
+whenever a <code>response_format</code> is set (still true in 0.32.4), so the provider
+parses the JSON object back into a <code>ToolCall</code>.</li>
+<li><strong>It is one-shot, and never streams.</strong> A grammar forces <em>every</em> reply to be
+JSON, so leaving it on would make conversational answers impossible; and
+streaming it would type raw JSON into the user&#39;s bubble.</li>
+</ul>
+<p>No candidates means no constraint — forcing a call out of the whole catalog is
+just a different guess.</p>
+<h3 id="what-aliasing-does-not-fix">What aliasing does <em>not</em> fix</h3>
+<ul>
+<li>Invented tool suffixes (<code>…__google_search</code>) — no real name to repair to, so these
+still need a retry with the suggested name (or a smaller published tool surface)</li>
+<li>Wrong arguments (e.g. passing a time range as <code>event_id</code>) — MCP/API errors</li>
+<li>Think-only turns with no tool call — agent nudge / stall path in
+<code>harness/internal/agent</code> (separate from naming; the tree lands with
+<a href="todo.html">todo.md</a> §5)</li>
+<li>A model that neither calls nor prints anything callable — still a nudge, then
+the turn answers with whatever prose it has</li>
+</ul>
+<hr>
+<h2 id="manifest-filters">Manifest filters</h2>
+<p>Listed servers <strong>start</strong>. <code>tools</code> / <code>exclude</code> only filter what is <strong>published</strong>
+to the model:</p>
+<pre><code class="language-toml">[[server]]
+name = &quot;garmin&quot;
+command = &quot;garmin&quot;
+args = [&quot;mcp&quot;]
+tools = [&quot;get_sleep&quot;, &quot;get_weight&quot;, &quot;get_hrv&quot;]  # allowlist
+# exclude = [&quot;raw_*&quot;]</code></pre>
+<p>Boot logs <code>tools_listed</code> vs <code>tools_published</code>. Schema cost is estimated as
+<code>est_tokens</code> (chars/4); <code>TOOL_SCHEMA_MAX_TOKENS</code> can hard-fail an oversized set.
+Prefer MCP-native tiers (<code>--tool-tier core</code>) first — <a href="mcp-naming.html">mcp-naming.md</a>.</p>
+<h3 id="call-budget-budget">Call budget (<code>budget</code>)</h3>
+<p>A metered API — rentals, flights, cars on a 50-requests-a-month plan — gets
+its quota written into the manifest, and the host enforces it:</p>
+<pre><code class="language-toml">[[server]]
+name = &quot;rentals&quot;
+command = &quot;rentals-search-mcp&quot;
+budget = &quot;1/day&quot;        # or &quot;50/month&quot;</code></pre>
+<p>Why the host and not the prompt: the model is not the only caller, and it
+is not a careful one. In the behavioral eval a single &quot;I need to be in
+Denver Friday&quot; produced three to five <code>flights__search</code> calls in one turn.
+A <code>watch_add</code> that omits <code>interval</code> polls every <strong>15 minutes</strong> — 96 calls a
+day, a monthly quota gone before lunch. The daily planner reaches for live tools
+too. Every one of those paths ends in the same <code>Host.call</code>, so that is
+where the counter sits, after argument validation (a malformed call spends
+nothing) and before the child is touched (a refused call never reaches the
+vendor).</p>
+<ul>
+<li>Counted per server per period in <code>gantry.db</code> (<code>mcp_budget</code>), so a
+monthly cap survives a redeploy. The day rolls at the <strong>human&#39;s</strong>
+midnight (<code>[timezone]</code>), the month on their first. <code>gantry.db</code> lives on
+the container disk and in the R2 snapshot
+(<a href="architecture.html">architecture.md</a>).</li>
+<li>Over budget, the tool result is a refusal that names the reset and says
+not to retry: <code>mcp: rentals budget 1/day used (1 calls this day); resets 2026-09-16 00:00 PDT — do not retry; use what you already have and tell the human</code>. The model reports instead of burning.</li>
+<li><code>watch_add</code> on a budgeted server raises a shorter interval to the floor
+(<code>1/day</code> → 24h; <code>50/month</code> → 14h24m) and says so in its reply. A watch
+that still hits the wall — one created before the budget existed — is
+parked until the reset instead of re-polling every tick; it stays
+enabled and keeps its cursor.</li>
+<li><code>/tools</code> shows <code>budget_refused=N</code> once anything has been turned away.</li>
+</ul>
+<p>The count is of attempts: a call the vendor rejects still spent a slot,
+because it almost certainly spent one of theirs.</p>
+<h3 id="prefix-enable-dynamictools">Prefix enable (<code>dynamic_tools</code>)</h3>
+<p>By default (<code>dynamic_tools</code> omitted or <code>true</code>) MCP schemas stay <strong>off</strong> until
+the agent calls <code>mcp_enable</code> (list of prefixes, next Completer call in the
+same turn). The prompt lists on vs off under <code>[mcp prefixes]</code> and tells the
+model to review that list and enable a needed off prefix this turn. Brief hold
+idles out at 6h (morning/afternoon); short at 27h. Harness builtins stay on.
+Go-live is from zero — no seed of today&#39;s catalog.</p>
+<p>Small models / rollback — full catalog every turn, no <code>mcp_enable</code>:</p>
+<pre><code class="language-toml">dynamic_tools = false</code></pre>
+<p>Furniture that should never idle-drop while dynamic tools are on:</p>
+<pre><code class="language-toml">[[server]]
+name = &quot;google&quot;
+force = true          # whole server prefix; pair with a tight `tools` allowlist</code></pre>
+<p>Or <code>MCP_ENABLE_FORCE=google__calendar,garmin__sleep</code>. Human overrides:
+<code>/brief</code> <code>/short</code> <code>/off</code>. <code>/tools</code> shows published vs available.</p>
+<hr>
+<h2 id="using-this-locally">Using this locally</h2>
+<p>The harness tree (<code>Makefile</code>, <code>examples/</code>) lands with <a href="todo.html">todo.md</a> §5.
+Until then these commands have nothing to run.</p>
+<h3 id="a-repl-fastest-feedback">A — REPL (fastest feedback)</h3>
+<pre><code class="language-bash">cd harness
+make init          # deploy/persona + deploy/mcp.toml
+# edit deploy/mcp.toml — uncomment / add servers you have binaries for
+# edit .env — LLM_* (Gemini, Ollama, …)
+
+make run           # CHANNEL=stdio by default</code></pre>
+<p>In the REPL:</p>
+<pre><code class="language-text">/status     # model, history, tool count
+/tools      # exact prefixed catalog the model sees</code></pre>
+<p>Ask something that needs a tool (“search for …”, “what’s on my calendar
+today”). Watch stderr JSON for <code>tool call</code>, <code>mcp tool name aliased</code>, or
+<code>tool call failed</code> with the suggestion string.</p>
+<p>Override mounts:</p>
+<pre><code class="language-bash"># Windows PowerShell example, from harness/
+$env:CHANNEL=&quot;stdio&quot;
+$env:PERSONA_DIR=&quot;./deploy/persona&quot;
+$env:MCP_MANIFEST=&quot;./deploy/mcp.toml&quot;
+make run</code></pre>
+<h3 id="b-an-agent-on-the-board">B — An agent on the board</h3>
+<p>Compose is not carried. Grant servers in that agent&#39;s <code>config.mcp</code>, put
+<code>LLM_*</code> in <code>config.env</code>, and recreate. The Agent DO starts the container;
+the harness dials back. <a href="architecture.html">architecture.md</a>,
+<a href="custom-mcp.html">custom-mcp.md</a>.</p>
+<p>Same <code>/tools</code> / <code>/status</code> in chat once the agent is up.</p>
+<p>For a local model, trust <code>/tools</code> plus alias/suggestions when the model
+mangles hyphens. Do not copy the MCP catalog into <code>PERSONA.md</code>
+(<a href="persona.html">persona.md</a>).</p>
+<h3 id="unit-tests-no-llm">Unit tests (no LLM)</h3>
+<pre><code class="language-bash">cd harness &amp;&amp; go test ./internal/mcp/ -count=1</code></pre>
+<p>Covers catalog suggestions, underscore-prefix aliasing, and “did you mean”
+hints without spawning real MCP binaries. The tree lands with
+<a href="todo.html">todo.md</a> §5.</p>
+<hr>
+<h2 id="checklist">Checklist</h2>
+<ul>
+<li><input disabled="" type="checkbox"> Only list servers this persona should have (<code>mcp.toml</code> = grant)</li>
+<li><input disabled="" type="checkbox"> Prefer MCP <code>--tool-tier</code> / <code>tools = […]</code> so Flash/local models see tens of tools, not hundreds</li>
+<li><input disabled="" type="checkbox"> After deploy, <code>/tools</code> once and confirm the published names</li>
+<li><input disabled="" type="checkbox"> On weird tool loops: check logs for <code>aliased</code> vs repeated <code>unknown tool</code></li>
+<li><input disabled="" type="checkbox"> Static MCP binaries only — the image is distroless (no libc/shell for children)</li>
+</ul>
+<hr>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="architecture.html">architecture.md</a> — Agent DO, container, R2 snapshot</li>
+<li><a href="custom-mcp.html">custom-mcp.md</a> — baking a server into the image</li>
+<li><a href="persona.html">persona.md</a> — <code>PERSONA.md</code> is not the tool catalog</li>
+<li><a href="cron.html#event-watches">cron.md</a> — poller + <code>feeds</code> / <code>twitter</code> / <code>boards</code></li>
+<li><a href="mcp-naming.html">mcp-naming.md</a> — package-author naming contract</li>
+<li><a href="contract.html">contract.md</a> — <code>status</code> JSON settings reads</li>
+</ul>
+</article>
+  </main>
+  <footer class="foot">
+    <div class="wrap">
+      <span>MIT</span>
+      <span>
+        <a href="../privacy/">privacy</a>
+        · <a href="../oauth-catch/">oauth code</a>
+        · <a href="https://github.com/shotah/gantree2-apps">apps</a>
+      </span>
+      <span><a href="https://github.com/shotah/gantree2">github.com/shotah/gantree2</a></span>
+    </div>
+  </footer>
+  
+</body>
+</html>

@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MCP tool naming — gantree</title>
+  <meta name="description" content="MCP tool naming">
+  <link rel="canonical" href="https://shotah.github.io/gantree2/docs/mcp-naming.html">
+  <meta name="theme-color" content="#0e1316">
+  <meta property="og:title" content="MCP tool naming — gantree">
+  <meta property="og:description" content="MCP tool naming">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://shotah.github.io/gantree2/docs/mcp-naming.html">
+  <meta property="og:image" content="https://shotah.github.io/gantree2/assets/banner.png">
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body class="">
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="top">
+    <a class="brand" href="../index.html">
+      <img src="../assets/logo.svg" width="28" height="28" alt="">
+      gantree
+    </a>
+    <nav class="nav" aria-label="Site">
+        <a href="../index.html">Home</a>
+        <a href="../docs/install.html">Install</a>
+        <a href="../docs/access.html">Access</a>
+        <a href="../docs/architecture.html">Architecture</a>
+        <a href="../docs/security.html">Security</a>
+        <a href="../docs/auth.html">Accounts</a>
+        <a href="../docs/mcp.html">MCP</a>
+        <a href="../docs/custom-mcp.html">Custom MCP</a>
+        <a href="../docs/mcp-naming.html" aria-current="page">Naming</a>
+        <a href="../docs/eval_setup.html">Evals</a>
+        <a href="https://github.com/shotah/gantree2">GitHub</a>
+    </nav>
+  </header>
+  <main id="content" class="wrap">
+    <article class="prose"><h1 id="mcp-tool-naming">MCP tool naming</h1>
+<p>Canonical contract for every MCP plugin baked into the harness image —
+the ones under <code>harness/mcp/&lt;name&gt;/</code> and any you add via
+<code>harness/mcp.lock</code>. The harness prefixes <code>{server}__{tool}</code>; this page
+is what goes on the right of the <code>__</code>. Plugins do not get a local
+dialect.</p>
+<p><strong>Why it matters:</strong> small models and the harness&#39;s closest-match repair
+pick tools by <strong>name tokens + description</strong>. Synonyms and double
+prefixes break matching, and a broken match is a serial round the Go
+loop could have batched.</p>
+<p>Related: how a plugin gets into the image (<a href="custom-mcp.html">custom-mcp.md</a>);
+the eval that fails a fixture when a plugin renames a tool
+(<a href="eval_setup.html#real-catalogs-tools_from">eval_setup.md</a>).</p>
+<hr>
+<h2 id="layers-do-not-confuse-them">Layers (do not confuse them)</h2>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Who owns it</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MCP <strong>server id</strong></td>
+<td><code>harness/mcp.lock</code> <code>name</code>, mirrored in each agent&#39;s <code>config.mcp</code></td>
+<td><code>strava</code>, <code>google</code>, <code>garmin</code></td>
+</tr>
+<tr>
+<td>MCP <strong>tool name</strong></td>
+<td>Binary registration</td>
+<td><code>activities_list</code>, <code>calendar_list_events</code></td>
+</tr>
+<tr>
+<td><strong>Host-facing name</strong></td>
+<td>Harness joins with <code>__</code></td>
+<td><code>strava__activities_list</code></td>
+</tr>
+</tbody></table>
+<pre><code class="language-text">{server_id}__{service}_{verb}_{object}[_{qualifier}]</code></pre>
+<hr>
+<h2 id="hard-rules">Hard rules</h2>
+<ol>
+<li><p><strong>Tool = <code>{service}_{verb}_{object…}</code></strong>
+Service first (resource / domain), then verb, then object. Same
+family as google-mcp (<code>calendar_list_events</code>, <code>gmail_search_messages</code>).</p>
+</li>
+<li><p><strong>Never put the server id in the tool name</strong>
+The harness already prefixes.</p>
+<ul>
+<li>Bad: <code>garmin_sleep_get</code> → <code>garmin__garmin_sleep_get</code></li>
+<li>Bad: <code>strava_get_activities</code> → <code>strava__strava_get_activities</code></li>
+<li>Good: <code>activities_list</code> → <code>strava__activities_list</code></li>
+</ul>
+</li>
+<li><p><strong>No dual aliases</strong>
+One name set per release. A breaking rename is a semver bump on the
+plugin, a <code>mcp.lock</code> bump, and the eval fixtures updated <strong>in the
+same PR</strong> — <code>harness.yml</code> runs the fixture well-formedness check and
+<code>eval.yml</code> fails the catalog drift before any model call.</p>
+</li>
+<li><p><strong>Stable verb set</strong> (prefer these; don&#39;t invent synonyms)</p>
+<table>
+<thead>
+<tr>
+<th>Verb</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>list</code></td>
+<td>Collection / page / day window</td>
+</tr>
+<tr>
+<td><code>get</code></td>
+<td>One resource by id</td>
+</tr>
+<tr>
+<td><code>search</code></td>
+<td>Query → hits</td>
+</tr>
+<tr>
+<td><code>create</code> / <code>update</code> / <code>delete</code></td>
+<td>Mutations</td>
+</tr>
+<tr>
+<td><code>format</code></td>
+<td>Pure reshape / hint (no side effects)</td>
+</tr>
+</tbody></table>
+<p>Avoid verb-first tools (<code>search_tracks</code>, <code>get_sleep</code>) — rename to
+<code>tracks_search</code> / <code>sleep_get</code> style when touching that surface.</p>
+</li>
+<li><p><strong>Shared nouns across plugins</strong> when the concept is shared</p>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>Preferred service token</th>
+<th>Used by</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Calendar events</td>
+<td><code>calendar_</code></td>
+<td>google</td>
+</tr>
+<tr>
+<td>Activities / workouts</td>
+<td><code>activities_</code></td>
+<td>garmin, strava</td>
+</tr>
+<tr>
+<td>Saved Strava courses / share links</td>
+<td><code>routes_</code> / <code>urls_</code></td>
+<td>strava (<code>urls_resolve</code>; not <code>maps__link_resolve</code>)</td>
+</tr>
+<tr>
+<td>Devices (hardware)</td>
+<td><code>devices_</code></td>
+<td>garmin</td>
+</tr>
+<tr>
+<td>Math</td>
+<td><code>expression_</code> / <code>units_</code></td>
+<td>math</td>
+</tr>
+<tr>
+<td>Web search</td>
+<td><code>web_</code></td>
+<td>harness builtin <code>web_search</code> (not a plugin)</td>
+</tr>
+<tr>
+<td>Flight offers / dates / airports / returns / booking / quota</td>
+<td><code>offers_</code> / <code>dates_</code> / <code>airports_</code> / <code>returns_</code> / <code>booking_</code> / <code>link_</code> / <code>account_</code></td>
+<td>flights</td>
+</tr>
+<tr>
+<td>Rental listings / rent estimate / markets / areas / quota</td>
+<td><code>listings_</code> / <code>rent_</code> / <code>markets_</code> / <code>areas_</code> / <code>link_</code> / <code>account_</code></td>
+<td>rentals</td>
+</tr>
+<tr>
+<td>Car listings / VIN / markets / quota</td>
+<td><code>listings_</code> / <code>vin_</code> / <code>markets_</code> / <code>link_</code> / <code>account_</code></td>
+<td>cars (prefix disambiguates from rentals)</td>
+</tr>
+<tr>
+<td>Feed items / feed URL discovery</td>
+<td><code>items_</code> / <code>source_</code></td>
+<td>feeds</td>
+</tr>
+<tr>
+<td>X / Twitter public posts</td>
+<td><code>posts_</code></td>
+<td>twitter (not <code>tweets_</code>)</td>
+</tr>
+<tr>
+<td>Places / Maps share links / leave-by</td>
+<td><code>place_</code> / <code>link_</code> / <code>route_</code></td>
+<td>maps (<code>place_search</code>; <code>link_resolve</code> not <code>short_url_*</code>; <code>route_eta</code> is leave-by)</td>
+</tr>
+<tr>
+<td>Generated / edited pictures</td>
+<td><code>photo_</code></td>
+<td>image (<code>photo_generate</code> / <code>photo_edit</code>; not <code>image_*</code> — double prefix)</td>
+</tr>
+<tr>
+<td>Chat face / wallpaper / room mood</td>
+<td><code>avatar_</code> / <code>backdrop_</code> / <code>theme_</code></td>
+<td>chat (<code>avatar_update</code>, <code>backdrop_update</code>, <code>theme_list</code>; not <code>chat_*</code>, not <code>pendant_*</code>)</td>
+</tr>
+</tbody></table>
+</li>
+<li><p><strong>Descriptions sell the intent</strong>
+First sentence = what the agent wants (&quot;List recent Strava
+activities…&quot;, &quot;Get last night&#39;s sleep…&quot;). Nearest-name matching uses
+these tokens. Do not start with &quot;Calls the Strava API v3
+athlete/activities…&quot;</p>
+</li>
+<li><p><strong>Args: snake_case</strong>
+<code>task_list_id</code>, <code>video_id</code>, <code>time_min</code> — never camelCase in schemas.
+Teach-in errors &gt; silent defaults.</p>
+</li>
+<li><p><strong>Don&#39;t steal another plugin&#39;s domain words</strong>
+No <code>calendar_*</code> on fitness plugins for Google Calendar asks. No
+<code>mail_*</code> on Strava. A &quot;calendar&quot; of workouts is <code>training_calendar_*</code>
+(or excluded from the core tier).</p>
+</li>
+<li><p><strong>Lean catalogs</strong>
+Prefer <code>--tool-tier core</code> / presets / <code>exclude</code> so the published set
+stays small. Fat schemas starve local models even when names are
+perfect. Google ships about a hundred tools; the eval&#39;s manifest
+allowlists two.</p>
+</li>
+<li><p><strong>Tests lock names</strong>
+Every plugin asserts each registered tool matches <code>^[a-z]+_[a-z]+</code>
+and does <strong>not</strong> start with the server id string. That test runs
+under <code>harness.yml</code> and its coverage rolls into the harness badge.</p>
+</li>
+</ol>
+<hr>
+<h2 id="host-forms">Host forms</h2>
+<table>
+<thead>
+<tr>
+<th>Server id</th>
+<th>Example tools</th>
+<th>Harness calls</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>google</code></td>
+<td><code>calendar_list_events</code></td>
+<td><code>google__calendar_list_events</code></td>
+</tr>
+<tr>
+<td><code>garmin</code></td>
+<td><code>sleep_get</code>, <code>activities_list</code></td>
+<td><code>garmin__sleep_get</code></td>
+</tr>
+<tr>
+<td><code>strava</code></td>
+<td><code>activities_list</code>, <code>routes_list</code>, <code>urls_resolve</code></td>
+<td><code>strava__activities_list</code></td>
+</tr>
+<tr>
+<td><code>math</code></td>
+<td><code>expression_evaluate</code>, <code>units_convert</code></td>
+<td><code>math__expression_evaluate</code></td>
+</tr>
+<tr>
+<td><code>flights</code></td>
+<td><code>offers_search</code>, <code>dates_search</code>, <code>airports_search</code>, <code>returns_search</code>, <code>booking_options_get</code>, <code>link_format</code>, <code>account_get</code></td>
+<td><code>flights__offers_search</code></td>
+</tr>
+<tr>
+<td><code>rentals</code></td>
+<td><code>listings_search</code>, <code>listings_get</code>, <code>rent_estimate_get</code>, <code>markets_get</code>, <code>areas_resolve</code>, <code>link_format</code>, <code>account_get</code></td>
+<td><code>rentals__listings_search</code></td>
+</tr>
+<tr>
+<td><code>cars</code></td>
+<td><code>listings_search</code>, <code>listings_get</code>, <code>vin_get</code>, <code>markets_get</code>, <code>link_format</code>, <code>account_get</code></td>
+<td><code>cars__listings_search</code></td>
+</tr>
+<tr>
+<td><code>feeds</code></td>
+<td><code>items_list</code>, <code>source_resolve</code></td>
+<td><code>feeds__items_list</code></td>
+</tr>
+<tr>
+<td><code>twitter</code></td>
+<td><code>posts_list</code></td>
+<td><code>twitter__posts_list</code></td>
+</tr>
+<tr>
+<td><code>maps</code></td>
+<td><code>link_resolve</code>, <code>place_resolve</code>, <code>place_search</code>, <code>route_eta</code></td>
+<td><code>maps__place_search</code></td>
+</tr>
+<tr>
+<td><code>image</code></td>
+<td><code>photo_generate</code>, <code>photo_edit</code></td>
+<td><code>image__photo_generate</code></td>
+</tr>
+<tr>
+<td><code>chat</code></td>
+<td><code>avatar_update</code>, <code>backdrop_update</code>, <code>theme_list</code></td>
+<td><code>chat__avatar_update</code></td>
+</tr>
+</tbody></table>
+<p>Hyphenated server ids are fine; tool suffixes stay underscores. The
+harness aliases underscored prefixes (<code>google_health__…</code> →
+<code>google-health__…</code>) on call — <strong>suffixes are never rewritten</strong>. Web
+search is the unprefixed builtin <code>web_search</code>.</p>
+<hr>
+<h2 id="checklist-for-a-new-or-reshaped-plugin">Checklist for a new or reshaped plugin</h2>
+<ul>
+<li><input disabled="" type="checkbox"> Pick a <strong>short</strong> server id (<code>strava</code>, not <code>go-strava-mcp</code>)</li>
+<li><input disabled="" type="checkbox"> Every tool is <code>{service}_{verb}_{object…}</code> with no server-id prefix</li>
+<li><input disabled="" type="checkbox"> Diff verbs/nouns against the table above before inventing a third synonym</li>
+<li><input disabled="" type="checkbox"> Descriptions lead with agent intent</li>
+<li><input disabled="" type="checkbox"> Args snake_case; hot paths documented in the tool description</li>
+<li><input disabled="" type="checkbox"> Name assertion test; no dual registration</li>
+<li><input disabled="" type="checkbox"> <code>host-manifest</code> prints; <code>mcp.lock</code> row added or bumped</li>
+<li><input disabled="" type="checkbox"> Eval fixtures that name the tool updated in the same PR</li>
+<li><input disabled="" type="checkbox"> Release notes include old→new map; bump semver on break</li>
+</ul>
+<hr>
+<h2 id="anti-patterns-seen-in-the-wild">Anti-patterns (seen in the wild)</h2>
+<table>
+<thead>
+<tr>
+<th>Anti-pattern</th>
+<th>Why it hurts</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>strava_*</code> tools on server <code>strava</code></td>
+<td>Double prefix</td>
+<td>Drop tool-level brand</td>
+</tr>
+<tr>
+<td><code>tracks_*</code> vs <code>videos_*</code> mixed</td>
+<td>Nearest-match thrash</td>
+<td>One noun per product era</td>
+</tr>
+<tr>
+<td><code>search_tracks</code> (verb-first)</td>
+<td>Breaks <code>{service}_{verb}_…</code> scanners</td>
+<td><code>videos_search</code></td>
+</tr>
+<tr>
+<td><code>get_daily_schedule</code> as a memory &quot;skill&quot; name</td>
+<td>Not a host tool name</td>
+<td>Skills cite real <code>google__calendar_list_events</code></td>
+</tr>
+<tr>
+<td>Publishing <code>calendar_get</code> on Garmin</td>
+<td>Steals Google Calendar</td>
+<td>Rename or <code>exclude</code></td>
+</tr>
+<tr>
+<td>Catalog pasted into <code>PERSONA.md</code></td>
+<td>Stale the day a plugin ships</td>
+<td>Recipes live in tool descriptions and the live catalog</td>
+</tr>
+</tbody></table>
+</article>
+  </main>
+  <footer class="foot">
+    <div class="wrap">
+      <span>MIT</span>
+      <span>
+        <a href="../privacy/">privacy</a>
+        · <a href="../oauth-catch/">oauth code</a>
+        · <a href="https://github.com/shotah/gantree2-apps">apps</a>
+      </span>
+      <span><a href="https://github.com/shotah/gantree2">github.com/shotah/gantree2</a></span>
+    </div>
+  </footer>
+  
+</body>
+</html>

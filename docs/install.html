@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Install — local, Cloudflare, or home — gantree</title>
+  <meta name="description" content="Install — local, Cloudflare, or home">
+  <link rel="canonical" href="https://shotah.github.io/gantree2/docs/install.html">
+  <meta name="theme-color" content="#0e1316">
+  <meta property="og:title" content="Install — local, Cloudflare, or home — gantree">
+  <meta property="og:description" content="Install — local, Cloudflare, or home">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://shotah.github.io/gantree2/docs/install.html">
+  <meta property="og:image" content="https://shotah.github.io/gantree2/assets/banner.png">
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body class="">
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="top">
+    <a class="brand" href="../index.html">
+      <img src="../assets/logo.svg" width="28" height="28" alt="">
+      gantree
+    </a>
+    <nav class="nav" aria-label="Site">
+        <a href="../index.html">Home</a>
+        <a href="../docs/install.html" aria-current="page">Install</a>
+        <a href="../docs/access.html">Access</a>
+        <a href="../docs/architecture.html">Architecture</a>
+        <a href="../docs/security.html">Security</a>
+        <a href="../docs/auth.html">Accounts</a>
+        <a href="../docs/mcp.html">MCP</a>
+        <a href="../docs/custom-mcp.html">Custom MCP</a>
+        <a href="../docs/mcp-naming.html">Naming</a>
+        <a href="../docs/eval_setup.html">Evals</a>
+        <a href="https://github.com/shotah/gantree2">GitHub</a>
+    </nav>
+  </header>
+  <main id="content" class="wrap">
+    <article class="prose"><h1 id="install-local-cloudflare-or-home">Install — local, Cloudflare, or home</h1>
+<p>Same Worker, same <code>wrangler.jsonc</code>, three places it runs. Agents open
+<strong>zero</strong> inbound ports anywhere: the harness dials the Worker.</p>
+<table>
+<thead>
+<tr>
+<th>Place</th>
+<th>Command</th>
+<th>State</th>
+<th>Reach it at</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Local dev</td>
+<td><code>npm run dev</code></td>
+<td>in-memory, <code>.wrangler/</code></td>
+<td><code>http://127.0.0.1:3000</code></td>
+</tr>
+<tr>
+<td>Cloudflare</td>
+<td><code>wrangler deploy</code> (CI)</td>
+<td>Workers · DO · KV · R2 · Containers</td>
+<td>your <code>workers.dev</code> or custom domain</td>
+</tr>
+<tr>
+<td>Home (Mini / NUC / VM)</td>
+<td><code>npm run deploy:home</code> (<code>celld deploy</code>)</td>
+<td>celld&#39;s SQLite + an S3-compatible bucket you own</td>
+<td>Tailscale HTTPS or a Cloudflare Tunnel</td>
+</tr>
+</tbody></table>
+<p>Need <strong>Node 22</strong> (<code>node -v</code>). Distro <code>apt install npm</code> is often Node 20
+and will fail.</p>
+<hr>
+<h2 id="google-oauth-client">Google OAuth client</h2>
+<p>gantree does not create this. GCP → <strong>APIs &amp; Services → Credentials →
+Create credentials → OAuth client ID</strong>.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Application type</td>
+<td><strong>Web application</strong></td>
+</tr>
+<tr>
+<td>Authorized redirect URIs</td>
+<td>one line per place you run, below</td>
+</tr>
+<tr>
+<td>Scopes (consent screen)</td>
+<td><code>openid</code>, <code>email</code>, <code>profile</code> — nothing else</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th>Place</th>
+<th>Redirect URI</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Local dev</td>
+<td><code>http://127.0.0.1:3000/api/auth/callback/google</code> (Google accepts loopback <code>http</code>)</td>
+</tr>
+<tr>
+<td>Cloudflare</td>
+<td><code>https://&lt;worker-origin&gt;/api/auth/callback/google</code></td>
+</tr>
+<tr>
+<td>Home</td>
+<td><code>https://&lt;mini&gt;.&lt;tailnet&gt;.ts.net/api/auth/callback/google</code> or your Tunnel hostname</td>
+</tr>
+</tbody></table>
+<p><strong>Google rejects private LAN IPs</strong> (<code>http://192.168.x.x</code>). A home box
+must sit behind Tailscale HTTPS or a Tunnel for sign-in to work. One
+client can carry all three redirects.</p>
+<p>Consent screen: External (or Internal if Workspace-only). External +
+Testing → add yourself as a test user.</p>
+<hr>
+<h2 id="local-dev">Local dev</h2>
+<pre><code class="language-bash">git clone https://github.com/shotah/gantree2.git
+cd gantree2
+cp .dev.vars.example .dev.vars
+# .dev.vars: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SESSION_SECRET (≥32 chars),
+#            GANTREE_ADMINS=you@example.com
+npm ci
+npm run dev            # http://127.0.0.1:3000 → /login</code></pre>
+<p>Sign in. You are admin. A second Google account gets <code>not_allowed</code>
+until you add it on <code>/users</code>.</p>
+<p>Without a Google client: <code>GANTREE_DEV_USER=118212345678901234567:you@example.com</code>
+in <code>.dev.vars</code> fakes a session on loopback only. It still has to be in
+<code>GANTREE_ADMINS</code> or <code>GANTREE_ALLOW</code>. Details:
+<a href="access.html#dev-without-google">access.md</a>.</p>
+<p>Built Worker under Miniflare: <code>npm run build &amp;&amp; npm run start</code>.</p>
+<hr>
+<h2 id="cloudflare">Cloudflare</h2>
+<p>CI does it. Repository → <strong>Settings → Secrets and variables → Actions</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Kind</th>
+<th>Name</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Variable</td>
+<td><code>GOOGLE_CLIENT_ID</code></td>
+<td>from GCP</td>
+</tr>
+<tr>
+<td>Variable</td>
+<td><code>GANTREE_ADMINS</code></td>
+<td><code>you@example.com</code> (grammar: <a href="access.html#allowlist-entry-grammar">access.md</a>)</td>
+</tr>
+<tr>
+<td>Variable</td>
+<td><code>GANTREE_ALLOW</code></td>
+<td>optional members</td>
+</tr>
+<tr>
+<td>Secret</td>
+<td><code>GOOGLE_CLIENT_SECRET</code></td>
+<td>from GCP</td>
+</tr>
+<tr>
+<td>Secret</td>
+<td><code>SESSION_SECRET</code></td>
+<td><code>openssl rand -base64 48</code></td>
+</tr>
+<tr>
+<td>Secret</td>
+<td><code>CLOUDFLARE_API_TOKEN</code></td>
+<td>Workers Scripts Edit · Workers KV Storage Edit · Workers R2 Storage Edit · Account Settings Read</td>
+</tr>
+<tr>
+<td>Secret</td>
+<td><code>CLOUDFLARE_ACCOUNT_ID</code></td>
+<td>dashboard sidebar</td>
+</tr>
+</tbody></table>
+<p>Push to <code>main</code>. <code>ci.yml</code> runs tests, lint, typecheck, build.
+<code>deploy-cloudflare.yml</code> then runs <code>wrangler deploy --var …</code> and
+<code>wrangler secret bulk</code>. It fails fast if any of the four auth values is
+empty. Add the Worker origin to the Google client&#39;s redirect list.</p>
+<p>By hand from a laptop (same token in your shell):</p>
+<pre><code class="language-bash">npm run deploy
+npx wrangler secret bulk &lt; secrets.json   # {&quot;GOOGLE_CLIENT_SECRET&quot;:&quot;…&quot;,&quot;SESSION_SECRET&quot;:&quot;…&quot;}</code></pre>
+<p>The Worker itself runs on the free tier. Containers need Workers Paid —
+see <a href="#containers">below</a>.</p>
+<hr>
+<h2 id="containers">Containers</h2>
+<p>One harness container per agent. The Cloudflare account needs Containers
+enabled (Workers Paid). <code>wrangler deploy</code> builds <code>harness/Dockerfile</code>
+(context is the <code>harness/</code> directory, which is where that file&#39;s
+<code>COPY</code> expects to run) and ships the image with the Worker.
+<code>wrangler.jsonc</code> names the application <code>gantree-harness</code>, class
+<code>Harness</code>, five instances, plus a <code>v2</code> migration for the <code>Harness</code>
+Durable Object.</p>
+<p>The process env is the dial-back. Everything else (LLM keys, <code>mcp.toml</code>,
+persona) arrives on the socket in a <code>config</code> frame.</p>
+<table>
+<thead>
+<tr>
+<th>Var</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>CHANNEL</code></td>
+<td><code>pendant</code></td>
+</tr>
+<tr>
+<td><code>PENDANT_MAILBOX_URL</code></td>
+<td><code>wss://&lt;origin&gt;/ws/&lt;slug&gt;</code> — the harness adds <code>?role=crane</code></td>
+</tr>
+<tr>
+<td><code>PENDANT_BEARER</code></td>
+<td>room bearer from the Agent DO</td>
+</tr>
+<tr>
+<td><code>SNAPSHOT</code></td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td><code>SNAPSHOT_INTERVAL</code></td>
+<td><code>5m</code></td>
+</tr>
+</tbody></table>
+<p>Set <code>PUBLIC_ORIGIN</code> to <code>https://&lt;worker-origin&gt;</code> (no path) when the host
+the harness should dial is not the browser&#39;s. Leave it unset locally and
+start uses the request origin.</p>
+<p>The image does not <code>EXPOSE</code> a port. The supervisor still sets
+<code>defaultPort</code> 8080 so the Container class has a probe port; <code>gantry</code>
+dials out and does not listen.</p>
+<p>Local <code>wrangler dev</code> without Docker has no container binding. <code>GET /api/agents/:slug/container</code> then returns <code>state: &quot;unknown&quot;</code>.</p>
+<p>The <code>gantry</code> binary in this tree also refuses to stay up without
+<code>PENDANT_ALLOWED_USERS</code>. The start body does not carry that list — the
+room lives on the Agent DO — so a real container exits until the harness
+takes the room from the <code>config</code> frame.</p>
+<hr>
+<h2 id="home-celld">Home (celld)</h2>
+<p><a href="https://github.com/denoland/celld">celld</a> runs the Workers platform on
+your own box from the same <code>wrangler.jsonc</code>: Workers, Durable Objects,
+KV, R2, Cron, static assets, and — experimentally — Containers. Install
+per its README; it needs Docker or Podman for the harness container
+and an S3-compatible bucket (MinIO on the same box is fine) for
+durable state. <code>celld dev</code> needs neither.</p>
+<pre><code class="language-bash"># on the Mini
+cat &gt; /etc/gantree/vars.env &lt;&lt;'EOF'
+GOOGLE_CLIENT_ID=…
+GOOGLE_CLIENT_SECRET=…
+SESSION_SECRET=…
+GANTREE_ADMINS=you@example.com
+GANTREE_ALLOW=
+EOF
+chmod 600 /etc/gantree/vars.env
+
+git clone https://github.com/shotah/gantree2.git /opt/gantree
+cd /opt/gantree &amp;&amp; npm ci
+CELLD_VARS_FILE=/etc/gantree/vars.env npm run deploy:home</code></pre>
+<p>Put a hostname in front:</p>
+<p><strong>Tailscale</strong> (preferred): <code>tailscale serve --bg https / http://127.0.0.1:&lt;celld-port&gt;</code>.
+Redirect URI is <code>https://&lt;mini&gt;.&lt;tailnet&gt;.ts.net/api/auth/callback/google</code>.</p>
+<p><strong>Cloudflare Tunnel</strong> (zone already on Cloudflare, no WAN ports):
+<code>cloudflared tunnel run</code> with the public hostname → <code>http://127.0.0.1:&lt;celld-port&gt;</code>.</p>
+<p>Do not open a router or cloud firewall port to the world. celld stops
+on any <code>wrangler.jsonc</code> key it does not model, so a manifest that
+deploys to Cloudflare deploys here, or tells you exactly why not.</p>
+<p>Home deploy is <strong>not</strong> a GitHub Action. GitHub cannot reach the Mini
+and should not.</p>
+<hr>
+<h2 id="harness-image">Harness image</h2>
+<p>Agents run <code>ghcr.io/shotah/gantree-harness:&lt;tag&gt;</code> — the Go harness plus
+every MCP server in <code>harness/mcp.lock</code> baked into <code>/opt/mcp</code>.
+<code>harness-image.yml</code> builds it when <code>harness/**</code> changes, smokes
+<code>gantry version</code>, and on <code>main</code> pushes
+<code>ghcr.io/shotah/gantree-harness:&lt;sha&gt;</code>. <code>wrangler deploy</code> builds the
+same Dockerfile into the account&#39;s container registry. <strong>Recreate</strong>
+picks up a newly deployed image.</p>
+<hr>
+<h2 id="release">Release</h2>
+<pre><code class="language-bash">npm test
+npm run release:dry          # show next tag
+npm run release              # patch bump, tag v*, push
+npm run release -- --bump=minor</code></pre>
+<p>Requires a clean tree. Tags trigger <code>release.yml</code> (GitHub release) and
+<code>harness-image.yml</code> (tagged image).</p>
+</article>
+  </main>
+  <footer class="foot">
+    <div class="wrap">
+      <span>MIT</span>
+      <span>
+        <a href="../privacy/">privacy</a>
+        · <a href="../oauth-catch/">oauth code</a>
+        · <a href="https://github.com/shotah/gantree2-apps">apps</a>
+      </span>
+      <span><a href="https://github.com/shotah/gantree2">github.com/shotah/gantree2</a></span>
+    </div>
+  </footer>
+  
+</body>
+</html>

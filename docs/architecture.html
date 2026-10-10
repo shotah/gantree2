@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Architecture — gantree</title>
+  <meta name="description" content="Architecture">
+  <link rel="canonical" href="https://shotah.github.io/gantree2/docs/architecture.html">
+  <meta name="theme-color" content="#0e1316">
+  <meta property="og:title" content="Architecture — gantree">
+  <meta property="og:description" content="Architecture">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://shotah.github.io/gantree2/docs/architecture.html">
+  <meta property="og:image" content="https://shotah.github.io/gantree2/assets/banner.png">
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body class="">
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="top">
+    <a class="brand" href="../index.html">
+      <img src="../assets/logo.svg" width="28" height="28" alt="">
+      gantree
+    </a>
+    <nav class="nav" aria-label="Site">
+        <a href="../index.html">Home</a>
+        <a href="../docs/install.html">Install</a>
+        <a href="../docs/access.html">Access</a>
+        <a href="../docs/architecture.html" aria-current="page">Architecture</a>
+        <a href="../docs/security.html">Security</a>
+        <a href="../docs/auth.html">Accounts</a>
+        <a href="../docs/mcp.html">MCP</a>
+        <a href="../docs/custom-mcp.html">Custom MCP</a>
+        <a href="../docs/mcp-naming.html">Naming</a>
+        <a href="../docs/eval_setup.html">Evals</a>
+        <a href="https://github.com/shotah/gantree2">GitHub</a>
+    </nav>
+  </header>
+  <main id="content" class="wrap">
+    <article class="prose"><h1 id="architecture">Architecture</h1>
+<p>How gantree is put together: the pictures, then the choices that stay
+true as it grows. The reasoning behind each shape is in
+<a href="proposal.html">proposal.md</a>; who may do what is in <a href="access.html">access.md</a>;
+where it runs is in <a href="install.html">install.md</a>. When this file and the
+proposal disagree, fix both.</p>
+<p>Vocabulary: <strong>settings</strong> (what operators see), <strong>chat</strong> (the PWA a
+member talks through), <strong>agents</strong> (one Durable Object + one container
+each), <strong>harness</strong> (the Go binary that is the agent), <strong>users</strong> (one
+list, three roles). Wire names are the new ones (<code>CHAT_*</code>,
+<code>CHANNEL=chat</code>, <code>agents</code>, <code>chat:&lt;slug&gt;:&lt;sub&gt;</code>); the originals&#39;
+(<code>PENDANT_*</code>, <code>CHANNEL=pendant</code>, <code>cranes</code>) are accepted as aliases
+until the Phase 4 cutover and are marked where they appear.</p>
+<h2 id="1-the-product">1. The product</h2>
+<p>One Worker, one manifest, two places it runs.</p>
+<pre class="mermaid">flowchart LR
+  subgraph people[&quot; &quot;]
+    direction TB
+    B[Browser&lt;br/&gt;operator]
+    P[Phone&lt;br/&gt;member, PWA]
+    C[Cab / Helm&lt;br/&gt;native]
+  end
+
+  subgraph worker[&quot;gantree Worker — wrangler.jsonc&quot;]
+    direction TB
+    MW[middleware.ts&lt;br/&gt;one door]
+    subgraph routes[&quot;Routes&quot;]
+      direction LR
+      L[&quot;/login&lt;br/&gt;/api/auth/*&quot;]
+      S[&quot;/  /agents/:slug&lt;br/&gt;/users  /settings&quot;]
+      CH[&quot;/chat/:slug&quot;]
+      WS[&quot;/ws/:slug&quot;]
+    end
+    subgraph dos[&quot;Durable Objects&quot;]
+      direction LR
+      SDO[(&quot;Settings DO&lt;br/&gt;users · audit · samples&lt;br/&gt;SQLite&quot;)]
+      ADO[(&quot;Agent:slug DO&lt;br/&gt;config · allowlist · room&lt;br/&gt;bearer · alarm · container&quot;)]
+    end
+    KV[(&quot;KV directory&lt;br/&gt;sub / email → slugs&quot;)]
+    R2[(&quot;R2&lt;br/&gt;backups · boards · avatars&quot;)]
+    CRON[Cron&lt;br/&gt;planner tick]
+  end
+
+  subgraph box[&quot;harness container — one per agent&quot;]
+    H[gantry binary&lt;br/&gt;Go, distroless]
+    MCP[&quot;/opt/mcp/*&lt;br/&gt;baked MCP servers&quot;]
+    DB[(&quot;gantry.db · SELF.md&lt;br/&gt;container disk&quot;)]
+    H --- MCP
+    H --- DB
+  end
+
+  G[(Google&lt;br/&gt;OIDC)]
+
+  B &amp; P &amp; C --&gt; MW
+  MW --&gt; routes
+  L &lt;-.-&gt; G
+  S --&gt; SDO
+  S --&gt; ADO
+  CH --&gt; ADO
+  WS --&gt; ADO
+  MW --&gt; SDO
+  SDO --&gt; KV
+  ADO -- &quot;Container binding&lt;br/&gt;start · env · stop&quot; --&gt; H
+  H -- &quot;wss /ws/:slug&lt;br/&gt;bearer&quot; --&gt; WS
+  H -- &quot;presigned PUT/GET&quot; --&gt; R2
+  CRON --&gt; ADO
+  ADO -- avatars --&gt; R2
+
+  classDef store fill:#171d22,stroke:#3a4550,color:#f4f0ea
+  class SDO,ADO,KV,R2,DB store</pre>
+<p>Two deploy targets, same picture:</p>
+<pre class="mermaid">flowchart LR
+  M[wrangler.jsonc&lt;br/&gt;+ dist/]
+  M -- &quot;wrangler deploy&lt;br/&gt;(deploy-cloudflare.yml)&quot; --&gt; CF[&quot;Cloudflare&lt;br/&gt;Workers · DO · KV · R2&lt;br/&gt;Containers&quot;]
+  M -- &quot;celld deploy&lt;br/&gt;(npm run deploy:home)&quot; --&gt; HOME[&quot;celld on the Mini&lt;br/&gt;same bindings&lt;br/&gt;Docker/Podman for containers&lt;br/&gt;S3 bucket for state&quot;]</pre>
+<p>Where Docker went. The originals <em>operated</em> Docker: compose files,
+<code>docker.sock</code>, bind mounts, <code>docker logs</code>. None of that exists here on
+either target. On Cloudflare the Worker runs on Cloudflare&#39;s platform
+and the harness on <strong>Cloudflare Containers</strong>. At home <strong>celld</strong> runs
+that same platform, and for its container binding it drives Docker or
+Podman underneath — an engine you install once and never address. One
+OCI image, two supervisors; Docker survives only as celld&#39;s engine.</p>
+<p>Two supervisors, one owner: Cloudflare acquired Deno on 2026-10-09 and
+is merging celld into workerd. The home column below is the same
+platform, catching up to the cloud column, maintained by the same
+people. That is why the cloud target is Workers and not a VM.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Cloudflare</th>
+<th>Home</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Worker, DOs, KV, R2, Cron</td>
+<td>Cloudflare</td>
+<td>celld (SQLite + your S3 bucket)</td>
+</tr>
+<tr>
+<td>Harness container supervisor</td>
+<td>Cloudflare Containers</td>
+<td>celld container binding</td>
+</tr>
+<tr>
+<td>Container engine</td>
+<td>Cloudflare&#39;s</td>
+<td>Docker or Podman, under celld</td>
+</tr>
+<tr>
+<td>What you type</td>
+<td><code>wrangler deploy</code></td>
+<td><code>celld deploy</code></td>
+</tr>
+</tbody></table>
+<p>Why the languages stay where they are: the harness is Go because the
+turn loop — parallel tool calls in one batch, the Completer round
+discipline, RSS under small models — is the thing already proven, and
+both supervisors run a static Go binary in a distroless image as well
+as anything can be run. Rust would buy no user-visible speed (the token
+path is the model) and would cost the sixteen Go plugins their shared
+SDK. The Worker is TypeScript because Workers execute JS/Wasm, Vinext
+and Durable Object classes are JS, and the backend is thin on purpose:
+gate, DO storage, socket fan-out. There is no hot loop in it to move.</p>
+<h2 id="2-request-path-the-door">2. Request path — the door</h2>
+<p>Every non-public request passes <code>lib/door/gate.ts</code>. It is pure:
+request + env + store in, decision out. <code>lib/door/http.ts</code> turns the
+decision into a <code>Response</code>; <code>middleware.ts</code> is one line.</p>
+<pre class="mermaid">flowchart TD
+  R([request]) --&gt; PUB{public path?&lt;br/&gt;/login /api/auth/google&lt;br/&gt;/api/auth/callback/google&lt;br/&gt;assets · manifest · sw.js&lt;br/&gt;/_vinext /.well-known}
+  PUB -- yes --&gt; PASS([pass through])
+  PUB -- no --&gt; ADM{GANTREE_ADMINS&lt;br/&gt;parses to ≥1 entry?}
+  ADM -- no --&gt; E503([503 no admins])
+  ADM -- yes --&gt; DEV{GANTREE_DEV_USER set&lt;br/&gt;and host is loopback?}
+  DEV -- yes --&gt; ID[identity = dev user]
+  DEV -- no --&gt; CK{gantree_session&lt;br/&gt;cookie opens?}
+  CK -- no --&gt; API{&quot;/api/* or /ws/*?&quot;}
+  API -- yes --&gt; E401a([401 JSON])
+  API -- no --&gt; LOGIN([302 /login?next=path])
+  CK -- yes --&gt; ID
+  ID --&gt; RES[&quot;resolveUser(env floor ∪ Settings DO rows)&lt;br/&gt;highest role wins · operator agents unioned&quot;]
+  RES -- not on any list --&gt; E401b([401 — a stale cookie is not a key])
+  RES -- admin / operator / member --&gt; HDR[&quot;x-gantree-sub · email · role · agents&quot;]
+  HDR --&gt; PASS</pre>
+<p>Role, every request, never from the cookie:</p>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Role</th>
+<th>Locked</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GANTREE_ADMINS</code> (env)</td>
+<td>admin</td>
+<td>yes — settings cannot remove</td>
+</tr>
+<tr>
+<td><code>GANTREE_ALLOW</code> (env)</td>
+<td>member</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Settings DO <code>users</code> rows</td>
+<td>admin / operator(agents) / member</td>
+<td>no</td>
+</tr>
+</tbody></table>
+<h2 id="3-sign-in-google-pkce-two-cookies">3. Sign-in — Google, PKCE, two cookies</h2>
+<pre class="mermaid">sequenceDiagram
+  autonumber
+  actor U as Person
+  participant W as Worker&lt;br/&gt;lib/door/http.ts
+  participant G as Google&lt;br/&gt;accounts.google.com
+  participant T as Google&lt;br/&gt;oauth2.googleapis.com
+  participant S as Settings DO&lt;br/&gt;(UserStore)
+
+  U-&gt;&gt;W: GET /agents/kit (no cookie)
+  W--&gt;&gt;U: 302 /login?next=/agents/kit
+  U-&gt;&gt;W: GET /login
+  W--&gt;&gt;U: page: &quot;Continue with Google&quot;
+  U-&gt;&gt;W: GET /api/auth/google?next=/agents/kit
+  Note over W: state, nonce, code_verifier&lt;br/&gt;sealed in gantree_oauth (JWE, 10 min)
+  W--&gt;&gt;U: 302 accounts.google.com/o/oauth2/v2/auth&lt;br/&gt;Set-Cookie: gantree_oauth
+  U-&gt;&gt;G: authorize (openid email profile, S256 challenge)
+  G--&gt;&gt;U: 302 /api/auth/callback/google?code&amp;state
+  U-&gt;&gt;W: GET /api/auth/callback/google (gantree_oauth)
+  W-&gt;&gt;W: open gantree_oauth · state must match
+  W-&gt;&gt;T: POST /token {code, code_verifier, client_secret}
+  T--&gt;&gt;W: {id_token}
+  W-&gt;&gt;W: jose.jwtVerify: iss · aud · exp · sig (JWKS) · nonce
+  W-&gt;&gt;S: list()
+  S--&gt;&gt;W: rows
+  W-&gt;&gt;W: resolveUser(env floor ∪ rows, {sub, email, email_verified})
+  alt on a list
+    Note over W: gantree_session = JWE {sub, email}&lt;br/&gt;7-day hard expiry, HttpOnly Secure Lax
+    W--&gt;&gt;U: 302 /agents/kit&lt;br/&gt;Set-Cookie: gantree_session · clear gantree_oauth
+  else not on any list
+    W--&gt;&gt;U: 302 /login?error=not_allowed&lt;br/&gt;clear gantree_oauth · no session
+  end</pre>
+<p>Every miss (<code>expired</code>, <code>state</code>, <code>exchange</code>, <code>token</code>, <code>not_allowed</code>)
+bounces to <code>/login?error=</code> and never sets a session. The only identity
+a stranger ever sees is their own.</p>
+<h2 id="4-chat-phone-to-harness-through-the-agent-do">4. Chat — phone to harness through the Agent DO</h2>
+<p>The Agent DO is the room. A phone joins with a cookie plus that agent&#39;s
+own list; the harness joins with a bearer. Neither side knows the
+other&#39;s address.</p>
+<pre class="mermaid">sequenceDiagram
+  autonumber
+  actor M as Member (PWA)
+  participant MW as middleware
+  participant A as Agent:kit DO
+  participant H as harness (container)
+
+  Note over H,A: on container start — config is the first frame
+  H-&gt;&gt;A: wss /ws/kit  Authorization: Bearer &lt;PENDANT_BEARER&gt;
+  A-&gt;&gt;A: bearer matches DO row
+  A-&gt;&gt;H: config {env, mcp, persona, restore/put presigned GET/PUT}
+  H-&gt;&gt;A: allow {PENDANT_ALLOWED_USERS}
+  A-&gt;&gt;A: room list ← allow
+  H-&gt;&gt;A: status {published, skipped MCP}
+  Note over A: status, perf, log, snapshot stay on the DO — never fanned to phones
+
+  Note over M,A: a person opens the chat
+  M-&gt;&gt;MW: GET /chat/kit (gantree_session)
+  MW-&gt;&gt;MW: gate → pass (member)
+  MW--&gt;&gt;M: PWA shell
+  M-&gt;&gt;A: wss /ws/kit (cookie)
+  A-&gt;&gt;A: open cookie · sub/email on the room list?
+  alt on the room list
+    A--&gt;&gt;M: joined · theme · backlog
+  else not
+    A--&gt;&gt;M: close 4403
+  end
+
+  M-&gt;&gt;A: message {text, images?}
+  A-&gt;&gt;H: message
+  H-&gt;&gt;H: turn (model · MCP tools · gantry.db)
+  H-&gt;&gt;A: reply {text}
+  A--&gt;&gt;M: reply
+  opt agent sets the mood
+    H-&gt;&gt;A: theme {id}
+    A--&gt;&gt;M: {kind: &quot;theme&quot;, theme: &quot;siren&quot;}
+    Note over M: paint unless the person pinned their own
+  end
+  H-&gt;&gt;A: perf {turn, tokens}  (slog line as a frame)
+  A-&gt;&gt;A: append to Settings samples</pre>
+<h2 id="5-agent-lifecycle-the-do-supervises-the-container">5. Agent lifecycle — the DO supervises the container</h2>
+<pre class="mermaid">stateDiagram-v2
+  [*] --&gt; Stopped
+  Stopped --&gt; Starting : operator Start&lt;br/&gt;or Cron tick with work
+  Starting --&gt; Restoring : container up&lt;br/&gt;harness dials /ws
+  Restoring --&gt; Running : R2 latest gantry_db and self_md&lt;br/&gt;(or 404 — fresh brain)
+  Running --&gt; Running : turns · alarm wakes · perf/log frames
+  Running --&gt; Snapshotting : timer · SIGTERM
+  Snapshotting --&gt; Running : PUT backups/kit/latest and backups/kit/&lt;stamp&gt;
+  Snapshotting --&gt; Stopped : was stopping
+  Running --&gt; Recreating : env drifted since markStarted&lt;br/&gt;(start is a separate call)
+  Recreating --&gt; Starting : new env → new container
+  Running --&gt; Stopped : crash → DO notes restart count
+  Stopped --&gt; [*]
+
+  note right of Restoring
+    Container disk is not durable.
+    gantry.db lives in R2 between runs.
+  end note</pre>
+<pre class="mermaid">sequenceDiagram
+  autonumber
+  actor O as Operator
+  participant W as Worker /agents/kit
+  participant A as Agent:kit DO
+  participant C as Container binding
+  participant H as harness
+  participant R as R2
+
+  O-&gt;&gt;W: POST start
+  W-&gt;&gt;A: start()
+  A-&gt;&gt;A: read config.env · bearer
+  A-&gt;&gt;C: start(image, env)
+  C--&gt;&gt;A: running
+  H-&gt;&gt;A: dial /ws/kit (bearer)
+  A-&gt;&gt;H: config {…, restore: presigned GET gantry_db and self_md}
+  H-&gt;&gt;R: GET backups/kit/latest/gantry_db
+  R--&gt;&gt;H: file (or 404)
+  H-&gt;&gt;A: status
+  A--&gt;&gt;W: alive · image · status
+  W--&gt;&gt;O: card turns green
+
+  loop every N minutes and on SIGTERM
+    H-&gt;&gt;R: PUT backups/kit/latest/{gantry_db,self_md} (presigned)
+    H-&gt;&gt;A: snapshot {stamp, bytes}
+  end
+
+  O-&gt;&gt;W: PATCH config.env
+  W-&gt;&gt;A: write config.env
+  A--&gt;&gt;W: view { recreate: true } when env differs from last start
+  Note over A,H: container start calls markStarted; env drift is a recreate hint</pre>
+<h2 id="6-users-one-list-three-roles">6. Users — one list, three roles</h2>
+<pre class="mermaid">flowchart LR
+  subgraph floor[&quot;env floor (locked, every request)&quot;]
+    AD[&quot;GANTREE_ADMINS&lt;br/&gt;admin&quot;]
+    AL[&quot;GANTREE_ALLOW&lt;br/&gt;member&quot;]
+  end
+  subgraph store[&quot;Settings DO · users&quot;]
+    ROWS[&quot;rows: entry · role · agents[] &quot;]
+  end
+  subgraph agent[&quot;Agent:kit DO&quot;]
+    ROOM[&quot;room list&lt;br/&gt;(PENDANT_ALLOWED_USERS)&quot;]
+  end
+
+  floor --&gt; RES
+  store --&gt; RES
+  RES[&quot;resolveUser(who)&quot;] --&gt; ROLE{{&quot;admin · operator(agents) · member · none&quot;}}
+  ROLE -- &quot;/users /settings&quot; --&gt; ADMIN[admin only]
+  ROLE -- &quot;/agents/:slug&quot; --&gt; OP[&quot;admin, or operator with slug in agents[]&quot;]
+  ROLE -- &quot;/chat/:slug&quot; --&gt; CHAT[&quot;any role, and on the room list&quot;]
+  ROOM --&gt; CHAT</pre>
+<p>Seeding, by place:</p>
+<table>
+<thead>
+<tr>
+<th>Where</th>
+<th><code>GANTREE_ADMINS</code> / <code>GANTREE_ALLOW</code> / <code>GOOGLE_CLIENT_ID</code></th>
+<th><code>GOOGLE_CLIENT_SECRET</code> / <code>SESSION_SECRET</code></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Local</td>
+<td><code>.dev.vars</code></td>
+<td><code>.dev.vars</code></td>
+</tr>
+<tr>
+<td>Cloudflare</td>
+<td>Actions <strong>variables</strong> → <code>wrangler deploy --var</code></td>
+<td>Actions <strong>secrets</strong> → <code>wrangler secret bulk</code></td>
+</tr>
+<tr>
+<td>Home</td>
+<td><code>CELLD_VARS_FILE</code></td>
+<td><code>CELLD_VARS_FILE</code></td>
+</tr>
+</tbody></table>
+<h2 id="7-build-and-ship">7. Build and ship</h2>
+<pre class="mermaid">flowchart LR
+  subgraph ci[&quot;ci.yml — push, PR&quot;]
+    direction LR
+    T[test:coverage&lt;br/&gt;thresholds] --&gt; LNT[lint] --&gt; TC[typecheck] --&gt; BLD[vite build]
+    BLD -- main --&gt; BADGE[badge.mjs vitest] --&gt; PUB1[publish-pages.sh&lt;br/&gt;badges/coverage.svg]
+  end
+  subgraph hz[&quot;harness.yml — harness/**&quot;]
+    direction LR
+    GT[&quot;go vet + go test -cover&lt;br/&gt;harness/ and harness/mcp/*&quot;] --&gt; MERGE[coverage-harness.sh&lt;br/&gt;one profile, one total] --&gt; MIN{≥ HARNESS_COVERAGE_MIN}
+    MIN -- main --&gt; BADGE2[badge.mjs gofunc] --&gt; PUB2[publish-pages.sh&lt;br/&gt;badges/harness-coverage.svg]
+  end
+  subgraph dep[&quot;deploy-cloudflare.yml — after ci on main&quot;]
+    direction LR
+    V[vite build] --&gt; CHK{vars + secrets&lt;br/&gt;all set?} --&gt; WD[wrangler deploy --var …] --&gt; SB[wrangler secret bulk]
+  end
+  subgraph img[&quot;harness-image.yml — harness/** · mcp.lock · tag&quot;]
+    direction LR
+    LOCK[mcp.lock] --&gt; DOCK[Dockerfile&lt;br/&gt;fetch tarballs → /opt/mcp] --&gt; MAN[host-manifest&lt;br/&gt;per baked server] --&gt; REG[GHCR + Cloudflare registry]
+  end
+  ci --&gt; dep
+  PUB1 &amp; PUB2 --&gt; GH[(&quot;gh-pages&lt;br/&gt;badges/ · site&quot;)]
+  GH --&gt; README[README badge row]</pre>
+<p><code>publish-pages.sh</code> replaces only the paths it is handed; the three
+writers share one concurrency group. Home deploy is a human running
+<code>npm run deploy:home</code>; GitHub cannot reach the Mini.</p>
+<h2 id="8-code-map">8. Code map</h2>
+<pre class="mermaid">flowchart TB
+  subgraph app[&quot;app/ — thin shells&quot;]
+    LAYOUT[layout.tsx&lt;br/&gt;themeCss · THEME_BOOT]
+    PAGES[&quot;login/ · page.tsx&lt;br/&gt;agents/ · chat/ · users/ (next)&quot;]
+    API[&quot;api/auth/*/route.ts&lt;br/&gt;one line each&quot;]
+    ALIB[&quot;app/lib&lt;br/&gt;theme · prefs · login&quot;]
+    COMP[&quot;app/components/shared&lt;br/&gt;ThemeSelect&quot;]
+  end
+  subgraph door[&quot;lib/door — pure, tested&quot;]
+    ALLOW[allowlist] --&gt; USERS[users] --&gt; GATE[gate] --&gt; HTTP[http]
+    GOOGLE[google] --&gt; HTTP
+    SESSION[session] --&gt; GATE
+    SESSION --&gt; HTTP
+    RT[&quot;runtime&lt;br/&gt;(cloudflare:workers only here)&quot;]
+  end
+  subgraph theme[&quot;lib/theme — from pendant&quot;]
+    CAT[catalog · 15 themes] --&gt; CON[contrast gate]
+    CAT --&gt; STORE[store · wire notice]
+  end
+  subgraph edge[&quot;edge/ — Durable Objects (Phase 1–2)&quot;]
+    SDO[settings.do.ts]
+    ADO[agent.do.ts]
+    DIR[directory.ts]
+  end
+  MW[middleware.ts] --&gt; HTTP
+  MW --&gt; RT
+  API --&gt; HTTP
+  API --&gt; RT
+  RT -.-&gt; SDO
+  LAYOUT --&gt; ALIB --&gt; CAT
+  COMP --&gt; ALIB
+  TEST[&quot;test/ mirrors every folder&quot;] -.-&gt; door &amp; theme &amp; ALIB &amp; edge</pre>
+<p>Coverage counts <code>lib/**</code>, <code>edge/**</code>, <code>app/lib/**</code>. <code>lib/door/runtime.ts</code>
+is the one excluded file: it imports <code>cloudflare:workers</code> and has
+nothing to assert.</p>
+<hr>
+<h2 id="9-why-this-shape">9. Why this shape</h2>
+<p><strong>One Worker, not three repos.</strong> The originals were a Node console on
+the Docker host, a Worker for the phone, and a Go harness in a
+container — three ideas of a person and three READMEs. Here settings
+and chat are one Vinext app on Workers, state is Durable Objects
+instead of files on a host, and the harness is a container the Agent
+DO supervises. Cloudflare Containers in the cloud; celld&#39;s container
+binding at home.</p>
+<p><strong>Why the harness stays Go, in a container.</strong> The loop that was
+hardened on small models — parallel tool calls, Completer rounds, RSS
+discipline — is Go and stays Go. It does not become a Worker. The DO
+starts it, passes its env, wakes it on alarm, and is the room it dials.</p>
+<p><strong>Why Durable Objects, not D1.</strong> One actor per agent is the natural
+unit: its config, its room, its bearer, its alarm, its container
+handle. Settings is one more actor. Nothing is shared except the KV
+directory and R2.</p>
+<p><strong>Why a brain in R2.</strong> Container disk is not durable on either target.
+<code>gantry.db</code> + <code>SELF.md</code> snapshot to R2 on a timer and on stop, restore
+on start, via presigned URLs on the <code>config</code> frame. The harness&#39;s
+storage code does not change.</p>
+<h2 id="10-choices-that-stay-true">10. Choices that stay true</h2>
+<p>If a task fails one of these, it is later, or it is wrong.</p>
+<ol>
+<li><strong>One door.</strong> Google signs you in; one list says whether; a role
+says what; each agent&#39;s room list says who it talks to. Role is
+computed every request, never read from the cookie. No second
+login. <a href="access.html">access.md</a>.</li>
+<li><strong>The Agent DO is truth.</strong> <code>config.env</code>, <code>config.mcp</code>, persona,
+allowlist, bearer live on the DO. Settings edits them; the harness
+reads them at boot. No file on a host, no second inventory.</li>
+<li><strong>Pull, don&#39;t punch.</strong> The harness is outbound-only. No <code>/metrics</code>
+port, no scrape, no hook. <code>status</code>, <code>perf</code>, <code>log</code>, <code>allow</code>,
+<code>snapshot</code> ride the socket it already opened. If a settings want
+would make the harness slower, the want is wrong.</li>
+<li><strong>One mutation path.</strong> Route handlers call <code>lib/door</code> and the DO
+stubs. Never storage from a React Server Component. Pages stay thin
+shells.</li>
+<li><strong>One manifest, two targets.</strong> Anything that deploys to Cloudflare
+deploys under celld. celld stops on a key it does not model; that
+is the check.</li>
+<li><strong>One language in this repo, two in the product.</strong> TypeScript here.
+Go in <code>harness/</code> and <code>harness/mcp/*</code>. No <code>gantree</code> CLI until <code>npm</code>
+scripts are genuinely not enough — still TypeScript.</li>
+<li><strong>Isolation.</strong> One human list per agent, one DO, one container, one
+R2 prefix. Retire a tryout = delete its DO and prefix. Adding a
+person to Kit does not touch Ada.</li>
+<li><strong>Env change recreates.</strong> Same rule as Docker. Restart keeps a
+ghost allowlist; the UI nags.</li>
+<li><strong>Not chat.</strong> Settings never sits in a chat turn. Chat is a PWA on
+the same origin, not a feature of the settings screens.</li>
+<li><strong>MCP is baked in.</strong> <code>harness/mcp.lock</code> → image. Omit a server from
+an agent&#39;s <code>config.mcp</code> and it does not exist for that agent. No
+download at agent start. <a href="custom-mcp.html">custom-mcp.md</a>.</li>
+<li><strong>Estimates stay estimates.</strong> Spend is <code>perf</code> tokens plus an
+optional pasted $/1M. Not an invoice. <code>unknown</code> is a first-class
+slice.</li>
+<li><strong>Import over write.</strong> <code>jose</code> for JWE/JWKS, Vinext for the app,
+wrangler and celld for deploy. Do not invent a Docker client, a
+JWT parser, or a theme engine.</li>
+<li><strong>Coverage is a badge, not a hope.</strong> Two numbers on the README.
+Thresholds in <code>vitest.config.ts</code> and <code>HARNESS_COVERAGE_MIN</code> only
+go up.</li>
+</ol>
+<h2 id="11-repo-rules">11. Repo rules</h2>
+<ul>
+<li>Tests live under <code>test/</code> and mirror the module they cover
+(<code>lib/door/gate.ts</code> → <code>test/door/gate.test.ts</code>,
+<code>app/components/shared/ThemeSelect.tsx</code> →
+<code>test/app/components/shared/ThemeSelect.test.tsx</code>). Never beside
+source.</li>
+<li>Import with <code>@/</code>. Import leaf modules, not barrels.</li>
+<li>UI folders match screens (<code>shared</code>, <code>agents</code>, <code>chat</code>, <code>users</code>,
+<code>settings</code>), not widget types. No <code>src/</code> wrap, no atoms/molecules.</li>
+<li><code>cloudflare:workers</code> is imported in exactly one place per concern
+(<code>lib/door/runtime.ts</code>, later <code>edge/*.do.ts</code>). Everything else is
+plain TypeScript Vitest can run.</li>
+<li>ESLint + <code>@stylistic</code> is the style. No Prettier. Do not disable
+<code>no-explicit-any</code>; type it or delete the dead write.</li>
+<li>Nothing new is written with the originals&#39; wire names. <code>CHAT_*</code>,
+<code>CHANNEL=chat</code>, <code>agents</code>, <code>chat:&lt;slug&gt;:&lt;sub&gt;</code>, plugin <code>chat</code> are the
+names (<a href="todo.html#0-decide">todo.md</a>). <code>PENDANT_*</code>, <code>CHANNEL=pendant</code>,
+<code>cranes</code> beside <code>agents</code> on <code>/api/auth/me</code> are accepted as aliases so
+cab, helm, and agents on the old stack keep working until the Phase 4
+cutover, then dropped. Marked as aliases wherever they appear.
+Harness-side detail: <a href="channels.html">channels.md</a>,
+<a href="contract.html">contract.md</a>.</li>
+</ul>
+<h2 id="12-later-and-not-the-product">12. Later, and not the product</h2>
+<p><strong>Later</strong> (when a real gap forces it): Workspace <code>hd</code> gate; saved
+watches and a tile catalog after one attention surface stops being
+enough; provider billing pull; harness write-through to DO SQLite;
+operator writes on boards. List: <a href="todo.html#later">todo.md</a>.</p>
+<p><strong>Not the product:</strong> hosted SaaS, Kubernetes, Cloud Run / Lambda, a
+shared family brain, pairing the agent through settings, multi-tenant
+orgs, invite links, billing, a second login, Cloudflare Access in
+front of the Worker, anything that makes the harness slower so a
+dashboard looks nicer.</p>
+</article>
+  </main>
+  <footer class="foot">
+    <div class="wrap">
+      <span>MIT</span>
+      <span>
+        <a href="../privacy/">privacy</a>
+        · <a href="../oauth-catch/">oauth code</a>
+        · <a href="https://github.com/shotah/gantree2-apps">apps</a>
+      </span>
+      <span><a href="https://github.com/shotah/gantree2">github.com/shotah/gantree2</a></span>
+    </div>
+  </footer>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({ startOnLoad: true, theme: "dark" });
+  </script>
+</body>
+</html>

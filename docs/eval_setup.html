@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Eval setup — gantree</title>
+  <meta name="description" content="Eval setup">
+  <link rel="canonical" href="https://shotah.github.io/gantree2/docs/eval_setup.html">
+  <meta name="theme-color" content="#0e1316">
+  <meta property="og:title" content="Eval setup — gantree">
+  <meta property="og:description" content="Eval setup">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://shotah.github.io/gantree2/docs/eval_setup.html">
+  <meta property="og:image" content="https://shotah.github.io/gantree2/assets/banner.png">
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body class="">
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="top">
+    <a class="brand" href="../index.html">
+      <img src="../assets/logo.svg" width="28" height="28" alt="">
+      gantree
+    </a>
+    <nav class="nav" aria-label="Site">
+        <a href="../index.html">Home</a>
+        <a href="../docs/install.html">Install</a>
+        <a href="../docs/access.html">Access</a>
+        <a href="../docs/architecture.html">Architecture</a>
+        <a href="../docs/security.html">Security</a>
+        <a href="../docs/auth.html">Accounts</a>
+        <a href="../docs/mcp.html">MCP</a>
+        <a href="../docs/custom-mcp.html">Custom MCP</a>
+        <a href="../docs/mcp-naming.html">Naming</a>
+        <a href="../docs/eval_setup.html" aria-current="page">Evals</a>
+        <a href="https://github.com/shotah/gantree2">GitHub</a>
+    </nav>
+  </header>
+  <main id="content" class="wrap">
+    <article class="prose"><h1 id="eval-setup">Eval setup</h1>
+<blockquote>
+<p>Why it exists: the persona seed is a behavior contract, and a rule
+that holds two runs in three is a rule the seed is not carrying.
+Fixtures: <code>harness/internal/agent/testdata/eval/</code></p>
+</blockquote>
+<p>Three values, two places. The eval replays each fixture against a live
+model with the shipped persona seed; it needs the same three <code>LLM_*</code> the
+harness needs and nothing else. No MCP servers running, no chat room,
+no Google — every tool is canned, or its catalog is read from the
+binary already baked into the image.</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Local</th>
+<th>GitHub</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>LLM_BASE_URL</code></td>
+<td><code>harness/.env</code></td>
+<td>Repository <strong>variable</strong></td>
+</tr>
+<tr>
+<td><code>LLM_MODEL</code></td>
+<td><code>harness/.env</code></td>
+<td>Repository <strong>variable</strong></td>
+</tr>
+<tr>
+<td><code>LLM_API_KEY</code></td>
+<td><code>harness/.env</code></td>
+<td>Repository <strong>secret</strong></td>
+</tr>
+</tbody></table>
+<p>This is the harness&#39;s own <code>.env</code> for running Go tests from a laptop. It
+is not the Worker&#39;s <code>.dev.vars</code>, and neither is committed.</p>
+<h2 id="1-local">1. Local</h2>
+<ol>
+<li><p>Copy the example and fill the three lines at the top:</p>
+<pre><code class="language-sh">cp harness/.env.example harness/.env</code></pre>
+<pre><code class="language-sh">LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+LLM_API_KEY=your-key
+LLM_MODEL=gemini-3.8-flash</code></pre>
+<p>Use the model you ship with — the eval is a reading of the seed on
+<em>that</em> model, not a model benchmark.</p>
+</li>
+<li><p>Run it:</p>
+<pre><code class="language-sh">npm run eval                 # = make -C harness integration-test</code></pre>
+<p>The target sources <code>harness/.env</code>, then runs <code>go test -tags integration</code>
+on <code>TestEval_Live</code>. A turn is ~15 s on a Flash-class model: seven
+fixtures × 3 runs is ~5 minutes, × 10 is ~20. The target passes
+<code>-timeout $(EVAL_TIMEOUT)</code> (default <code>120m</code>) because Go&#39;s default 10 m
+kills a long run mid-fixture with <code>panic: test timed out</code>.</p>
+<p>Without the three values it does not fail, it skips:</p>
+<pre><code class="language-text">--- SKIP: TestEval_Live (0.00s)
+    eval_integration_test.go:36: LLM_BASE_URL, LLM_API_KEY, LLM_MODEL required; ...</code></pre>
+</li>
+<li><p>Narrow it while you tune:</p>
+<pre><code class="language-sh">npm run eval -- EVAL_ARGS='-eval.only=scoop_at_2'          # one fixture
+npm run eval -- EVAL_ARGS='-eval.n=10'                     # nervous
+npm run eval -- EVAL_ARGS='-eval.n=3 -eval.only=no_aims_one_question,planner_gym_no_workout'</code></pre>
+<p><code>-eval.only</code> takes fixture <code>name</code>s (the JSON field, not the file
+name), comma-separated. Two more flags: <code>-eval.v</code> prints every call
+with its args and the reply for passing runs too; <code>-eval.persona=path</code>
+loads that file instead of the shipped seed — see the bake-off below.</p>
+<p>Every passing run prints its cost and shape:</p>
+<pre><code class="language-text">run 1/3 ok: 2 rounds, 10.7k prompt / 259 completion tokens — [cron_schedule memory_store google__calendar_create_events] → reply
+scoop_at_2: 3 runs, mean 2.00 rounds, mean 10.7k prompt / 259 completion tokens per turn
+...
+all fixtures: 21 runs, mean 2.17 rounds, mean 11.3k prompt / 149 completion tokens per turn</code></pre>
+<p>Rounds are Completer calls for the turn; the last one is the reply,
+so one tool batch plus the answer is 2. Brackets are the calls that
+went out <strong>in one batch</strong> — the parallel tool calls the Go loop is
+good at; each <code>→</code> is a serial round. Tokens are the provider&#39;s
+native usage summed over rounds (0 when it omits them).</p>
+<p>Windows: the target is POSIX shell. Set the three variables in the
+session and run the <code>go test</code> line from <code>harness/Makefile</code> directly.</p>
+</li>
+</ol>
+<h2 id="2-github">2. GitHub</h2>
+<p>The release gate reads the key from a <strong>secret</strong> and the endpoint and
+model from <strong>variables</strong> — the endpoint and model are not sensitive,
+and variables show up in the run log so a wrong one is visible.</p>
+<p><strong>Settings → Secrets and variables → Actions</strong></p>
+<ul>
+<li><strong>Secrets</strong> → <code>LLM_API_KEY</code></li>
+<li><strong>Variables</strong> → <code>LLM_BASE_URL</code>, <code>LLM_MODEL</code></li>
+</ul>
+<p>Or with the <code>gh</code> CLI from the repo:</p>
+<pre><code class="language-sh">gh secret set LLM_API_KEY
+gh variable set LLM_BASE_URL --body 'https://generativelanguage.googleapis.com/v1beta/openai'
+gh variable set LLM_MODEL --body 'gemini-3.8-flash'</code></pre>
+<p>Two workflows read them:</p>
+<ul>
+<li><p><strong><code>eval.yml</code></strong> — <em>Actions → eval → Run workflow</em>. Inputs: <code>runs</code>
+(default 3) and <code>only</code> (a fixture name, blank = all). By hand:</p>
+<pre><code class="language-sh">gh workflow run eval.yml -f runs=5 -f only=scoop_at_2</code></pre>
+</li>
+<li><p><strong><code>release.yml</code></strong> — on a <code>v*</code> tag the <code>eval</code> job runs first and the
+release <code>needs</code> it. Eval fails → no release, no image tag. Fix the
+fixture or the seed, then re-run the failed job (or push the next
+tag).</p>
+</li>
+</ul>
+<p>Without the secret the eval job skips and stays green, so a fork with
+no key still releases. <code>ci.yml</code> and <code>harness.yml</code> do not call the eval
+— the free goldens and the coverage floors are the PR gate; this is the
+release gate. Until <code>harness/go.mod</code> lands (Phase 2) the job skips with
+a notice, like <code>harness.yml</code>.</p>
+<h2 id="3-reading-a-failure">3. Reading a failure</h2>
+<p>Every failed run prints what the model did, then the reply:</p>
+<pre><code class="language-text">run 2/3 FAIL: expected tool cron_schedule; waiting_for_reply=false, want true
+--- tool calls ---
+google__calendar_list_events {}
+--- waiting=false silent=false jobs=none ---
+--- reply ---
+Sprint's at 2:30 and the scoop is at 2 — I'll keep an eye on it.</code></pre>
+<table>
+<thead>
+<tr>
+<th>Failure line</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>expected tool X</code></td>
+<td>The recorder never saw <code>X</code>. A call the agent <strong>blocked</strong> (prefix off, never <code>mcp_enable</code>d) also never reaches the recorder — that is a real miss, not a harness gap.</td>
+</tr>
+<tr>
+<td><code>expected tool X with args /re/</code></td>
+<td><code>X</code> was called, but no call&#39;s JSON args matched.</td>
+</tr>
+<tr>
+<td><code>tool X called N times, max M</code></td>
+<td>Spend discipline on a metered API. Two <code>offers_search</code> for two possible Fridays is fine; a third byte-identical to the first is the model re-asking a question it already had answered.</td>
+</tr>
+<tr>
+<td><code>invented price $N (in no tool result)</code></td>
+<td>A figure in the reply that no tool returned.</td>
+</tr>
+<tr>
+<td><code>fixture tool X is not in the live S catalog (have …)</code></td>
+<td>Drift: the baked plugin no longer publishes that name. Fails before any model call.</td>
+</tr>
+<tr>
+<td><code>order: X before …</code></td>
+<td>Both called, wrong order (e.g. the tool before <code>mcp_enable</code>).</td>
+</tr>
+<tr>
+<td><code>reply should match /re/</code> · <code>should not match</code></td>
+<td>Shape of the reply — a <code>?</code>, a bare &quot;got it&quot;. Never a sentence.</td>
+</tr>
+<tr>
+<td><code>N questions, max M</code></td>
+<td>Counted <code>?</code> in the reply.</td>
+</tr>
+<tr>
+<td><code>waiting_for_reply=false, want true</code></td>
+<td>The model asked but did not put <code>[wait]</code> on its own line.</td>
+</tr>
+<tr>
+<td><code>silent=true, want false</code></td>
+<td><code>[silent]</code> (or an empty reply with no reaction) where a nudge was owed.</td>
+</tr>
+<tr>
+<td><code>expected a reaction, got none</code> · <code>reaction X, want Y</code></td>
+<td>No <code>[react …]</code> in the reply, or the wrong emoji (<code>react: &quot;*&quot;</code> is any).</td>
+</tr>
+<tr>
+<td><code>want a reaction and no text</code></td>
+<td><code>react_only</code>: the model reacted and also wrote.</td>
+</tr>
+<tr>
+<td><code>N model rounds, want the kernel to settle it</code></td>
+<td><code>no_model_call</code>: an idle 👍 reached the model — the kernel triage should have recorded it for free.</td>
+</tr>
+<tr>
+<td><code>expected memory row kind subject</code></td>
+<td>No live <code>memory_store</code> row with that subject after the turn.</td>
+</tr>
+<tr>
+<td><code>no cron job A–B min out (have …)</code></td>
+<td>Nothing on the board in the window; <code>followup</code>-kind wait pokes do not count.</td>
+</tr>
+<tr>
+<td><code>none of any_of held — alt 1: … | alt 2: …</code></td>
+<td>Every alternative failed; each is listed with its own reason.</td>
+</tr>
+</tbody></table>
+<p>A rule that holds two runs in three is a rule the persona is not
+carrying — that is why every run must pass.</p>
+<p>One line is <strong>not</strong> a failure. <code>run 2/3 ok (over budget: 4 rounds, budget 3)</code> means the turn passed and took more Completer rounds than the
+fixture&#39;s <code>round_budget</code>. The gate is on missing work; a model that does
+something extra is not wrong, so the budget is reported beside the pass
+and summed at the end, never failed. Read it as a trend across runs: a
+fixture that is always over budget has a sentence in the seed costing a
+round for nothing; one run in five is the model being thorough.</p>
+<h2 id="4-tuning">4. Tuning</h2>
+<p>Two kinds of red:</p>
+<ul>
+<li><strong>The model is right and the fixture is wrong.</strong> It scheduled the
+scoop at +118 minutes and the window was 120–140; it said &quot;buzz you&quot;
+and the regex only knew &quot;ping&quot;. Fix the JSON. Widen the window, add
+the word, add an <code>any_of</code> alternative.</li>
+<li><strong>The persona lost a rule.</strong> It said &quot;nothing today&quot; and stopped; it
+narrated a reminder and set no cron; it asked three questions. Do not
+loosen the fixture. Put the line back in the seed, run <code>-eval.only</code>
+on that fixture until it holds, then the whole set.</li>
+</ul>
+<p>Regexes are Go <code>regexp</code> (RE2): <code>(?i)</code> for case-insensitive, no
+lookaround. Fixtures are validated in <code>go test ./...</code> before any model
+call:</p>
+<pre><code class="language-sh">cd harness &amp;&amp; go test ./internal/agent/ -run 'TestEvalFixtures_WellFormed|TestEvalHarness'</code></pre>
+<h3 id="one-seed">One seed</h3>
+<p>The persona seed is <code>harness/examples/persona/PERSONA.example.md</code> and
+<strong>that is the only copy</strong>. Settings reads it from there when it builds
+a new agent (<code>config.persona</code> on the Agent DO starts as this file). The
+originals kept three lockstep copies across three repos; this repo has
+one file and no lockstep.</p>
+<h3 id="the-bake-off">The bake-off</h3>
+<p>The same run is how a persona edit earns its place. Read the shapes
+first: a <code>→</code> inside a run that the rule did not need is the thing to
+cut, and it usually traces to one sentence. Then:</p>
+<pre><code class="language-sh">cp harness/examples/persona/PERSONA.example.md /tmp/candidate.md
+# edit /tmp/candidate.md
+npm run eval -- EVAL_ARGS='-eval.n=5'                                   # seed: the number to beat
+npm run eval -- EVAL_ARGS='-eval.n=5 -eval.persona=/tmp/candidate.md'   # candidate</code></pre>
+<p>Compare the two <code>all fixtures:</code> lines and the per-fixture means. A
+candidate wins when every run still passes and rounds or tokens fall;
+n=3 is too noisy to call a 0.2-round difference, use 5 or more. When it
+wins, copy it over the seed and lower <code>round_budget</code> on the fixtures
+that moved so the next regression shows up as a run of over-budget
+notes.</p>
+<p>What a bake-off is not for: cutting the work. A round worth removing is
+one in which the model did nothing new. A candidate that passes with
+fewer rounds because it searches less, stores less, or stops at &quot;let me
+know when&quot; is a loss, and the completion fixtures are there to fail it.
+Likewise <code>LLM_REASONING_EFFORT</code>: lower is cheaper because the model
+plans less; that is the trade this product does not make.</p>
+<h2 id="5-adding-a-fixture">5. Adding a fixture</h2>
+<p>Copy the nearest file under <code>harness/internal/agent/testdata/eval/</code>
+and edit.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>name</code>, <code>why</code></td>
+<td><code>name</code> is what <code>-eval.only</code> matches; <code>why</code> is the rule in one sentence, printed at the top of the run.</td>
+</tr>
+<tr>
+<td><code>inbound</code></td>
+<td>The human&#39;s text. <code>{{+120m}}</code> becomes the local clock 120 minutes from now — the eval runs on the real clock because <code>cron_schedule</code> does.</td>
+</tr>
+<tr>
+<td><code>planner</code></td>
+<td>Instead of <code>inbound</code>: send the daily planner wake.</td>
+</tr>
+<tr>
+<td><code>cron</code></td>
+<td>Instead of <code>inbound</code>: the prompt of a scheduled job the model set.</td>
+</tr>
+<tr>
+<td><code>history</code></td>
+<td>Prior <code>user</code> / <code>assistant</code> turns appended to the session first.</td>
+</tr>
+<tr>
+<td><code>waiting</code></td>
+<td>Arms <code>waiting_for_reply</code> before the turn. For <code>[reaction] 👍 on: …</code> inbound: is the 👍 an answer.</td>
+</tr>
+<tr>
+<td><code>memory</code></td>
+<td>Seed rows: <code>kind</code>, <code>subject</code>, <code>content</code>.</td>
+</tr>
+<tr>
+<td><code>self</code></td>
+<td><code>SELF.md</code> body (<code>- </code> bullets). Empty file when absent.</td>
+</tr>
+<tr>
+<td><code>tools</code></td>
+<td>Canned MCP tools: <code>name</code> (must be <code>server__name</code>), <code>description</code>, optional <code>params</code> schema, <code>result</code> returned every call — <code>{{+90m}}</code> in a result expands like <code>inbound</code>.</td>
+</tr>
+<tr>
+<td><code>tools_from</code></td>
+<td>Servers whose <strong>real</strong> catalog replaces hand-written defs — see below.</td>
+</tr>
+<tr>
+<td><code>force</code></td>
+<td>MCP prefixes published without <code>mcp_enable</code>. Leave empty to test the off → enable → call path.</td>
+</tr>
+<tr>
+<td><code>expect</code></td>
+<td>The shape contract — see the failure table. <code>round_budget</code> is the cost note, not a check. <code>tools_called[].max_calls</code> caps a metered tool. <code>prices_from_tools</code> fails any <code>$N</code> the tools did not return. <code>react</code> / <code>react_only</code> / <code>no_model_call</code> are the reaction gates.</td>
+</tr>
+</tbody></table>
+<h3 id="real-catalogs-toolsfrom">Real catalogs (<code>tools_from</code>)</h3>
+<p>A hand-written <code>params</code> block is the eval&#39;s guess at a plugin&#39;s
+interface, and the guess drifts. <code>tools_from: [&quot;rentals&quot;]</code> publishes the
+server&#39;s real catalog instead: the harness reads
+<code>harness/internal/agent/testdata/eval/mcp.toml</code>, boots the binary, and
+takes <code>tools/list</code> — names, descriptions, schemas — as the tool defs.
+Nothing is called: results stay canned, so a placeholder key never
+reaches a vendor.</p>
+<p><strong>In this repo the binary is already there.</strong> Plugins live under
+<code>harness/mcp/&lt;name&gt;/</code>, so the eval runs <code>go build</code> on the sibling
+module (or uses the one in <code>/opt/mcp</code> when run inside the image) — no
+GitHub release lookup, no rate limit, no <code>GITHUB_TOKEN</code>. A fixture
+<code>tools</code> entry whose name the live server does not publish fails before
+any model call, and so does a <code>tools_from</code> server with no <code>mcp.lock</code>
+row. That is the naming contract (<a href="mcp-naming.html">mcp-naming.md</a>)
+enforced by the eval.</p>
+<p>Then:</p>
+<pre><code class="language-sh">cd harness &amp;&amp; go test ./internal/agent/ -run TestEvalFixtures_WellFormed   # parses, regexes compile
+npm run eval -- EVAL_ARGS='-eval.n=1 -eval.only=&lt;name&gt;'                      # first live read</code></pre>
+<p>Four kinds of fixture live in the directory. <strong>Single-batch rules</strong> —
+one tool round and a reply, <code>round_budget</code> 2 or 3. <strong>Completion</strong>
+fixtures (the flight, the gym check-in, the dinner planner): the check
+is that the legwork happened, and the model may take the rounds it
+needs. <strong>Spend</strong> fixtures on real catalogs: a metered API, <code>max_calls</code>
+on the search, <code>tools_not_called</code> on the per-item detail calls nobody
+asked for, <code>prices_from_tools</code> on the reply. <strong>Reaction</strong> fixtures: the
+agent&#39;s <code>[react 👍]</code> where a sentence would be noise, and the human&#39;s
+👍 / 👎 on the agent&#39;s message — free when idle, an answer when the
+agent was waiting, never nothing when negative.</p>
+</article>
+  </main>
+  <footer class="foot">
+    <div class="wrap">
+      <span>MIT</span>
+      <span>
+        <a href="../privacy/">privacy</a>
+        · <a href="../oauth-catch/">oauth code</a>
+        · <a href="https://github.com/shotah/gantree2-apps">apps</a>
+      </span>
+      <span><a href="https://github.com/shotah/gantree2">github.com/shotah/gantree2</a></span>
+    </div>
+  </footer>
+  
+</body>
+</html>

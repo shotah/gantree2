@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Access — who may operate, who may talk — gantree</title>
+  <meta name="description" content="Access — who may operate, who may talk">
+  <link rel="canonical" href="https://shotah.github.io/gantree2/docs/access.html">
+  <meta name="theme-color" content="#0e1316">
+  <meta property="og:title" content="Access — who may operate, who may talk — gantree">
+  <meta property="og:description" content="Access — who may operate, who may talk">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://shotah.github.io/gantree2/docs/access.html">
+  <meta property="og:image" content="https://shotah.github.io/gantree2/assets/banner.png">
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body class="">
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="top">
+    <a class="brand" href="../index.html">
+      <img src="../assets/logo.svg" width="28" height="28" alt="">
+      gantree
+    </a>
+    <nav class="nav" aria-label="Site">
+        <a href="../index.html">Home</a>
+        <a href="../docs/install.html">Install</a>
+        <a href="../docs/access.html" aria-current="page">Access</a>
+        <a href="../docs/architecture.html">Architecture</a>
+        <a href="../docs/security.html">Security</a>
+        <a href="../docs/auth.html">Accounts</a>
+        <a href="../docs/mcp.html">MCP</a>
+        <a href="../docs/custom-mcp.html">Custom MCP</a>
+        <a href="../docs/mcp-naming.html">Naming</a>
+        <a href="../docs/eval_setup.html">Evals</a>
+        <a href="https://github.com/shotah/gantree2">GitHub</a>
+    </nav>
+  </header>
+  <main id="content" class="wrap">
+    <article class="prose"><h1 id="access-who-may-operate-who-may-talk">Access — who may operate, who may talk</h1>
+<p>One repo, one door, one household. This page is how a <strong>person</strong> lines
+up across settings, chat, and the agent: the Google sign-in, the list
+that says whether you may be here, the role that says what you may
+touch, and the room list each agent obeys.</p>
+<p>Pictures: <a href="architecture.html">architecture.md</a> §2–§4 and §6. Why the
+door is Google and not a passphrase: <a href="proposal.html#auth-one-door">proposal.md</a>.
+Setup by place: <a href="install.html">install.md</a>. Open walks: <a href="todo.html">todo.md</a>.</p>
+<hr>
+<h2 id="two-populations-one-sign-in">Two populations, one sign-in</h2>
+<table>
+<thead>
+<tr>
+<th>Who</th>
+<th>Wants</th>
+<th>Needs</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Operators</strong></td>
+<td>to <em>touch</em> an agent — config, tools, recreate, users</td>
+<td>a Google account on the list with role <code>admin</code> or <code>operator</code></td>
+</tr>
+<tr>
+<td><strong>Members</strong></td>
+<td>the agent to <em>answer</em></td>
+<td>a Google account on the list <strong>and</strong> on that agent&#39;s room list</td>
+</tr>
+</tbody></table>
+<p>Bob can operate Kit and never message her. Ada can message Kit from
+her phone and never see settings. Both sign in at the same <code>/login</code>.
+There is no second door and no passphrase.</p>
+<pre><code class="language-text">            Google sign-in  →  gantree_session {sub, email}
+                                     │
+                     gate, every request (never from the cookie)
+                                     │
+         ┌───────────────────────────┼────────────────────────────┐
+   GANTREE_ADMINS           GANTREE_ALLOW              Settings DO users
+   admin · locked           member · locked            admin / operator(agents) / member
+         └───────────────────────────┼────────────────────────────┘
+                                     │  role
+         /users /settings  admin ────┤
+         /agents/&lt;slug&gt;    admin, or operator with &lt;slug&gt; in agents[]
+         /chat/&lt;slug&gt;      any role  ──┐
+                                       └─ and on Agent:&lt;slug&gt; room list
+                                          (wire name PENDANT_ALLOWED_USERS)</code></pre>
+<hr>
+<h2 id="the-principle">The principle</h2>
+<p><strong>One identity (<code>sub</code>), one app list, one room list per agent, every
+check at request time.</strong></p>
+<ul>
+<li>Google proves <em>who</em>. It never says <em>whether</em>.</li>
+<li>The app list (env floor ∪ Settings DO rows) says whether you may be
+here at all, and with what role.</li>
+<li>The agent&#39;s room list says whether that agent will talk to you. It
+lives in the agent&#39;s <code>config.env</code> on the Agent DO as
+<code>PENDANT_ALLOWED_USERS</code>, is handed to the harness at start, and the
+harness publishes it back on dial as an <code>allow</code> frame. Settings edits
+it; nothing else does.</li>
+<li>A cookie only proves who. Removing a person from a list ends their
+access on the next request, not at cookie expiry.</li>
+</ul>
+<hr>
+<h2 id="shared-contract">Shared contract</h2>
+<p>Every piece of this repo — and cab, helm, and any agent still on the
+original stack — codes to this section. Change it here first.</p>
+<h3 id="allowlist-entry-grammar">Allowlist entry grammar</h3>
+<p>Comma or whitespace separated. Three forms. Same grammar for
+<code>GANTREE_ADMINS</code>, <code>GANTREE_ALLOW</code>, Settings DO rows, and every
+agent&#39;s <code>PENDANT_ALLOWED_USERS</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Entry</th>
+<th>Parse</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>118212345678901234567</code></td>
+<td><code>sub</code> = 10–32 digits</td>
+</tr>
+<tr>
+<td><code>118212345678901234567:ada@example.com</code></td>
+<td>split at the <strong>first</strong> <code>:</code>; <code>sub</code> left, email right (lowercased)</td>
+</tr>
+<tr>
+<td><code>ada@example.com</code></td>
+<td>no <code>:</code> and contains <code>@</code> → email only, lowercased</td>
+</tr>
+</tbody></table>
+<p>Normalize: trim, drop empties, dedupe by <code>sub</code> then by email. Junk is a
+dropped entry with a warning in settings and a config error at harness
+boot. Code: <code>lib/door/allowlist.ts</code>.</p>
+<h3 id="matching">Matching</h3>
+<table>
+<thead>
+<tr>
+<th>Entry has</th>
+<th>Matches when</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>sub</code></td>
+<td><code>sub</code> equals the token&#39;s <code>sub</code>, exactly</td>
+</tr>
+<tr>
+<td><code>email</code></td>
+<td>token&#39;s <code>email_verified</code> is true <strong>and</strong> lowercased <code>email</code> equals, exactly. No Gmail-dot or <code>+tag</code> folding.</td>
+</tr>
+<tr>
+<td>both</td>
+<td>either</td>
+</tr>
+</tbody></table>
+<p><code>sub</code> is the key: it survives an email change. Email is an alias: it
+only ever <em>matches</em>, never <em>identifies</em>. Session ids and <code>user_id</code> on
+frames are always <code>sub</code>.</p>
+<h3 id="roles">Roles</h3>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>From</th>
+<th>May</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>admin</code></td>
+<td><code>GANTREE_ADMINS</code> (locked) or a Settings row</td>
+<td>everything: <code>/users</code>, <code>/settings</code>, every agent, every chat the room list allows</td>
+</tr>
+<tr>
+<td><code>operator</code></td>
+<td>Settings row with <code>agents[]</code></td>
+<td><code>/agents/&lt;slug&gt;</code> for listed slugs; chat where the room list allows</td>
+</tr>
+<tr>
+<td><code>member</code></td>
+<td><code>GANTREE_ALLOW</code> (locked) or a Settings row</td>
+<td>chat where the room list allows; <code>/api/auth/me</code></td>
+</tr>
+</tbody></table>
+<p>Resolution is per request: collect every row that matches, take the
+highest role, union the operators&#39; <code>agents[]</code>. Env rows are <strong>locked</strong>:
+settings shows them and cannot remove them; edit the env to change
+them. Empty <code>GANTREE_ADMINS</code> → every gated route is <code>503</code> until it is
+set. Code: <code>lib/door/users.ts</code>.</p>
+<h3 id="cookies">Cookies</h3>
+<table>
+<thead>
+<tr>
+<th>Cookie</th>
+<th>Holds</th>
+<th>Life</th>
+<th>Flags</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>gantree_oauth</code></td>
+<td><code>state</code>, <code>nonce</code>, <code>code_verifier</code>, <code>next</code></td>
+<td>10 min</td>
+<td><code>HttpOnly; Secure; SameSite=Lax; Path=/</code></td>
+</tr>
+<tr>
+<td><code>gantree_session</code></td>
+<td><code>{ sub, email }</code></td>
+<td><strong>7 days, hard</strong></td>
+<td>same</td>
+</tr>
+</tbody></table>
+<p>Both are JWE (<code>dir</code> + <code>A256GCM</code>); key = SHA-256 of <code>SESSION_SECRET</code>
+(≥ 32 chars). <code>Secure</code> is dropped only on loopback <code>http</code>. Nothing else
+is in the cookie: no role, no agents, no name. Code: <code>lib/door/session.ts</code>.</p>
+<h3 id="google">Google</h3>
+<p>Authorization Code + PKCE (<code>S256</code>), scopes <code>openid email profile</code>,
+<code>prompt=select_account</code>. ID token verified with <code>jose</code>: <code>iss</code> in
+<code>accounts.google.com</code> / <code>https://accounts.google.com</code>, <code>aud</code> =
+<code>GOOGLE_CLIENT_ID</code>, <code>exp</code>, signature from Google&#39;s JWKS, and our
+<code>nonce</code>. Nobody decodes a JWT by hand. Code: <code>lib/door/google.ts</code>.</p>
+<h3 id="gate-every-non-public-request">Gate, every non-public request</h3>
+<table>
+<thead>
+<tr>
+<th>Situation</th>
+<th>Page</th>
+<th><code>/api/*</code>, <code>/ws/*</code></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>public path</td>
+<td>through</td>
+<td>through</td>
+</tr>
+<tr>
+<td>no admins configured</td>
+<td><code>503</code></td>
+<td><code>503</code></td>
+</tr>
+<tr>
+<td>no / bad / expired cookie</td>
+<td><code>302 /login?next=&lt;path&gt;</code></td>
+<td><code>401 {&quot;error&quot;:&quot;unauthorized&quot;}</code></td>
+</tr>
+<tr>
+<td>cookie, not on any list</td>
+<td><code>401</code></td>
+<td><code>401</code></td>
+</tr>
+<tr>
+<td>on a list</td>
+<td>through, <code>x-gantree-sub/email/role/agents</code> set</td>
+<td>same</td>
+</tr>
+</tbody></table>
+<p>Public: <code>/login</code>, <code>/api/auth/google</code>, <code>/api/auth/callback/google</code>,
+<code>/manifest.webmanifest</code>, <code>/sw.js</code>, <code>/icon.svg</code>, <code>/favicon.ico</code>,
+<code>/robots.txt</code>, <code>/_vinext/*</code>, <code>/_next/*</code>, <code>/assets/*</code>, <code>/.well-known/*</code>.
+Code: <code>lib/door/gate.ts</code>, <code>lib/door/http.ts</code>, <code>middleware.ts</code>.</p>
+<h3 id="apiauthme"><code>/api/auth/me</code></h3>
+<pre><code class="language-json">{ &quot;sub&quot;: &quot;118212345678901234567&quot;, &quot;email&quot;: &quot;ada@example.com&quot;,
+  &quot;role&quot;: &quot;member&quot;, &quot;agents&quot;: [&quot;kit&quot;] }</code></pre>
+<p><code>agents</code> for a member is the slugs whose room list has them (KV
+directory <code>sub:&lt;sub&gt;</code> / <code>email:&lt;email&gt;</code> → slugs, written by each Agent
+DO when it stores an <code>allow</code> frame). For an operator it is their
+assignment. For an admin it is every slug. Cab and helm read this
+today as <code>cranes</code>; the alias stays until Phase 4. The only identity a
+stranger sees is their own.</p>
+<h3 id="room-admission-wsltsluggt">Room admission (<code>/ws/&lt;slug&gt;</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Where</th>
+<th>On miss</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>harness: bearer bound to this slug</td>
+<td>handshake</td>
+<td><code>unauthorized</code></td>
+</tr>
+<tr>
+<td>phone: <code>gantree_session</code> opens, person is on the app list</td>
+<td>handshake, every frame</td>
+<td><code>4401</code></td>
+</tr>
+<tr>
+<td>phone: <code>sub</code> ∈ room list <strong>or</strong> (<code>email_verified</code> ∧ <code>email</code> ∈ room list)</td>
+<td>handshake, every frame</td>
+<td><code>4403</code></td>
+</tr>
+</tbody></table>
+<p>Room list = last <code>allow</code> frame stored on that slug&#39;s Agent DO. New
+<code>allow</code> → re-check every phone socket; close the ones no longer on it.
+Admins are <strong>not</strong> exempt from the room list: operating Kit and
+talking to Kit are different grants.</p>
+<h3 id="frames-harness-room">Frames (harness ↔ room)</h3>
+<p>Harness → room, right after <code>cmds</code>, and again on every reconnect:</p>
+<pre><code class="language-json">{ &quot;kind&quot;: &quot;allow&quot;, &quot;users&quot;: [
+  { &quot;sub&quot;: &quot;118212345678901234567&quot;, &quot;email&quot;: &quot;ada@example.com&quot; },
+  { &quot;email&quot;: &quot;bob@example.com&quot; }
+] }</code></pre>
+<p>Room → harness, <code>email</code> beside <code>user_id</code>:</p>
+<pre><code class="language-json">{ &quot;kind&quot;: &quot;msg&quot;, &quot;user_id&quot;: &quot;118212345678901234567&quot;,
+  &quot;email&quot;: &quot;ada@example.com&quot;, &quot;text&quot;: &quot;…&quot;, &quot;context&quot;: { } }</code></pre>
+<p>The harness admits a frame when <code>user_id</code> <strong>or</strong> <code>email</code> is on its
+list. Session id: <code>pendant:&lt;slug&gt;:&lt;sub&gt;</code> (wire name; Phase 4 renames).</p>
+<hr>
+<h2 id="seeding-where-the-first-people-come-from">Seeding — where the first people come from</h2>
+<table>
+<thead>
+<tr>
+<th>Place</th>
+<th><code>GANTREE_ADMINS</code>, <code>GANTREE_ALLOW</code>, <code>GOOGLE_CLIENT_ID</code></th>
+<th><code>GOOGLE_CLIENT_SECRET</code>, <code>SESSION_SECRET</code></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Local dev</td>
+<td><code>.dev.vars</code></td>
+<td><code>.dev.vars</code></td>
+</tr>
+<tr>
+<td>Cloudflare</td>
+<td>GitHub Actions <strong>variables</strong> → <code>wrangler deploy --var</code></td>
+<td>GitHub Actions <strong>secrets</strong> → <code>wrangler secret bulk</code></td>
+</tr>
+<tr>
+<td>Home (celld)</td>
+<td><code>CELLD_VARS_FILE</code></td>
+<td><code>CELLD_VARS_FILE</code></td>
+</tr>
+</tbody></table>
+<p>The env is the floor. Everyone else is a row on the Settings DO, added
+on <code>/users</code> by an admin. Never commit <code>.dev.vars</code>.</p>
+<h3 id="dev-without-google">Dev without Google</h3>
+<p><code>GANTREE_DEV_USER=118212345678901234567:you@example.com</code> in <code>.dev.vars</code>
+fakes a signed-in session <strong>only</strong> when the request host is
+<code>127.0.0.1</code> / <code>localhost</code>. The gate refuses it on any other host. The
+dev user still has to be on a list.</p>
+<hr>
+<h2 id="end-to-end">End to end</h2>
+<h3 id="once">Once</h3>
+<ol>
+<li>GCP → APIs &amp; Services → Credentials → OAuth client ID → <strong>Web
+application</strong>. Scopes <code>openid email profile</code>. One client can carry
+every redirect below. Table: <a href="install.html#google-oauth-client">install.md</a>.</li>
+<li>Put <code>GOOGLE_CLIENT_ID</code>, <code>GOOGLE_CLIENT_SECRET</code>, <code>SESSION_SECRET</code>,
+and your email in <code>GANTREE_ADMINS</code> where that place reads them.</li>
+<li>Deploy. Open <code>/</code>. Sign in. You are admin.</li>
+</ol>
+<h3 id="add-an-operator">Add an operator</h3>
+<p><code>/users</code> → add <code>bob@example.com</code>, role <code>operator</code>, agents <code>kit</code>. Bob
+signs in; <code>/agents/kit</code> opens; <code>/agents/ada</code> is <code>401</code>; <code>/users</code> is
+<code>401</code>. No redeploy.</p>
+<h3 id="add-a-human-to-kit">Add a human to Kit</h3>
+<ol>
+<li><code>/agents/kit</code> → Users fold → tick Bob, or type an email for someone
+who is not on the app list yet (settings adds them as <code>member</code> on
+the same save). Settings writes <code>PENDANT_ALLOWED_USERS</code> in Kit&#39;s
+<code>config.env</code>. Env change <strong>recreates</strong> the container.</li>
+<li>Kit boots, reads the list, dials, publishes <code>allow</code>. The DO stores
+it and indexes the email in KV.</li>
+<li>Ada opens <code>/chat/kit</code> on her phone. <code>/api/auth/me</code> says
+<code>agents: [&quot;kit&quot;]</code>. First frame carries <code>user_id</code> + <code>email</code>; Kit
+matches the email and answers.</li>
+<li>Kit&#39;s <code>perf</code> frame carries <code>user_id</code>. Spend shows a raw <code>1182…</code> next
+to Ada&#39;s email and offers to store it. Accept; the row becomes
+<code>sub:email</code>.</li>
+</ol>
+<h3 id="yank">Yank</h3>
+<ol>
+<li>Untick on Kit&#39;s Users fold. Recreate. Kit&#39;s dial publishes the
+shorter <code>allow</code>; the DO closes Ada&#39;s socket <code>4403</code>.</li>
+<li>Remove from <code>/users</code> (or the env). Her next request anywhere is
+<code>401</code>; her cookie is worthless even though it has not expired.</li>
+<li>Emergency (Kit down, cannot recreate now): Rotate bearer on
+<code>/agents/kit</code>. The room refuses the old harness; the phone has no
+one to talk to. Recreate when you can.</li>
+<li>Stolen phone: OS lock, Google → sign out other sessions, then 2.</li>
+</ol>
+<h3 id="email-change">Email change</h3>
+<p>The <code>sub</code> did not change. A <code>sub:email</code> row only needs a relabel. An
+<code>email</code>-only row stops matching — update it. This is why settings
+learns the <code>sub</code> when it can.</p>
+<hr>
+<h2 id="what-we-gave-up-and-what-we-keep">What we gave up, and what we keep</h2>
+<p>The originals kept a passphrase on settings so the Mini would open
+when <code>accounts.google.com</code> did not. gantree2 drops that on purpose.</p>
+<table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>Now</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Google down</td>
+<td>Existing 7-day sessions keep working; new sign-ins wait. Status of a stopped agent is still readable with a live cookie.</td>
+</tr>
+<tr>
+<td>Redirect URI at home</td>
+<td>Google rejects LAN IPs. A home box needs Tailscale HTTPS or a Tunnel in front of celld. <a href="install.html#home-celld">install.md</a>.</td>
+</tr>
+<tr>
+<td>First boot</td>
+<td>No <code>/setup</code>. <code>GANTREE_ADMINS</code> in the env is the first admin.</td>
+</tr>
+<tr>
+<td>Still a list</td>
+<td>Yes. Google proves who; the list says whether; the role says what.</td>
+</tr>
+</tbody></table>
+<p>Kept from the originals: the grammar, <code>sub</code> as the key, verified email
+as an alias, fail closed, no enumeration, bearer per agent, the room
+list as the agent&#39;s own policy.</p>
+<hr>
+<h2 id="threats">Threats</h2>
+<table>
+<thead>
+<tr>
+<th>Change</th>
+<th>Risk</th>
+<th>Why it is acceptable</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Harness names its own room&#39;s humans</td>
+<td>Bearer holder can admit anyone to <strong>that</strong> room</td>
+<td>The bearer already impersonates the harness and reads the queue. Kit&#39;s bearer still cannot touch Ada&#39;s slug.</td>
+</tr>
+<tr>
+<td>Session for any verified Google account</td>
+<td>Strangers hold a cookie</td>
+<td>It opens nothing: the gate re-checks the list on every request. Same <code>unauthorized</code> for every miss; the only id shown is your own.</td>
+</tr>
+<tr>
+<td>Email as alias</td>
+<td>Someone else&#39;s Google account with that email?</td>
+<td>Google verifies <code>email</code> on its own accounts. Exact, lowercased, <code>email_verified</code> required. Workspace <code>hd</code> is a later knob.</td>
+</tr>
+<tr>
+<td>Room list remembered while the agent is down</td>
+<td>Yank waits for a recreate</td>
+<td>Removing the person from <code>/users</code> is instant for everything else. Bearer rotation is the instant room kill.</td>
+</tr>
+<tr>
+<td>One IdP</td>
+<td>Google outage blocks new logins</td>
+<td>Sessions are 7 days; the originals&#39; passphrase door is the escape hatch until Phase 4, after which an admin&#39;s live session is.</td>
+</tr>
+</tbody></table>
+<p>What does <strong>not</strong> move: no inbound port on the harness, no Cloudflare
+API token in settings, no MCP OAuth token doubling as a login, no role
+in the cookie.</p>
+<hr>
+<h2 id="not-this">Not this</h2>
+<table>
+<thead>
+<tr>
+<th>Shape</th>
+<th>Why not</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Passphrase or magic-link second door</td>
+<td>Two doors is how the originals ended up with three ideas of a person.</td>
+</tr>
+<tr>
+<td>Role in the cookie</td>
+<td>Removal must be instant. The list is read every request.</td>
+</tr>
+<tr>
+<td>Cloudflare Access in front of the Worker</td>
+<td>403s WebSocket upgrades; the harness is not a browser; a second identity system.</td>
+</tr>
+<tr>
+<td>Pairing codes in chat</td>
+<td>Lists, not handshakes.</td>
+</tr>
+<tr>
+<td>Admins bypass the room list</td>
+<td>Operating and talking are different grants. Kit&#39;s humans are Kit&#39;s list.</td>
+</tr>
+</tbody></table>
+<h2 id="fit-gates">Fit gates</h2>
+<p>Fail one and the task is later, or wrong.</p>
+<ol>
+<li><strong>One sign-in.</strong> Google, PKCE, <code>jose</code>. Nothing else issues a session.</li>
+<li><strong>One app list, one room list per agent.</strong> Env floor ∪ Settings DO
+rows; <code>PENDANT_ALLOWED_USERS</code> on the Agent DO. No fourth copy.</li>
+<li><strong><code>sub</code> is the key, verified email is an alias.</strong></li>
+<li><strong>Role every request, never from the cookie.</strong></li>
+<li><strong>Fail closed.</strong> No admins → <code>503</code>. Empty room list → nobody talks.</li>
+<li><strong>No enumeration.</strong> Same miss for everyone; you only ever see your
+own id.</li>
+<li><strong>Isolation.</strong> Adding a person to Kit does not touch Ada.</li>
+<li><strong>Pull and dial, never punch.</strong> <code>allow</code> rides the socket the harness
+already opened.</li>
+</ol>
+</article>
+  </main>
+  <footer class="foot">
+    <div class="wrap">
+      <span>MIT</span>
+      <span>
+        <a href="../privacy/">privacy</a>
+        · <a href="../oauth-catch/">oauth code</a>
+        · <a href="https://github.com/shotah/gantree2-apps">apps</a>
+      </span>
+      <span><a href="https://github.com/shotah/gantree2">github.com/shotah/gantree2</a></span>
+    </div>
+  </footer>
+  
+</body>
+</html>

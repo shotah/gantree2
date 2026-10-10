@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Custom MCP servers — gantree</title>
+  <meta name="description" content="Custom MCP servers">
+  <link rel="canonical" href="https://shotah.github.io/gantree2/docs/custom-mcp.html">
+  <meta name="theme-color" content="#0e1316">
+  <meta property="og:title" content="Custom MCP servers — gantree">
+  <meta property="og:description" content="Custom MCP servers">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://shotah.github.io/gantree2/docs/custom-mcp.html">
+  <meta property="og:image" content="https://shotah.github.io/gantree2/assets/banner.png">
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body class="">
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="top">
+    <a class="brand" href="../index.html">
+      <img src="../assets/logo.svg" width="28" height="28" alt="">
+      gantree
+    </a>
+    <nav class="nav" aria-label="Site">
+        <a href="../index.html">Home</a>
+        <a href="../docs/install.html">Install</a>
+        <a href="../docs/access.html">Access</a>
+        <a href="../docs/architecture.html">Architecture</a>
+        <a href="../docs/security.html">Security</a>
+        <a href="../docs/auth.html">Accounts</a>
+        <a href="../docs/mcp.html">MCP</a>
+        <a href="../docs/custom-mcp.html" aria-current="page">Custom MCP</a>
+        <a href="../docs/mcp-naming.html">Naming</a>
+        <a href="../docs/eval_setup.html">Evals</a>
+        <a href="https://github.com/shotah/gantree2">GitHub</a>
+    </nav>
+  </header>
+  <main id="content" class="wrap">
+    <article class="prose"><h1 id="custom-mcp-servers">Custom MCP servers</h1>
+<p>The Tools grid on <code>/agents/&lt;slug&gt;</code> is the <strong>catalog</strong>: every MCP server
+baked into the harness image. Granting one to an agent is a <code>[[server]]</code>
+in that agent&#39;s <code>config.mcp</code> (TOML, on the Agent DO). Omit it and it
+does not exist for that agent.</p>
+<p>A custom server is still first-class. It is a row in <code>harness/mcp.lock</code>
+and an image rebuild — not a download at agent start. There is no
+<code>/mcp/add?url=</code> route and no <code>tools-fetch</code> on a running agent.</p>
+<hr>
+<h2 id="a-build-one-clone-an-existing-mcp">A. Build one — clone an existing MCP</h2>
+<p>Do not start from a blank Go module. Fork or copy a sibling that already
+speaks stdio, ships a static binary, and prints <strong>shape</strong>. Those siblings
+live under <code>harness/mcp/&lt;name&gt;/</code> in this repo once Phase 2 lands; until
+then they are their own GitHub repos.</p>
+<table>
+<thead>
+<tr>
+<th>You need</th>
+<th>Clone this</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>No secrets</td>
+<td><code>mcp-go-math</code></td>
+<td>Smallest: evaluate + convert, empty <code>env_keys</code></td>
+</tr>
+<tr>
+<td>One API key</td>
+<td><code>google-maps-mcp</code></td>
+<td><code>host-manifest</code> + <code>GOOGLE_MAPS_API_KEY</code></td>
+</tr>
+<tr>
+<td>Image gen</td>
+<td><code>image-generation-mcp</code></td>
+<td><code>IMAGE_API_KEY</code> or the agent&#39;s <code>LLM_API_KEY</code>; grant prefix <code>image</code></td>
+</tr>
+<tr>
+<td>Chat face / mood</td>
+<td><code>pendant-mcp</code></td>
+<td>Face, wallpaper, mood → the room theme. Prefix <code>pendant</code> (wire name)</td>
+</tr>
+<tr>
+<td>OAuth hop</td>
+<td><code>go-strava-mcp</code></td>
+<td><code>auth_args</code> + PKCE paste (<code>url</code> / <code>exchange</code>)</td>
+</tr>
+</tbody></table>
+<p>Keep:</p>
+<ul>
+<li><code>CGO_ENABLED=0</code> static binary, stdio MCP only</li>
+<li>Root <code>package main</code> so <code>go run . host-manifest</code> works</li>
+<li>Tool names <code>{service}_{verb}_{object}</code> with <strong>no</strong> server id in the
+tool name</li>
+<li>A <code>go.mod</code> at the plugin root. <code>harness.yml</code> runs its tests and rolls
+its coverage into the <strong>harness coverage</strong> badge; an untested plugin
+lowers the number for everyone.</li>
+</ul>
+<p>Do not reuse <code>maps</code>, <code>math</code>, <code>image</code>, or <code>pendant</code>.</p>
+<h3 id="host-manifest-required"><code>host-manifest</code> (required)</h3>
+<p>The binary must exit 0 and print one JSON object on stdout:</p>
+<pre><code class="language-bash">CGO_ENABLED=0 go run . host-manifest</code></pre>
+<pre><code class="language-json">{
+  &quot;name&quot;: &quot;rentals&quot;,
+  &quot;command&quot;: &quot;rentals-search-mcp&quot;,
+  &quot;env_keys&quot;: [&quot;RENTCAST_API_KEY&quot;],
+  &quot;blurb&quot;: &quot;US listings. One RentCast key.&quot;
+}</code></pre>
+<p>Optional fields: <code>args</code>, <code>auth_args</code>, <code>auth_flow</code> (<code>pkce</code> | <code>device</code> |
+<code>mfa</code>), <code>home_only</code>. First arg <code>host-manifest</code> must not start the stdio
+server.</p>
+<p>If the tool needs a browser hop, implement the auth argv the harness
+already speaks and set <code>auth_args</code> (e.g. <code>[&quot;auth&quot;]</code>). Static keys stay
+in the agent&#39;s <code>config.env</code> — never <code>/auth rentals &lt;apikey&gt;</code> in chat.</p>
+<hr>
+<h2 id="b-bake-it-in">B. Bake it in</h2>
+<p>Add a row to <code>harness/mcp.lock</code>:</p>
+<pre><code class="language-toml">[[server]]
+name = &quot;rentals&quot;
+command = &quot;rentals-search-mcp&quot;
+path = &quot;mcp/rentals&quot;            # in-repo plugin: built from source in the image
+# or, for a server that lives elsewhere:
+# repo = &quot;github.com/you/rentals-search-mcp&quot;
+# tag  = &quot;v0.3.1&quot;</code></pre>
+<p><code>harness/Dockerfile</code> builds (or fetches) every row into <code>/opt/mcp</code> at
+<strong>image build</strong>, puts it on <code>PATH</code>, and runs <code>host-manifest</code> for each so
+the shapes ship with the image. Distroless stays distroless. Push to
+<code>main</code>; <code>harness-image.yml</code> publishes the new tag.</p>
+<p>Then on <code>/agents/&lt;slug&gt;</code>:</p>
+<ol>
+<li><strong>pull + recreate</strong> to the new image tag.</li>
+<li>Tools grid now shows <strong>rentals</strong>. Toggle it — settings writes the
+<code>[[server]]</code> into <code>config.mcp</code> and the needed keys appear in the
+Secrets fold (from <code>env_keys</code>).</li>
+<li>Put the key in. Env change <strong>recreates</strong>. The agent&#39;s <code>status</code> frame
+on reconnect lists <code>rentals</code> as published, or says why not
+(<code>no_key</code> / <code>no_oauth</code>).</li>
+</ol>
+<p>No GitHub rate limits at agent start, no <code>/data/bin</code>, no prune step:
+the image is the install.</p>
+<hr>
+<h2 id="c-one-agent-only-no-catalog-row">C. One agent only, no catalog row</h2>
+<p>You can hand-write a <code>[[server]]</code> in one agent&#39;s <code>config.mcp</code> for a
+binary already in the image. It will not appear as a checkbox for
+other agents until it has a <code>mcp.lock</code> row — but a <code>mcp.lock</code> row is
+the only way into the image, so in practice every server is in the
+catalog. The distinction that remains is <code>home_only</code>: servers that
+need mDNS or the LAN (<code>life-cast</code>) are hidden on Cloudflare and shown
+under celld.</p>
+</article>
+  </main>
+  <footer class="foot">
+    <div class="wrap">
+      <span>MIT</span>
+      <span>
+        <a href="../privacy/">privacy</a>
+        · <a href="../oauth-catch/">oauth code</a>
+        · <a href="https://github.com/shotah/gantree2-apps">apps</a>
+      </span>
+      <span><a href="https://github.com/shotah/gantree2">github.com/shotah/gantree2</a></span>
+    </div>
+  </footer>
+  
+</body>
+</html>
