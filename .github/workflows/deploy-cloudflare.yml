@@ -92,6 +92,21 @@ jobs:
       # or it ships the literal "TODO" id.
       - run: npm run build
 
+      # `wrangler deploy` hides the body of a Containers refusal behind
+      # "A request to … /containers/me failed". Ask first, so the real
+      # reason (token scope vs. Workers Paid plan) is the first line of the
+      # failure instead of the last thing after a full image build.
+      - name: Containers available?
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx wrangler containers list >/dev/null 2>/tmp/containers.err || {
+            echo "::error::Containers refused for this account/token. Needs Workers Paid and a token with Containers Edit (docs/install.md → Containers)."
+            cat /tmp/containers.err
+            exit 1
+          }
+
       - name: wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

@@ -146,7 +146,7 @@ if a workflow grows a new `vars.X` or `secrets.X`, it is added here.
 
 | Kind | Name | Used by | Value | Required |
 | --- | --- | --- | --- | --- |
-| Secret | `CLOUDFLARE_API_TOKEN` | `deploy-cloudflare` | API token with Workers Scripts Edit · Workers KV Storage Edit · Workers R2 Storage Edit · Account Settings Read | yes |
+| Secret | `CLOUDFLARE_API_TOKEN` | `deploy-cloudflare` | Custom API token, account permissions: Workers Scripts Edit · Workers KV Storage Edit · Workers R2 Storage Edit · **Containers Edit** · Account Settings Read. The "Edit Cloudflare Workers" template lacks Containers; without it `wrangler deploy` ends in `A request to … /containers/me failed` after the image has built | yes |
 | Secret | `CLOUDFLARE_ACCOUNT_ID` | `deploy-cloudflare` | dashboard sidebar | yes |
 | Variable | `GOOGLE_CLIENT_ID` | `deploy-cloudflare` | the sign-in client, from GCP | yes |
 | Secret | `GOOGLE_CLIENT_SECRET` | `deploy-cloudflare` | same client | yes |
@@ -214,7 +214,13 @@ see [below](#containers).
 ## Containers
 
 One harness container per agent. The Cloudflare account needs Containers
-enabled (Workers Paid). `wrangler deploy` builds `harness/Dockerfile`
+enabled (Workers Paid) and the API token needs **Containers Edit**. Both
+failures look the same from `wrangler deploy` — "A request to
+`/accounts/…/containers/me` failed" with no body. `npx wrangler containers
+list` with the same token prints the real reason (for a Free account:
+"Deploying containers requires the Workers Paid plan"); the deploy
+workflow runs that probe before building the image.
+`wrangler deploy` builds `harness/Dockerfile`
 (context is the `harness/` directory, which is where that file's
 `COPY` expects to run) and ships the image with the Worker.
 `wrangler.jsonc` names the application `gantree2-harness`, class
