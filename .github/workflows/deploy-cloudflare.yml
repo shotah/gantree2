@@ -53,34 +53,39 @@ jobs:
       # wrangler.jsonc ships with the KV id as "TODO" so a fork has nothing to
       # scrub. Create the namespace and bucket once (idempotent) and patch
       # the real id in for this run only; the file in git stays generic.
+      # Every account-level name is `gantree2-*`: the same account runs the
+      # originals (Worker `gantree`, pendant's KV `DIRECTORY`), and a bare
+      # name collides with them or, worse, shares their data.
       - name: Provision KV + R2
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -eu
-          # `wrangler kv namespace list` prints a banner, then a JSON array;
-          # the namespace a Worker named `gantree` creates for binding
-          # DIRECTORY is titled `gantree-DIRECTORY`.
+          KV_TITLE="gantree2-directory"
+          # `wrangler kv namespace list` prints a banner, then a JSON array.
+          # Match the title as given or prefixed with the Worker name, since
+          # wrangler versions differ on whether `create` adds the prefix.
           kv_id() {
             npx wrangler kv namespace list | node -e '
+              const want = process.argv[1];
               const text = require("fs").readFileSync(0, "utf8");
               const rows = JSON.parse(text.slice(text.indexOf("[")));
-              const hit = rows.find((r) => r.title === "gantree-DIRECTORY");
+              const hit = rows.find((r) => r.title === want || r.title === `gantree2-${want}`);
               process.stdout.write(hit ? hit.id : "");
-            '
+            ' "$KV_TITLE"
           }
           id=$(kv_id)
           if [ -z "$id" ]; then
-            npx wrangler kv namespace create DIRECTORY >/dev/null
+            npx wrangler kv namespace create "$KV_TITLE" >/dev/null
             id=$(kv_id)
-            echo "created KV namespace gantree-DIRECTORY"
+            echo "created KV namespace $KV_TITLE"
           fi
-          [ -n "$id" ] || { echo "no KV namespace id" >&2; exit 1; }
+          [ -n "$id" ] || { echo "no KV namespace id for $KV_TITLE" >&2; exit 1; }
           sed -i "s/\"binding\": \"DIRECTORY\", \"id\": \"TODO\"/\"binding\": \"DIRECTORY\", \"id\": \"$id\"/" wrangler.jsonc
           grep -q "\"id\": \"$id\"" wrangler.jsonc || { echo "KV id not patched" >&2; exit 1; }
-          npx wrangler r2 bucket list | grep -qw "gantree-store" \
-            || npx wrangler r2 bucket create gantree-store
+          npx wrangler r2 bucket list | grep -qw "gantree2-store" \
+            || npx wrangler r2 bucket create gantree2-store
 
       - name: wrangler deploy
         env:

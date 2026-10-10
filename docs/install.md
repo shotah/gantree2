@@ -190,8 +190,8 @@ tools' provider consoles ([auth.md](auth.md)).
 
 CI does it, with the GitHub settings [above](#github-settings--the-whole-list).
 Push to `main`. `ci.yml` runs tests, lint, typecheck, build.
-`deploy-cloudflare.yml` then creates the `DIRECTORY` KV namespace and
-the `gantree-store` R2 bucket if they are missing (the `TODO` id in
+`deploy-cloudflare.yml` then creates the `gantree2-directory` KV namespace and
+the `gantree2-store` R2 bucket if they are missing (the `TODO` id in
 `wrangler.jsonc` is patched for that run only), runs
 `wrangler deploy --var …` and `wrangler secret bulk`. It fails fast if
 any of the four auth values is empty. Add the Worker origin to the
@@ -200,8 +200,8 @@ Google client's redirect list.
 By hand from a laptop (same token in your shell), once:
 
 ```bash
-npx wrangler kv namespace create DIRECTORY   # paste the id over "TODO" in wrangler.jsonc
-npx wrangler r2 bucket create gantree-store
+npx wrangler kv namespace create gantree2-directory   # paste the id over "TODO" in wrangler.jsonc
+npx wrangler r2 bucket create gantree2-store
 npm run deploy
 npx wrangler secret bulk < secrets.json   # {"GOOGLE_CLIENT_SECRET":"…","SESSION_SECRET":"…"}
 ```
@@ -217,7 +217,7 @@ One harness container per agent. The Cloudflare account needs Containers
 enabled (Workers Paid). `wrangler deploy` builds `harness/Dockerfile`
 (context is the `harness/` directory, which is where that file's
 `COPY` expects to run) and ships the image with the Worker.
-`wrangler.jsonc` names the application `gantree-harness`, class
+`wrangler.jsonc` names the application `gantree2-harness`, class
 `Harness`, five instances, plus a `v2` migration for the `Harness`
 Durable Object.
 

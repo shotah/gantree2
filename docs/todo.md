@@ -121,10 +121,14 @@ product.
       Squeezy / Paddle / Polar.sh) so sales tax and VAT are theirs.
       Needed before the first paid sign-up, not before.
 - [ ] **owner · medium** Paper: Terms of Service and a hosted privacy
-      policy (the Pages one covers the OAuth catch page only). Say
-      plainly what the Agent DO holds (the LLM key they paste; the key
-      that decrypts their token snapshot) and that tool OAuth clients
-      are theirs.
+      policy (the Pages one covers the OAuth catch page only). The
+      inventory they describe is written and exact:
+      [security.md → What the service holds](security.md#what-the-service-holds--the-inventory)
+      — credentials (every pasted key in plaintext in the Agent DO, the
+      OAuth refresh tokens encrypted in R2 with a key the DO holds),
+      chat (full history in the SQLite snapshot; a 1-hour / 50-message
+      queue on the DO), and who-may-talk-to-whom. The paper wraps that
+      list; it does not need to invent anything.
 - [ ] **hard** Tenancy. Today one Settings DO is `idFromName(
       "settings")` and Agent / Harness DOs are `idFromName(slug)` —
       one household per deploy. Hosted needs a household id: Settings

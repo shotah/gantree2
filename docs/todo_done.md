@@ -130,11 +130,21 @@ Nothing here is a plan; the plan is [proposal.md](proposal.md).
 - [x] `wrangler.jsonc`: `SETTINGS` + `AGENT` DOs, one `v1` migration;
       KV `DIRECTORY`; R2 `STORE`.
 - [x] KV id and bucket before first deploy (2026-10-10):
-      `deploy-cloudflare.yml` now provisions them itself — lists KV
-      namespaces, creates `gantree-DIRECTORY` if missing, patches the
+      `deploy-cloudflare.yml` provisions them itself — lists KV
+      namespaces, creates `gantree2-directory` if missing, patches the
       real id over the `TODO` placeholder for that run only, and
-      creates the `gantree-store` bucket if missing. The file in git
+      creates the `gantree2-store` bucket if missing. The file in git
       stays generic so a fork has nothing to scrub.
+- [x] **Unique Cloudflare names (2026-10-10).** The first deploy died
+      on `A KV namespace with the title "DIRECTORY" already exists` —
+      pendant's. The same account runs the originals, so every
+      account-level name is now `gantree2-*`: Worker `gantree2` (v1 is
+      `gantree`; §9 hands the name over at cutover, and nothing from
+      this repo had deployed yet so no Durable Objects were orphaned),
+      KV `gantree2-directory`, R2 `gantree2-store`, container app
+      `gantree2-harness`. Bindings (`DIRECTORY`, `STORE`, `HARNESS`)
+      and the GHCR image name are unchanged — those are not shared
+      with anything.
 - [x] `/users` (admin): list (env rows locked), add, role, agents,
       remove, audit fold. Every write → audit.
 - [x] `/api/users` → Settings DO. Tests in `test/door/`, `test/edge/`,
@@ -427,8 +437,8 @@ shipping-yard art is gone, not restyled.
       site at a domain root, so no `/gantree2/` path any more;
       `pages.yml` always writes the CNAME (`PAGES_CUSTOM_DOMAIN`
       overrides for a fork). DNS `CNAME github.bldhosting.com →
-      shotah.github.io` is in place. The Worker name stays `gantree`
-      (renaming the script would orphan the Durable Objects).
+      shotah.github.io` is in place. The Worker is `gantree2` until the
+      §9 cutover (see "Unique Cloudflare names" in §2).
 - [x] Screenshots — `scripts/seed.ts` and `scripts/shot.mjs`
       (`npm run seed`, `npm run shot`). Headless Chrome over CDP.
       `CHROME_BIN` overrides the flatpak path. Seed signs in as

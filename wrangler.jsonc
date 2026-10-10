@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "gantree",
+  "name": "gantree2",
   "compatibility_date": "2026-10-10",
   "compatibility_flags": ["nodejs_compat"],
   "main": "./worker/index.ts",
@@ -20,7 +20,7 @@
       "class_name": "Harness",
       "image": "./harness/Dockerfile",
       "max_instances": 5,
-      "name": "gantree-harness"
+      "name": "gantree2-harness"
     }
   ],
   "durable_objects": {
@@ -38,7 +38,7 @@
     { "binding": "DIRECTORY", "id": "TODO" }
   ],
   "r2_buckets": [
-    { "binding": "STORE", "bucket_name": "gantree-store" }
+    { "binding": "STORE", "bucket_name": "gantree2-store" }
   ],
   // Optional var. Origin the harness dials, no path.
   // Unset locally: start falls back to the request origin.
