@@ -19,7 +19,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "badge": "node scripts/badge.mjs vitest coverage/coverage-summary.json badges/coverage.svg",
-    "coverage:harness": "scripts/coverage-harness.sh harness coverage"
+    "coverage:harness": "scripts/coverage-harness.sh harness coverage",
+    "eval": "make -C harness integration-test"
   },
   "dependencies": {
     "@vinext/cloudflare": "^1.1.0",

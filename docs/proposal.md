@@ -21,6 +21,7 @@ disagree, this one is right ([corrections](#corrections-to-the-gantry2-doc)).
 The docs beside this one are the standalone set: [architecture.md](architecture.md)
 (pictures, invariants), [access.md](access.md) (one person across
 settings, chat, agent), [install.md](install.md), [custom-mcp.md](custom-mcp.md),
+[mcp-naming.md](mcp-naming.md), [eval_setup.md](eval_setup.md),
 [todo.md](todo.md). They were carried over from the originals and
 rewritten for this product. **Two things change on purpose** and are
 called out below: the settings door is Google, not a passphrase; and
@@ -492,8 +493,9 @@ pin a version of it.
 | `harness.yml` | push/PR touching `harness/**` | `go vet` + `go test -cover` in `harness/` **and every** `harness/mcp/*/go.mod`; `scripts/coverage-harness.sh` merges the profiles into one number; fails under `HARNESS_COVERAGE_MIN`; on `main`: `badges/harness-coverage.svg` → `gh-pages`. Skips cleanly until Phase 2 lands `harness/go.mod` |
 | `deploy-cloudflare.yml` | after `ci` on `main`, or by hand | `vite build`; `wrangler deploy --var GOOGLE_CLIENT_ID:… --var GANTREE_ADMINS:… --var GANTREE_ALLOW:…`; `wrangler secret bulk` from `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`; fails fast if any of the four is empty |
 | `harness-image.yml` | push to `harness/**` or `mcp.lock`, tag | Multi-stage image (gantry + `/opt/mcp`) → GHCR **and** the Cloudflare container registry; run `host-manifest` for every baked server; upload shapes |
+| `eval.yml` | by hand, and called by `release.yml` | live-model behavior eval of the persona seed against the fixtures in `harness/internal/agent/testdata/eval/` ([eval_setup.md](eval_setup.md)); skips green without `LLM_API_KEY` or before `harness/go.mod` |
 | `pages.yml` | push to `main` | docs site into `gh-pages` beside the badges |
-| `release.yml` | tag `v*` | version bump, GitHub release |
+| `release.yml` | tag `v*` | `needs: eval`; version bump, GitHub release, tagged harness image |
 
 Home deploy is **not** an Action. `npm run deploy:home` runs
 `celld deploy` on the Mini from the same manifest with

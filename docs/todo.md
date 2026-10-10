@@ -51,6 +51,37 @@ Still true on this stack. Each becomes a fold or a check on
 - [ ] **Chat pitch:** one multi-step turn with tool trace captured
       from a real agent on this stack, not a mock.
 
+## Now — carry from ai-gantry
+
+ai-gantry was the seed; most of its docs describe the harness that
+moves into `harness/` unchanged. Each one gets copied into `docs/`,
+re-pathed (`harness/…`), and re-worded (agent, settings, chat) when
+`harness/` lands. Already carried: [eval_setup.md](eval_setup.md),
+[mcp-naming.md](mcp-naming.md), [custom-mcp.md](custom-mcp.md).
+
+- [ ] `mcp.md` — host mechanics: `mcp_enable`, prefixes, tiers, repair
+- [ ] `auth.md` — the OAuth hop argv plugins implement (`auth_args`,
+      PKCE paste, device, mfa); tokens land in `config.env`, not the image
+- [ ] `persona.md`, `persona_doc_goals.md`, `evaluation_fable.md` —
+      the behavior contract behind the eval; one seed, no lockstep
+- [ ] `reactions.md` — `[react …]`, kernel triage, the eval gates
+- [ ] `cron.md`, `planner-siblings.md` — the planner tick is a Cron
+      Trigger → Agent DO alarm, not an in-container timer
+- [ ] `channels.md` — chat is the default; Telegram / Discord / Slack
+      stay as `CHANNEL=` values the harness still speaks
+- [ ] `gantree-contract.md` → `contract.md` — frames (`cmds`, `allow`,
+      `status`, `config`, `perf`, `log`, `snapshot`), env the DO injects
+- [ ] `design.md`, `features.md`, `architecture.md` → fold what still
+      holds into [architecture.md](architecture.md) §9–10; drop the
+      Docker-host parts
+- [ ] `troubleshooting.md` — re-keyed to DO state, R2 snapshots, celld
+      and Workers logs instead of `docker logs`
+- [ ] `deploy-docker.md`, `deploy-native.md`, `dockerhub.md` — **not
+      carried**; [install.md](install.md) replaces them
+- [ ] `.env.example` → `harness/.env.example` (the eval's three `LLM_*`)
+- [ ] Eval fixtures and `mcp.toml` → `harness/internal/agent/testdata/eval/`;
+      `tools_from` builds the sibling plugin instead of fetching a release
+
 ---
 
 ## Next — Phase 2 and 3 extras

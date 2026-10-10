@@ -1,0 +1,58 @@
+name: eval
+
+# Behavioral eval against a live model (docs/eval_setup.md). Paid, so not
+# on every push: release.yml calls it as a gate on tag push, and it can be
+# run by hand. Needs the LLM_API_KEY repository secret plus LLM_BASE_URL
+# and LLM_MODEL repository variables; without them the test skips and the
+# job is green, so a fork without a key still releases. Skips with a
+# notice until harness/go.mod exists (Phase 2).
+
+on:
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: "Runs per fixture (every run must pass)"
+        default: "3"
+      only:
+        description: "Run only this fixture name (blank = all)"
+        default: ""
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    name: Live model eval
+    runs-on: ubuntu-latest
+    # ~15s a turn; 7 fixtures x 3 runs is ~5min, x 10 is ~20min.
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Harness present?
+        id: present
+        run: |
+          if [ -f harness/go.mod ]; then echo "yes=true" >> "$GITHUB_OUTPUT"; else echo "yes=false" >> "$GITHUB_OUTPUT"; echo "::notice::no harness/go.mod yet; eval skipped"; fi
+
+      - uses: actions/setup-go@v5
+        if: steps.present.outputs.yes == 'true'
+        with:
+          go-version-file: harness/go.mod
+          cache-dependency-path: harness/go.sum
+
+      - name: Eval fixtures against the model
+        if: steps.present.outputs.yes == 'true'
+        env:
+          LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          EVAL_N: ${{ inputs.runs || '3' }}
+          EVAL_ONLY: ${{ inputs.only || '' }}
+        run: |
+          if [ -z "$LLM_API_KEY" ]; then
+            echo "::notice::LLM_API_KEY not set; live eval skipped"
+          fi
+          make -C harness integration-test EVAL_ARGS="-eval.n=${EVAL_N} -eval.only=${EVAL_ONLY}"

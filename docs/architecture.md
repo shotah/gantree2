@@ -84,6 +84,31 @@ flowchart LR
   M -- "celld deploy<br/>(npm run deploy:home)" --> HOME["celld on the Mini<br/>same bindings<br/>Docker/Podman for containers<br/>S3 bucket for state"]
 ```
 
+Where Docker went. The originals *operated* Docker: compose files,
+`docker.sock`, bind mounts, `docker logs`. None of that exists here on
+either target. On Cloudflare the Worker runs on Cloudflare's platform
+and the harness on **Cloudflare Containers**. At home **celld** runs
+that same platform, and for its container binding it drives Docker or
+Podman underneath — an engine you install once and never address. One
+OCI image, two supervisors; Docker survives only as celld's engine.
+
+| | Cloudflare | Home |
+| --- | --- | --- |
+| Worker, DOs, KV, R2, Cron | Cloudflare | celld (SQLite + your S3 bucket) |
+| Harness container supervisor | Cloudflare Containers | celld container binding |
+| Container engine | Cloudflare's | Docker or Podman, under celld |
+| What you type | `wrangler deploy` | `celld deploy` |
+
+Why the languages stay where they are: the harness is Go because the
+turn loop — parallel tool calls in one batch, the Completer round
+discipline, RSS under small models — is the thing already proven, and
+both supervisors run a static Go binary in a distroless image as well
+as anything can be run. Rust would buy no user-visible speed (the token
+path is the model) and would cost the sixteen Go plugins their shared
+SDK. The Worker is TypeScript because Workers execute JS/Wasm, Vinext
+and Durable Object classes are JS, and the backend is thin on purpose:
+gate, DO storage, socket fan-out. There is no hot loop in it to move.
+
 ## 2. Request path — the door
 
 Every non-public request passes `lib/door/gate.ts`. It is pure:

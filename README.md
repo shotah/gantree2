@@ -39,7 +39,11 @@ its own badge. Tests live under `test/`, mirroring the module they cover.
 npm run test:coverage     # Worker, with the threshold gate
 npm run coverage:harness  # harness + plugins, merged (once harness/ exists)
 npm run badge             # badges/coverage.svg from the last run
+npm run eval              # live-model behavior eval; the release gate (docs/eval_setup.md)
 ```
+
+Plugins live and die by [docs/mcp-naming.md](docs/mcp-naming.md): a
+renamed tool fails the eval before any model call.
 
 ## Run it
 
