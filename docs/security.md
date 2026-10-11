@@ -82,7 +82,7 @@ Three named roles, one field. Not a permission matrix.
 | Choice | Why | Risk accepted |
 | --- | --- | --- |
 | One DO per agent slug; the room list (`sub` / email) decides who may join | Isolation is the object boundary, not a `WHERE` clause | A slug typo creates an empty room, not a shared one |
-| Phones authenticate with the **session cookie**; the harness with a **bearer** the DO minted | Two credentials, two audiences; a phone cannot impersonate the agent | Bearer lives in the container env for the life of the box |
+| Phones authenticate with the **session JWE** (the PWA's cookie; the native apps carry the same token on `Authorization`, minted by `POST /api/auth/token` — [access.md](access.md#phones-native-sign-in)); the harness with a **bearer** the DO minted | Two credentials, two audiences; a phone cannot impersonate the agent | Bearer lives in the container env for the life of the box |
 | Bearer rotates on `recreate`; the old one dies with the box | No long-lived agent credential | — |
 | Payload caps, per-socket rate limit, slug validation (`lib/chat/caps.ts`, `rate.ts`, `slug.ts`) | A member cannot fill storage or flood the harness | Slow phone drops oldest and says so |
 | Backlog bounded; photos and boards in R2 under the slug prefix | Storage is per agent | R2 keys are not encrypted at rest beyond Cloudflare's own |

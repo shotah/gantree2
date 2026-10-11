@@ -123,22 +123,29 @@ decision into a `Response`; `middleware.ts` is one line.
 
 ```mermaid
 flowchart TD
-  R([request]) --> PUB{public path?<br/>/login /api/auth/google<br/>/api/auth/callback/google<br/>assets · manifest · sw.js<br/>/_vinext /.well-known}
+  R([request]) --> PUB{public path?<br/>/login /api/auth/google<br/>/api/auth/callback/google<br/>/api/auth/config · nonce · token<br/>assets · manifest · sw.js<br/>/_vinext /.well-known}
   PUB -- yes --> PASS([pass through])
   PUB -- no --> ADM{GANTREE_ADMINS<br/>parses to ≥1 entry?}
   ADM -- no --> E503([503 no admins])
   ADM -- yes --> DEV{GANTREE_DEV_USER set<br/>and host is loopback?}
   DEV -- yes --> ID[identity = dev user]
   DEV -- no --> CK{gantree_session<br/>cookie opens?}
-  CK -- no --> API{"/api/* or /ws/*?"}
+  CK -- yes --> ID
+  CK -- no --> BR{Bearer session JWE<br/>opens?}
+  BR -- yes --> ID
+  BR -- no --> API{"/api/* or /ws/*?"}
   API -- yes --> E401a([401 JSON])
   API -- no --> LOGIN([302 /login?next=path])
-  CK -- yes --> ID
   ID --> RES["resolveUser(env floor ∪ Settings DO rows)<br/>highest role wins · operator agents unioned"]
-  RES -- not on any list --> E401b([401 — a stale cookie is not a key])
+  RES -- not on any list --> E401b([401 — a stale session is not a key])
   RES -- admin / operator / member --> HDR["x-gantree-sub · email · role · agents"]
   HDR --> PASS
 ```
+
+A cookie that opens wins; otherwise `Authorization: Bearer` is the
+same session JWE. A bearer on `/api/chat/{avatar,backdrop,theme}` is
+the harness room token (`isAgentRoomRequest`) and is let through
+before either of those reads.
 
 Role, every request, never from the cookie:
 
@@ -190,9 +197,40 @@ a stranger ever sees is their own.
 
 ## 4. Chat — phone to harness through the Agent DO
 
-The Agent DO is the room. A phone joins with a cookie plus that agent's
-own list; the harness joins with a bearer. Neither side knows the
-other's address.
+The Agent DO is the room. A phone joins with the session — the cookie,
+or the same JWE on `Authorization` — plus that agent's own list; the
+harness joins with the room bearer. Neither side knows the other's
+address.
+
+Native sign-in ([access.md](access.md#phones-native-sign-in)):
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor P as Phone<br/>gantree-android / gantree-ios
+  participant W as Worker<br/>lib/door/native.ts
+  participant G as Google
+  participant A as Agent DO
+
+  P->>W: GET /api/auth/config
+  W-->>P: {mode, google, voice, version, dev}
+  P->>W: GET /api/auth/nonce
+  Note over W: compact JWE, audience nonce<br/>10 min, stateless
+  W-->>P: {nonce}
+  P->>G: native sign-in (nonce)
+  G-->>P: id_token
+  P->>W: POST /api/auth/token {id_token, nonce}
+  alt on a list
+    W-->>P: 200 {token, sub, email, exp}
+    P->>W: GET /api/auth/me<br/>Authorization: Bearer token
+    W-->>P: {sub, email, role, agents, cranes}
+    P->>A: wss /ws/kit?role=phone<br/>Authorization: Bearer token
+  else not on any list
+    W-->>P: 403 {error: not_allowed, sub, email}<br/>no session
+  end
+```
+
+The PWA sends the cookie:
 
 ```mermaid
 sequenceDiagram

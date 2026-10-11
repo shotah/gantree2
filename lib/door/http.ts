@@ -125,8 +125,8 @@ export function logout(req: Request): Response {
  * GET /api/auth/me → the principal, or 401 / 503 from the gate.
  *
  * `agents` is the union of the Settings grants and whatever `rooms` admits
- * (chat room membership). `cranes` is the alias copy cab and helm still read,
- * dropped at the Phase 4 cutover.
+ * (chat room membership). `cranes` is an alias copy: gantree-android and
+ * gantree-ios read `agents` and fall back to it; dropped at the Phase 4 cutover.
  */
 export async function me(
   req: Request,

@@ -5,10 +5,11 @@ The plan is [proposal.md](proposal.md); the pictures are
 [todo_done.md](todo_done.md) (same section numbers, so "§5" means the
 same thing in both). This is what is left, in the order to do it.
 
-**State today (2026-10-10):** every screen, the door, the chat PWA,
+**State today (2026-10-11):** every screen, the door, the chat PWA,
 the agent registry, the harness with twelve plugins, the mark, the
 docs site on `github.bldhosting.com`, release tooling. Kit answers
-through `npm run agent` and files tasks and goals from chat. Vitest,
+through `npm run agent` and files tasks and goals from chat. Phones
+can sign in without a browser (`/api/auth/{config,nonce,token}`). Vitest,
 type-aware ESLint, `tsc`, and the Go gate are green; CI is green so
 `deploy-cloudflare` runs on the next push. **Not yet done:** a real
 Google sign-in on the laptop, the first Cloudflare deploy, and a
@@ -101,7 +102,9 @@ pricing, in the Hosted section.
 
 - [ ] Backup of a compose Kit → R2 → gantree2 Kit remembers.
 - [ ] Two agents, one per stack, same users, one week.
-- [ ] Cab and helm on the new origin, no app change.
+- [ ] gantree-android and gantree-ios on the new origin (native sign-in
+      routes landed 2026-10-11; apps updated for `agents` + 403
+      `not_allowed`). Walk both phones.
 - [ ] Flip the wire aliases from §0 (`cranes`, `CHANNEL=pendant`,
       `PENDANT_*`). Drop `cranes`.
 - [ ] Originals: README pointer, archive. gantree2 takes the `gantree`

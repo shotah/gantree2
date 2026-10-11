@@ -67,8 +67,9 @@ check at request time.**
 
 ## Shared contract
 
-Every piece of this repo — and cab, helm, and any agent still on the
-original stack — codes to this section. Change it here first.
+Every piece of this repo — and gantree-android, gantree-ios, and any
+agent still on the original stack — codes to this section. Change it
+here first.
 
 ### Allowlist entry grammar
 
@@ -137,14 +138,18 @@ Authorization Code + PKCE (`S256`), scopes `openid email profile`,
 | --- | --- | --- |
 | public path | through | through |
 | no admins configured | `503` | `503` |
-| no / bad / expired cookie | `302 /login?next=<path>` | `401 {"error":"unauthorized"}` |
-| cookie, not on any list | `401` | `401` |
+| no / bad / expired cookie, and no bearer that opens | `302 /login?next=<path>` | `401 {"error":"unauthorized"}` |
+| cookie or bearer, not on any list | `401` | `401` |
 | on a list | through, `x-gantree-sub/email/role/agents` set | same |
 
 Public: `/login`, `/api/auth/google`, `/api/auth/callback/google`,
+`/api/auth/config`, `/api/auth/nonce`, `/api/auth/token`,
 `/manifest.webmanifest`, `/sw.js`, `/icon.svg`, `/favicon.ico`,
 `/robots.txt`, `/_vinext/*`, `/_next/*`, `/assets/*`, `/.well-known/*`.
-Code: `lib/door/gate.ts`, `lib/door/http.ts`, `middleware.ts`.
+Code: `lib/door/gate.ts`, `lib/door/http.ts`, `middleware.ts`. A cookie
+that opens wins; otherwise the same JWE on `Authorization: Bearer`.
+A bearer on `/api/chat/{avatar,backdrop,theme}` is the harness room
+token (`isAgentRoomRequest`) and is public before that read.
 
 ### `/api/auth/me`
 
@@ -156,16 +161,65 @@ Code: `lib/door/gate.ts`, `lib/door/http.ts`, `middleware.ts`.
 `agents` for a member is the slugs whose room list has them (KV
 directory `sub:<sub>` / `email:<email>` → slugs, written by each Agent
 DO when it stores an `allow` frame). For an operator it is their
-assignment. For an admin it is every slug. Cab and helm read this
-today as `cranes`; the alias stays until Phase 4. The only identity a
-stranger sees is their own.
+assignment. For an admin it is every slug. gantree-android and
+gantree-ios read `agents` and fall back to `cranes`; the alias is
+still written until the cutover. The only identity a stranger sees
+is their own.
+
+### Phones (native sign-in)
+
+gantree-android (`com.gantree.cab`) and gantree-ios (`com.gantree.helm`)
+call config → nonce → Google with that nonce → token → `/api/auth/me`
+→ `/ws/<slug>?role=phone` with the bearer. On 403 they store nothing
+and show the sub; on socket close 4401 they drop the JWE, and on 4403
+they keep it. These three routes are public and do not read or set a
+cookie. Code: `lib/door/native.ts`.
+
+| Route | Status | Body |
+| --- | --- | --- |
+| `GET /api/auth/config` | 200 | `{ mode, google, voice, version, dev }` |
+| `GET /api/auth/nonce` | 200 | `{ nonce }` |
+| `GET /api/auth/nonce` | 503 | `{"error":"not_configured"}` |
+| `POST /api/auth/token` | 400 | `{"error":"bad_request"}` |
+| `POST /api/auth/token` | 503 | `{"error":"not_configured"}` |
+| `POST /api/auth/token` | 401 | `{"error":"nonce"}` |
+| `POST /api/auth/token` | 401 | `{"error":"token"}` |
+| `POST /api/auth/token` | 403 | `{"error":"not_allowed", sub, email}` |
+| `POST /api/auth/token` | 200 | `{ token, sub, email, exp }` |
+
+`mode` is `"google"` when `GOOGLE_CLIENT_ID` and `SESSION_SECRET` are
+both set, otherwise `"spike"`. `voice` is true only when
+`GOOGLE_TTS_API_KEY` is set and `VOICE` is not `off`. `version` is
+`package.json` via `app/lib/release.ts`. `dev` is loopback.
+
+The nonce is server-issued and stateless: a compact JWE sealed with
+the session key, audience `nonce`, 10-minute TTL, no KV or DO row, and
+a replay inside that TTL is accepted. Nonce `503` means
+`SESSION_SECRET` is missing.
+
+The token is the `gantree_session` JWE (7-day TTL) on
+`Authorization: Bearer`, and `exp` is epoch seconds. `401` `nonce`
+means the posted nonce is not ours or is expired. `401` `token` means
+the ID token failed signature, issuer, `aud`, `exp`, or its nonce
+claim ≠ the posted nonce. `aud` must be `GOOGLE_CLIENT_ID`, the web
+client id the apps pass as `serverClientId` / `GIDServerClientID`.
+Token `503` means `GOOGLE_CLIENT_ID` or `SESSION_SECRET` is missing.
+
+A stranger gets 403 `not_allowed` with only their own `sub` and
+`email`, and no session.
+
+The gate takes the bearer wherever it takes the cookie. A cookie that
+opens wins; a cookie that does not falls through to the bearer.
+`isAgentRoomRequest` still runs first: a bearer on
+`/api/chat/{avatar,backdrop,theme}` is the harness room token, not a
+session.
 
 ### Room admission (`/ws/<slug>`)
 
 | Check | Where | On miss |
 | --- | --- | --- |
 | harness: bearer bound to this slug | handshake | `unauthorized` |
-| phone: `gantree_session` opens, person is on the app list | handshake, every frame | `4401` |
+| phone: session opens (cookie, else the same JWE on `Authorization`) and the person is on the app list | handshake, every frame | `4401` |
 | phone: `sub` ∈ room list **or** (`email_verified` ∧ `email` ∈ room list) | handshake, every frame | `4403` |
 
 Room list = last `allow` frame stored on that slug's Agent DO. New
@@ -294,6 +348,7 @@ list as the agent's own policy.
 | Email as alias | Someone else's Google account with that email? | Google verifies `email` on its own accounts. Exact, lowercased, `email_verified` required. Workspace `hd` is a later knob. |
 | Room list remembered while the agent is down | Yank waits for a recreate | Removing the person from `/users` is instant for everything else. Bearer rotation is the instant room kill. |
 | One IdP | Google outage blocks new logins | Sessions are 7 days; the originals' passphrase door is the escape hatch until Phase 4, after which an admin's live session is. |
+| Stateless nonce | Replay of a (nonce, id_token) pair within 10 minutes | The ID token is the proof of identity and is itself short-lived; the session minted is identical; no state to exhaust. |
 
 What does **not** move: no inbound port on the harness, no Cloudflare
 API token in settings, no MCP OAuth token doubling as a login, no role
@@ -315,7 +370,8 @@ in the cookie.
 
 Fail one and the task is later, or wrong.
 
-1. **One sign-in.** Google, PKCE, `jose`. Nothing else issues a session.
+1. **One sign-in.** Google, verified with `jose`. The browser is PKCE;
+   the phones post an ID token. Nothing else issues a session.
 2. **One app list, one room list per agent.** Env floor ∪ Settings DO
    rows; `PENDANT_ALLOWED_USERS` on the Agent DO. No fourth copy.
 3. **`sub` is the key, verified email is an alias.**

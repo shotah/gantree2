@@ -151,6 +151,11 @@ Nothing here is a plan; the plan is [proposal.md](proposal.md).
       `test/app/components/users/`.
 - [x] `/api/auth/me` returns `agents` = Settings grants ∪ room
       admission (`lib/chat/membership.ts`), `cranes` alias copy.
+- [x] Native sign-in (2026-10-11): `GET /api/auth/config`,
+      `GET /api/auth/nonce`, `POST /api/auth/token`
+      (`lib/door/native.ts`, public, no cookie). The gate accepts
+      `Authorization: Bearer` of that session JWE wherever it accepts
+      the cookie; a cookie that opens wins (`lib/door/gate.ts`).
 - [x] `addSample` / `listSamples` RPCs on the Settings DO; the Agent DO
       writes `tokens_prompt`, `tokens_completion`, `turn` from each
       `perf` frame; `/api/samples` reads them for spend.
