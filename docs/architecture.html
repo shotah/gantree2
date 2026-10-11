@@ -41,18 +41,34 @@
     <article class="prose"><h1 id="architecture">Architecture</h1>
 <p>How gantree is put together: the pictures, then the choices that stay
 true as it grows. The reasoning behind each shape is in
-<a href="proposal.html">proposal.md</a>; who may do what is in <a href="access.html">access.md</a>;
-where it runs is in <a href="install.html">install.md</a>. When this file and the
-proposal disagree, fix both.</p>
+<a href="proposal.html">proposal.md</a>; the runtime decision that replaced the
+container brain is <a href="brain.html">brain.md</a>; who may do what is in
+<a href="access.html">access.md</a>; where it runs is in <a href="install.html">install.md</a>.
+When this file and the proposal disagree about the runtime, this file
+and <a href="brain.html">brain.md</a> win. The proposal keeps the morning&#39;s plan.</p>
 <p>Vocabulary: <strong>settings</strong> (what operators see), <strong>chat</strong> (the PWA a
-member talks through), <strong>agents</strong> (one Durable Object + one container
-each), <strong>harness</strong> (the Go binary that is the agent), <strong>users</strong> (one
-list, three roles). Wire names are the new ones (<code>CHAT_*</code>,
-<code>CHANNEL=chat</code>, <code>agents</code>, <code>chat:&lt;slug&gt;:&lt;sub&gt;</code>); the originals&#39;
-(<code>PENDANT_*</code>, <code>CHANNEL=pendant</code>, <code>cranes</code>) are accepted as aliases
-until the Phase 4 cutover and are marked where they appear.</p>
+member talks through), <strong>agents</strong> (one Durable Object each), <strong>brain</strong>
+(the TypeScript loop inside that object when <code>runtime</code> is <code>native</code>),
+<strong>harness</strong> (the Go binary, only while an agent is still
+<code>runtime: container</code>), <strong>users</strong> (one list, three roles). Wire names
+are the new ones (<code>CHAT_*</code>, <code>CHANNEL=chat</code>, <code>agents</code>,
+<code>chat:&lt;slug&gt;:&lt;sub&gt;</code>); the originals (<code>PENDANT_*</code>, <code>CHANNEL=pendant</code>,
+<code>cranes</code>) are accepted as aliases until the Phase 4 cutover and are
+marked where they appear.</p>
+<p>Each agent has <code>runtime: &quot;container&quot; | &quot;native&quot;</code>. Anything that is not
+<code>native</code> stays <code>container</code>, including rows stored before the flag.
+The pictures in §1–§5 are the native path. The container, the Harness
+Durable Object, the crane socket, and the R2 snapshot set are
+<a href="#13-legacy-container-runtime">§13</a>. The dashboard radios flip one
+agent; the others keep the legacy path until their own flag changes.</p>
 <h2 id="1-the-product">1. The product</h2>
-<p>One Worker, one manifest, two places it runs.</p>
+<p>One Worker, one manifest, two places it runs. A native agent has no
+harness process, no image, and no socket between the brain and the
+room. <code>edge/agent.do.ts</code> builds the brain with <code>openRoomBrain</code>
+(<code>brain/room</code>) and <code>createBrain</code> (<code>brain/agent</code>). The contract is
+<code>brain/core</code>: <code>Sql</code> on <code>ctx.storage.sql</code>, <code>Clock</code>, <code>Logger</code>,
+<code>ChatProvider</code> (<code>openai</code> at major 7, against <code>LLM_BASE_URL</code>,
+<code>LLM_API_KEY</code>, <code>LLM_MODEL</code>), and <code>Plugin</code> / <code>Tool</code>.</p>
 <pre class="mermaid">flowchart LR
   subgraph people[&quot; &quot;]
     direction TB
@@ -74,21 +90,12 @@ until the Phase 4 cutover and are marked where they appear.</p>
     subgraph dos[&quot;Durable Objects&quot;]
       direction LR
       SDO[(&quot;Settings DO&lt;br/&gt;users · audit · samples&lt;br/&gt;SQLite&quot;)]
-      ADO[(&quot;Agent:slug DO&lt;br/&gt;config · allowlist · room&lt;br/&gt;bearer · alarm · container&quot;)]
+      ADO[(&quot;Agent:slug DO&lt;br/&gt;room · config · alarm&lt;br/&gt;SQLite brain&quot;)]
     end
     KV[(&quot;KV directory&lt;br/&gt;sub / email → slugs&quot;)]
-    R2[(&quot;R2&lt;br/&gt;backups · boards · avatars&quot;)]
-    CRON[Cron&lt;br/&gt;planner tick]
   end
 
-  subgraph box[&quot;harness container — one per agent&quot;]
-    H[gantry binary&lt;br/&gt;Go, distroless]
-    MCP[&quot;/opt/mcp/*&lt;br/&gt;baked MCP servers&quot;]
-    DB[(&quot;gantry.db · SELF.md&lt;br/&gt;container disk&quot;)]
-    H --- MCP
-    H --- DB
-  end
-
+  LLM[(OpenAI-compat&lt;br/&gt;chat completions)]
   G[(Google&lt;br/&gt;OIDC)]
 
   B &amp; P &amp; C --&gt; MW
@@ -100,30 +107,52 @@ until the Phase 4 cutover and are marked where they appear.</p>
   WS --&gt; ADO
   MW --&gt; SDO
   SDO --&gt; KV
-  ADO -- &quot;Container binding&lt;br/&gt;start · env · stop&quot; --&gt; H
-  H -- &quot;wss /ws/:slug&lt;br/&gt;bearer&quot; --&gt; WS
-  H -- &quot;presigned PUT/GET&quot; --&gt; R2
-  CRON --&gt; ADO
-  ADO -- avatars --&gt; R2
+  ADO -- &quot;completeStream&lt;br/&gt;fetch&quot; --&gt; LLM
 
   classDef store fill:#171d22,stroke:#3a4550,color:#f4f0ea
-  class SDO,ADO,KV,R2,DB store</pre>
-<p>Two deploy targets, same picture:</p>
+  class SDO,ADO,KV store</pre>
+<p>The twelve tools are in-process modules under <code>brain/plugins</code>, not
+child processes: <code>chat</code>, <code>feeds</code>, <code>flights</code>, <code>garmin</code>, <code>google</code>,
+<code>google-health</code>, <code>image</code>, <code>maps</code>, <code>math</code>, <code>rentals</code>, <code>strava</code>,
+<code>twitter</code>. The model sees <code>{plugin}__{tool}</code> (<code>google__calendar_list_events</code>).
+Schemas stay off until <code>mcp_enable</code>; a brief hold drops after 6 hours
+idle, a short hold after 27. Plugin tools take a set and return a list
+(<code>.cursor/rules/brain-plugins-plural.mdc</code>). <code>GARMIN_TOOL_TIER</code>
+(<code>core</code>, <code>extended</code>, <code>complete</code>; empty stays <code>core</code>) and
+<code>GOOGLE_TOOL_PRESET</code> (<code>lean</code>, <code>everyday</code>, <code>all</code>; empty stays
+<code>everyday</code>) narrow those two catalogs. A plugin that cannot serve is
+skipped, not spawned: <code>no_key</code>, <code>no_oauth</code>, <code>disabled</code>, or <code>error</code>,
+on the <code>status</code> frame.</p>
+<p>Cron, watches, and memory consolidation share the Agent DO alarm.
+<code>nextAlarm()</code> is the soonest due instant; <code>alarm()</code> calls
+<code>brain.alarm()</code>, which runs due work and returns the next wake. Cost
+between fires is zero. The alarm does not start a container.</p>
+<p>The brain emits the frames the crane socket used to emit. Phone-facing
+kinds are <code>reply</code>, <code>draft</code>, <code>typing</code>, <code>react</code>, <code>cmds</code>, <code>aims</code>, <code>todo</code>,
+<code>allow</code>, and <code>push</code>. <code>status</code>, <code>perf</code>, and <code>log</code> stay on the DO. A
+phone cannot tell which runtime answered.</p>
+<p>Persona and <code>SELF.md</code> are SQLite rows: <code>persona_file</code> and <code>selfnote</code>.
+The first native open copies <code>config.persona</code> into <code>PERSONA.md</code> once,
+and only when the table is empty. After that the row is the text.
+Operators edit them on the dashboard folds and at
+<code>GET</code> / <code>PUT</code> / <code>DELETE /api/agents/:slug/persona</code> and
+<code>GET</code> / <code>PUT /api/agents/:slug/self</code>. Those routes answer 409
+<code>container runtime</code> while the flag is still <code>container</code>.</p>
+<p>OAuth for a plugin finishes at <code>GET /api/auth/catch?state&amp;code</code>.
+<code>state</code> is an <code>oauth-catch</code> JWE holding <code>{ slug, plugin }</code>. The Worker
+calls <code>authFinish</code> on that agent&#39;s DO. The path is public. Detail:
+<a href="auth.html">auth.md</a>.</p>
+<p>Two deploy targets, same Worker:</p>
 <pre class="mermaid">flowchart LR
   M[wrangler.jsonc&lt;br/&gt;+ dist/]
-  M -- &quot;wrangler deploy&lt;br/&gt;(deploy-cloudflare.yml)&quot; --&gt; CF[&quot;Cloudflare&lt;br/&gt;Workers · DO · KV · R2&lt;br/&gt;Containers&quot;]
-  M -- &quot;celld deploy&lt;br/&gt;(npm run deploy:home)&quot; --&gt; HOME[&quot;celld on the Mini&lt;br/&gt;same bindings&lt;br/&gt;Docker/Podman for containers&lt;br/&gt;S3 bucket for state&quot;]</pre>
-<p>Where Docker went. The originals <em>operated</em> Docker: compose files,
-<code>docker.sock</code>, bind mounts, <code>docker logs</code>. None of that exists here on
-either target. On Cloudflare the Worker runs on Cloudflare&#39;s platform
-and the harness on <strong>Cloudflare Containers</strong>. At home <strong>celld</strong> runs
-that same platform, and for its container binding it drives Docker or
-Podman underneath — an engine you install once and never address. One
-OCI image, two supervisors; Docker survives only as celld&#39;s engine.</p>
-<p>Two supervisors, one owner: Cloudflare acquired Deno on 2026-10-09 and
-is merging celld into workerd. The home column below is the same
-platform, catching up to the cloud column, maintained by the same
-people. That is why the cloud target is Workers and not a VM.</p>
+  M -- &quot;wrangler deploy&lt;br/&gt;(deploy-cloudflare.yml)&quot; --&gt; CF[&quot;Cloudflare&lt;br/&gt;Workers · DO · KV · R2&quot;]
+  M -- &quot;celld deploy&lt;br/&gt;(npm run deploy:home)&quot; --&gt; HOME[&quot;celld on the Mini&lt;br/&gt;same bindings&lt;br/&gt;S3 bucket for state&quot;]</pre>
+<p>The manifest still declares the Harness container binding. That
+binding is the legacy path in <a href="#13-legacy-container-runtime">§13</a>. A
+native agent does not start it. On Cloudflare the Worker runs on
+Cloudflare&#39;s platform. At home <strong>celld</strong> runs that same platform.
+Docker or Podman appears only as the engine under celld&#39;s container
+binding, and only for an agent still on <code>container</code>.</p>
 <table>
 <thead>
 <tr>
@@ -133,19 +162,19 @@ people. That is why the cloud target is Workers and not a VM.</p>
 </tr>
 </thead>
 <tbody><tr>
-<td>Worker, DOs, KV, R2, Cron</td>
+<td>Worker, DOs, KV, R2</td>
 <td>Cloudflare</td>
 <td>celld (SQLite + your S3 bucket)</td>
 </tr>
 <tr>
-<td>Harness container supervisor</td>
-<td>Cloudflare Containers</td>
-<td>celld container binding</td>
+<td>Native brain</td>
+<td>Agent Durable Object</td>
+<td>the same class under celld</td>
 </tr>
 <tr>
-<td>Container engine</td>
-<td>Cloudflare&#39;s</td>
-<td>Docker or Podman, under celld</td>
+<td>Harness container (legacy)</td>
+<td>Cloudflare Containers</td>
+<td>celld container binding</td>
 </tr>
 <tr>
 <td>What you type</td>
@@ -153,21 +182,20 @@ people. That is why the cloud target is Workers and not a VM.</p>
 <td><code>celld deploy</code></td>
 </tr>
 </tbody></table>
-<p>Why the languages stay where they are: the harness is Go because the
-turn loop — parallel tool calls in one batch, the Completer round
-discipline, RSS under small models — is the thing already proven, and
-both supervisors run a static Go binary in a distroless image as well
-as anything can be run. Rust would buy no user-visible speed (the token
-path is the model) and would cost the sixteen Go plugins their shared
-SDK. The Worker is TypeScript because Workers execute JS/Wasm, Vinext
-and Durable Object classes are JS, and the backend is thin on purpose:
-gate, DO storage, socket fan-out. There is no hot loop in it to move.</p>
+<p>The brain is TypeScript because the isolate is JavaScript, the Durable
+Object class is JavaScript, and a turn is waiting on the model and on
+<code>fetch</code>. Why Go-in-WASM lost, and why the morning&#39;s container lease
+was cancelled, is <a href="brain.html">brain.md</a>. The Go tree stays in <code>harness/</code>
+until cutover, frozen: the spec for agents still on <code>container</code>, then
+archived.</p>
+<p>Behavioral eval is Vitest: <code>brain/eval</code>, <code>npm run eval</code>. Setup:
+<a href="eval_setup.html">eval_setup.md</a>.</p>
 <h2 id="2-request-path-the-door">2. Request path — the door</h2>
 <p>Every non-public request passes <code>lib/door/gate.ts</code>. It is pure:
 request + env + store in, decision out. <code>lib/door/http.ts</code> turns the
 decision into a <code>Response</code>; <code>middleware.ts</code> is one line.</p>
 <pre class="mermaid">flowchart TD
-  R([request]) --&gt; PUB{public path?&lt;br/&gt;/login /api/auth/google&lt;br/&gt;/api/auth/callback/google&lt;br/&gt;/api/auth/config · nonce · token&lt;br/&gt;assets · manifest · sw.js&lt;br/&gt;/_vinext /.well-known}
+  R([request]) --&gt; PUB{public path?&lt;br/&gt;/login /api/auth/google&lt;br/&gt;/api/auth/callback/google&lt;br/&gt;/api/auth/catch&lt;br/&gt;/api/auth/config · nonce · token&lt;br/&gt;assets · manifest · sw.js&lt;br/&gt;/_vinext /.well-known}
   PUB -- yes --&gt; PASS([pass through])
   PUB -- no --&gt; ADM{GANTREE_ADMINS&lt;br/&gt;parses to ≥1 entry?}
   ADM -- no --&gt; E503([503 no admins])
@@ -186,8 +214,9 @@ decision into a <code>Response</code>; <code>middleware.ts</code> is one line.</
   HDR --&gt; PASS</pre>
 <p>A cookie that opens wins; otherwise <code>Authorization: Bearer</code> is the
 same session JWE. A bearer on <code>/api/chat/{avatar,backdrop,theme}</code> is
-the harness room token (<code>isAgentRoomRequest</code>) and is let through
-before either of those reads.</p>
+the room token (<code>isAgentRoomRequest</code>) and is let through before either
+of those reads. <code>/api/auth/catch</code> is public: the provider redirects
+there with no session.</p>
 <p>Role, every request, never from the cookie:</p>
 <table>
 <thead>
@@ -248,11 +277,13 @@ before either of those reads.</p>
 <p>Every miss (<code>expired</code>, <code>state</code>, <code>exchange</code>, <code>token</code>, <code>not_allowed</code>)
 bounces to <code>/login?error=</code> and never sets a session. The only identity
 a stranger ever sees is their own.</p>
-<h2 id="4-chat-phone-to-harness-through-the-agent-do">4. Chat — phone to harness through the Agent DO</h2>
+<h2 id="4-chat-phone-to-the-brain-through-the-agent-do">4. Chat — phone to the brain through the Agent DO</h2>
 <p>The Agent DO is the room. A phone joins with the session — the cookie,
-or the same JWE on <code>Authorization</code> — plus that agent&#39;s own list; the
-harness joins with the room bearer. Neither side knows the other&#39;s
-address.</p>
+or the same JWE on <code>Authorization</code> — plus that agent&#39;s own list. On a
+native agent there is no second socket. The DO hands <code>inbound</code> and
+<code>react</code> to <code>brain.handleInbound</code> and fans the frames the brain emits
+the same way it fans a crane frame. A container agent still dials in;
+that sequence is <a href="#13-legacy-container-runtime">§13</a>.</p>
 <p>Native sign-in (<a href="access.html#phones-native-sign-in">access.md</a>):</p>
 <pre class="mermaid">sequenceDiagram
   autonumber
@@ -277,24 +308,16 @@ address.</p>
   else not on any list
     W--&gt;&gt;P: 403 {error: not_allowed, sub, email}&lt;br/&gt;no session
   end</pre>
-<p>The PWA sends the cookie:</p>
+<p>The PWA sends the cookie. On a native agent the turn never leaves the
+DO:</p>
 <pre class="mermaid">sequenceDiagram
   autonumber
   actor M as Member (PWA)
   participant MW as middleware
   participant A as Agent:kit DO
-  participant H as harness (container)
+  participant B as brain&lt;br/&gt;createBrain
 
-  Note over H,A: on container start — config is the first frame
-  H-&gt;&gt;A: wss /ws/kit  Authorization: Bearer &lt;PENDANT_BEARER&gt;
-  A-&gt;&gt;A: bearer matches DO row
-  A-&gt;&gt;H: config {env, mcp, persona, restore/put presigned GET/PUT}
-  H-&gt;&gt;A: allow {PENDANT_ALLOWED_USERS}
-  A-&gt;&gt;A: room list ← allow
-  H-&gt;&gt;A: status {published, skipped MCP}
-  Note over A: status, perf, log, snapshot stay on the DO — never fanned to phones
-
-  Note over M,A: a person opens the chat
+  Note over A,B: first use opens the brain, announces status and cmds, arms nextAlarm
   M-&gt;&gt;MW: GET /chat/kit (gantree_session)
   MW-&gt;&gt;MW: gate → pass (member)
   MW--&gt;&gt;M: PWA shell
@@ -306,68 +329,51 @@ address.</p>
     A--&gt;&gt;M: close 4403
   end
 
-  M-&gt;&gt;A: message {text, images?}
-  A-&gt;&gt;H: message
-  H-&gt;&gt;H: turn (model · MCP tools · gantry.db)
-  H-&gt;&gt;A: reply {text}
+  M-&gt;&gt;A: inbound {text, images?}
+  A-&gt;&gt;B: handleInbound
+  B-&gt;&gt;B: turn (model · in-process tools · DO SQLite)
+  B-&gt;&gt;A: reply {text}
   A--&gt;&gt;M: reply
-  opt agent sets the mood
-    H-&gt;&gt;A: theme {id}
-    A--&gt;&gt;M: {kind: &quot;theme&quot;, theme: &quot;siren&quot;}
-    Note over M: paint unless the person pinned their own
-  end
-  H-&gt;&gt;A: perf {turn, tokens}  (slog line as a frame)
-  A-&gt;&gt;A: append to Settings samples</pre>
-<h2 id="5-agent-lifecycle-the-do-supervises-the-container">5. Agent lifecycle — the DO supervises the container</h2>
+  B-&gt;&gt;A: perf {turn, tokens}
+  A-&gt;&gt;A: append to Settings samples
+  Note over A: status, perf, log stay on the DO — never fanned to phones</pre>
+<h2 id="5-agent-lifecycle-the-do-is-the-brain">5. Agent lifecycle — the DO is the brain</h2>
 <pre class="mermaid">stateDiagram-v2
-  [*] --&gt; Stopped
-  Stopped --&gt; Starting : operator Start&lt;br/&gt;or Cron tick with work
-  Starting --&gt; Restoring : container up&lt;br/&gt;harness dials /ws
-  Restoring --&gt; Running : R2 latest gantry_db and self_md&lt;br/&gt;(or 404 — fresh brain)
-  Running --&gt; Running : turns · alarm wakes · perf/log frames
-  Running --&gt; Snapshotting : timer · SIGTERM
-  Snapshotting --&gt; Running : PUT backups/kit/latest and backups/kit/&lt;stamp&gt;
-  Snapshotting --&gt; Stopped : was stopping
-  Running --&gt; Recreating : env drifted since markStarted&lt;br/&gt;(start is a separate call)
-  Recreating --&gt; Starting : new env → new container
-  Running --&gt; Stopped : crash → DO notes restart count
-  Stopped --&gt; [*]
+  [*] --&gt; Idle : runtime native
+  Idle --&gt; Turn : phone inbound or react
+  Turn --&gt; Idle : frames fanned · nextAlarm armed
+  Idle --&gt; Due : Durable Object alarm
+  Due --&gt; Idle : cron · watch · consolidation · arm next
+  Idle --&gt; Idle : env or persona change drops the brain
 
-  note right of Restoring
-    Container disk is not durable.
-    gantry.db lives in R2 between runs.
+  note right of Idle
+    SQLite in the DO is the brain.
+    Nothing is snapshotted to R2.
   end note</pre>
 <pre class="mermaid">sequenceDiagram
   autonumber
   actor O as Operator
   participant W as Worker /agents/kit
   participant A as Agent:kit DO
-  participant C as Container binding
-  participant H as harness
-  participant R as R2
+  participant B as brain
 
-  O-&gt;&gt;W: POST start
-  W-&gt;&gt;A: start()
-  A-&gt;&gt;A: read config.env · bearer
-  A-&gt;&gt;C: start(image, env)
-  C--&gt;&gt;A: running
-  H-&gt;&gt;A: dial /ws/kit (bearer)
-  A-&gt;&gt;H: config {…, restore: presigned GET gantry_db and self_md}
-  H-&gt;&gt;R: GET backups/kit/latest/gantry_db
-  R--&gt;&gt;H: file (or 404)
-  H-&gt;&gt;A: status
-  A--&gt;&gt;W: alive · image · status
-  W--&gt;&gt;O: card turns green
+  O-&gt;&gt;W: radio runtime = native
+  W-&gt;&gt;A: PATCH config.runtime
+  A-&gt;&gt;A: forget any container alarm
+  A-&gt;&gt;B: openRoomBrain · createBrain
+  B-&gt;&gt;A: announce status · cmds
+  A-&gt;&gt;A: setAlarm(nextAlarm())
+  A--&gt;&gt;W: card shows native
 
-  loop every N minutes and on SIGTERM
-    H-&gt;&gt;R: PUT backups/kit/latest/{gantry_db,self_md} (presigned)
-    H-&gt;&gt;A: snapshot {stamp, bytes}
-  end
-
-  O-&gt;&gt;W: PATCH config.env
-  W-&gt;&gt;A: write config.env
-  A--&gt;&gt;W: view { recreate: true } when env differs from last start
-  Note over A,H: container start calls markStarted; env drift is a recreate hint</pre>
+  O-&gt;&gt;W: phone inbound, or the alarm fires
+  W-&gt;&gt;A: frame, or alarm()
+  A-&gt;&gt;B: handleInbound, or brain.alarm()
+  B-&gt;&gt;A: reply · push · boards
+  A-&gt;&gt;A: setAlarm(next wake)</pre>
+<p>Flipping the radio back to <code>container</code> drops the brain and deletes the
+alarm. Start, stop, and recreate are the container buttons; on a
+native agent the status fold does not show them, and
+<code>POST /api/agents/:slug/container</code> returns <code>lastError: &quot;native runtime&quot;</code>.</p>
 <h2 id="6-users-one-list-three-roles">6. Users — one list, three roles</h2>
 <pre class="mermaid">flowchart LR
   subgraph floor[&quot;env floor (locked, every request)&quot;]
@@ -378,7 +384,7 @@ address.</p>
     ROWS[&quot;rows: entry · role · agents[] &quot;]
   end
   subgraph agent[&quot;Agent:kit DO&quot;]
-    ROOM[&quot;room list&lt;br/&gt;(PENDANT_ALLOWED_USERS)&quot;]
+    ROOM[&quot;room list&lt;br/&gt;(last allow frame)&quot;]
   end
 
   floor --&gt; RES
@@ -420,33 +426,40 @@ address.</p>
     T[test:coverage&lt;br/&gt;thresholds] --&gt; LNT[lint] --&gt; TC[typecheck] --&gt; BLD[vite build]
     BLD -- main --&gt; BADGE[badge.mjs vitest] --&gt; PUB1[publish-pages.sh&lt;br/&gt;badges/coverage.svg]
   end
-  subgraph hz[&quot;harness.yml — harness/**&quot;]
+  subgraph hz[&quot;harness.yml — frozen, harness/**&quot;]
     direction LR
     GT[&quot;go vet + go test -cover&lt;br/&gt;harness/ and harness/mcp/*&quot;] --&gt; MERGE[coverage-harness.sh&lt;br/&gt;one profile, one total] --&gt; MIN{≥ HARNESS_COVERAGE_MIN}
     MIN -- main --&gt; BADGE2[badge.mjs gofunc] --&gt; PUB2[publish-pages.sh&lt;br/&gt;badges/harness-coverage.svg]
+  end
+  subgraph ev[&quot;eval.yml — tag, or by hand&quot;]
+    direction LR
+    EV[&quot;npm run eval&lt;br/&gt;Vitest · brain/eval&quot;]
   end
   subgraph dep[&quot;deploy-cloudflare.yml — after ci on main&quot;]
     direction LR
     V[vite build] --&gt; CHK{vars + secrets&lt;br/&gt;all set?} --&gt; WD[wrangler deploy --var …] --&gt; SB[wrangler secret bulk]
   end
-  subgraph img[&quot;harness-image.yml — harness/** · mcp.lock · tag&quot;]
+  subgraph img[&quot;harness-image.yml — legacy image&quot;]
     direction LR
     LOCK[mcp.lock] --&gt; DOCK[Dockerfile&lt;br/&gt;fetch tarballs → /opt/mcp] --&gt; MAN[host-manifest&lt;br/&gt;per baked server] --&gt; REG[GHCR + Cloudflare registry]
   end
   ci --&gt; dep
   PUB1 &amp; PUB2 --&gt; GH[(&quot;gh-pages&lt;br/&gt;badges/ · site&quot;)]
   GH --&gt; README[README badge row]</pre>
-<p><code>publish-pages.sh</code> replaces only the paths it is handed; the three
-writers share one concurrency group. Home deploy is a human running
-<code>npm run deploy:home</code>; GitHub cannot reach the Mini.</p>
+<p><code>publish-pages.sh</code> replaces only the paths it is handed; the writers
+share one concurrency group. <code>harness.yml</code> keeps running while
+<code>harness/</code> is in the tree; the number is frozen with that tree, not a
+second product. Home deploy is a human running <code>npm run deploy:home</code>;
+GitHub cannot reach the Mini. Live eval setup is
+<a href="eval_setup.html">eval_setup.md</a>.</p>
 <h2 id="8-code-map">8. Code map</h2>
 <pre class="mermaid">flowchart TB
   subgraph app[&quot;app/ — thin shells&quot;]
     LAYOUT[layout.tsx&lt;br/&gt;themeCss · THEME_BOOT]
-    PAGES[&quot;login/ · page.tsx&lt;br/&gt;agents/ · chat/ · users/ (next)&quot;]
-    API[&quot;api/auth/*/route.ts&lt;br/&gt;one line each&quot;]
+    PAGES[&quot;login/ · page.tsx&lt;br/&gt;agents/ · chat/ · users/&quot;]
+    API[&quot;api/auth/*/route.ts&lt;br/&gt;api/agents/:slug/{persona,self}&quot;]
     ALIB[&quot;app/lib&lt;br/&gt;theme · prefs · login&quot;]
-    COMP[&quot;app/components/shared&lt;br/&gt;ThemeSelect&quot;]
+    COMP[&quot;app/components&lt;br/&gt;agents · chat · users&quot;]
   end
   subgraph door[&quot;lib/door — pure, tested&quot;]
     ALLOW[allowlist] --&gt; USERS[users] --&gt; GATE[gate] --&gt; HTTP[http]
@@ -455,47 +468,49 @@ writers share one concurrency group. Home deploy is a human running
     SESSION --&gt; HTTP
     RT[&quot;runtime&lt;br/&gt;(cloudflare:workers only here)&quot;]
   end
-  subgraph theme[&quot;lib/theme — from pendant&quot;]
-    CAT[catalog · 15 themes] --&gt; CON[contrast gate]
-    CAT --&gt; STORE[store · wire notice]
+  subgraph brain[&quot;brain/ — the native agent&quot;]
+    CORE[core&lt;br/&gt;Sql · Clock · Logger · Provider]
+    LOOP[agent&lt;br/&gt;createBrain]
+    ROOM[room&lt;br/&gt;openRoomBrain · catch]
+    PLUG[plugins&lt;br/&gt;twelve modules]
+    CORE --&gt; LOOP
+    ROOM --&gt; LOOP
+    PLUG --&gt; LOOP
   end
-  subgraph edge[&quot;edge/ — Durable Objects (Phase 1–2)&quot;]
+  subgraph edge[&quot;edge/ — Durable Objects&quot;]
     SDO[settings.do.ts]
     ADO[agent.do.ts]
-    DIR[directory.ts]
+    HDO[harness.do.ts&lt;br/&gt;legacy container]
   end
   MW[middleware.ts] --&gt; HTTP
   MW --&gt; RT
   API --&gt; HTTP
   API --&gt; RT
   RT -.-&gt; SDO
-  LAYOUT --&gt; ALIB --&gt; CAT
-  COMP --&gt; ALIB
-  TEST[&quot;test/ mirrors every folder&quot;] -.-&gt; door &amp; theme &amp; ALIB &amp; edge</pre>
-<p>Coverage counts <code>lib/**</code>, <code>edge/**</code>, <code>app/lib/**</code>. <code>lib/door/runtime.ts</code>
-is the one excluded file: it imports <code>cloudflare:workers</code> and has
-nothing to assert.</p>
-<hr>
+  RT -.-&gt; ADO
+  ADO --&gt; ROOM
+  LAYOUT --&gt; ALIB
+  TEST[&quot;test/ mirrors every folder&quot;] -.-&gt; door &amp; brain &amp; edge</pre>
+<p>The coverage badge counts <code>lib/**</code>, <code>edge/**</code>, <code>app/lib/**</code>. Brain
+suites live under <code>test/brain/</code> and run with <code>npm test</code>; they are not
+in that badge&#39;s include. <code>lib/door/runtime.ts</code> is the one excluded
+file: it imports <code>cloudflare:workers</code> and has nothing to assert.</p>
 <h2 id="9-why-this-shape">9. Why this shape</h2>
 <p><strong>One Worker, not three repos.</strong> The originals were a Node console on
 the Docker host, a Worker for the phone, and a Go harness in a
 container — three ideas of a person and three READMEs. Here settings
-and chat are one Vinext app on Workers, state is Durable Objects
-instead of files on a host, and the harness is a container the Agent
-DO supervises. Cloudflare Containers in the cloud; celld&#39;s container
-binding at home.</p>
-<p><strong>Why the harness stays Go, in a container.</strong> The loop that was
-hardened on small models — parallel tool calls, Completer rounds, RSS
-discipline — is Go and stays Go. It does not become a Worker. The DO
-starts it, passes its env, wakes it on alarm, and is the room it dials.</p>
+and chat are one Vinext app on Workers, and state is Durable Objects
+instead of files on a host.</p>
+<p><strong>Why the brain is the Agent DO.</strong> A native agent is always available
+and is not billed while idle. The DO wakes in milliseconds, costs
+nothing between alarms, and keeps SQLite that outlives the invocation.
+The loop, the plugins, and the clock run in that object. Phones see
+the same frames either runtime emits. The record is
+<a href="brain.html">brain.md</a>.</p>
 <p><strong>Why Durable Objects, not D1.</strong> One actor per agent is the natural
-unit: its config, its room, its bearer, its alarm, its container
-handle. Settings is one more actor. Nothing is shared except the KV
-directory and R2.</p>
-<p><strong>Why a brain in R2.</strong> Container disk is not durable on either target.
-<code>gantry.db</code> + <code>SELF.md</code> snapshot to R2 on a timer and on stop, restore
-on start, via presigned URLs on the <code>config</code> frame. The harness&#39;s
-storage code does not change.</p>
+unit: its config, its room, its bearer, its alarm, and — on <code>native</code> —
+its brain. Settings is one more actor. Nothing is shared except the KV
+directory. R2 holds the legacy snapshot set, not the native brain.</p>
 <h2 id="10-choices-that-stay-true">10. Choices that stay true</h2>
 <p>If a task fails one of these, it is later, or it is wrong.</p>
 <ol>
@@ -503,82 +518,179 @@ storage code does not change.</p>
 says what; each agent&#39;s room list says who it talks to. Role is
 computed every request, never read from the cookie. No second
 login. <a href="access.html">access.md</a>.</li>
-<li><strong>The Agent DO is truth.</strong> <code>config.env</code>, <code>config.mcp</code>, persona,
-allowlist, bearer live on the DO. Settings edits them; the harness
-reads them at boot. No file on a host, no second inventory.</li>
-<li><strong>Pull, don&#39;t punch.</strong> The harness is outbound-only. No <code>/metrics</code>
-port, no scrape, no hook. <code>status</code>, <code>perf</code>, <code>log</code>, <code>allow</code>,
-<code>snapshot</code> ride the socket it already opened. If a settings want
-would make the harness slower, the want is wrong.</li>
+<li><strong>The Agent DO is truth.</strong> <code>config.env</code>, the runtime flag, the room
+list, and the bearer live on the DO. On <code>native</code>, persona rows,
+<code>SELF.md</code>, sessions, memory, cron, watches, and OAuth tokens live
+in that DO&#39;s SQLite. Settings edits them through the DO. No file on
+a host, no second inventory.</li>
+<li><strong>The brain does not listen.</strong> A native turn is a method call inside
+the DO. Frames go out through the fan-out the crane socket already
+used. No <code>/metrics</code> port, no scrape, no hook. <code>status</code>, <code>perf</code>, and
+<code>log</code> stay on the DO. A container agent is still outbound-only; that
+socket is <a href="#13-legacy-container-runtime">§13</a>.</li>
 <li><strong>One mutation path.</strong> Route handlers call <code>lib/door</code> and the DO
 stubs. Never storage from a React Server Component. Pages stay thin
 shells.</li>
 <li><strong>One manifest, two targets.</strong> Anything that deploys to Cloudflare
 deploys under celld. celld stops on a key it does not model; that
 is the check.</li>
-<li><strong>One language in this repo, two in the product.</strong> TypeScript here.
-Go in <code>harness/</code> and <code>harness/mcp/*</code>. No <code>gantree</code> CLI until <code>npm</code>
-scripts are genuinely not enough — still TypeScript.</li>
-<li><strong>Isolation.</strong> One human list per agent, one DO, one container, one
-R2 prefix. Retire a tryout = delete its DO and prefix. Adding a
-person to Kit does not touch Ada.</li>
-<li><strong>Env change recreates.</strong> Same rule as Docker. Restart keeps a
-ghost allowlist; the UI nags.</li>
+<li><strong>TypeScript is the product.</strong> The Worker, the DO, and the brain are
+one language. Go in <code>harness/</code> and <code>harness/mcp/*</code> is frozen until
+the last agent leaves <code>container</code>, then archived. No <code>gantree</code> CLI
+until <code>npm</code> scripts are genuinely not enough.</li>
+<li><strong>Isolation.</strong> One human list per agent, one DO. A container agent
+also has one Harness DO and one R2 prefix. Retire a tryout = delete
+its DO and, if it snapshotted, its prefix. Adding a person to Kit
+does not touch Ada.</li>
+<li><strong>Env change retargets.</strong> On <code>native</code>, a changed env or persona
+drops the memoised brain and opens a new one. On <code>container</code>, env
+drift is still a recreate. Restart that keeps a ghost allowlist is
+the thing the UI nags.</li>
 <li><strong>Not chat.</strong> Settings never sits in a chat turn. Chat is a PWA on
 the same origin, not a feature of the settings screens.</li>
-<li><strong>MCP is baked in.</strong> <code>harness/mcp.lock</code> → image. Omit a server from
-an agent&#39;s <code>config.mcp</code> and it does not exist for that agent. No
-download at agent start. <a href="custom-mcp.html">custom-mcp.md</a>.</li>
+<li><strong>Plugins are modules.</strong> The twelve live under <code>brain/plugins</code> and
+load with the Worker. <code>ready()</code> publishes or skips. <code>config.mcp</code>
+is the grant list the container harness still reads; the native
+registry does not consult it. Per-session schemas are <code>mcp_enable</code>.
+<a href="mcp.html">mcp.md</a>, <a href="custom-mcp.html">custom-mcp.md</a>.</li>
 <li><strong>Estimates stay estimates.</strong> Spend is <code>perf</code> tokens plus an
 optional pasted $/1M. Not an invoice. <code>unknown</code> is a first-class
 slice.</li>
-<li><strong>Import over write.</strong> <code>jose</code> for JWE/JWKS, Vinext for the app,
-wrangler and celld for deploy. Do not invent a Docker client, a
-JWT parser, or a theme engine.</li>
+<li><strong>Import over write.</strong> <code>jose</code> for JWE/JWKS, <code>openai</code> for chat
+completions, Vinext for the app, wrangler and celld for deploy. Do
+not invent a Docker client, a JWT parser, or a theme engine.</li>
 <li><strong>Coverage is a badge, not a hope.</strong> Two numbers on the README.
-Thresholds in <code>vitest.config.ts</code> and <code>HARNESS_COVERAGE_MIN</code> only
-go up.</li>
+The Vitest floor is <code>vitest.config.ts</code>. <code>HARNESS_COVERAGE_MIN</code> is
+the frozen Go tree and only goes up while <code>harness.yml</code> exists.</li>
 </ol>
 <h2 id="11-repo-rules">11. Repo rules</h2>
 <ul>
 <li>Tests live under <code>test/</code> and mirror the module they cover
 (<code>lib/door/gate.ts</code> → <code>test/door/gate.test.ts</code>,
-<code>app/components/shared/ThemeSelect.tsx</code> →
-<code>test/app/components/shared/ThemeSelect.test.tsx</code>). Never beside
+<code>brain/core/sql.ts</code> → <code>test/brain/core/sql.test.ts</code>). Never beside
 source.</li>
 <li>Import with <code>@/</code>. Import leaf modules, not barrels.</li>
 <li>UI folders match screens (<code>shared</code>, <code>agents</code>, <code>chat</code>, <code>users</code>,
 <code>settings</code>), not widget types. No <code>src/</code> wrap, no atoms/molecules.</li>
 <li><code>cloudflare:workers</code> is imported in exactly one place per concern
-(<code>lib/door/runtime.ts</code>, later <code>edge/*.do.ts</code>). Everything else is
-plain TypeScript Vitest can run.</li>
+(<code>lib/door/runtime.ts</code>, <code>edge/*.do.ts</code>). Everything else is plain
+TypeScript Vitest can run.</li>
 <li>ESLint + <code>@stylistic</code> is the style. No Prettier. Do not disable
 <code>no-explicit-any</code>; type it or delete the dead write.</li>
 <li>Nothing new is written with the originals&#39; wire names. <code>CHAT_*</code>,
 <code>CHANNEL=chat</code>, <code>agents</code>, <code>chat:&lt;slug&gt;:&lt;sub&gt;</code>, plugin <code>chat</code> are the
-names (<a href="todo_done.html#0-decide">todo.md</a>). <code>PENDANT_*</code>, <code>CHANNEL=pendant</code>,
-<code>cranes</code> beside <code>agents</code> on <code>/api/auth/me</code> are accepted as aliases so
-cab, helm, and agents on the old stack keep working until the Phase 4
-cutover, then dropped. Marked as aliases wherever they appear.
-Harness-side detail: <a href="channels.html">channels.md</a>,
+names (<a href="todo_done.html#0-decide">todo.md</a>). <code>PENDANT_*</code>,
+<code>CHANNEL=pendant</code>, <code>cranes</code> beside <code>agents</code> on <code>/api/auth/me</code> are
+accepted as aliases so cab, helm, and agents on the old stack keep
+working until the Phase 4 cutover, then dropped. Marked as aliases
+wherever they appear. Harness-side detail: <a href="channels.html">channels.md</a>,
 <a href="contract.html">contract.md</a>.</li>
 </ul>
 <h2 id="12-later-and-not-the-product">12. Later, and not the product</h2>
 <p><strong>Later</strong> (when a real gap forces it): Workspace <code>hd</code> gate; saved
 watches and a tile catalog after one attention surface stops being
-enough; provider billing pull; harness write-through to DO SQLite;
-operator writes on boards. List: <a href="todo.html#later">todo.md</a>.</p>
+enough; provider billing pull; the one-shot copy of an existing
+<code>gantry.db</code> into a native agent&#39;s DO SQLite
+(<a href="brain.html#data-migration">brain.md</a>); operator writes on boards.
+List: <a href="todo.html#later">todo.md</a>.</p>
 <p><strong>Hosted (decided 2026-10-10):</strong> the same Worker sold as a door you
 do not deploy — one household per account, every key the customer&#39;s,
-Settings / Agent / Harness DOs named by household instead of by bare
-slug. Plan in <a href="todo.html#hosted-phase-5--the-paid-door">todo.md</a>,
-numbers in <a href="monetize.html">monetize.md</a>.</p>
+Settings / Agent DOs named by household instead of by bare slug. Plan
+in <a href="todo.html#hosted-phase-5--the-paid-door">todo.md</a>, numbers in
+<a href="monetize.html">monetize.md</a>. A native agent has no container line on
+that bill.</p>
 <p><strong>Not the product:</strong> Kubernetes, Cloud Run / Lambda, a shared family
 brain, pairing the agent through settings, reselling LLM tokens, a
 shared Google client for the tools, orgs and invite links beyond one
 household per account, a second login, Cloudflare Access in front of
-the Worker, anything that makes the harness slower so a dashboard
-looks nicer.</p>
+the Worker, anything that makes a turn slower so a dashboard looks
+nicer.</p>
+<h2 id="13-legacy-container-runtime">13. Legacy: container runtime</h2>
+<p>This section is <code>runtime: &quot;container&quot;</code>. It is the default until an
+operator flips the radio. The Go harness, the Harness Durable Object,
+the crane WebSocket, and the R2 snapshot set stay until cutover, then
+they are archived. <code>edge/harness.do.ts</code> sets <code>sleepAfter = &quot;15m&quot;</code>.
+The Agent DO alarm does not start a stopped container: <code>alarm()</code>
+returns immediately unless the runtime is <code>native</code>. Start and Recreate
+are the operator buttons. The gap is the morning&#39;s record,
+<a href="runtime.html">runtime.md</a>.</p>
+<pre class="mermaid">flowchart LR
+  ADO[(&quot;Agent:slug DO&lt;br/&gt;room · bearer · config&quot;)]
+  HDO[(&quot;Harness DO&lt;br/&gt;sleepAfter 15m&quot;)]
+  H[gantry binary&lt;br/&gt;Go, distroless]
+  MCP[&quot;/opt/mcp/*&lt;br/&gt;twelve stdio servers&quot;]
+  DB[(&quot;gantry.db · SELF.md&lt;br/&gt;container disk&quot;)]
+  R2[(&quot;R2&lt;br/&gt;gantry_db · self_md · tokens_tar&quot;)]
+
+  ADO -- &quot;Container binding&lt;br/&gt;start · env · stop&quot; --&gt; HDO
+  HDO --&gt; H
+  H --- MCP
+  H --- DB
+  H -- &quot;wss /ws/:slug&lt;br/&gt;bearer&quot; --&gt; ADO
+  H -- &quot;presigned PUT/GET&quot; --&gt; R2
+
+  classDef store fill:#171d22,stroke:#3a4550,color:#f4f0ea
+  class ADO,DB,R2 store</pre>
+<p>A phone message for a container agent is queued to the crane tag. The
+harness dials <code>/ws/:slug</code> with the room bearer. The first frame in is
+<code>config</code> (env, <code>mcp</code>, persona, presigned restore and put). The harness
+restores <code>gantry.db</code> and <code>self_md</code> from R2, or starts empty on a 404,
+then sends <code>allow</code>, <code>status</code>, and later <code>reply</code> / <code>draft</code> / <code>perf</code> /
+<code>log</code> / <code>snapshot</code>. <code>status</code>, <code>perf</code>, <code>log</code>, and <code>snapshot</code> stay on the
+DO. Chat frames fan out to phones the same way a native frame does.</p>
+<pre class="mermaid">stateDiagram-v2
+  [*] --&gt; Stopped
+  Stopped --&gt; Starting : operator Start or Recreate
+  Starting --&gt; Restoring : container up&lt;br/&gt;harness dials /ws
+  Restoring --&gt; Running : R2 latest gantry_db and self_md&lt;br/&gt;(or 404 — fresh brain)
+  Running --&gt; Running : turns · perf/log frames
+  Running --&gt; Snapshotting : timer · SIGTERM
+  Snapshotting --&gt; Running : PUT backups/slug/latest and backups/slug/stamp
+  Snapshotting --&gt; Stopped : was stopping
+  Running --&gt; Recreating : env drifted since markStarted
+  Recreating --&gt; Starting : new env → new container
+  Running --&gt; Stopped : crash, or sleepAfter 15m
+  Stopped --&gt; [*]
+
+  note right of Restoring
+    Container disk is not durable.
+    gantry.db lives in R2 between runs.
+    A cron tick does not start this box.
+  end note</pre>
+<pre class="mermaid">sequenceDiagram
+  autonumber
+  actor O as Operator
+  participant W as Worker /agents/kit
+  participant A as Agent:kit DO
+  participant C as Container binding
+  participant H as harness
+  participant R as R2
+
+  O-&gt;&gt;W: POST start
+  W-&gt;&gt;A: start()
+  A-&gt;&gt;A: read config.env · bearer
+  A-&gt;&gt;C: start(image, env)
+  C--&gt;&gt;A: running
+  H-&gt;&gt;A: dial /ws/kit (bearer)
+  A-&gt;&gt;H: config {…, restore: presigned GET gantry_db, self_md, tokens_tar}
+  H-&gt;&gt;R: GET backups/kit/latest/gantry_db
+  R--&gt;&gt;H: file (or 404)
+  H-&gt;&gt;A: status
+  A--&gt;&gt;W: alive · image · status
+
+  loop every N minutes and on SIGTERM
+    H-&gt;&gt;R: PUT backups/kit/latest/{gantry_db,self_md,tokens_tar}
+    H-&gt;&gt;A: snapshot {stamp, bytes}
+  end</pre>
+<p>Why this stayed Go, for as long as the flag points here: the turn loop
+was already proven in Go — parallel tool calls in one batch, the
+Completer round discipline — and both supervisors run a static binary
+in a distroless image. That is not the native brain. Workers cannot
+host the process, the <code>exec.Command</code> MCP host, or <code>modernc.org/sqlite</code>.
+The port is the TypeScript tree. <code>harness.yml</code> still publishes the Go
+coverage badge. Workers Paid is required to deploy and run this
+container; a native agent does not incur it. Numbers:
+<a href="monetize.html">monetize.md</a>.</p>
 </article>
   </main>
   <footer class="foot">

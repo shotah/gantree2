@@ -39,13 +39,18 @@
   </header>
   <main id="content" class="wrap">
     <article class="prose"><h1 id="custom-mcp-servers">Custom MCP servers</h1>
-<p>The Tools grid on <code>/agents/&lt;slug&gt;</code> is the <strong>catalog</strong>: every MCP server
-baked into the harness image. Granting one to an agent is a <code>[[server]]</code>
-in that agent&#39;s <code>config.mcp</code> (TOML, on the Agent DO). Omit it and it
-does not exist for that agent.</p>
-<p>A custom server is still first-class. It is a row in <code>harness/mcp.lock</code>
-and an image rebuild — not a download at agent start. There is no
-<code>/mcp/add?url=</code> route and no <code>tools-fetch</code> on a running agent.</p>
+<p>On <code>runtime: native</code> a plugin is a module under <code>brain/plugins/&lt;name&gt;/</code>
+that exports a <code>Plugin</code>: <code>name</code>, <code>ready</code>, <code>tools</code>, and <code>call</code> on each
+tool. It is compiled into the Worker. There is no process to spawn and
+no image to rebuild. Tool names follow <a href="mcp-naming.html">mcp-naming.md</a>,
+and the host prefixes <code>{plugin}__{tool}</code>. Plural inputs and list
+outputs are <code>.cursor/rules/brain-plugins-plural.mdc</code>. <code>ready()</code> returns
+<code>no_key</code>, <code>no_oauth</code>, <code>disabled</code>, or <code>error</code> when the plugin cannot
+serve; otherwise <code>null</code>. The native registry loads every module in
+<code>brain/plugins/index.ts</code> and does not read <code>config.mcp</code>.</p>
+<p>There is still no <code>/mcp/add?url=</code> route and no download at agent start.</p>
+<p>The rest of this page is the container image: a row in <code>harness/mcp.lock</code>
+and a rebuild. That is <code>runtime: container</code>, kept until cutover.</p>
 <hr>
 <h2 id="a-build-one-clone-an-existing-mcp">A. Build one — clone an existing MCP</h2>
 <p>Do not start from a blank Go module. Fork or copy a sibling that already
@@ -113,7 +118,7 @@ server.</p>
 already speaks and set <code>auth_args</code> (e.g. <code>[&quot;auth&quot;]</code>). Static keys stay
 in the agent&#39;s <code>config.env</code> — never <code>/auth rentals &lt;apikey&gt;</code> in chat.</p>
 <hr>
-<h2 id="b-bake-it-in">B. Bake it in</h2>
+<h2 id="b-bake-it-in-legacy-container">B. Bake it in (legacy container)</h2>
 <p>Add a row to <code>harness/mcp.lock</code>:</p>
 <pre><code class="language-toml">[[server]]
 name = &quot;rentals&quot;

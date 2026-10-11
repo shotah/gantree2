@@ -42,7 +42,8 @@
 <p>What can go wrong, what we chose, and what we did not. One page, so a
 reviewer can disagree with a line instead of a feeling.</p>
 <p>Code: <code>lib/door/</code> (the door), <code>edge/agent.do.ts</code> + <code>lib/chat/</code> (the
-room), <code>harness/</code> (the agent). People and roles: <a href="access.html">access.md</a>.
+room), <code>brain/</code> (the native agent), <code>harness/</code> (the container agent).
+People and roles: <a href="access.html">access.md</a>.
 Shape: <a href="architecture.html">architecture.md</a>. Reporting a hole:
 <a href="https://github.com/shotah/gantree2/blob/main/SECURITY.md"><code>SECURITY.md</code></a> at the repo root.</p>
 <hr>
@@ -67,28 +68,28 @@ Shape: <a href="architecture.html">architecture.md</a>. Reporting a hole:
 </tr>
 <tr>
 <td>The chat thread</td>
-<td>Agent DO storage, R2 (photos, boards)</td>
+<td>Agent DO: the room queue, and on <code>native</code> the session rows. A container agent&#39;s copy is also the R2 snapshot</td>
 <td>Users on that agent&#39;s room</td>
 </tr>
 <tr>
-<td>The harness bearer (room token)</td>
-<td>Agent DO; handed to the container at start</td>
-<td>The Worker, that one container</td>
+<td>The room bearer</td>
+<td>Agent DO; handed to a container at start. Also the token on face / wallpaper / theme</td>
+<td>The Worker. A container process while it runs</td>
 </tr>
 <tr>
 <td>Model and tool keys (<code>LLM_API_KEY</code>, <code>GOOGLE_MAPS_API_KEY</code>, …)</td>
-<td>Settings DO per agent → <code>config</code> frame → container env</td>
-<td>Admins write, the container reads</td>
+<td>Agent DO <code>config.env</code>, in plaintext. House <code>LLM_*</code> on the Worker. A container also receives them on the <code>config</code> frame</td>
+<td>Admins write. The brain reads. A container process reads</td>
 </tr>
 <tr>
 <td>OAuth refresh tokens for tools (Google Workspace, Strava, Google Health, Garmin)</td>
-<td>Container <code>DATA_DIR</code>, and ciphertext in the R2 snapshot (<code>tokens_tar</code>)</td>
-<td>Plaintext in that container. The 32-byte key in the Agent DO. R2 and the Worker see ciphertext only</td>
+<td>Native: <code>oauth_token</code> in the Agent DO, AES-256-GCM under <code>snapshot.key</code>. Container: <code>DATA_DIR</code>, and ciphertext in R2 <code>tokens_tar</code></td>
+<td>The plugin, for the call. R2 sees ciphertext only, and only on the container path</td>
 </tr>
 <tr>
-<td>The brain (<code>gantry.db</code>, <code>SELF.md</code>)</td>
-<td>Container disk, R2 snapshot</td>
-<td>That container only</td>
+<td>The brain</td>
+<td>Native: DO SQLite (<code>persona_file</code>, <code>selfnote</code>, sessions, memory, cron). Container: disk plus the R2 snapshot of <code>gantry.db</code> and <code>self_md</code></td>
+<td>That agent only</td>
 </tr>
 <tr>
 <td><code>SESSION_SECRET</code>, <code>GOOGLE_CLIENT_SECRET</code>, <code>CLOUDFLARE_API_TOKEN</code></td>
@@ -217,9 +218,9 @@ defense; the allowlist makes a correct password useless anyway.</p>
 <td>A slug typo creates an empty room, not a shared one</td>
 </tr>
 <tr>
-<td>Phones authenticate with the <strong>session JWE</strong> (the PWA&#39;s cookie; the native apps carry the same token on <code>Authorization</code>, minted by <code>POST /api/auth/token</code> — <a href="access.html#phones-native-sign-in">access.md</a>); the harness with a <strong>bearer</strong> the DO minted</td>
+<td>Phones authenticate with the <strong>session JWE</strong> (the PWA&#39;s cookie; the native apps carry the same token on <code>Authorization</code>, minted by <code>POST /api/auth/token</code> — <a href="access.html#phones-native-sign-in">access.md</a>). A container harness authenticates with a <strong>bearer</strong> the DO minted</td>
 <td>Two credentials, two audiences; a phone cannot impersonate the agent</td>
-<td>Bearer lives in the container env for the life of the box</td>
+<td>On <code>container</code>, the bearer lives in the container env for the life of the box. A native turn does not use it</td>
 </tr>
 <tr>
 <td>Bearer rotates on <code>recreate</code>; the old one dies with the box</td>
@@ -242,10 +243,17 @@ defense; the allowlist makes a correct password useless anyway.</p>
 <td>They keep what their phone already cached</td>
 </tr>
 </tbody></table>
-<p>The harness never listens. Cloud or home, the container dials the Worker
-with the bearer. There is no port to scan, no webhook URL to guess.</p>
+<p>A native brain never listens: it is the DO. A container harness never
+listens either. Cloud or home, that container dials the Worker with the
+bearer. There is no port to scan, no webhook URL to guess.</p>
+<p>OAuth tokens for a native agent are ciphertext in that DO&#39;s SQLite
+(<code>oauth_token</code>), AES-256-GCM under <code>snapshot.key</code> (<code>AesTokenStore</code> in
+<code>brain/tools</code>). The plugin sees plaintext for the call. The key stays
+on the DO. A bug in a plugin is that agent&#39;s env and tokens, not
+another agent&#39;s.</p>
 <hr>
 <h2 id="the-harness-container">The harness container</h2>
+<p>Legacy: <code>runtime: container</code>. A native agent has no process here.</p>
 <table>
 <thead>
 <tr>
@@ -291,8 +299,13 @@ agents, not the Worker. That is the blast radius we chose by baking them
 into one image instead of running fifteen sidecars.</p>
 <hr>
 <h2 id="oauth-for-tools-google-workspace-strava-google-health">OAuth for tools (Google Workspace, Strava, Google Health, …)</h2>
-<p>The harness is headless. Connecting a Google account to an agent is a
-browser hop that ends on a <strong>static page</strong>:</p>
+<p>A native agent finishes on the Worker: <code>GET /api/auth/catch?state&amp;code</code>.
+<code>state</code> is an <code>oauth-catch</code> JWE. The Worker does receive the code, and
+it posts it to that agent&#39;s DO, which exchanges it and stores
+ciphertext in <code>oauth_token</code>. The code is not written to the log. Detail:
+<a href="auth.html#worker-catch-native">auth.md</a>.</p>
+<p>The container harness is headless. Connecting an account on that path
+is a browser hop that ends on a <strong>static page</strong>:</p>
 <pre><code class="language-text">https://github.bldhosting.com/oauth-catch/</code></pre>
 <table>
 <thead>
@@ -302,8 +315,8 @@ browser hop that ends on a <strong>static page</strong>:</p>
 </tr>
 </thead>
 <tbody><tr>
-<td>The catch page is static HTML on GitHub Pages (<code>site/oauth-catch/index.html</code>). It reads <code>?code=</code> from the URL, shows it, offers copy, strips it from history. <strong>No server receives the code.</strong></td>
-<td>Nothing to breach; nothing logged</td>
+<td>The container catch page is static HTML on GitHub Pages (<code>site/oauth-catch/index.html</code>). It reads <code>?code=</code> from the URL, shows it, offers copy, strips it from history. <strong>That page&#39;s server does not receive the code.</strong> The native catch does, on the Worker, and only long enough to call <code>authFinish</code></td>
+<td>The static page has nothing to breach. The Worker catch is the same door as the rest of the app, public, and does not set a session</td>
 </tr>
 <tr>
 <td>You paste the code into chat: <code>/auth &lt;server&gt; &lt;code&gt;</code>. The plugin exchanges it from inside the container with its own client secret</td>
@@ -440,18 +453,33 @@ are the heavy part.</p>
 </thead>
 <tbody><tr>
 <td><code>config</code></td>
-<td><strong>Every secret pasted on the Keys or Tools fold, in plaintext</strong>: <code>LLM_API_KEY</code>, <code>GOOGLE_OAUTH_CLIENT_ID</code> / <code>_SECRET</code>, <code>RENTCAST_API_KEY</code>, <code>STRAVA_CLIENT_SECRET</code>, … plus the persona text and the list of granted tools</td>
+<td><strong>Every secret pasted on the Keys or Tools fold, in plaintext</strong>: <code>LLM_API_KEY</code>, <code>GOOGLE_OAUTH_CLIENT_ID</code> / <code>_SECRET</code>, <code>RENTCAST_API_KEY</code>, <code>STRAVA_CLIENT_SECRET</code>, … plus the persona seed, <code>runtime</code>, and (for a container agent) the <code>mcp</code> grant list</td>
 <td>until changed or the agent is retired</td>
 </tr>
 <tr>
 <td><code>bearer</code></td>
-<td>the room bearer the harness authenticates with</td>
+<td>the room bearer a container harness authenticates with. Also the token on <code>/api/chat/{avatar,backdrop,theme}</code></td>
 <td>until retire</td>
 </tr>
 <tr>
 <td><code>snapshot.key</code></td>
-<td>the 32-byte key that decrypts the agent&#39;s <code>tokens_tar</code> — so <strong>the deployment can read the OAuth refresh tokens it stores in R2</strong></td>
+<td>the 32-byte key. On <code>native</code> it decrypts <code>oauth_token</code> in this DO. On <code>container</code> it decrypts <code>tokens_tar</code> in R2. The deployment can read the OAuth refresh tokens it stores</td>
 <td>until retire</td>
+</tr>
+<tr>
+<td><code>persona_file</code>, <code>selfnote</code> (native SQLite)</td>
+<td><code>PERSONA.md</code> and <code>SELF.md</code></td>
+<td>until edited</td>
+</tr>
+<tr>
+<td><code>oauth_token</code> (native SQLite)</td>
+<td>OAuth access and refresh tokens, AES-256-GCM, nonce prefixed. Providers <code>google</code>, <code>strava</code>, <code>garmin</code>, and the same shape for any plugin that stores one</td>
+<td>until deleted</td>
+</tr>
+<tr>
+<td>sessions, memory, cron, watches (native SQLite)</td>
+<td>the chat the model saw, memories, jobs, watch cursors</td>
+<td>until the agent is retired</td>
 </tr>
 <tr>
 <td><code>allow</code> + hash</td>
@@ -488,7 +516,9 @@ are the heavy part.</p>
 <p><code>sub → [slugs]</code>: which rooms each person may enter, mirrored from the
 Agent DOs so <code>/api/auth/me</code> answers without waking them. No names, no
 text.</p>
-<h3 id="r2-store-backupsltsluggtlatest-and-backupsltsluggtltstampgt">R2 <code>STORE</code> — <code>backups/&lt;slug&gt;/latest/</code> and <code>backups/&lt;slug&gt;/&lt;stamp&gt;/</code></h3>
+<h3 id="r2-store-legacy-snapshots-backupsltsluggtlatest-and-backupsltsluggtltstampgt">R2 <code>STORE</code> — legacy snapshots, <code>backups/&lt;slug&gt;/latest/</code> and <code>backups/&lt;slug&gt;/&lt;stamp&gt;/</code></h3>
+<p>Written by a container agent&#39;s harness. A native agent does not PUT
+these. Faces and backdrops are blobs on the Agent DO, not objects here.</p>
 <table>
 <thead>
 <tr>
@@ -513,16 +543,20 @@ text.</p>
 <td>AES-256-GCM with the Agent DO&#39;s <code>snapshot.key</code></td>
 </tr>
 </tbody></table>
-<p>Every 5 minutes and on shutdown a new stamp lands; nothing prunes them
-yet (<a href="todo.html">todo.md</a> backup loop).</p>
+<p>Every snapshot interval and on shutdown a new stamp lands; nothing
+prunes them yet (<a href="todo.html">todo.md</a> backup loop). After an agent flips
+to <code>native</code>, these objects are the last container copy. The live tokens
+are the <code>oauth_token</code> rows above.</p>
 <h3 id="in-flight-and-on-the-box">In flight and on the box</h3>
 <ul>
 <li><strong>Session cookie</strong>: an encrypted token carrying <code>sub</code> and email, 7
 days, <code>HttpOnly</code>. Role is not in it.</li>
-<li><strong>Harness container</strong>: while running it holds all of the above
-decrypted in memory and under <code>DATA_DIR</code> — keys, tokens, the full
-SQLite. On Cloudflare that disk is gone on stop; on celld <code>/data</code> is
-a volume and keeps it.</li>
+<li><strong>Native isolate</strong>: while a turn runs it holds <code>config.env</code> and, for
+a plugin call, the decrypted OAuth token. SQLite keeps the ciphertext.</li>
+<li><strong>Harness container</strong> (legacy): while running it holds all of the
+above decrypted in memory and under <code>DATA_DIR</code> — keys, tokens, the
+full SQLite. On Cloudflare that disk is gone on stop; on celld
+<code>/data</code> is a volume and keeps it.</li>
 <li><strong>LLM provider</strong>: every turn&#39;s prompt — persona, memory, the
 person&#39;s messages, tool results — goes to whichever model endpoint
 the agent&#39;s <code>LLM_BASE_URL</code> names, under the key they pasted. We do
@@ -622,10 +656,10 @@ Settings DO and are readable by admins only. Not a SIEM.</p>
 </tr>
 <tr>
 <td>4</td>
-<td>R2 copy of OAuth refresh tokens (<code>tokens_tar</code>)</td>
+<td>OAuth refresh tokens</td>
 <td>Low</td>
-<td>That agent&#39;s tool tokens, if the per-agent key is also taken</td>
-<td>Ciphertext only in R2. AES-256-GCM, random 12-byte nonce prefixed to the body. Key is 32 bytes minted once in the Agent DO (<code>snapshot.key</code>, next to the room bearer) and sent on the config frame as <code>SNAPSHOT_KEY</code> (base64). Presigned GET/PUT ≤15 min. The Worker never decrypts. No token files skips the PUT; HTTP 404 on GET is a no-op; a missing key skips the archive and is logged once. Plaintext is never uploaded</td>
+<td>That agent&#39;s tool tokens, if <code>snapshot.key</code> is also taken</td>
+<td>Native: ciphertext in the Agent DO (<code>oauth_token</code>), AES-256-GCM, 12-byte nonce then the seal. The DO decrypts for the plugin. Container: ciphertext only in R2 (<code>tokens_tar</code>). Same key, minted once (<code>snapshot.key</code>). The container path sends it on the config frame as <code>SNAPSHOT_KEY</code>. Presigned GET/PUT ≤15 min. No token files skips the PUT; HTTP 404 on GET is a no-op. Plaintext is never uploaded to R2</td>
 <td>No</td>
 </tr>
 <tr>
@@ -694,9 +728,10 @@ encryption. The token archive is the exception (register #4).</li>
 <h2 id="operator-checklist">Operator checklist</h2>
 <ol>
 <li>Two Google OAuth clients: <strong>door</strong> (redirect <code>/api/auth/callback/google</code>
-on your hostname, identity scopes) and <strong>tools</strong> (redirect the catch
-page URL, the scopes you grant). Privacy policy URL = the <code>privacy/</code>
-page.</li>
+on your hostname, identity scopes) and <strong>tools</strong> (redirect
+<code>https://&lt;origin&gt;/api/auth/catch</code> for a native agent, or the static
+catch page for a container agent, plus the scopes you grant). Privacy
+policy URL = the <code>privacy/</code> page.</li>
 <li><code>GANTREE_ADMINS</code> set before the first deploy. <code>SESSION_SECRET</code> ≥32
 random chars, generated once, stored only as a secret.</li>
 <li>Home: Tailscale or Tunnel. No router port.</li>

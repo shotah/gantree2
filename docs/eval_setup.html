@@ -42,13 +42,13 @@
 <blockquote>
 <p>Why it exists: the persona seed is a behavior contract, and a rule
 that holds two runs in three is a rule the seed is not carrying.
-Fixtures: <code>harness/internal/agent/testdata/eval/</code></p>
+Fixtures: <code>brain/eval/fixtures/</code> (same JSON the Go harness used).</p>
 </blockquote>
-<p>Three values, two places. The eval replays each fixture against a live
-model with the shipped persona seed; it needs the same three <code>LLM_*</code> the
-harness needs. Tool results stay canned. Where a fixture sets
-<code>tools_from</code>, the test builds that sibling plugin and reads <code>tools/list</code>;
-it does not call the tool.</p>
+<p>Three values, one file locally and repository secrets in CI. The eval
+replays each fixture against a live model with the shipped persona seed.
+Tool results stay canned. Where a fixture sets <code>tools_from</code>, the runner
+reads that plugin&#39;s in-process catalog (<code>brain/plugins</code>) filtered by
+<code>brain/eval/fixtures/mcp.toml</code>; it does not call the tool.</p>
 <table>
 <thead>
 <tr>
@@ -59,26 +59,26 @@ it does not call the tool.</p>
 </thead>
 <tbody><tr>
 <td><code>LLM_BASE_URL</code></td>
-<td><code>harness/.env</code></td>
+<td><code>.dev.vars</code></td>
 <td>Repository <strong>secret</strong></td>
 </tr>
 <tr>
 <td><code>LLM_MODEL</code></td>
-<td><code>harness/.env</code></td>
+<td><code>.dev.vars</code></td>
 <td>Repository <strong>secret</strong></td>
 </tr>
 <tr>
 <td><code>LLM_API_KEY</code></td>
-<td><code>harness/.env</code></td>
+<td><code>.dev.vars</code></td>
 <td>Repository <strong>secret</strong></td>
 </tr>
 </tbody></table>
-<p>This is the harness&#39;s own <code>.env</code> for running Go tests from a laptop. It
-is not the Worker&#39;s <code>.dev.vars</code>, and neither is committed.</p>
+<p><code>.dev.vars</code> is the Worker&#39;s local env file. It is not committed. <code>npm run eval</code> loads it dotenv-style and does not print the values. A variable
+already set in the environment wins, so CI secrets are left alone.</p>
 <h2 id="1-local">1. Local</h2>
 <ol>
-<li><p>Copy the example and fill the three lines at the top:</p>
-<pre><code class="language-sh">cp harness/.env.example harness/.env</code></pre>
+<li><p>Put the three lines in <code>.dev.vars</code> (create the file if it is not
+there):</p>
 <pre><code class="language-sh">LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
 LLM_API_KEY=your-key
 LLM_MODEL=gemini-3.8-flash</code></pre>
@@ -86,24 +86,28 @@ LLM_MODEL=gemini-3.8-flash</code></pre>
 <em>that</em> model, not a model benchmark.</p>
 </li>
 <li><p>Run it:</p>
-<pre><code class="language-sh">npm run eval                 # = make -C harness integration-test</code></pre>
-<p>The target sources <code>harness/.env</code>, then runs <code>go test -tags integration</code>
-on <code>TestEval_Live</code>. A turn is ~15 s on a Flash-class model: seven
-fixtures × 3 runs is ~5 minutes, × 10 is ~20. The target passes
-<code>-timeout $(EVAL_TIMEOUT)</code> (default <code>120m</code>) because Go&#39;s default 10 m
-kills a long run mid-fixture with <code>panic: test timed out</code>.</p>
-<p>Without the three values it does not fail, it skips:</p>
-<pre><code class="language-text">--- SKIP: TestEval_Live (0.00s)
-    eval_integration_test.go:36: LLM_BASE_URL, LLM_API_KEY, LLM_MODEL required; ...</code></pre>
+<pre><code class="language-sh">npm run eval</code></pre>
+<p>That loads <code>.dev.vars</code> and runs Vitest with <code>vitest.eval.config.ts</code>
+(<code>test/brain/eval/**</code>). The live test is <code>TestEval_Live</code>&#39;s successor.
+A turn is slow on a Flash-class model; thirty fixtures × 3 runs can
+take the better part of an hour. The Vitest timeout is 120 minutes.</p>
+<p>Without the three values the live test skips and the process still
+exits 0:</p>
+<pre><code class="language-text">LLM_BASE_URL, LLM_API_KEY, LLM_MODEL required; put them in .dev.vars and run npm run eval</code></pre>
+<p>The runner&#39;s unit tests (fixture loader, assertions, canned plugins)
+do not need a key. They run under <code>npm test</code>. The live file is
+excluded there.</p>
 </li>
 <li><p>Narrow it while you tune:</p>
-<pre><code class="language-sh">npm run eval -- EVAL_ARGS='-eval.only=scoop_at_2'          # one fixture
-npm run eval -- EVAL_ARGS='-eval.n=10'                     # nervous
-npm run eval -- EVAL_ARGS='-eval.n=3 -eval.only=no_aims_one_question,planner_gym_no_workout'</code></pre>
-<p><code>-eval.only</code> takes fixture <code>name</code>s (the JSON field, not the file
-name), comma-separated. Two more flags: <code>-eval.v</code> prints every call
-with its args and the reply for passing runs too; <code>-eval.persona=path</code>
-loads that file instead of the shipped seed — see the bake-off below.</p>
+<pre><code class="language-sh">EVAL_ONLY=scoop_at_2 npm run eval
+EVAL_N=10 npm run eval
+EVAL_N=3 EVAL_ONLY=no_aims_one_question,planner_gym_no_workout npm run eval</code></pre>
+<p><code>EVAL_ONLY</code> takes fixture <code>name</code>s (the JSON field, not the file
+name), comma-separated. <code>EVAL_N</code> is runs per fixture (default 3).
+<code>EVAL_V=1</code> prints every call with its args and the reply for passing
+runs too. <code>EVAL_PERSONA=path</code> loads that file instead of the shipped
+seed — see the bake-off below. An unknown name is a failure, so a
+typo does not go green.</p>
 <p>Every passing run prints its cost and shape:</p>
 <pre><code class="language-text">run 1/3 ok: 2 rounds, 10.7k prompt / 259 completion tokens — [cron_schedule memory_store google__calendar_create_events] → reply
 scoop_at_2: 3 runs, mean 2.00 rounds, mean 10.7k prompt / 259 completion tokens per turn
@@ -114,8 +118,8 @@ so one tool batch plus the answer is 2. Brackets are the calls that
 went out <strong>in one batch</strong> — the parallel tool calls the Go loop is
 good at; each <code>→</code> is a serial round. Tokens are the provider&#39;s
 native usage summed over rounds (0 when it omits them).</p>
-<p>Windows: the target is POSIX shell. Set the three variables in the
-session and run the <code>go test</code> line from <code>harness/Makefile</code> directly.</p>
+<p>The script is Node. Set the three variables in the environment (or
+in <code>.dev.vars</code>) and run <code>npm run eval</code>.</p>
 </li>
 </ol>
 <h2 id="2-github">2. GitHub</h2>
@@ -177,8 +181,8 @@ Sprint's at 2:30 and the scoop is at 2 — I'll keep an eye on it.</code></pre>
 <td>Spend discipline on a metered API. Two <code>offers_search</code> for two possible Fridays is fine; a third byte-identical to the first is the model re-asking a question it already had answered.</td>
 </tr>
 <tr>
-<td><code>invented price $N (in no tool result)</code></td>
-<td>A figure in the reply that no tool returned.</td>
+<td><code>invented price $N (in no tool result or input)</code></td>
+<td>A figure in the reply that no tool result and no seeded input contained.</td>
 </tr>
 <tr>
 <td><code>fixture tool X is not in the live S catalog (have …)</code></td>
@@ -246,27 +250,27 @@ and the regex only knew &quot;ping&quot;. Fix the JSON. Widen the window, add
 the word, add an <code>any_of</code> alternative.</li>
 <li><strong>The persona lost a rule.</strong> It said &quot;nothing today&quot; and stopped; it
 narrated a reminder and set no cron; it asked three questions. Do not
-loosen the fixture. Put the line back in the seed, run <code>-eval.only</code>
+loosen the fixture. Put the line back in the seed, run <code>EVAL_ONLY</code>
 on that fixture until it holds, then the whole set.</li>
 </ul>
 <p>Regexes are Go <code>regexp</code> (RE2): <code>(?i)</code> for case-insensitive, no
-lookaround. Fixtures are validated in <code>go test ./...</code> before any model
-call:</p>
-<pre><code class="language-sh">cd harness &amp;&amp; go test ./internal/agent/ -run 'TestEvalFixtures_WellFormed|TestEvalHarness'</code></pre>
+lookaround. The runner strips a leading <code>(?i)</code> and sets the JavaScript
+<code>i</code> flag. Fixtures are validated by the runner&#39;s unit tests before any
+model call:</p>
+<pre><code class="language-sh">npm test</code></pre>
 <h3 id="one-seed">One seed</h3>
-<p>The persona seed is <code>harness/examples/persona/PERSONA.example.md</code> and
-<strong>that is the only copy</strong>. Settings reads it from there when it builds
-a new agent (<code>config.persona</code> on the Agent DO starts as this file). The
-originals kept three lockstep copies across three repos; this repo has
-one file and no lockstep.</p>
+<p>The persona seed the eval fills in (Kit, Sam, Seattle) is
+<code>app/components/agents/personaTemplate.ts</code> — the text settings gives a
+new agent. While <code>harness/examples/persona/PERSONA.example.md</code> is still
+on disk, the eval reads that file instead. <code>EVAL_PERSONA</code> is a bake-off
+file and does not fall back.</p>
 <h3 id="the-bake-off">The bake-off</h3>
 <p>The same run is how a persona edit earns its place. Read the shapes
 first: a <code>→</code> inside a run that the rule did not need is the thing to
 cut, and it usually traces to one sentence. Then:</p>
-<pre><code class="language-sh">cp harness/examples/persona/PERSONA.example.md /tmp/candidate.md
-# edit /tmp/candidate.md
-npm run eval -- EVAL_ARGS='-eval.n=5'                                   # seed: the number to beat
-npm run eval -- EVAL_ARGS='-eval.n=5 -eval.persona=/tmp/candidate.md'   # candidate</code></pre>
+<pre><code class="language-sh"># edit a copy of the template (or the harness example, if it is still there)
+EVAL_N=5 npm run eval                                          # seed: the number to beat
+EVAL_N=5 EVAL_PERSONA=/tmp/candidate.md npm run eval           # candidate</code></pre>
 <p>Compare the two <code>all fixtures:</code> lines and the per-fixture means. A
 candidate wins when every run still passes and rounds or tokens fall;
 n=3 is too noisy to call a 0.2-round difference, use 5 or more. When it
@@ -280,8 +284,8 @@ know when&quot; is a loss, and the completion fixtures are there to fail it.
 Likewise <code>LLM_REASONING_EFFORT</code>: lower is cheaper because the model
 plans less; that is the trade this product does not make.</p>
 <h2 id="5-adding-a-fixture">5. Adding a fixture</h2>
-<p>Copy the nearest file under <code>harness/internal/agent/testdata/eval/</code>
-and edit.</p>
+<p>Copy the nearest file under <code>brain/eval/fixtures/</code> and edit. The JSON
+shape is the Go fixture format; field names stay snake_case.</p>
 <table>
 <thead>
 <tr>
@@ -291,7 +295,7 @@ and edit.</p>
 </thead>
 <tbody><tr>
 <td><code>name</code>, <code>why</code></td>
-<td><code>name</code> is what <code>-eval.only</code> matches; <code>why</code> is the rule in one sentence, printed at the top of the run.</td>
+<td><code>name</code> is what <code>EVAL_ONLY</code> matches; <code>why</code> is the rule in one sentence, printed at the top of the run.</td>
 </tr>
 <tr>
 <td><code>inbound</code></td>
@@ -341,25 +345,21 @@ and edit.</p>
 <h3 id="real-catalogs-toolsfrom">Real catalogs (<code>tools_from</code>)</h3>
 <p>A hand-written <code>params</code> block is the eval&#39;s guess at a plugin&#39;s
 interface, and the guess drifts. <code>tools_from: [&quot;rentals&quot;]</code> publishes the
-server&#39;s real catalog instead: the harness reads
-<code>harness/internal/agent/testdata/eval/mcp.toml</code>, boots the binary, and
-takes <code>tools/list</code> — names, descriptions, schemas — as the tool defs.
-Nothing is called: results stay canned, so a placeholder key never
-reaches a vendor.</p>
-<p><strong>In this repo the binary is already there.</strong> Plugins live under
-<code>harness/mcp/&lt;name&gt;/</code>, so the eval runs <code>go build</code> on the sibling
-module (or uses the one in <code>/opt/mcp</code> when run inside the image, or a
-prebuild in <code>EVAL_MCP_BIN</code>) — no GitHub release lookup, no rate limit,
-no <code>GITHUB_TOKEN</code>. A fixture <code>tools</code> entry whose name the live server
-does not publish fails before any model call, and so does a
-<code>tools_from</code> server with no <code>mcp.lock</code> row. That is the naming contract
-(<a href="mcp-naming.html">mcp-naming.md</a>) enforced by the eval.</p>
+server&#39;s real catalog instead: the runner reads
+<code>brain/eval/fixtures/mcp.toml</code> and asks the in-process plugin
+(<code>brain/plugins/flights</code>, <code>rentals</code>, <code>google</code>) for names, descriptions,
+and input schemas. Google is filtered to the <code>tools</code> allowlist in that
+file (<code>calendar_list_events</code>, <code>calendar_create_events</code>). Nothing is
+called: results stay canned, so a placeholder key never reaches a vendor.</p>
+<p>A fixture <code>tools</code> entry whose name the live plugin does not publish
+fails before any model call, and so does a <code>tools_from</code> server with no
+row in <code>mcp.toml</code>. Hand-written tools for other servers (garmin, and
+google tools outside the allowlist) stay canned.</p>
 <p>The fixtures that set <code>tools_from</code> name <code>rentals</code>, <code>flights</code>, and
-<code>google</code>. Each is a row in <code>harness/mcp.lock</code> and is built from
-<code>harness/mcp/&lt;id&gt;/</code>.</p>
+<code>google</code>.</p>
 <p>Then:</p>
-<pre><code class="language-sh">cd harness &amp;&amp; go test ./internal/agent/ -run TestEvalFixtures_WellFormed   # parses, regexes compile
-npm run eval -- EVAL_ARGS='-eval.n=1 -eval.only=&lt;name&gt;'                      # first live read</code></pre>
+<pre><code class="language-sh">npm test                                              # parses, regexes compile
+EVAL_N=1 EVAL_ONLY=&lt;name&gt; npm run eval                # first live read</code></pre>
 <p>Four kinds of fixture live in the directory. <strong>Single-batch rules</strong> —
 one tool round and a reply, <code>round_budget</code> 2 or 3. <strong>Completion</strong>
 fixtures (the flight, the gym check-in, the dinner planner): the check

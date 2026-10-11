@@ -39,8 +39,11 @@
   </header>
   <main id="content" class="wrap">
     <article class="prose"><h1 id="install-local-cloudflare-or-home">Install — local, Cloudflare, or home</h1>
-<p>Same Worker, same <code>wrangler.jsonc</code>, three places it runs. Agents open
-<strong>zero</strong> inbound ports anywhere: the harness dials the Worker.</p>
+<p>Same Worker, same <code>wrangler.jsonc</code>, three places it runs. A native
+agent opens <strong>zero</strong> inbound ports: the brain is the Agent Durable
+Object. A container agent still dials the Worker. Set <strong>Runtime</strong> to
+<code>native</code> on the dashboard. The default, and any row from before the
+flag, is <code>container</code>.</p>
 <table>
 <thead>
 <tr>
@@ -135,17 +138,35 @@ until you add it on <code>/users</code>.</p>
 in <code>.dev.vars</code> fakes a session on loopback only. The sub is 10–32 digits.
 It still has to be in <code>GANTREE_ADMINS</code> or <code>GANTREE_ALLOW</code>. Details:
 <a href="access.html#dev-without-google">access.md</a>.</p>
-<p><code>npm run dev</code> is Vite on <code>127.0.0.1:3000</code>. It serves the Durable Objects.
-Containers need Docker, which local dev does not assume: <code>wrangler.jsonc</code>
-sets <code>dev.enable_containers</code> to false, and the agent page shows the
-container as unknown instead of failing. Screenshots in this repo were
-taken against <code>npm run dev</code>. <code>npm run build &amp;&amp; npm run start</code> is the
-built Worker under Miniflare (<code>dist/server/wrangler.json</code>); use it when
-you want the production bundle, not to get Durable Objects.</p>
-<h3 id="chat-with-a-real-agent-locally">Chat with a real agent locally</h3>
-<p>No Docker, no deploy. The Worker from <code>npm run dev</code> is the room; the Go
-harness runs as a plain process on your machine and dials it the same
-way the container would.</p>
+<p><code>npm run dev</code> is Vite on <code>127.0.0.1:3000</code>. It serves the Durable Objects,
+including a native brain. Containers need Docker, which local dev does
+not assume: <code>wrangler.jsonc</code> sets <code>dev.enable_containers</code> to false, and
+a container agent&#39;s page shows the container as unknown instead of
+failing. Screenshots in this repo were taken against <code>npm run dev</code>.
+<code>npm run build &amp;&amp; npm run start</code> is the built Worker under Miniflare
+(<code>dist/server/wrangler.json</code>); use it when you want the production
+bundle, not to get Durable Objects.</p>
+<p>House keys the brain reads from <code>.dev.vars</code> (and, in production, from
+Worker secrets): <code>LLM_BASE_URL</code>, <code>LLM_API_KEY</code>, <code>LLM_MODEL</code>, and
+optionally <code>BRAVE_SEARCH_API_KEY</code>. An agent&#39;s own <code>config.env</code> wins
+when the same name is set on both. Plugin keys (<code>GOOGLE_MAPS_API_KEY</code>,
+<code>GOOGLE_OAUTH_CLIENT_ID</code> / <code>GOOGLE_OAUTH_CLIENT_SECRET</code>,
+<code>STRAVA_CLIENT_ID</code> / <code>STRAVA_CLIENT_SECRET</code>, <code>GARMIN_EMAIL</code> /
+<code>GARMIN_PASSWORD</code>, <code>X_BEARER_TOKEN</code>, <code>FEEDS_USER_AGENT</code>, and the rest
+each plugin&#39;s <code>ready()</code> checks) live on the agent. <code>GARMIN_TOOL_TIER</code>
+and <code>GOOGLE_TOOL_PRESET</code> narrow those catalogs. <code>OAUTH_REDIRECT_URI</code>
+is what chat <code>/auth</code> prints; for the Worker catch, register
+<code>https://&lt;origin&gt;/api/auth/catch</code> (<a href="auth.html">auth.md</a>). <code>CRON_TZ</code>,
+<code>DAILY_PLANNER_AT</code>, <code>MEMORY_CONSOLIDATE_MINUTES</code>, <code>DYNAMIC_TOOLS</code>, and
+<code>MCP_ENABLE_FORCE</code> are brain knobs, not container knobs.</p>
+<p><code>CHANNEL</code>, <code>CHAT_MAILBOX_URL</code>, <code>PENDANT_BEARER</code>, <code>SNAPSHOT</code>, and
+<code>SNAPSHOT_INTERVAL</code> are the container start env. A native agent does
+not read them.</p>
+<h3 id="chat-with-a-container-agent-locally">Chat with a container agent locally</h3>
+<p>Legacy. No image and no deploy: the Go binary on your machine dials
+the Worker from <code>npm run dev</code>, the same way the container would. A
+native agent skips this section: flip the runtime radio and open
+<code>/chat/&lt;slug&gt;</code>.</p>
 <pre><code class="language-bash"># .dev.vars, in addition to the above:
 #   GANTREE_DEV_USER=118212345678901234567:you@example.com   # the runner signs in through the dev door
 #   LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
@@ -216,7 +237,7 @@ if a workflow grows a new <code>vars.X</code> or <code>secrets.X</code>, it is a
 <td>Secret</td>
 <td><code>CLOUDFLARE_API_TOKEN</code></td>
 <td><code>deploy-cloudflare</code></td>
-<td>Custom API token, account permissions: Workers Scripts Edit · Workers KV Storage Edit · Workers R2 Storage Edit · <strong>Containers Edit</strong> · Account Settings Read. The &quot;Edit Cloudflare Workers&quot; template lacks Containers; without it <code>wrangler deploy</code> ends in <code>A request to … /containers/me failed</code> after the image has built</td>
+<td>Custom API token, account permissions: Workers Scripts Edit · Workers KV Storage Edit · Workers R2 Storage Edit · <strong>Containers Edit</strong> (legacy binding; this tree still deploys it) · Account Settings Read. The &quot;Edit Cloudflare Workers&quot; template lacks Containers; without it <code>wrangler deploy</code> ends in <code>A request to … /containers/me failed</code> after the image has built</td>
 <td>yes</td>
 </tr>
 <tr>
@@ -348,11 +369,16 @@ Google client&#39;s redirect list.</p>
 npx wrangler r2 bucket create gantree2-store
 npm run deploy
 npx wrangler secret bulk &lt; secrets.json   # {&quot;GOOGLE_CLIENT_SECRET&quot;:&quot;…&quot;,&quot;SESSION_SECRET&quot;:&quot;…&quot;}</code></pre>
-<p>The Worker itself runs on the free tier. Containers need Workers Paid —
-see <a href="#containers">below</a>.</p>
+<p>A native agent adds no container line item. The manifest still declares
+the Harness container, so <code>wrangler deploy</code> of this tree still talks to
+the Containers API until that binding is removed. Starting a container
+needs Workers Paid — see <a href="#containers-legacy">below</a>. The Worker,
+Durable Objects, KV, and R2 are the pieces
+<a href="monetize.html">monetize.md</a> already prices on the free tier.</p>
 <hr>
-<h2 id="containers">Containers</h2>
-<p>One harness container per agent. The Cloudflare account needs Containers
+<h2 id="containers-legacy">Containers (legacy)</h2>
+<p>One harness container per agent still on <code>runtime: container</code>. The
+Cloudflare account needs Containers
 enabled (Workers Paid) and the API token needs <strong>Containers Edit</strong>. Both
 failures look the same from <code>wrangler deploy</code> — &quot;A request to
 <code>/accounts/…/containers/me</code> failed&quot; with no body. <code>npx wrangler containers list</code> with the same token prints the real reason (for a Free account:
@@ -450,7 +476,7 @@ deploys to Cloudflare deploys here, or tells you exactly why not.</p>
 <p>Home deploy is <strong>not</strong> a GitHub Action. GitHub cannot reach the Mini
 and should not.</p>
 <hr>
-<h2 id="harness-image">Harness image</h2>
+<h2 id="harness-image-legacy">Harness image (legacy)</h2>
 <p>One image, <code>harness/Dockerfile</code>: the Go harness plus every MCP server in
 <code>harness/mcp.lock</code> baked into <code>/opt/mcp/&lt;id&gt;/&lt;id&gt;</code>. Neither deploy
 target pulls it from a registry — <code>wrangler deploy</code> builds it into the

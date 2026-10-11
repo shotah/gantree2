@@ -257,7 +257,7 @@ is in the cookie: no role, no agents, no name. Code: <code>lib/door/session.ts</
 </tr>
 </tbody></table>
 <p>Public: <code>/login</code>, <code>/api/auth/google</code>, <code>/api/auth/callback/google</code>,
-<code>/api/auth/config</code>, <code>/api/auth/nonce</code>, <code>/api/auth/token</code>,
+<code>/api/auth/catch</code>, <code>/api/auth/config</code>, <code>/api/auth/nonce</code>, <code>/api/auth/token</code>,
 <code>/manifest.webmanifest</code>, <code>/sw.js</code>, <code>/icon.svg</code>, <code>/favicon.ico</code>,
 <code>/robots.txt</code>, <code>/_vinext/*</code>, <code>/_next/*</code>, <code>/assets/*</code>, <code>/.well-known/*</code>.
 Code: <code>lib/door/gate.ts</code>, <code>lib/door/http.ts</code>, <code>middleware.ts</code>. A cookie
@@ -386,17 +386,21 @@ session.</p>
 <code>allow</code> → re-check every phone socket; close the ones no longer on it.
 Admins are <strong>not</strong> exempt from the room list: operating Kit and
 talking to Kit are different grants.</p>
-<h3 id="frames-harness-room">Frames (harness ↔ room)</h3>
-<p>Harness → room, right after <code>cmds</code>, and again on every reconnect:</p>
+<h3 id="frames-brain-room">Frames (brain ↔ room)</h3>
+<p>A native brain emits these inside the DO. A container harness sends them
+on the crane socket. The DO fans the phone-facing kinds either way.</p>
+<p>Brain → room, right after <code>cmds</code>, and again when the allow list changes:</p>
 <pre><code class="language-json">{ &quot;kind&quot;: &quot;allow&quot;, &quot;users&quot;: [
   { &quot;sub&quot;: &quot;118212345678901234567&quot;, &quot;email&quot;: &quot;ada@example.com&quot; },
   { &quot;email&quot;: &quot;bob@example.com&quot; }
 ] }</code></pre>
-<p>Room → harness, <code>email</code> beside <code>user_id</code>:</p>
-<pre><code class="language-json">{ &quot;kind&quot;: &quot;msg&quot;, &quot;user_id&quot;: &quot;118212345678901234567&quot;,
-  &quot;email&quot;: &quot;ada@example.com&quot;, &quot;text&quot;: &quot;…&quot;, &quot;context&quot;: { } }</code></pre>
-<p>The harness admits a frame when <code>user_id</code> <strong>or</strong> <code>email</code> is on its
-list. Session id: <code>pendant:&lt;slug&gt;:&lt;sub&gt;</code> (wire name; Phase 4 renames).</p>
+<p>Room → brain, <code>email</code> beside <code>user_id</code>. The phone kind is <code>inbound</code>:</p>
+<pre><code class="language-json">{ &quot;kind&quot;: &quot;inbound&quot;, &quot;user_id&quot;: &quot;118212345678901234567&quot;,
+  &quot;email&quot;: &quot;ada@example.com&quot;, &quot;text&quot;: &quot;…&quot; }</code></pre>
+<p>The DO admits the socket when <code>user_id</code> <strong>or</strong> a verified <code>email</code> is on
+the room list, then stamps <code>user_id</code> before the brain sees the frame.
+A native brain keeps one session id, <code>gantry</code>. The container wire name
+<code>pendant:&lt;slug&gt;:&lt;sub&gt;</code> is the alias until Phase 4.</p>
 <hr>
 <h2 id="seeding-where-the-first-people-come-from">Seeding — where the first people come from</h2>
 <table>

@@ -39,11 +39,14 @@
   </header>
   <main id="content" class="wrap">
     <article class="prose"><h1 id="mcp-tool-naming">MCP tool naming</h1>
-<p>Canonical contract for every MCP plugin baked into the harness image —
-the ones under <code>harness/mcp/&lt;name&gt;/</code> and any you add via
-<code>harness/mcp.lock</code>. The harness prefixes <code>{server}__{tool}</code>; this page
-is what goes on the right of the <code>__</code>. Plugins do not get a local
-dialect.</p>
+<p>Canonical contract for every plugin. On <code>runtime: native</code> the modules
+live under <code>brain/plugins/&lt;name&gt;/</code> and <code>brain/tools/names.ts</code> prefixes
+<code>{plugin}__{tool}</code>. The Go copies under <code>harness/mcp/&lt;name&gt;/</code> are the
+frozen container image. This page is what goes on the right of the
+<code>__</code>. Plugins do not get a local dialect.</p>
+<p>Tools take a set and return a list. The rule is
+<code>.cursor/rules/brain-plugins-plural.mdc</code>. A tool that is one thing
+sets <code>single</code> and says why.</p>
 <p><strong>Why it matters:</strong> small models and the harness&#39;s closest-match repair
 pick tools by <strong>name tokens + description</strong>. Synonyms and double
 prefixes break matching, and a broken match is a serial round the Go
@@ -62,18 +65,18 @@ the eval that fails a fixture when a plugin renames a tool
 </tr>
 </thead>
 <tbody><tr>
-<td>MCP <strong>server id</strong></td>
-<td><code>harness/mcp.lock</code> <code>name</code>, mirrored in each agent&#39;s <code>config.mcp</code></td>
+<td>Plugin id</td>
+<td>directory name under <code>brain/plugins/</code> (and <code>harness/mcp.lock</code> <code>name</code> on the container)</td>
 <td><code>strava</code>, <code>google</code>, <code>garmin</code></td>
 </tr>
 <tr>
-<td>MCP <strong>tool name</strong></td>
-<td>Binary registration</td>
+<td>Tool name</td>
+<td>what the plugin registers</td>
 <td><code>activities_list</code>, <code>calendar_list_events</code></td>
 </tr>
 <tr>
 <td><strong>Host-facing name</strong></td>
-<td>Harness joins with <code>__</code></td>
+<td><code>{plugin}__{tool}</code></td>
 <td><code>strava__activities_list</code></td>
 </tr>
 </tbody></table>

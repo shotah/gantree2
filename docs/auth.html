@@ -39,11 +39,35 @@
   </header>
   <main id="content" class="wrap">
     <article class="prose"><h1 id="auth-from-chat-remote-oauth-no-inbound-ports">Auth from chat (remote OAuth, no inbound ports)</h1>
-<p>The harness has no inbound port, so it cannot finish the usual laptop
-OAuth dance (<code>gantry auth google</code> → localhost callback → copy tokens).
-Chat <code>/auth</code> does that hop. The Agent DO starts the container and the
-harness dials out; nothing listens. Pictures:
+<p>Nothing listens for a callback on your LAN. A native agent finishes
+OAuth on the Worker. A container agent still has no inbound port; chat
+<code>/auth</code> does that hop, and the harness dials out. Pictures:
 <a href="architecture.html">architecture.md</a>.</p>
+<hr>
+<h2 id="worker-catch-native">Worker catch (native)</h2>
+<p><code>GET /api/auth/catch?state&amp;code</code> is public (<code>lib/door/gate.ts</code>).
+<code>state</code> is an <code>oauth-catch</code> JWE (<code>sealOAuthCatch</code> in <code>lib/door/session.ts</code>,
+30 minutes) holding <code>{ slug, plugin }</code>. The Worker posts <code>{ plugin, code, redirectUri }</code> to that agent&#39;s DO (<code>X-Chat-Op: auth</code>), and the brain
+calls <code>authFinish</code>. <code>redirectUri</code> is this Worker&#39;s own
+<code>/api/auth/catch</code> (origin plus that path). Success is plain text:
+<code>Connected &lt;plugin&gt;. Go back to chat.</code></p>
+<p>Misses: <code>login not configured</code> (503, no <code>SESSION_SECRET</code>), <code>bad state</code>
+(400), <code>missing code</code> (400), <code>could not connect</code> (502). A container
+agent&#39;s DO answers 409 <code>native runtime</code>, which this route surfaces as
+502.</p>
+<p>Register that URI on the provider, exactly, no trailing slash unless
+the origin&#39;s URL has one:</p>
+<pre><code class="language-text">https://&lt;worker-origin&gt;/api/auth/catch</code></pre>
+<p>The plugin name is the module name: <code>google</code>, <code>strava</code>, <code>google-health</code>,
+<code>garmin</code>. Not <code>ghealth</code>.</p>
+<p>Chat <code>/auth &lt;plugin&gt;</code> on a native agent still prints an authorize URL
+and can exchange a pasted code (<code>/auth &lt;plugin&gt; &lt;code&gt;</code>). That command
+requires <code>OAUTH_REDIRECT_URI</code> or it refuses to start. The <code>state</code> it
+puts on the URL is <code>auth-&lt;ms&gt;</code>, not the catch JWE. Point
+<code>OAUTH_REDIRECT_URI</code> at <code>/api/auth/catch</code> when the provider should land
+on the Worker. Garmin stays an MFA paste (<code>/auth garmin</code>, then
+<code>/auth garmin &lt;code&gt;</code>); it does not use this redirect.</p>
+<p>The static page below is the container path.</p>
 <hr>
 <h2 id="two-flows">Two flows</h2>
 <table>
@@ -66,9 +90,11 @@ harness dials out; nothing listens. Pictures:
 </tr>
 </tbody></table>
 <hr>
-<h2 id="catch-page-pkce-redirect">Catch page (PKCE redirect)</h2>
-<p>Authorize URLs redirect to a static catch page. That page only displays
-<code>?code=</code> with a copy button. No server logic, no tokens.</p>
+<h2 id="catch-page-pkce-redirect-legacy-container">Catch page (PKCE redirect) — legacy container</h2>
+<p>A container agent&#39;s authorize URL redirects to a static catch page.
+That page only displays <code>?code=</code> with a copy button. No server logic,
+no tokens. A native agent uses <a href="#worker-catch-native">Worker catch</a>
+instead of this page.</p>
 <p>The page is <code>site/oauth-catch/index.html</code> in this repo, published by
 <code>pages.yml</code> to the docs site. Why it is static and what it never does:
 <a href="security.html#oauth-for-tools-google-workspace-strava-google-health-">security.md</a>.
