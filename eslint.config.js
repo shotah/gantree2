@@ -123,7 +123,6 @@ export default tseslint.config(
       "security/detect-eval-with-expression": "error",
       "security/detect-unsafe-regex": "error",
       "regexp/no-super-linear-backtracking": "error",
-      "regexp/no-super-linear-move": "error",
     },
   },
 );

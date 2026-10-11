@@ -28,7 +28,7 @@ A tag eval uses `EVAL_N=1` (one pass). A hand run defaults to 3. `ci` and `pages
 
 ## Owner clicks
 
-Done: labels `brain`, `plugins`, `edge`, `app`, `docs`, `ci`, `tests`. Ruleset `24891897` on `~DEFAULT_BRANCH` (active): code-owner review, zero required approvals, dismiss stale reviews, strict checks `app` and `Analyze (javascript-typescript)`, no force-push, no delete. Repository admin bypasses. Dependabot security updates are on. CodeQL default setup is `not-configured` (this repo's `codeql.yml` is the scan). Private vulnerability reporting is on. Pages publishes from `gh-pages`.
+Done: labels `brain`, `plugins`, `edge`, `app`, `docs`, `ci`, `tests`. Dependabot security updates are on. CodeQL default setup is `not-configured` (this repo's `codeql.yml` is the scan). Private vulnerability reporting is on. Pages publishes from `gh-pages`.
 
 No remaining click.
 
@@ -37,5 +37,7 @@ No remaining click.
 `npm run release` (`scripts/release.mjs`) bumps patch unless `--bump=minor`, `--bump=major`, or `--version=vX.Y.Z`. `npm run release:dry` prints current → next and stops. It takes the newest `v*` tag (else `package.json`), runs `npm version --no-git-tag-version`, commits `package.json` and `package-lock.json` as `chore: release vX.Y.Z` when they changed, annotated-tags that version, moves annotated tag `latest` to the same commit, and pushes `HEAD`, the version tag, and force-pushes `latest`. A dirty tree stops it (`--allow-dirty`). `--skip-push` stops before the push.
 
 On the tag: `release` opens the GitHub Release (a `-` in the tag is a prerelease). `eval` runs in parallel at `EVAL_N=1` and does not block. Re-add the gate once fixtures are stable (`TODO(2026-10-11, release-gate)` in `release.yml`) and drop the tag trigger on `eval.yml` when you do. On `main`: `ci`, then `deploy-cloudflare` (`gate` fails the deploy when `ci` is not success). `workflow_dispatch` deploys by hand.
+
+No branch rules on main: one developer. Add a ruleset (PR + `app` + `Analyze (javascript-typescript)`) when a second committer arrives.
 
 After a deploy: `curl -fsS https://gantree2.bldhosting.com/api/health` (`{ok, version, time}`, public, `cache-control: no-store`).

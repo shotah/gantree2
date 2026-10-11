@@ -78,9 +78,8 @@ Nothing here is a plan; the plan is [proposal.md](proposal.md).
       native brain is the only runtime. There is no cutover, no
       freeze, and no archive. `harness/`, the Harness DO, the
       Containers bindings, the harness workflows, the R2 snapshot
-      set, the crane socket, and the `runtime` flag are being
-      deleted. Nothing was deployed, so there is no `gantry.db` to
-      import.
+      set, the crane socket, and the `runtime` flag are gone.
+      Nothing was deployed, so there is no `gantry.db` to import.
 
 ## 1. Run it locally
 
@@ -578,7 +577,7 @@ Decision and the package map: [brain.md](brain.md). Landed
       `EnableStore` (`mcp_enable`; brief idle 6h, short 27h;
       unprefixed builtins do not idle-drop), and `AesTokenStore`
       (AES-256-GCM in SQLite; the key is the Agent DO's
-      `snapshot.key`).
+      `token.key`).
 - [x] **Twelve in-process plugins (2026-10-11).** `chat`, `feeds`,
       `math`, `twitter`, `image`, `strava`, `maps`, `flights`,
       `rentals`, `google-health`, `google`, `garmin`. Google preset
@@ -595,20 +594,19 @@ Decision and the package map: [brain.md](brain.md). Landed
       with `Promise.all`. `/help`, reactions, `/cancel`, and bound
       collapse of old tool results (`collapseOldToolResults`).
 - [x] **`brain/room` (2026-10-11).** The Agent DO adapter. Config
-      `runtime: "container" | "native"`. Dashboard Runtime radios.
-      `GET /api/auth/catch` (`brain/room/catch`). A native agent
-      has no harness process. Phones still see the same frames.
+      `runtime: "container" | "native"` and dashboard Runtime radios
+      landed with it. Both were removed later the same day. A native
+      agent has no second process. Phones still see the same frames.
 - [x] **SELF.md in SQL (2026-10-11).** The self-note row.
       `X-Chat-Op: self_get` / `self_put` on the Agent DO. `GET` and
       `PUT /api/agents/:slug/self`. The Self notes fold edits that
-      row when runtime is `native`. A container agent keeps
-      SELF.md on the container disk.
+      row. The container-disk copy was removed later the same day.
 - [x] **Persona in SQL (2026-10-11).** `persona_file`.
       `importLegacy` copies `config.persona` into `PERSONA.md`
       once; after that the row is the text. `GET`, `PUT`, and
       `DELETE /api/agents/:slug/persona`. The Persona fold reads
-      the SQL row when runtime is `native`, and the config string
-      when it is `container`.
+      the SQL row. The config-string branch was removed later the
+      same day.
 - [x] **Vitest (2026-10-11).** Include is `test/**/*.test.ts` and
       `test/**/*.test.tsx`, so `test/brain` is in `npm test` and
       `npm run test:coverage`. The 11:00 run was green: 274 files,
@@ -622,12 +620,84 @@ Decision and the package map: [brain.md](brain.md). Landed
       eval` load `.dev.vars` and run that config.
       `.github/workflows/eval.yml` is Node: the same `runs` and
       `only` inputs, the same skip notice when `LLM_*` secrets are
-      absent, then `npm ci` and `npm run eval`. `release.yml` still
-      calls it. A failed eval still blocks the tag. A skipped one
-      does not.
+      absent, then `npm ci` and `npm run eval`. At that hour
+      `release.yml` still called it, so a failed eval blocked the
+      tag. A skipped one did not. They were decoupled later the
+      same day.
 - [x] **First live tally (2026-10-11).** `EVAL_N=1`: 28 of 30
       fixtures passed. Failures: `react_to_thanks` (a bare thumbs-up
       in the text, no reaction frame) and `planner_weight_on_pace` (the reply
       was not `[silent]`). Tally: 31 runs, mean 2.29 rounds, mean
       17.8k prompt / 142 completion tokens per turn, 4 over the
       round budget.
+- [x] **Container path deleted, phases 1 and 2 (2026-10-11).**
+      No `harness/` directory, no `harness.yml` or
+      `harness-image.yml`, no `scripts/coverage-harness.sh`. No
+      Harness class (`wrangler.jsonc` migration v3 is
+      `deleted_classes: ["Harness"]`; `worker/` does not export
+      one). No `container`, `containerHttp`, `snapshot`, or `lock`
+      module under `lib/agents`, and no container or snapshot
+      route. No `runtime` field on the agent types. No R2 `STORE`
+      binding and no `containers` block. Bindings are Settings,
+      Agent (SQLite), and KV `DIRECTORY`.
+- [x] **Catalog and grants (2026-10-11).** `toolCatalog()` in
+      `lib/agents/catalog.ts` reads `brain/plugins`.
+      `grantedPlugins` keeps an ungranted plugin on the list so
+      status can say `skipped: disabled`.
+- [x] **Integrated OAuth (2026-10-11).** `/auth <plugin>` seals
+      `{ slug, plugin }` into `state`. `GET /api/auth/catch` is
+      cookie-gated and posts `<plugin> connected` into that user's
+      room. Connect on the Tools fold and
+      `POST /api/agents/:slug/auth/start` start the same path. The
+      redirect is `/api/auth/catch` on the origin. Consoles list
+      `https://gantree2.bldhosting.com/api/auth/catch` and
+      `http://127.0.0.1:3000/api/auth/catch`. `OAUTH_REDIRECT_URI`
+      is not read.
+- [x] **Watch and Twitter on the DO alarm (2026-10-11).** Feeds
+      default 60m, floor 15m. Twitter default 6h, floor 1h. Grid
+      is 5 minutes (`GRID_MS`). One combined wake. Quiet hours,
+      backoff, and pause after repeated fetch failures. HTTP 304
+      keeps the ETag and adds no items. `X_MONTHLY_READS` defaults
+      to 100. Migrations `watch.003` and `twitter.001`.
+- [x] **`npm run agent` (2026-10-11).** `scripts/agent.ts` is an
+      in-process REPL on `createBrain` (`node:sqlite` under
+      `.agent/`). The owner live-verified it. This note did not
+      re-run that session.
+- [x] **Eval follow-up, 30 of 30 (2026-10-11).** The react frame
+      carries the reply id (`brain/agent/frames.ts`).
+      `planner_weight_on_pace` pins `now` at
+      `2026-10-07T08:00:00-07:00` and expects `191.4` on the
+      weigh-in. The reported follow-up run was 30 of 30. This note
+      did not re-run it.
+- [x] **Docs, native only (2026-10-11).** README has no harness
+      path. The 19 living docs are access, architecture, auth,
+      channels, ci, contract, cron, custom-mcp, eval_setup,
+      install, mcp, mcp-naming, monetize, persona,
+      persona_doc_goals, planner-siblings, reactions, security,
+      and troubleshooting. Architecture and cron describe the DO
+      brain. `eval_setup.md` still names
+      `harness/examples/persona/PERSONA.example.md` in one
+      sentence. The morning records (`proposal.md`, `brain.md`,
+      `runtime.md`, `evaluation_fable.md`) still tell the
+      container story.
+- [x] **GitHub hygiene (2026-10-11).** `CODEOWNERS`, pull-request
+      template, issue templates (bug, feature, plugin-request,
+      config), `copilot-instructions.md`, `dependabot.yml`,
+      `labeler.yml`, workflows `codeql`, `scorecard`,
+      `dependency-review`, `labeler`, `stale`, and
+      `.github/release.yml` changelog categories. Root
+      `CONTRIBUTING.md` and `SECURITY.md` describe the Worker and
+      the brain.
+- [x] **CI (2026-10-11).** Scorecard is pinned to
+      `ossf/scorecard-action` v2.4.4. `release.yml` no longer calls
+      `eval.yml` (a TODO names the day the gate comes back). A `v*`
+      tag runs eval beside the release at `EVAL_N=1` and does not
+      block it. `deploy-cloudflare.yml` `gate` fails unless `ci`
+      succeeded (`::error::ci failed on main`). Dependabot ignores
+      `typescript` majors. [ci.md](ci.md) is the page. There is no
+      `docs/codeql.md`. The CodeQL-to-eslint pass stays open.
+- [x] **Gate reported with this pass (2026-10-11).** 279 files /
+      1945 tests, eslint clean, tsc clean, build ok. `package.json`
+      is 0.2.15. A count of `test/**/*.test.ts(x)` while this note
+      was written was 280 files. This note did not re-run the
+      suite.
