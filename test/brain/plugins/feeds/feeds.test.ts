@@ -407,6 +407,35 @@ describe("feeds plugin", () => {
     expect(textOf(items)).toContain("atom-1");
   });
 
+  it("sends validators and treats 304 as an empty feed", async () => {
+    let match = "";
+    let since = "";
+    const ctx = pluginCtx({
+      env,
+      fetch: async (_input, init) => {
+        const headers = new Headers(init?.headers);
+        match = headers.get("if-none-match") ?? "";
+        since = headers.get("if-modified-since") ?? "";
+        return new Response(null, {
+          status: 304,
+          headers: { etag: "\"abc\"", "last-modified": "Thu, 01 Jan 2026 00:00:00 GMT" },
+        });
+      },
+    });
+    const listed = await callTool(feedsPlugin, ctx, "items_list", {
+      url: "https://example.com/rss.xml",
+      if_none_match: "\"abc\"",
+      if_modified_since: "Thu, 01 Jan 2026 00:00:00 GMT",
+    });
+    expect(match).toBe("\"abc\"");
+    expect(since).toBe("Thu, 01 Jan 2026 00:00:00 GMT");
+    expect(listed.isError).toBeUndefined();
+    const rows = JSON.parse(textOf(listed)) as { not_modified?: boolean; items?: unknown[]; etag?: string }[];
+    expect(rows[0]?.not_modified).toBe(true);
+    expect(rows[0]?.items).toEqual([]);
+    expect(rows[0]?.etag).toBe("\"abc\"");
+  });
+
   it("reads each url and resolves each page, with a bad source as a row", async () => {
     const mixed = pluginCtx({
       env,

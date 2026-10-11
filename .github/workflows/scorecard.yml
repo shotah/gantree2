@@ -1,0 +1,49 @@
+name: scorecard
+
+# OpenSSF Scorecard. publish_results writes the public score once this
+# file is on main. Weekly, plus a push to main, plus branch_protection_rule
+# so Branch-Protection and Maintained stay current.
+# The job stays inside the action list the publisher accepts.
+
+on:
+  branch_protection_rule:
+  schedule:
+    - cron: "20 6 * * 1"
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  analysis:
+    name: Scorecard analysis
+    runs-on: ubuntu-latest
+    permissions:
+      # Checkout, and the scorecard reading workflow runs.
+      contents: read
+      actions: read
+      # publish_results signs the result with the OIDC token.
+      id-token: write
+      # SARIF upload to code scanning.
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: ossf/scorecard-action@v2
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: SARIF file
+          path: results.sarif
+          retention-days: 5
+
+      - uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: results.sarif

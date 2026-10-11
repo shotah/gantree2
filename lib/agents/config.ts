@@ -1,10 +1,9 @@
 /**
  * Agent DO config. HTTP sees `AgentConfigView` (env values redacted).
- * The harness socket sees the real env inside the `config` frame.
+ * A crane socket sees the real env inside the `config` frame.
  * `recreate` is true only after `markStarted` and a later env change.
  */
-import type { AgentConfig, AgentConfigView, AgentRuntime } from "@/lib/agents/types";
-import { SNAPSHOT_FILES, type SnapshotUrls } from "@/lib/agents/snapshot";
+import type { AgentConfig, AgentConfigView } from "@/lib/agents/types";
 
 export const CONFIG_STORE_KEY = "agent.config";
 export const CONFIG_STARTED_KEY = "agent.config.started";
@@ -16,12 +15,7 @@ const ENV_VALUE_MAX = 16_384;
 const TEXT_MAX = 262_144;
 
 export function emptyConfig(): AgentConfig {
-  return { env: {}, mcp: "", persona: "", runtime: "container", updatedAt: null };
-}
-
-/** Stored rows from before the flag, and anything that is not `native`, stay on the container. */
-export function agentRuntime(value: unknown): AgentRuntime {
-  return value === "native" ? "native" : "container";
+  return { env: {}, mcp: "", persona: "", updatedAt: null };
 }
 
 export function canonicalEnv(env: Record<string, string>): string {
@@ -35,7 +29,7 @@ export function canonicalEnv(env: Record<string, string>): string {
   return JSON.stringify(sorted);
 }
 
-/** True when env differs from the blob captured at the last container start. */
+/** True when env differs from the blob captured at the last applied start. */
 export function needsRecreate(env: Record<string, string>, startedEnv: string | null): boolean {
   if (startedEnv == null) {
     return false;
@@ -49,7 +43,6 @@ export function configView(config: AgentConfig, startedEnv: string | null, house
     house: [...house],
     mcp: config.mcp,
     persona: config.persona,
-    runtime: config.runtime,
     updatedAt: config.updatedAt,
     recreate: needsRecreate(config.env, startedEnv),
   };
@@ -93,7 +86,6 @@ export function parseConfig(raw: unknown): AgentConfig {
     env: copyEnv(row.env),
     mcp: typeof row.mcp === "string" ? row.mcp : "",
     persona: typeof row.persona === "string" ? row.persona : "",
-    runtime: agentRuntime(row.runtime),
     updatedAt,
   };
 }
@@ -142,7 +134,6 @@ export function applyConfigPatch(config: AgentConfig, patch: unknown, now: numbe
   }
   let mcp = config.mcp;
   let persona = config.persona;
-  let runtime = config.runtime;
   if (Object.prototype.hasOwnProperty.call(body, "mcp")) {
     if (typeof body.mcp !== "string" || body.mcp.length > TEXT_MAX) {
       return { ok: false, error: "bad_config" };
@@ -161,27 +152,17 @@ export function applyConfigPatch(config: AgentConfig, patch: unknown, now: numbe
       changed = true;
     }
   }
-  if (Object.prototype.hasOwnProperty.call(body, "runtime")) {
-    if (body.runtime !== "container" && body.runtime !== "native") {
-      return { ok: false, error: "bad_config" };
-    }
-    if (runtime !== body.runtime) {
-      runtime = body.runtime;
-      changed = true;
-    }
-  }
   return {
     ok: true,
     changed,
-    config: changed ? { env, mcp, persona, runtime, updatedAt: now } : { ...config, env: config.env },
+    config: changed ? { env, mcp, persona, updatedAt: now } : { ...config, env: config.env },
   };
 }
 
-/** Env map the `config` frame sends: house floor, then the agent's own keys, then the snapshot key. */
+/** Env map the `config` frame sends: house floor, then the agent's own keys. */
 export function frameEnv(
   config: AgentConfig,
   house: Record<string, string> = {},
-  snapshotKey = "",
 ): Record<string, string> {
   const env: Record<string, string> = {};
   for (const [key, value] of Object.entries({ ...house, ...config.env })) {
@@ -189,39 +170,21 @@ export function frameEnv(
       env[key] = value;
     }
   }
-  if (snapshotKey) {
-    env.SNAPSHOT_KEY = snapshotKey;
-  }
   return env;
 }
 
-function presentUrls(urls: SnapshotUrls): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const file of SNAPSHOT_FILES) {
-    const url = urls[file];
-    if (url) {
-      out[file] = url;
-    }
-  }
-  return out;
-}
-
 /**
- * DO → harness. Carries env values — the house floor under the agent's own,
+ * DO → crane socket. Carries env values — the house floor under the agent's own,
  * so a blank `LLM_*` on the agent falls through. Never fan this out to phones.
  */
 export function configFrame(
   config: AgentConfig,
-  urls: { restore: SnapshotUrls; put: SnapshotUrls },
   house: Record<string, string> = {},
-  snapshotKey = "",
 ): string {
   return JSON.stringify({
     kind: "config",
-    env: frameEnv(config, house, snapshotKey),
+    env: frameEnv(config, house),
     mcp: config.mcp,
     persona: config.persona,
-    restore: presentUrls(urls.restore),
-    put: presentUrls(urls.put),
   });
 }

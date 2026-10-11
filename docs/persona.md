@@ -15,26 +15,18 @@ The prompt concatenates them in that order. The brain stamps the
 **Self-notes**, **Location pins**, and **Follow-up** sections in
 `PERSONA.md` and the `SELF.md` header. Your bullets stay.
 
-On `runtime: native` both are SQLite rows in the Agent DO. `PERSONA.md`
-is a `persona_file` row. `SELF.md` is the `selfnote` row. The first
-native open copies `config.persona` into `PERSONA.md` once, and only
-when `persona_file` is empty. That copy does not run again once any
-row exists. Saving the persona fold writes the row. A `PATCH` of
-`config.persona` while the runtime is `native` also writes
-`PERSONA.md`. The dashboard folds
-and the HTTP routes are the edit path:
+Both are SQLite rows in the Agent DO. `PERSONA.md` is a
+`persona_file` row. `SELF.md` is the `selfnote` row. The first open
+copies `config.persona` into `PERSONA.md` once, and only when
+`persona_file` is empty and the text is non-blank. That copy does not
+run again once any row exists. Saving the persona fold writes the row.
+A `PATCH` of `config.persona` also writes `PERSONA.md` when the string
+changes. The dashboard folds and the HTTP routes are the edit path:
 `GET` / `PUT` / `DELETE /api/agents/:slug/persona` and
-`GET` / `PUT /api/agents/:slug/self`. A container agent answers 409
-`container runtime` on those routes. Other `*.md` names can be stored;
+`GET` / `PUT /api/agents/:slug/self`. Other `*.md` names can be stored;
 the assembler uses `PERSONA.md` and `SELF.md`. If `PERSONA.md` is
 absent, leftover `SOUL.md` / `RULES.md` / `USER.md` / `TOOLS.md` are
-folded into it.
-
-On `runtime: container`, the two files live in `PERSONA_DIR` on the
-container disk, and `SELF.md` is also in the R2 snapshot with
-`gantry.db`. Extra `*.md` is ignored. The board's persona box is
-`config.persona`, sent on the `config` frame.
-[architecture.md](architecture.md).
+folded into it. [architecture.md](architecture.md).
 
 ---
 
@@ -42,7 +34,7 @@ container disk, and `SELF.md` is also in the R2 snapshot with
 
 Loaded MCP servers reach the model from the **live catalog**:
 
-- Tool schemas on the Completer call (`mcp.toml` grant, `mcp_enable` filter)
+- Tool schemas on the model call (the granted catalog, then `mcp_enable`)
 - `[mcp prefixes]` in the prompt when dynamic tools are on — the model is
   told to review on vs off and `mcp_enable` a needed off prefix this turn
 - `/tools` for you
@@ -52,7 +44,7 @@ That file is in the cached prefix every turn. If Google is not mounted, a
 persona that names `google__calendar_list_events` teaches the model to invent
 a tool. If Google *is* mounted, the schema already has the name.
 
-`PERSONA.md` may mention harness builtins (`self_note`, `memory_*`, `cron_*`,
+`PERSONA.md` may mention builtins (`self_note`, `memory_*`, `cron_*`,
 `watch_*`, `mcp_enable`) and **your** facts the schema cannot know (timezone,
 canonical email, “ask first”). House notes (“bike = bicycling”) belong under
 **About you**, not as a fake catalog.
@@ -83,9 +75,8 @@ A north-star sentence in `SELF.md` is the always-on personality layer.
 forget / FTS / supersede. Jokes competing with project plans is mystery
 blending again.
 
-No new `goal` kind. `insight` + `aim/` is the convention. Canonical seed
-teaches this: `harness/examples/persona/PERSONA.example.md` (lands with
-[todo.md](todo.md) §5).
+No new `goal` kind. `insight` + `aim/` is the convention. The new-agent
+template teaches this: `app/components/agents/personaTemplate.ts`.
 
 ---
 
@@ -164,15 +155,14 @@ anything `/tools` already shows, **progress logs / mileage / open loops**
 (those are memory, not persona). If a sentence does not change behavior,
 delete it.
 
-Canonical seed: `harness/examples/persona/PERSONA.example.md`
-(`make init` inside `harness/`, which lands with [todo.md](todo.md) §5).
+Canonical seed: `app/components/agents/personaTemplate.ts`.
 
 ### Settings seed
 
-One copy. A new agent's `config.persona` starts as that seed. On the
-first native open it is copied into the `PERSONA.md` row once. There is
-no second template to keep in lockstep. The container harness still
-reads the same string as `PERSONA_DIR/PERSONA.md` from the config frame.
+One copy. A new agent's `config.persona` starts as that template. On
+the first open it is copied into the `PERSONA.md` row once, when the
+table is empty and the text is non-blank. There is no second template
+to keep in lockstep.
 
 **Inject user** (admin) then patches **About you** from the signed-in
 user's profile — name, email, timezone, location, languages, notes, chat
@@ -187,10 +177,9 @@ When you change the seed, that file is the change.
 
 ## `SELF.md`
 
-Agent-written, append-only mid-chat, merge on `/new`. You prune it. On
-a native agent the operator fold is `GET` / `PUT /api/agents/:slug/self`
-(an empty body is refused). The container copy is the file in
-`PERSONA_DIR` and the `self_md` object in R2.
+Agent-written, append-only mid-chat, merge on `/new`. You prune it.
+The operator fold is `GET` / `PUT /api/agents/:slug/self` (an empty
+body is refused).
 
 Keep **3–5 north-star sentences** (how you show up for months). Move mileage,
 dates, and open loops to memory (`aim/<area>`). Audit: [troubleshooting.md](troubleshooting.md#selfmd--personality-drift).

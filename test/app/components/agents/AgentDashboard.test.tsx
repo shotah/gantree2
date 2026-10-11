@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AgentDashboard } from "@/app/components/agents/AgentDashboard";
 import type { ApiClient } from "@/app/lib/agentsHttp";
-import { CONTAINER, MAPS, card, config, json, session, href, areaOf, buttonOf, textBody } from "./fixtures";
+import { MAPS, card, config, json, session, href, areaOf, buttonOf, textBody } from "./fixtures";
 
 afterEach(() => {
   cleanup();
@@ -29,14 +29,19 @@ function dashClient(options?: { role?: "admin" | "operator"; canMutate?: boolean
     }
     if (url.endsWith("/config")) {
       if (method === "PATCH") {
-        const body = JSON.parse(textBody(init?.body)) as { persona?: string; runtime?: string };
+        const body = JSON.parse(textBody(init?.body)) as { persona?: string };
         return json(200, {
           ...view,
           persona: body.persona ?? view.persona,
-          runtime: body.runtime ?? view.runtime,
         });
       }
       return json(200, view);
+    }
+    if (url.endsWith("/self")) {
+      return json(200, { text: "# SELF.md\n", maxChars: 4096 });
+    }
+    if (url.endsWith("/log")) {
+      return json(200, { lines: [], next: 0 });
     }
     if (url.endsWith("/persona")) {
       if (method === "PUT") {
@@ -50,9 +55,6 @@ function dashClient(options?: { role?: "admin" | "operator"; canMutate?: boolean
         files: [{ name: "PERSONA.md", text: view.persona, updatedAt: 1 }],
         maxChars: 262144,
       });
-    }
-    if (url.endsWith("/container")) {
-      return json(200, { ...CONTAINER, state: "stopped" });
     }
     if (method === "DELETE") {
       return new Response(null, { status: 204 });
@@ -72,7 +74,7 @@ function dashClient(options?: { role?: "admin" | "operator"; canMutate?: boolean
 }
 
 describe("AgentDashboard", () => {
-  it("shows the agent, runs a container action, saves persona, and deletes after the slug is typed", async () => {
+  it("shows the agent, saves persona, and deletes after the slug is typed", async () => {
     const go = vi.fn();
     const client = dashClient();
     render(<AgentDashboard slug="kit" client={client} go={go} spend={<p>Spend goes here</p>} />);
@@ -90,9 +92,6 @@ describe("AgentDashboard", () => {
     const zone = screen.getByRole("region", { name: "Danger zone" });
     expect(zone.className).toContain("border-danger-line");
     expect(zone.className).toContain("bg-danger-soft/40");
-
-    fireEvent.click(screen.getByRole("button", { name: "stop container" }));
-    expect(await screen.findByText("stopped")).toBeTruthy();
 
     // One header button shuts every fold on the page, wherever its state lives, then offers to open them again.
     const foldHeads = () => ["Status", "Persona", "Self notes", "Keys", "Tools", "Who can chat", "Log"].map((name) => screen.getByRole("button", { name }));
@@ -113,7 +112,7 @@ describe("AgentDashboard", () => {
     fireEvent.click(persona);
     expect(persona.getAttribute("aria-expanded")).toBe("true");
     expect(persona.querySelector("[aria-hidden]")?.className).toContain("rotate-180");
-    fireEvent.change(screen.getByLabelText("Persona text"), { target: { value: "Be sharp." } });
+    fireEvent.change(await screen.findByLabelText("Persona text"), { target: { value: "Be sharp." } });
     fireEvent.click(screen.getByRole("button", { name: "Save persona" }));
     expect(await screen.findByText("Saved.")).toBeTruthy();
 
@@ -127,27 +126,16 @@ describe("AgentDashboard", () => {
     await vi.waitFor(() => expect(go).toHaveBeenCalledWith("/agents"));
   });
 
-  it("patches the runtime from the Runtime radios and shows native in place of the container row", async () => {
-    const client = dashClient();
-    render(<AgentDashboard slug="kit" client={client} go={vi.fn()} />);
-    expect(await screen.findByRole("radio", { name: "container" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("radio", { name: "native" }));
-    await vi.waitFor(() => expect(screen.queryByRole("button", { name: "start container" })).toBeNull());
-    expect(screen.getByText("native", { selector: "p" })).toBeTruthy();
-    const patches = vi.mocked(client).mock.calls.filter((call) => {
-      const init = call[1];
-      return init?.method === "PATCH" && href(call[0]).endsWith("/config");
-    });
-    const body = JSON.parse(textBody(patches[0]?.[1]?.body)) as { runtime?: string };
-    expect(body.runtime).toBe("native");
+  it("has no runtime switch", async () => {
+    render(<AgentDashboard slug="kit" client={dashClient()} go={vi.fn()} />);
+    expect(await screen.findByRole("heading", { name: "Kit" })).toBeTruthy();
+    expect(screen.queryByRole("radio")).toBeNull();
   });
 
-  it("saves persona through the persona route after switching to native", async () => {
+  it("saves persona through the persona route", async () => {
     const client = dashClient();
     render(<AgentDashboard slug="kit" client={client} go={vi.fn()} />);
-    expect(await screen.findByRole("radio", { name: "container" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("radio", { name: "native" }));
-    await vi.waitFor(() => expect(screen.queryByRole("button", { name: "start container" })).toBeNull());
+    expect(await screen.findByRole("heading", { name: "Kit" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Persona" }));
     const field = areaOf(await screen.findByLabelText("Persona text"));
     expect(field.value).toBe("Be brief.");
@@ -183,7 +171,6 @@ describe("AgentDashboard", () => {
   it("hides changes from an operator", async () => {
     render(<AgentDashboard slug="kit" client={dashClient({ role: "operator", canMutate: false })} />);
     expect(await screen.findByText("Looking only. Changes belong to an admin or this agent's operator.")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "start container" })).toBeNull();
     expect(screen.queryByRole("region", { name: "Danger zone" })).toBeNull();
   });
 

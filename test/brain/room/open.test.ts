@@ -4,9 +4,8 @@ import { createBrain } from "@/brain/agent";
 import type { BrainDeps } from "@/brain/core/brain";
 import type { LogFrame } from "@/brain/core/wire";
 import { allPlugins } from "@/brain/plugins";
-import { AesTokenStore } from "@/brain/tools";
+import { AesTokenStore, TOKEN_KEY_STORE_KEY, tokenKeyOk } from "@/brain/tools";
 import { CONFIG_STORE_KEY } from "@/lib/agents/config";
-import { SNAPSHOT_KEY_STORE_KEY, snapshotKeyOk } from "@/lib/agents/snapshot";
 import { dropRoomBrain, openRoomBrain } from "@/brain/room";
 import { roomAuth } from "@/brain/room/authbind";
 
@@ -121,9 +120,11 @@ describe("openRoomBrain", () => {
     expect(deps.env.LLM_MODEL).toBe("mine");
     expect(deps.env.LLM_API_KEY).toBe("mine-key");
     expect(deps.env.LLM_BASE_URL).toBe("https://llm.example/v1");
-    expect(snapshotKeyOk(String(deps.env.SNAPSHOT_KEY))).toBe(true);
-    expect(rows.get(SNAPSHOT_KEY_STORE_KEY)).toBe(deps.env.SNAPSHOT_KEY);
+    expect(deps.env.SNAPSHOT_KEY).toBeUndefined();
+    expect(tokenKeyOk(String(rows.get(TOKEN_KEY_STORE_KEY)))).toBe(true);
     expect(deps.tokens).toBeInstanceOf(AesTokenStore);
+    const math = deps.plugins.find((plugin) => plugin.name === "math");
+    expect(await math?.ready({} as never)).toBe("disabled");
     expect(deps.plugins.map((plugin) => plugin.name)).toEqual(PLUGIN_NAMES);
     expect(allPlugins.map((plugin) => plugin.name)).toEqual(PLUGIN_NAMES);
     expect(typeof deps.provider.complete).toBe("function");
@@ -212,5 +213,30 @@ describe("openRoomBrain", () => {
     expect(bound?.redirectUri()).toBe("https://gantree2.bldhosting.com/api/auth/catch");
     expect(await bound?.sealState("google")).toBe("sealed:google");
     expect(depsOf().env.OAUTH_REDIRECT_URI).toBeUndefined();
+  });
+
+  it("rebuilds when the grant list changes and publishes the granted plugin", async () => {
+    const rows = new Map<string, unknown>();
+    rows.set("slug", "kit");
+    rows.set(CONFIG_STORE_KEY, { env: {}, mcp: "", persona: "", updatedAt: 1 });
+    const ctx = ctxFor(rows);
+    const opts = { foldLog: () => undefined };
+    await openRoomBrain(ctx as unknown as DurableObjectState, {}, opts);
+    expect(await depsOf().plugins.find((plugin) => plugin.name === "math")?.ready({} as never)).toBe("disabled");
+
+    rows.set(CONFIG_STORE_KEY, {
+      env: {},
+      mcp: "[[server]]\nname = \"math\"\ncommand = \"math\"\n",
+      persona: "",
+      updatedAt: 2,
+    });
+    await openRoomBrain(ctx as unknown as DurableObjectState, {}, opts);
+    expect(vi.mocked(createBrain)).toHaveBeenCalledTimes(2);
+    expect(await depsOf().plugins.find((plugin) => plugin.name === "math")?.ready({} as never)).toBeNull();
+
+    rows.set(CONFIG_STORE_KEY, { env: {}, mcp: "", persona: "", updatedAt: 3 });
+    await openRoomBrain(ctx as unknown as DurableObjectState, {}, opts);
+    expect(vi.mocked(createBrain)).toHaveBeenCalledTimes(3);
+    expect(await depsOf().plugins.find((plugin) => plugin.name === "math")?.ready({} as never)).toBe("disabled");
   });
 });

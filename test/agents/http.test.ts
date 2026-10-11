@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { openRegistry, type AgentCreateBody } from "@/lib/agents/registry";
 import {
   deleteAgent,
@@ -13,7 +13,6 @@ import {
   getAgentStatus,
   getAgentUsers,
   getSamples,
-  handleSnapshot,
   patchAgentConfig,
   putAgentPersona,
   putAgentSelf,
@@ -23,51 +22,11 @@ import {
   settingsApi,
   type AgentsHttpEnv,
 } from "@/lib/agents/http";
-import { signSnapshot, type SnapshotStore } from "@/lib/agents/snapshot";
 import { emptyStatus } from "@/lib/agents/status";
 import { openSettings, type SampleInput, type SampleQuery } from "@/lib/door/settingsStore";
 import { memorySql } from "../door/memorySql";
 
-const container = vi.hoisted(() => ({
-  info: vi.fn((_env: unknown, _slug: unknown) => Promise.resolve({ state: "unknown" as const, since: null, lastError: null, image: null })),
-  act: vi.fn((_env: unknown, _slug: unknown, _action: unknown) => Promise.resolve({ state: "unknown" as const, since: null, lastError: null, image: null })),
-}));
-
-vi.mock("@/lib/agents/container", () => ({
-  containerInfo: (env: unknown, slug: unknown) => container.info(env, slug),
-  containerAct: (env: unknown, slug: unknown, action: unknown) => container.act(env, slug, action),
-  UNKNOWN_CONTAINER: { state: "unknown", since: null, lastError: null, image: null },
-}));
-
 const ADA = "118212345678901234567";
-const now = 1_700_000_000_000;
-
-class MemR2 implements SnapshotStore {
-  objects = new Map<string, Uint8Array>();
-  fail = false;
-
-  get(key: string) {
-    const hit = this.objects.get(key);
-    if (!hit) {
-      return Promise.resolve(null);
-    }
-    const copy = hit.slice();
-    return Promise.resolve({
-      arrayBuffer: () => Promise.resolve(copy.buffer.slice(copy.byteOffset, copy.byteOffset + copy.byteLength)),
-    });
-  }
-
-  put(key: string, value: ArrayBuffer | ArrayBufferView) {
-    if (this.fail) {
-      throw new Error("r2");
-    }
-    const bytes = value instanceof ArrayBuffer
-      ? new Uint8Array(value)
-      : new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
-    this.objects.set(key, bytes.slice());
-    return Promise.resolve();
-  }
-}
 
 function usersFrom(body: string): unknown[] {
   if (!body) {
@@ -96,7 +55,6 @@ function world() {
   const users = openSettings(sql, () => 50);
   const agents = openRegistry(sql, () => 50);
   const calls: { url: string; method: string; op: string | null; body: string }[] = [];
-  const bucket = new MemR2();
   let bearer: string | null = "room-secret";
   let down = false;
   const api = {
@@ -138,12 +96,10 @@ function world() {
         },
       }),
     },
-    STORE: bucket,
   } as unknown as AgentsHttpEnv;
   return {
     env,
     api,
-    bucket,
     calls,
     users,
     agents,
@@ -157,22 +113,15 @@ function world() {
 }
 
 describe("agents http", () => {
-  beforeEach(() => {
-    container.info.mockReset();
-    container.act.mockReset();
-    container.info.mockResolvedValue({ state: "unknown", since: null, lastError: null, image: null });
-    container.act.mockResolvedValue({ state: "unknown", since: null, lastError: null, image: null });
-  });
-
   it("lists every agent for an admin and only runnable ones for an operator", async () => {
     const { env, agents } = world();
     await agents.create({ slug: "kit", name: "Kit" }, ADA);
     await agents.create({ slug: "ada", name: "Ada" }, ADA);
     const all = await getAgents(asRole("admin", "/api/agents"), env);
     expect(all.status).toBe(200);
-    const body = await all.json<{ agents: { slug: string; canMutate: boolean; status: { harness: string }; container: { state: string } }[] }>();
+    const body = await all.json<{ agents: { slug: string; canMutate: boolean; status: { harness: string } }[] }>();
     expect(body.agents.map((row) => row.slug)).toEqual(["ada", "kit"]);
-    expect(body.agents.every((row) => row.canMutate && row.status.harness === "connected" && row.container.state === "unknown")).toBe(true);
+    expect(body.agents.every((row) => row.canMutate && row.status.harness === "connected")).toBe(true);
 
     const mine = await getAgents(asRole("operator", "/api/agents", ["kit"]), env);
     expect((await mine.json<{ agents: { slug: string; canMutate: boolean }[] }>()).agents).toEqual([
@@ -197,9 +146,8 @@ describe("agents http", () => {
     expect(calls.filter((c) => c.op === "bearer" && c.method === "PUT")).toHaveLength(0);
   });
 
-  it("creates for an admin, refuses an operator, and deletes after stopping the container", async () => {
-    const { env, agents, bucket, users } = world();
-    bucket.objects.set("backups/kit/latest/gantry_db", new Uint8Array([1]));
+  it("creates for an admin, refuses an operator, and deletes the row", async () => {
+    const { env, agents, users } = world();
     const created = await postAgent(asRole("admin", "/api/agents", [], "POST", JSON.stringify({ slug: "Kit", tags: ["house"] })), env);
     expect(created.status).toBe(201);
     expect(await created.json()).toMatchObject({ agent: { slug: "kit", name: "kit", tags: ["house"], canMutate: true } });
@@ -208,26 +156,12 @@ describe("agents http", () => {
     expect((await postAgent(asRole("admin", "/api/agents", [], "POST", JSON.stringify({ slug: "kit" })), env)).status).toBe(409);
 
     await users.addSample({ agent: "kit", kind: "turn", value: 1 });
-    container.act.mockImplementationOnce(() => agents.get("kit").then((row) => {
-      expect(row).not.toBeNull();
-      return { state: "unknown" as const, since: null, lastError: null, image: null };
-    }));
     const removed = await deleteAgent(asRole("admin", "/api/agents/kit", [], "DELETE"), env, "Kit");
     expect(removed.status).toBe(204);
-    expect(container.act).toHaveBeenCalledWith(env, "kit", { action: "stop" });
     expect(await agents.get("kit")).toBeNull();
     expect(await users.listSamples({ agent: "kit" })).toHaveLength(1);
-    expect(bucket.objects.has("backups/kit/latest/gantry_db")).toBe(true);
     expect((await deleteAgent(asRole("admin", "/api/agents/kit", [], "DELETE"), env, "kit")).status).toBe(404);
     expect((await deleteAgent(asRole("operator", "/api/agents/kit", ["kit"], "DELETE"), env, "kit")).status).toBe(403);
-  });
-
-  it("keeps the row when the container stop throws", async () => {
-    const { env, agents } = world();
-    await agents.create({ slug: "kit" }, ADA);
-    container.act.mockRejectedValueOnce(new Error("nope"));
-    expect((await deleteAgent(asRole("admin", "/api/agents/kit", [], "DELETE"), env, "kit")).status).toBe(503);
-    expect(await agents.get("kit")).not.toBeNull();
   });
 
   it("hands the room bearer only to an admin on the loopback dev door", async () => {
@@ -358,9 +292,8 @@ describe("agents http", () => {
     expect(created.status).toBe(201);
     expect((await created.json<{ agent: { status: null } }>()).agent.status).toBeNull();
     expect((await getAgentConfig(asRole("admin", "/api/agents/kit/config"), env, "kit")).status).toBe(503);
-    container.info.mockRejectedValueOnce(new Error("container"));
     const listed = await getAgents(asRole("admin", "/api/agents"), env);
-    expect((await listed.json<{ agents: { container: { state: string } }[] }>()).agents[0]?.container.state).toBe("unknown");
+    expect((await listed.json<{ agents: { status: null }[] }>()).agents[0]?.status).toBeNull();
   });
 
   it("falls back to idFromName for the settings stub", async () => {
@@ -457,127 +390,5 @@ describe("agents http", () => {
     api.listSamples = () => Promise.reject(new Error("down"));
     expect((await getSamples(asRole("admin", "/api/samples"), env)).status).toBe(503);
     expect((await getSamples(asRole("admin", "/api/samples?since=9007199254740993"), env)).status).toBe(400);
-
-    const exp = now + 60_000;
-    const sig = await signSnapshot("room-secret", "kit", "gantry_db", "GET", exp);
-    vi.spyOn(crypto.subtle, "verify").mockRejectedValueOnce(new Error("hmac"));
-    expect((await handleSnapshot(
-      new Request(`https://g.test/api/agents/kit/snapshot/gantry_db?exp=${exp}&sig=${sig}`),
-      env,
-      "kit",
-      "gantry_db",
-      { now },
-    )).status).toBe(401);
-  });
-});
-
-describe("snapshot http", () => {
-  it("serves and stores a signed body and rejects a bad sig", async () => {
-    const { env, bucket, setBearer } = world();
-    const exp = now + 60_000;
-    const sig = await signSnapshot("room-secret", "kit", "gantry_db", "PUT", exp);
-    const put = await handleSnapshot(
-      new Request(`https://g.test/api/agents/kit/snapshot/gantry_db?exp=${exp}&sig=${sig}&stamp=20261010T120000Z`, {
-        method: "PUT",
-        body: new Uint8Array([7, 8]),
-      }),
-      env,
-      "kit",
-      "gantry_db",
-      { now },
-    );
-    expect(put.status).toBe(204);
-    expect(bucket.objects.has("backups/kit/latest/gantry_db")).toBe(true);
-    expect(bucket.objects.has("backups/kit/20261010T120000Z/gantry_db")).toBe(true);
-    const getSig = await signSnapshot("room-secret", "kit", "gantry_db", "GET", exp);
-    const got = await handleSnapshot(
-      new Request(`https://g.test/api/agents/kit/snapshot/gantry_db?exp=${exp}&sig=${getSig}`, { method: "GET" }),
-      env,
-      "Kit",
-      "gantry_db",
-      { now },
-    );
-    expect(got.status).toBe(200);
-    expect(new Uint8Array(await got.arrayBuffer())).toEqual(new Uint8Array([7, 8]));
-    const missing = await handleSnapshot(
-      new Request(`https://g.test/api/agents/kit/snapshot/self_md?exp=${exp}&sig=${await signSnapshot("room-secret", "kit", "self_md", "GET", exp)}`),
-      env,
-      "kit",
-      "self_md",
-      { now },
-    );
-    expect(missing.status).toBe(404);
-    const tokenPutSig = await signSnapshot("room-secret", "kit", "tokens_tar", "PUT", exp);
-    const tokenPut = await handleSnapshot(
-      new Request(`https://g.test/api/agents/kit/snapshot/tokens_tar?exp=${exp}&sig=${tokenPutSig}`, {
-        method: "PUT",
-        body: new Uint8Array([9, 9, 9]),
-      }),
-      env,
-      "kit",
-      "tokens_tar",
-      { now },
-    );
-    expect(tokenPut.status).toBe(204);
-    expect(bucket.objects.has("backups/kit/latest/tokens_tar")).toBe(true);
-    const tokenGet = await handleSnapshot(
-      new Request(`https://g.test/api/agents/kit/snapshot/tokens_tar?exp=${exp}&sig=${await signSnapshot("room-secret", "kit", "tokens_tar", "GET", exp)}`),
-      env,
-      "kit",
-      "tokens_tar",
-      { now },
-    );
-    expect(tokenGet.status).toBe(200);
-    expect(new Uint8Array(await tokenGet.arrayBuffer())).toEqual(new Uint8Array([9, 9, 9]));
-    const bad = await handleSnapshot(
-      new Request(`https://g.test/api/agents/kit/snapshot/gantry_db?exp=${exp}&sig=abcd`, { method: "GET" }),
-      env,
-      "kit",
-      "gantry_db",
-      { now },
-    );
-    expect(bad.status).toBe(401);
-    expect((await handleSnapshot(new Request("https://g.test/api/agents/kit/snapshot/other"), env, "kit", "other")).status).toBe(404);
-    expect((await handleSnapshot(new Request("https://g.test/api/agents/kit/snapshot/gantry_db", { method: "DELETE" }), env, "kit", "gantry_db")).status).toBe(405);
-    const huge = await handleSnapshot(
-      new Request(`https://g.test/api/agents/kit/snapshot/gantry_db?exp=${exp}&sig=${sig}`, { method: "PUT", body: new Uint8Array([1, 2, 3, 4]) }),
-      env,
-      "kit",
-      "gantry_db",
-      { now, maxBytes: 3 },
-    );
-    expect(huge.status).toBe(413);
-    setBearer(null);
-    expect((await handleSnapshot(
-      new Request(`https://g.test/api/agents/kit/snapshot/gantry_db?exp=${exp}&sig=${sig}`),
-      env,
-      "kit",
-      "gantry_db",
-      { now },
-    )).status).toBe(401);
-    const noStore = { ...env, STORE: undefined };
-    setBearer("room-secret");
-    expect((await handleSnapshot(
-      new Request(`https://g.test/api/agents/kit/snapshot/gantry_db?exp=${exp}&sig=${getSig}`),
-      noStore,
-      "kit",
-      "gantry_db",
-      { now },
-    )).status).toBe(503);
-    bucket.fail = true;
-    expect((await handleSnapshot(
-      new Request(`https://g.test/api/agents/kit/snapshot/gantry_db?exp=${exp}&sig=${sig}`, { method: "PUT", body: new Uint8Array([1]) }),
-      env,
-      "kit",
-      "gantry_db",
-      { now },
-    )).status).toBe(503);
-    expect((await handleSnapshot(
-      new Request(`https://g.test/api/agents/kit/snapshot/gantry_db?exp=${exp}&sig=${getSig}`),
-      { STORE: bucket } as unknown as AgentsHttpEnv,
-      "kit",
-      "gantry_db",
-      { now },
-    )).status).toBe(503);
   });
 });

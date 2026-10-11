@@ -28,7 +28,15 @@ export function validateURL(raw: string): string | null {
   return null;
 }
 
-export type Got = { body: Uint8Array; contentType: string; finalURL: string };
+export type Got = {
+  body: Uint8Array;
+  contentType: string;
+  finalURL: string;
+  status?: number;
+  etag?: string;
+  lastModified?: string;
+  notModified?: boolean;
+};
 
 export async function httpGet(opts: {
   fetch: typeof fetch;
@@ -36,6 +44,8 @@ export async function httpGet(opts: {
   userAgent?: string;
   maxBytes?: number;
   signal?: AbortSignal;
+  ifNoneMatch?: string;
+  ifModifiedSince?: string;
 }): Promise<Got> {
   const bad = validateURL(opts.url);
   if (bad) throw new Error(bad);
@@ -45,6 +55,11 @@ export async function httpGet(opts: {
     AbortSignal.timeout(defaultTimeoutMs),
     ...(opts.signal ? [opts.signal] : []),
   ]);
+  const headers: Record<string, string> = { "User-Agent": ua, Accept: ACCEPT };
+  const ifNoneMatch = (opts.ifNoneMatch ?? "").trim();
+  const ifModifiedSince = (opts.ifModifiedSince ?? "").trim();
+  if (ifNoneMatch !== "") headers["If-None-Match"] = ifNoneMatch;
+  if (ifModifiedSince !== "") headers["If-Modified-Since"] = ifModifiedSince;
   let current = opts.url;
   let redirects = 0;
   for (;;) {
@@ -52,8 +67,20 @@ export async function httpGet(opts: {
       method: "GET",
       redirect: "manual",
       signal,
-      headers: { "User-Agent": ua, Accept: ACCEPT },
+      headers,
     });
+    if (res.status === 304) {
+      await res.body?.cancel();
+      return {
+        body: new Uint8Array(),
+        contentType: "",
+        finalURL: current,
+        status: 304,
+        etag: res.headers.get("etag") ?? ifNoneMatch,
+        lastModified: res.headers.get("last-modified") ?? ifModifiedSince,
+        notModified: true,
+      };
+    }
     if (res.status >= 300 && res.status < 400) {
       redirects += 1;
       if (redirects >= maxRedirects) throw new Error(`stopped after ${maxRedirects} redirects`);
@@ -74,7 +101,15 @@ export async function httpGet(opts: {
     let ct = res.headers.get("content-type") ?? "";
     const semi = ct.indexOf(";");
     if (semi >= 0) ct = ct.slice(0, semi).trim();
-    return { body, contentType: ct.toLowerCase(), finalURL: current };
+    return {
+      body,
+      contentType: ct.toLowerCase(),
+      finalURL: current,
+      status: res.status,
+      etag: res.headers.get("etag") ?? "",
+      lastModified: res.headers.get("last-modified") ?? "",
+      notModified: false,
+    };
   }
 }
 

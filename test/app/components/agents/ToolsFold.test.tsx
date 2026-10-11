@@ -46,13 +46,12 @@ describe("tool grants", () => {
 
 const GARMIN: ToolEntry = { id: "garmin", binary: "garmin-bin", needs: [], oauth: false, homeOnly: false };
 
-function Harness({ client, tools, start, canMutate = true, seen, runtime = "container", status = null }: {
+function Harness({ client, tools, start, canMutate = true, seen, status = null }: {
   client: ApiClient;
   tools: ToolEntry[];
   start: AgentConfigView;
   canMutate?: boolean;
   seen?: AgentConfigView[];
-  runtime?: "container" | "native";
   status?: AgentStatus | null;
 }) {
   const [view, setView] = useState(start);
@@ -62,7 +61,6 @@ function Harness({ client, tools, start, canMutate = true, seen, runtime = "cont
       config={view}
       tools={tools}
       canMutate={canMutate}
-      runtime={runtime}
       status={status}
       client={client}
       onConfig={(next) => {
@@ -132,29 +130,6 @@ describe("ToolsFold", () => {
     expect(secret.value).toBe("");
     expect(secret.placeholder).toBe(KEY_PLACEHOLDER_SET);
     expect(screen.queryByDisplayValue("shh")).toBeNull();
-    expect(screen.getByText("Keys changed. Recreate the container so they take effect.")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Recreate to apply keys" })).toBeTruthy();
-  });
-
-  it("recreates from the banner and reloads the config", async () => {
-    const seen: AgentConfigView[] = [];
-    const calls: string[] = [];
-    const client: ApiClient = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      await Promise.resolve();
-      calls.push(`${init?.method ?? "GET"} ${href(input)}`);
-      if ((init?.method ?? "GET") === "POST") {
-        return json(200, { state: "running", since: 1, lastError: null, image: null });
-      }
-      return json(200, config({ recreate: false }));
-    });
-    render(<Harness client={client} tools={[MAPS]} start={config({ recreate: true })} seen={seen} />);
-    fireEvent.click(screen.getByRole("button", { name: "Tools" }));
-    fireEvent.click(screen.getByRole("button", { name: "Recreate to apply keys" }));
-    await vi.waitFor(() => expect(seen).toHaveLength(1));
-    expect(calls[0]).toContain("POST ");
-    expect(calls[0]).toContain("/container");
-    expect(calls[1]).toContain("GET ");
-    expect(screen.queryByText("Keys changed. Recreate the container so they take effect.")).toBeNull();
   });
 
   it("rolls the tick back when the patch fails, and looking-only sessions get read-only fields", async () => {
@@ -174,7 +149,6 @@ describe("ToolsFold", () => {
     const form = screen.getByRole("form", { name: "Keys for maps" });
     expect(within(form).getByLabelText<HTMLInputElement>(/MAPS_KEY/).disabled).toBe(true);
     expect(within(form).queryByRole("button")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Recreate to apply keys" })).toBeNull();
   });
 
   it("opens Connect for a native oauth plugin and skips garmin", async () => {
@@ -197,8 +171,7 @@ describe("ToolsFold", () => {
       <Harness
         client={client}
         tools={[GOOGLE, GARMIN]}
-        start={config({ runtime: "native" })}
-        runtime="native"
+        start={config()}
         status={status}
       />,
     );

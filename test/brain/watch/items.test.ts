@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_SEEN_IDS, diffNew, formatItems, mergeSeen, parseItems, type Item } from "@/brain/watch";
+import { MAX_SEEN_IDS, diffNew, formatItems, mergeSeen, parseFetch, parseItems, type Item } from "@/brain/watch";
 
 function item(id: string, extra: Partial<Item> = {}): Item {
   return { id, title: "", url: "", text: "", ...extra };
@@ -33,6 +33,32 @@ describe("parseItems", () => {
   it("reports JSON cut off by a truncated tool result", () => {
     const raw = `{"items":[{"id":"a","summary":"hello` + "\n…[truncated]";
     expect(() => parseItems(raw)).toThrow(/truncated mid-JSON/);
+  });
+});
+
+describe("parseFetch", () => {
+  it("flattens plural feed and twitter rows and keeps a 304", () => {
+    const feeds = parseFetch(JSON.stringify([{
+      url: "https://example.com/rss.xml",
+      items: [{ id: "a", title: "One" }],
+      etag: "\"v1\"",
+      last_modified: "Thu, 01 Jan 2026 00:00:00 GMT",
+    }]));
+    expect(feeds.items?.map((item) => item.id)).toEqual(["a"]);
+    expect(feeds.etag).toBe("\"v1\"");
+    expect(feeds.lastModified).toContain("2026");
+    expect(feeds.error).toBeNull();
+
+    const posts = parseFetch(JSON.stringify([{ handle: "foo", items: [{ id: "t1", title: "hi" }] }]));
+    expect(posts.items?.[0]?.id).toBe("t1");
+
+    const stale = parseFetch(JSON.stringify({ not_modified: true, etag: "\"v1\"" }));
+    expect(stale.notModified).toBe(true);
+    expect(stale.items).toEqual([]);
+
+    const failed = parseFetch(JSON.stringify([{ url: "https://example.com/x", error: "HTTP 502" }]));
+    expect(failed.error).toContain("502");
+    expect(failed.items).toEqual([]);
   });
 });
 

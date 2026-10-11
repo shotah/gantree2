@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { openRegistry } from "@/lib/agents/registry";
-import { signSnapshot } from "@/lib/agents/snapshot";
 import { openSettings } from "@/lib/door/settingsStore";
 import { memorySql } from "../../door/memorySql";
 
@@ -22,7 +21,6 @@ import { GET as readStatus } from "@/app/api/agents/[slug]/status/route";
 import { GET as readLog } from "@/app/api/agents/[slug]/log/route";
 import { GET as readUsers } from "@/app/api/agents/[slug]/users/route";
 import { GET as readBearer } from "@/app/api/agents/[slug]/bearer/route";
-import { GET as readSnap } from "@/app/api/agents/[slug]/snapshot/[file]/route";
 import { GET as readSamples } from "@/app/api/samples/route";
 
 const ADA = "118212345678901234567";
@@ -56,10 +54,6 @@ describe("agent routes", () => {
           listSamples: (query?: { agent?: string }) => users.listSamples(query),
         }),
       },
-      STORE: {
-        get: () => Promise.resolve(null),
-        put: () => Promise.resolve(undefined),
-      },
       AGENT: {
         idFromName: (name: string) => ({ toString: () => name }),
         get: () => ({
@@ -78,7 +72,6 @@ describe("agent routes", () => {
                 published: [],
                 skipped: [],
                 lastTurn: null,
-                lastSnapshot: null,
                 lastError: null,
                 perf: { turns: 0, prompt: 0, completion: 0, errors: 0 },
               });
@@ -117,15 +110,5 @@ describe("agent routes", () => {
     const res = await readBearer(local, slug);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ bearer: "room-secret" });
-  });
-
-  it("answers a signed snapshot without a session", async () => {
-    const exp = Date.now() + 60_000;
-    const sig = await signSnapshot("room-secret", "kit", "self_md", "GET", exp);
-    const res = await readSnap(
-      new Request(`https://g.test/api/agents/kit/snapshot/self_md?exp=${exp}&sig=${sig}`),
-      { params: Promise.resolve({ slug: "kit", file: "self_md" }) },
-    );
-    expect(res.status).toBe(404);
   });
 });

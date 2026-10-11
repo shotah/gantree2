@@ -1,0 +1,27 @@
+brain:
+  - changed-files:
+      - any-glob-to-any-file: brain/**
+
+plugins:
+  - changed-files:
+      - any-glob-to-any-file: brain/plugins/**
+
+edge:
+  - changed-files:
+      - any-glob-to-any-file: edge/**
+
+app:
+  - changed-files:
+      - any-glob-to-any-file: app/**
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file: docs/**
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file: .github/**
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file: test/**

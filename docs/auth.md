@@ -1,238 +1,77 @@
-# Auth from chat (remote OAuth, no inbound ports)
+# Auth from chat
 
-Nothing listens for a callback on your LAN. A native agent finishes
-OAuth on the Worker. A container agent still has no inbound port; chat
-`/auth` does that hop, and the harness dials out. Pictures:
-[architecture.md](architecture.md).
+Google Workspace, Google Health, and Strava connect with an OAuth
+redirect that lands on this Worker. Garmin is email, password, and
+MFA. Nothing listens on your LAN. Pictures:
+[architecture.md](architecture.md). The threat write-up:
+[security.md](security.md).
+
+This is a different Google client from the door. The door's redirect
+is `/api/auth/callback/google` and asks for identity only. The tools
+client asks for the scopes you grant and redirects to the catch below.
 
 ---
 
-## Worker catch (native)
+## Redirect URIs
 
-`GET /api/auth/catch?state&code` is public (`lib/door/gate.ts`).
-`state` is an `oauth-catch` JWE (`sealOAuthCatch` in `lib/door/session.ts`,
-30 minutes) holding `{ slug, plugin }`. The Worker posts `{ plugin, code,
-redirectUri }` to that agent's DO (`X-Chat-Op: auth`), and the brain
-calls `authFinish`. `redirectUri` is this Worker's own
-`/api/auth/catch` (origin plus that path). Success is plain text:
-`Connected <plugin>. Go back to chat.`
+Register these on the provider, exactly, with no trailing slash.
+`PUBLIC_ORIGIN` (no path) overrides the host the Worker prints.
+An unusable `PUBLIC_ORIGIN` does not fall through to the request
+origin.
+
+```text
+https://gantree2.bldhosting.com/api/auth/catch
+http://127.0.0.1:3000/api/auth/catch
+```
+
+A home box uses its own public origin the same way:
+`https://<host>/api/auth/catch`.
+
+Plugin names are the module names: `google`, `strava`,
+`google-health`. Not `ghealth`.
+
+---
+
+## From chat
+
+`/auth <plugin>` returns the provider URL. `state` on that URL is an
+`oauth-catch` JWE (`sealOAuthCatch`, 30 minutes) holding
+`{ slug, plugin }`. Open it, approve, and you land back here
+connected. The room gets a reply: `<plugin> connected`.
+
+---
+
+## Connect on the Tools fold
+
+`POST /api/agents/:slug/auth/start` with `{ plugin }` returns the same
+URL. The dashboard Connect button uses that route. A plugin that is
+not `google`, `google-health`, or `strava` is `400 bad_plugin`.
+
+---
+
+## The catch
+
+`GET /api/auth/catch?state&code` is on the public list
+(`lib/door/gate.ts`) so a missing cookie is a plain-text 401, not an
+HTML login redirect. The handler still requires the `gantree_session`
+cookie. The caller is an admin, or a member of that agent's room.
+`state` is the same JWE. The Worker posts `{ plugin, code,
+redirectUri, userId }` to that agent's DO (`X-Chat-Op: auth`). The
+brain runs `authFinish` and the DO enqueues
+`{ kind: reply, text: "<plugin> connected" }`.
+
+Success body: `Connected <plugin>. Go back to chat.`
 
 Misses: `login not configured` (503, no `SESSION_SECRET`), `bad state`
-(400), `missing code` (400), `could not connect` (502). A container
-agent's DO answers 409 `native runtime`, which this route surfaces as
-502.
+(400), `missing code` (400), `could not connect` (502).
 
-Register that URI on the provider, exactly, no trailing slash unless
-the origin's URL has one:
-
-```text
-https://<worker-origin>/api/auth/catch
-```
-
-The plugin name is the module name: `google`, `strava`, `google-health`,
-`garmin`. Not `ghealth`.
-
-Chat `/auth <plugin>` on a native agent still prints an authorize URL
-and can exchange a pasted code (`/auth <plugin> <code>`). That command
-requires `OAUTH_REDIRECT_URI` or it refuses to start. The `state` it
-puts on the URL is `auth-<ms>`, not the catch JWE. Point
-`OAUTH_REDIRECT_URI` at `/api/auth/catch` when the provider should land
-on the Worker. Garmin stays an MFA paste (`/auth garmin`, then
-`/auth garmin <code>`); it does not use this redirect.
-
-The static page below is the container path.
+The code is not written to the log. Refresh tokens land in
+`oauth_token` in that DO, AES-256-GCM under `snapshot.key`.
 
 ---
 
-## Two flows
+## Garmin
 
-| Flow | Servers | What you do |
-| --- | --- | --- |
-| **Auth-code paste + PKCE** | `google`, `strava`, `ghealth` | Open URL → approve → copy `code` from catch page → paste into chat |
-| **MFA paste** | `garmin` | Creds in `config.env` → `/auth garmin` → email code → `/auth garmin <code>` |
-
----
-
-## Catch page (PKCE redirect) — legacy container
-
-A container agent's authorize URL redirects to a static catch page.
-That page only displays `?code=` with a copy button. No server logic,
-no tokens. A native agent uses [Worker catch](#worker-catch-native)
-instead of this page.
-
-The page is `site/oauth-catch/index.html` in this repo, published by
-`pages.yml` to the docs site. Why it is static and what it never does:
-[security.md](security.md#oauth-for-tools-google-workspace-strava-google-health-).
-The URI to register on every provider:
-
-```text
-https://github.bldhosting.com/oauth-catch/
-```
-
-Plugin binaries still default to the retired `ai-gantry` Pages URI
-([todo.md](todo.md) §7 flips them). Until then set the env override and
-register the URI above on each client:
-
-| Provider | Env override | Set to |
-| --- | --- | --- |
-| Google Workspace | `GOOGLE_OAUTH_REDIRECT_URI` | `https://github.bldhosting.com/oauth-catch/` |
-| Strava | `STRAVA_OAUTH_REDIRECT_URI` | `https://github.bldhosting.com/oauth-catch/` |
-| Google Health | `GOOGLE_HEALTH_OAUTH_REDIRECT_URI` | `https://github.bldhosting.com/oauth-catch/` |
-
-Commented examples belong in `harness/.env.example` (lands with
-[todo.md](todo.md) §5). A fork hosts its own copy of the static page and
-points the same variables at it — the page has no secrets. The longer
-Workspace-scope write-up is not carried.
-
-### Google: you need a **Web application** client
-
-A **Desktop** OAuth client (what laptop `gantry auth google` uses) only allows
-`http://localhost:…` redirects. Chat `/auth` sends people to the catch URI
-above — Google rejects that on Desktop (`redirect_uri_mismatch` /
-“invalid request”).
-
-This is the Workspace / Gmail / Drive client for MCP tools, not the
-sign-in client in [install.md](install.md#google-oauth-client).
-
-In [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials):
-
-1. **Create OAuth client → Web application** (do not try to flip an existing Desktop client).
-2. Authorized redirect URIs — add **exactly** (trailing slash matters):
-   ```text
-   https://github.bldhosting.com/oauth-catch/
-   ```
-   Optional on the same Web client if you want one pair of secrets for both flows:
-   ```text
-   http://localhost:4100/oauth2callback
-   ```
-3. Put that Web client’s ID/secret in `GOOGLE_OAUTH_CLIENT_ID` /
-   `GOOGLE_OAUTH_CLIENT_SECRET` on the agent's `config.env`, then recreate
-   (env change recreates — [architecture.md](architecture.md)).
-4. Keep the Desktop client for laptop-only auth if you prefer separate secrets.
-
-**Google Health** already uses a **Web** client — add the catch URI alongside
-`http://127.0.0.1:4101/oauth2callback` on the same client (same pattern as
-Workspace chat `/auth`).
-
-Scopes for Workspace chat auth must include `openid` +
-`userinfo.email` (current `google-mcp` defaults) or userinfo returns 401 after
-a successful code paste. The plugin lands at `harness/mcp/google`
-([todo.md](todo.md) §6).
-
-Expect **"Google hasn't verified this app"** on this flow (Advanced → continue).
-It comes from the Gmail/Drive scopes, not the client type. Branding on the
-current catch domain names **gantree** with its logo; the interstitial
-itself only goes away with scope verification. That write-up is not carried.
-
-### Strava: Authorization Callback Domain
-
-Strava’s app settings take **one domain** (not a path, not a list —
-`localhost; github.bldhosting.com` / commas do not work).
-
-For chat `/auth`, set:
-
-1. [Strava API settings](https://www.strava.com/settings/api) →
-   **Authorization Callback Domain** = `github.bldhosting.com`
-   (or your own catch-page host).
-2. Leave localhost alone — Strava always whitelists `localhost` /
-   `127.0.0.1`, so laptop `gantry auth strava` still works with that domain set.
-
-Chat `/auth strava` is implemented but **not fully smoke-tested** end-to-end
-yet — confirm the authorize URL lands on the catch page and
-`/auth strava <code>` writes tokens before relying on it.
-
-Localhost interactive auth (`gantry auth <server>`) is
-**unchanged** and still uses `http://localhost:…`.
-
----
-
-## Chat commands
-
-```text
-/auth                       # list auth-capable servers
-/auth google                # print authorize URL (holds PKCE verifier ~10 min)
-/auth google <code>         # exchange pasted code → tokens on disk
-/auth strava                # same PKCE paste flow
-/auth strava <code>
-/auth ghealth               # same PKCE paste flow
-/auth ghealth <code>
-/auth garmin                # start login (GARMIN_EMAIL/PASSWORD); may ask for MFA
-/auth garmin <code>         # paste MFA code from email → session.json
-```
-
-PKCE verifier/state (or Garmin MFA cookies) lives in a pending file next
-to that MCP's tokens, on the container disk, not in the harness process.
-Restarting `/auth <server>` replaces it. Pending files expire (~10 min).
-
-Tokens are not baked into the image. With `SNAPSHOT=true` they ride in
-the encrypted `tokens_tar` object of the agent snapshot, so a recreate
-does not make you paste a code again. The Worker never sees plaintext.
-How: [install.md](install.md#oauth-tokens-in-the-snapshot). The key lives
-on the Agent DO — [security.md](security.md) register #4.
-
----
-
-## MCP CLI contract (for authors)
-
-Additive subcommands next to interactive `auth` / `login`:
-
-| Chat | MCP argv (after `auth_args`) |
-| --- | --- |
-| `/auth google` | `url` |
-| `/auth google <code>` | `exchange <code>` |
-| `/auth strava` | `url` |
-| `/auth strava <code>` | `exchange <code>` |
-| `/auth ghealth` | `url` |
-| `/auth ghealth <code>` | `exchange <code>` |
-| `/auth garmin` | `url` |
-| `/auth garmin <code>` | `exchange <code>` |
-
-Stdout shape (PKCE / MFA — forwarded into chat):
-
-```text
-open <url>   # or: garmin: MFA required (email) — check your email/app …
-then paste the code: /auth <server> <code>
-guide: docs/auth.md
-```
-
-The binary's `guide:` line still names the old repo until the harness
-copy rewrites it ([todo.md](todo.md) §5). This page is the guide.
-
-### Garmin (MFA paste)
-
-Put credentials in the agent's `config.env` only (never in chat):
-
-```env
-GARMIN_EMAIL=you@example.com
-GARMIN_PASSWORD=…
-```
-
-Then `/auth garmin` → if Garmin sends MFA, paste `/auth garmin <code>`.
-Laptop TTY `gantry auth garmin` still works.
-
----
-
-## Laptop path (still preferred when you have a browser nearby)
-
-The `gantry` binary lands with the harness tree ([todo.md](todo.md) §5).
-Compose docs are not carried.
-
-```bash
-gantry auth google      # localhost:4100
-gantry auth strava      # localhost:19876
-gantry auth ghealth     # 127.0.0.1:4101
-gantry auth garmin      # interactive TTY
-```
-
----
-
-## Security notes
-
-- Only the channel allowlist can run `/auth` (`CHAT_ALLOWED_USERS` on
-  chat; `TELEGRAM_ALLOWED_USERS`, `DISCORD_ALLOWED_USERS`,
-  `SLACK_ALLOWED_USERS` on those mouths). Grammar:
-  [access.md](access.md#allowlist-entry-grammar).
-- PKCE: a code alone (in chat history) is useless without the verifier on disk.
-- Codes are single-use and short-lived; never log them at info level.
-- Never paste Garmin (or any) **passwords** into chat — only MFA codes after
-  `/auth garmin`. Keep `GARMIN_EMAIL` / `GARMIN_PASSWORD` in `config.env`.
+Garmin has no public OAuth. Put `GARMIN_EMAIL` and `GARMIN_PASSWORD`
+on the agent, then `/auth garmin`. The vendor emails a code; paste it
+with `/auth garmin <code>`.

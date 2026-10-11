@@ -3,7 +3,6 @@ import {
   AgentsError,
   ME_URL,
   TOOLS_URL,
-  actContainer,
   agentUrl,
   agentsMessage,
   agentsUrl,
@@ -11,14 +10,12 @@ import {
   configUrl,
   selfUrl,
   personaUrl,
-  containerUrl,
   createAgent,
   deleteAgent,
   getAgent,
   getConfig,
   getSelf,
   getPersona,
-  getContainer,
   getLog,
   getMe,
   getRoomUsers,
@@ -51,12 +48,9 @@ const status = {
   published: ["maps"],
   skipped: [],
   lastTurn: 1,
-  lastSnapshot: null,
   lastError: null,
   perf: { turns: 0, prompt: 0, completion: 0, errors: 0 },
 };
-
-const container = { state: "running", since: 1, lastError: null, image: null };
 
 const agent = {
   slug: "kit",
@@ -65,7 +59,6 @@ const agent = {
   createdAt: 1,
   tags: ["home"],
   status,
-  container,
   canMutate: true,
 };
 
@@ -100,7 +93,6 @@ describe("agentsHttp", () => {
     expect(logUrl("kit", 0)).toBe("/api/agents/kit/log?after=0");
     expect(logUrl("kit", 4)).toBe("/api/agents/kit/log?after=4");
     expect(usersUrl("kit")).toBe("/api/agents/kit/users");
-    expect(containerUrl("kit")).toBe("/api/agents/kit/container");
   });
 
   it("maps known errors and keeps unknown text", () => {
@@ -147,12 +139,6 @@ describe("agentsHttp", () => {
       if (url.endsWith("/users")) {
         return json(200, { users: [{ sub: "1" }] });
       }
-      if (url.endsWith("/container") && init?.method === "POST") {
-        return json(200, container);
-      }
-      if (url.endsWith("/container")) {
-        return json(200, container);
-      }
       if (url === "/api/agents/kit" && init?.method === "DELETE") {
         return new Response(null, { status: 204 });
       }
@@ -177,8 +163,6 @@ describe("agentsHttp", () => {
     expect((await getLog("kit", 4, http)).lines).toHaveLength(1);
     expect(await getRoomUsers("kit", http)).toEqual([{ sub: "1" }]);
     expect(await putRoomUsers("kit", [{ email: "a@b.c" }], http)).toEqual([{ email: "a@b.c" }]);
-    expect((await getContainer("kit", http)).state).toBe("running");
-    expect((await actContainer("kit", "start", http)).state).toBe("running");
     expect((await listTools(http))[0]?.id).toBe("maps");
 
     const post = seen.find((call) => call.method === "POST" && call.url === "/api/agents");
@@ -188,8 +172,6 @@ describe("agentsHttp", () => {
     expect(patch?.type).toBe("application/json");
     const put = seen.find((call) => call.method === "PUT");
     expect(JSON.parse(put?.body ?? "{}")).toEqual({ users: [{ email: "a@b.c" }] });
-    const act = seen.find((call) => call.method === "POST" && call.url.endsWith("/container"));
-    expect(JSON.parse(act?.body ?? "{}")).toEqual({ action: "start" });
     expect(seen.some((call) => call.url === "/api/agents/kit/log?after=4")).toBe(true);
     expect(seen.some((call) => call.url === "/api/agents/kit/log" && call.method === "GET")).toBe(true);
   });
@@ -222,9 +204,6 @@ describe("agentsHttp", () => {
       if (url.endsWith("/users")) {
         return json(200, { users: [] });
       }
-      if (url.endsWith("/container")) {
-        return json(200, container);
-      }
       if (url === "/api/tools") {
         return json(200, { tools: [] });
       }
@@ -246,8 +225,6 @@ describe("agentsHttp", () => {
     await getLog("kit", 3);
     await getRoomUsers("kit");
     await putRoomUsers("kit", []);
-    await getContainer("kit");
-    await actContainer("kit", "stop");
     await listTools();
     expect(fetchMock).toHaveBeenCalled();
     const first = fetchMock.mock.calls[0]?.[1];
@@ -265,14 +242,12 @@ describe("agentsHttp", () => {
     await expect(getStatus("kit", missing)).rejects.toMatchObject({ code: "bad_body" });
     await expect(getLog("kit", 1, missing)).rejects.toMatchObject({ code: "bad_body" });
     await expect(getRoomUsers("kit", missing)).rejects.toMatchObject({ code: "bad_body" });
-    await expect(getContainer("kit", missing)).rejects.toMatchObject({ code: "bad_body" });
     await expect(listTools(missing)).rejects.toMatchObject({ code: "bad_body" });
     await expect(getMe(missing)).rejects.toMatchObject({ code: "bad_body" });
 
     await expect(listAgents(client(() => json(200, { agents: [{ slug: "kit" }] })))).rejects.toMatchObject({ code: "bad_body" });
     await expect(getAgent("kit", client(() => json(200, { agent: { slug: "kit", name: "Kit" } })))).rejects.toMatchObject({ code: "bad_body" });
     await expect(getStatus("kit", client(() => json(200, { harness: "asleep", published: [], skipped: [] })))).rejects.toMatchObject({ code: "bad_body" });
-    await expect(getContainer("kit", client(() => json(200, { state: "nope" })))).rejects.toMatchObject({ code: "bad_body" });
     await expect(getLog("kit", undefined, client(() => json(200, { lines: [], next: "0" })))).rejects.toMatchObject({ code: "bad_body" });
     await expect(getMe(client(() => json(200, { sub: "s", role: "guest", agents: [] })))).rejects.toMatchObject({ code: "bad_body" });
     await expect(getConfig("kit", client(() => json(200, { envKeys: [], mcp: "", persona: "", recreate: "yes" })))).rejects.toMatchObject({ code: "bad_body" });

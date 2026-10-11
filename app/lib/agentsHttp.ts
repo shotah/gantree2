@@ -7,8 +7,6 @@ import type {
   AgentConfigView,
   AgentCreate,
   AgentStatus,
-  ContainerAction,
-  ContainerInfo,
   LogPage,
   ToolEntry,
 } from "@/lib/agents/types";
@@ -37,7 +35,6 @@ export class AgentsError extends Error {
 const COPY: Record<string, string> = {
   forbidden: "You do not have access to that.",
   not_found: "That agent is not here.",
-  "container runtime": "This agent runs in a container. That file lives on the container.",
   bad_persona: "Use a markdown file name like PERSONA.md.",
   too_long: "That persona is over the size limit.",
   empty: "SELF.md cannot be empty.",
@@ -94,10 +91,6 @@ export function logUrl(slug: string, after?: number): string {
 
 export function usersUrl(slug: string): string {
   return `${agentUrl(slug)}/users`;
-}
-
-export function containerUrl(slug: string): string {
-  return `${agentUrl(slug)}/container`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -197,15 +190,6 @@ function asStatus(body: unknown): AgentStatus {
     bad();
   }
   return body as AgentStatus;
-}
-
-const CONTAINER_STATES = new Set(["stopped", "starting", "running", "stopping", "failed", "unknown"]);
-
-function asContainer(body: unknown): ContainerInfo {
-  if (!isRecord(body) || typeof body.state !== "string" || !CONTAINER_STATES.has(body.state)) {
-    bad();
-  }
-  return body as ContainerInfo;
 }
 
 function asLog(body: unknown): LogPage {
@@ -344,24 +328,6 @@ export async function getRoomUsers(slug: string, client: ApiClient = api): Promi
 
 export async function putRoomUsers(slug: string, users: RoomUser[], client: ApiClient = api): Promise<RoomUser[]> {
   return asUsers(await send(client, usersUrl(slug), jsonInit("PUT", { users })));
-}
-
-export async function getContainer(slug: string, client: ApiClient = api): Promise<ContainerInfo> {
-  return asContainer(await send(client, containerUrl(slug), { method: "GET" }));
-}
-
-export async function actContainer(
-  slug: string,
-  action: ContainerAction["action"],
-  client: ApiClient = api,
-): Promise<ContainerInfo> {
-  return asContainer(await send(client, containerUrl(slug), jsonInit("POST", { action } satisfies ContainerAction)));
-}
-
-/** Recreate the container so changed keys reach the harness, then read the config back (`recreate` clears). */
-export async function recreateForKeys(slug: string, client: ApiClient = api): Promise<AgentConfigView> {
-  await actContainer(slug, "recreate", client);
-  return getConfig(slug, client);
 }
 
 export async function toolsPage(client: ApiClient = api): Promise<ToolsPage> {

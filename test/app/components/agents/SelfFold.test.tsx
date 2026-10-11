@@ -33,7 +33,7 @@ function clientFor(note = NOTE, failEmpty = false): { client: ApiClient; sent: s
 describe("SelfFold", () => {
   it("prunes a line, reverts, and saves the draft", async () => {
     const { client, sent } = clientFor();
-    render(<SelfFold slug="kit" runtime="native" canMutate client={client} />);
+    render(<SelfFold slug="kit" canMutate client={client} />);
     fireEvent.click(screen.getByRole("button", { name: "Self notes" }));
     const field = areaOf(await screen.findByLabelText("Self notes text"));
     expect(field.value).toBe(NOTE);
@@ -55,7 +55,7 @@ describe("SelfFold", () => {
 
   it("shows the store's empty refusal", async () => {
     const { client } = clientFor(NOTE, true);
-    render(<SelfFold slug="kit" runtime="native" canMutate client={client} />);
+    render(<SelfFold slug="kit" canMutate client={client} />);
     fireEvent.click(screen.getByRole("button", { name: "Self notes" }));
     const field = areaOf(await screen.findByLabelText("Self notes text"));
     fireEvent.change(field, { target: { value: "   " } });
@@ -63,19 +63,9 @@ describe("SelfFold", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("SELF.md cannot be empty.");
   });
 
-  it("stays read-only for a container agent and does not fetch", () => {
-    const client = vi.fn();
-    render(<SelfFold slug="kit" runtime="container" canMutate client={client} />);
-    fireEvent.click(screen.getByRole("button", { name: "Self notes" }));
-    expect(screen.getByText("This agent runs in a container. SELF.md is on the container disk.")).toBeTruthy();
-    expect(screen.queryByRole("textbox")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Save self notes" })).toBeNull();
-    expect(client).not.toHaveBeenCalled();
-  });
-
   it("hides prune and save when the session cannot change the agent", async () => {
     const { client } = clientFor();
-    render(<SelfFold slug="kit" runtime="native" canMutate={false} client={client} />);
+    render(<SelfFold slug="kit" canMutate={false} client={client} />);
     fireEvent.click(screen.getByRole("button", { name: "Self notes" }));
     expect(areaOf(await screen.findByLabelText("Self notes text")).disabled).toBe(true);
     expect(screen.queryByRole("button", { name: "Save self notes" })).toBeNull();

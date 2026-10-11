@@ -2,10 +2,10 @@
 
 import { useEffect, useState, type SubmitEvent } from "react";
 import { chipClass } from "@/app/components/shared/PageHeader";
-import { agentsMessage, codeOf, patchConfig, recreateForKeys, startAuth, type ApiClient } from "@/app/lib/agentsHttp";
+import { agentsMessage, codeOf, patchConfig, startAuth, type ApiClient } from "@/app/lib/agentsHttp";
 import { api } from "@/app/lib/api";
 import { grantsFromToml, tomlFromGrants } from "@/lib/agents/mcpToml";
-import type { AgentConfigView, AgentRuntime, AgentStatus, Grant, ToolEntry } from "@/lib/agents/types";
+import type { AgentConfigView, AgentStatus, Grant, ToolEntry } from "@/lib/agents/types";
 import { alertClass, Fold, inputClass, labelClass, primaryClass, quietClass } from "./Fold";
 
 export function grantFor(tool: ToolEntry): Grant {
@@ -147,7 +147,6 @@ export function ToolsFold({
   canMutate,
   client = api,
   onConfig,
-  runtime = "container",
   status = null,
 }: {
   slug: string;
@@ -156,7 +155,6 @@ export function ToolsFold({
   canMutate: boolean;
   client?: ApiClient;
   onConfig: (config: AgentConfigView) => void;
-  runtime?: AgentRuntime;
   status?: AgentStatus | null;
 }) {
   const [open, setOpen] = useState(false);
@@ -217,37 +215,11 @@ export function ToolsFold({
     }
   }
 
-  async function recreate() {
-    setBusy(true);
-    setError(null);
-    try {
-      onConfig(await recreateForKeys(slug, client));
-    } catch (err) {
-      setError(codeOf(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
   const notes = missingNeeds(grants, tools, config.envKeys);
 
   return (
     <Fold title="Tools" open={open} onOpen={setOpen} hint={`${grants.length} on`}>
       {error ? <p role="alert" className={`${alertClass} mb-3`}>{agentsMessage(error)}</p> : null}
-      {config.recreate
-        ? (
-            <div role="status" className={`${alertClass} mb-3`}>
-              <p>Keys changed. Recreate the container so they take effect.</p>
-              {canMutate
-                ? (
-                    <button type="button" disabled={busy} onClick={() => void recreate()} className={`${quietClass} mt-2`}>
-                      Recreate to apply keys
-                    </button>
-                  )
-                : null}
-            </div>
-          )
-        : null}
       {notes.length > 0
         ? (
             <ul aria-label="Missing keys" className="mb-3 space-y-1">
@@ -258,7 +230,7 @@ export function ToolsFold({
       <ul className="space-y-2">
         {tools.map((tool) => {
           const on = grants.some((grant) => grant.name === tool.id);
-          const line = runtime === "native" && tool.oauth ? oauthLine(status, tool.id) : null;
+          const line = tool.oauth ? oauthLine(status, tool.id) : null;
           return (
             <li key={tool.id} className="rounded-xl border border-line bg-canvas/40 px-3 py-2">
               <label className="flex items-center gap-2 text-sm text-fg">
@@ -273,14 +245,13 @@ export function ToolsFold({
               <p className="mt-1 text-xs text-dim">{tool.binary}</p>
               {tool.homeOnly ? <p className="text-xs text-dim">Home</p> : null}
               {line ? <p className="text-xs text-dim">{line}</p> : null}
-              {runtime === "native" && tool.oauth && canMutate
+              {tool.oauth && canMutate
                 ? (
                     <button type="button" disabled={busy} onClick={() => void connect(tool)} className={`${quietClass} mt-2`}>
                       Connect {tool.id}
                     </button>
                   )
                 : null}
-              {runtime !== "native" && tool.oauth ? <p className="text-xs text-dim">Sign in from chat before this publishes.</p> : null}
               {on && tool.needs.length > 0
                 ? (
                     <KeyFields

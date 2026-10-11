@@ -1,4 +1,4 @@
-import type { AgentCard, AgentConfigView, AgentStatus, ContainerInfo, ToolEntry } from "@/lib/agents/types";
+import type { AgentCard, AgentConfigView, AgentStatus, ToolEntry } from "@/lib/agents/types";
 import type { Session } from "@/app/lib/agentsHttp";
 
 export function buttonOf(element: HTMLElement): HTMLButtonElement {
@@ -49,16 +49,8 @@ export const STATUS: AgentStatus = {
   published: ["maps"],
   skipped: [],
   lastTurn: 1_700_000_000_000,
-  lastSnapshot: null,
   lastError: null,
   perf: { turns: 2, prompt: 10, completion: 4, errors: 0 },
-};
-
-export const CONTAINER: ContainerInfo = {
-  state: "running",
-  since: 1_700_000_000_000,
-  lastError: null,
-  image: "gantree:1",
 };
 
 export function card(over: Partial<AgentCard> = {}): AgentCard {
@@ -69,7 +61,6 @@ export function card(over: Partial<AgentCard> = {}): AgentCard {
     createdAt: 1,
     tags: ["home"],
     status: STATUS,
-    container: CONTAINER,
     canMutate: true,
     ...over,
   };
@@ -81,7 +72,6 @@ export function config(over: Partial<AgentConfigView> = {}): AgentConfigView {
     house: [],
     mcp: "",
     persona: "Be brief.",
-    runtime: "container",
     updatedAt: 1,
     recreate: false,
     ...over,

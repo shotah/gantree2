@@ -15,7 +15,7 @@ import {
 const now = 1_700_000_000_000;
 
 describe("harness frames", () => {
-  it("recognises only the four harness kinds", () => {
+  it("recognises status, perf, and log", () => {
     expect(harnessKind("{\"kind\":\"status\"}")).toBe("status");
     expect(harnessKind("{\"kind\":\"reply\"}")).toBeNull();
     expect(harnessKind("nope")).toBeNull();
@@ -24,7 +24,7 @@ describe("harness frames", () => {
     expect(harnessKind(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength))).toBe("log");
   });
 
-  it("folds status, perf, log, and snapshot without touching phones' kinds", () => {
+  it("folds status, perf, and log without touching phones' kinds", () => {
     const status = noteConnected(emptyStatus(), now);
     let state = { status, log: emptyLog() };
     state = pick(applyHarnessFrame(state, { kind: "status", published: [" maps ", 1, ""], skipped: [{ name: "strava", reason: "no_key" }, { name: "" }] }, now, "kit"));
@@ -51,10 +51,8 @@ describe("harness frames", () => {
     expect(huge.log.lines[0]?.dropped).toBeUndefined();
 
     const shot = applyHarnessFrame(state, { kind: "snapshot", stamp: "20261010T120000Z", bytes: 9 }, now + 2, "kit");
-    expect(shot.stamp).toBe("20261010T120000Z");
-    expect(shot.status.lastSnapshot).toEqual({ stamp: "20261010T120000Z", bytes: 9, at: now + 2 });
-    expect(applyHarnessFrame(state, { kind: "snapshot", stamp: "../x", bytes: 1 }, now, "kit").stamp).toBeNull();
-    expect(applyHarnessFrame(state, { kind: "snapshot", stamp: "20261010T120000Z", bytes: -1 }, now, "kit").status.lastSnapshot).toBeNull();
+    expect(shot.status).toBe(state.status);
+    expect(harnessKind("{\"kind\":\"snapshot\"}")).toBeNull();
     expect(applyHarnessFrame(state, [], now, "kit").status).toBe(state.status);
     expect(applyHarnessFrame(state, { kind: "reply" }, now, "kit").status).toBe(state.status);
   });
@@ -106,7 +104,6 @@ describe("harness frames", () => {
       ...connected,
       published: ["maps", 1],
       skipped: [{ name: "a", reason: "no_key" }, { name: 1 }],
-      lastSnapshot: { stamp: "20261010T120000Z", bytes: 1, at: now },
     });
     expect(stored.published).toEqual(["maps"]);
     expect(stored.skipped).toEqual([{ name: "a", reason: "no_key" }]);

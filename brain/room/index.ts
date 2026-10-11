@@ -1,6 +1,6 @@
 /**
  * The Agent DO's native brain. Builds `BrainDeps` from the room's storage
- * and memoises one `Brain` per DO instance until config (env, slug) or the
+ * and memoises one `Brain` per DO instance until config (env, mcp, slug) or the
  * persona rows change, or `dropRoomBrain` runs.
  */
 import { createBrain } from "@/brain/agent";
@@ -12,13 +12,13 @@ import { doSql } from "@/brain/core/sql";
 import type { LogFrame } from "@/brain/core/wire";
 import { resolveTimezone } from "@/brain/persona";
 import { bindRoomAuth, type RoomAuth } from "@/brain/room/authbind";
+import { grantedPlugins } from "@/brain/room/grants";
 import { filePersona, openPersonaStore, personaParts } from "@/brain/room/persona";
 import { allPlugins } from "@/brain/plugins";
 import { openaiProvider } from "@/brain/provider";
-import { AesTokenStore } from "@/brain/tools";
+import { AesTokenStore, mintTokenKey, TOKEN_KEY_STORE_KEY, tokenKeyOk } from "@/brain/tools";
 import { canonicalEnv, CONFIG_STORE_KEY, frameEnv, parseConfig } from "@/lib/agents/config";
 import { houseEnv, type HouseEnv } from "@/lib/agents/house";
-import { mintSnapshotKey, SNAPSHOT_KEY_STORE_KEY, snapshotKeyOk } from "@/lib/agents/snapshot";
 import { parseStoredSlug, SLUG_STORE_KEY } from "@/lib/chat/allow";
 
 export type { CatchEnv } from "./catch";
@@ -49,12 +49,12 @@ export async function openRoomBrain(ctx: DurableObjectState, env: HouseEnv, opts
   const config = parseConfig(await ctx.storage.get(CONFIG_STORE_KEY));
   const stored = parseStoredSlug(await ctx.storage.get(SLUG_STORE_KEY));
   const slug = opts.slug ?? stored ?? "";
-  const snap = await ensureSnapshotKey(ctx);
-  const map = frameEnv(config, houseEnv(env), snap);
+  const tokenKey = await ensureTokenKey(ctx);
+  const map = frameEnv(config, houseEnv(env));
   const store = await openPersonaStore(ctx, opts);
   const parts = personaParts(store);
   const personaText = parts.find((part) => part.name === filePersona)?.text ?? "";
-  const generation = JSON.stringify({ slug, persona: parts, env: canonicalEnv(map) });
+  const generation = JSON.stringify({ slug, persona: parts, env: canonicalEnv(map), mcp: config.mcp });
   const hit = open.get(ctx);
   if (hit && hit.generation === generation) {
     return hit.brain;
@@ -70,8 +70,8 @@ export async function openRoomBrain(ctx: DurableObjectState, env: HouseEnv, opts
     clock,
     log: makeLogger(roomSink(opts.foldLog), () => clock.now(), slug ? { slug } : {}),
     provider: openaiProvider(providerConfig(map), globalThis.fetch),
-    plugins: allPlugins,
-    tokens: new AesTokenStore(sql, snap, clock),
+    plugins: grantedPlugins(allPlugins, config.mcp),
+    tokens: new AesTokenStore(sql, tokenKey, clock),
     fetch: globalThis.fetch,
     env: map,
     persona: parts,
@@ -81,13 +81,13 @@ export async function openRoomBrain(ctx: DurableObjectState, env: HouseEnv, opts
   return brain;
 }
 
-async function ensureSnapshotKey(ctx: DurableObjectState): Promise<string> {
-  const cur = await ctx.storage.get(SNAPSHOT_KEY_STORE_KEY);
-  if (typeof cur === "string" && snapshotKeyOk(cur)) {
+async function ensureTokenKey(ctx: DurableObjectState): Promise<string> {
+  const cur = await ctx.storage.get(TOKEN_KEY_STORE_KEY);
+  if (typeof cur === "string" && tokenKeyOk(cur)) {
     return cur;
   }
-  const key = mintSnapshotKey();
-  await ctx.storage.put(SNAPSHOT_KEY_STORE_KEY, key);
+  const key = mintTokenKey();
+  await ctx.storage.put(TOKEN_KEY_STORE_KEY, key);
   return key;
 }
 

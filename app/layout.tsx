@@ -5,7 +5,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "gantree",
-  description: "Settings, chat, and the harness. One door.",
+  description: "Settings and chat. One door.",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "gantree", statusBarStyle: "black-translucent" },
   icons: {

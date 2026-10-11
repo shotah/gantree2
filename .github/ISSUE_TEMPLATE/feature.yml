@@ -1,0 +1,27 @@
+name: Feature
+description: A change to an assistant, the door, or the room.
+title: "feature: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: The job this makes easier, and who it is for.
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What
+      description: What a person would see change.
+    validations:
+      required: true
+  - type: textarea
+    id: docs
+    attributes:
+      label: Docs and todo
+      description: Does docs/todo.md need a line, or does an existing line cover this?
+    validations:
+      required: false

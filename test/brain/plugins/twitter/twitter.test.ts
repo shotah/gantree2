@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { APIError, clientFromEnv, defaultBaseURL, listTweets, lookupUser, parseAPIError, type XClient } from "@/brain/plugins/twitter/client";
 import { listPosts, normalizeHandle, teachIn, twitterPlugin } from "@/brain/plugins/twitter/index";
+import { WatchStore } from "@/brain/watch";
 import { callTool, hrefOf, jsonResponse, pluginCtx, textOf, textResponse } from "../helpers";
 
 function client(fetchImpl: typeof fetch, extra: Partial<XClient> = {}): XClient {
@@ -198,7 +199,8 @@ describe("twitter plugin", () => {
     const tool = twitterPlugin.tools(pluginCtx())[0];
     expect(tool?.name).toBe("posts_list");
     expect(tool?.description).toContain("Official X API only");
-    expect(tool?.description).toContain("30–60m");
+    expect(tool?.description).toContain("6h");
+    expect(tool?.description).toContain("X_MONTHLY_READS");
     expect(tool?.inputSchema).toMatchObject({
       type: "object",
       required: ["handle"],
@@ -259,5 +261,40 @@ describe("twitter plugin", () => {
     expect(batch[0]).toMatchObject({ handle: "foo", items: [{ id: "555" }] });
     expect(batch[1]?.handle).toBe("gone");
     expect(batch[1]?.error).toContain("not found");
+  });
+
+  it("stops at the monthly read budget, skips the poller, and resumes next month", async () => {
+    const ctx = pluginCtx({
+      env: { X_BEARER_TOKEN: "test-token", X_MONTHLY_READS: "1" },
+      fetch: xapi({ username: "foo", userID: "9", tweets: [{ id: "555", text: "hi" }] }),
+    });
+    const first = JSON.parse(textOf(await callTool(twitterPlugin, ctx, "posts_list", { handle: "foo" }))) as { items?: { id: string }[] }[];
+    expect(first[0]?.items?.[0]?.id).toBe("555");
+
+    const blocked = await callTool(twitterPlugin, ctx, "posts_list", { handles: ["foo", "foo"] });
+    expect(blocked.isError).toBeUndefined();
+    const rows = JSON.parse(textOf(blocked)) as { handle?: string; error?: string; items?: unknown[] }[];
+    expect(rows[0]?.error).toContain("budget (1)");
+    expect(rows[0]?.error).toContain("resets 2026-02-01T00:00:00Z");
+    expect(blocked.retryAfter).toBe(Date.parse("2026-02-01T00:00:00.000Z"));
+
+    const store = new WatchStore(ctx.sql, ctx.clock, 10, ctx.log);
+    store.setTwitterReadLimit(1);
+    const watch = store.add("twitter__posts_list", { handle: "foo" }, "foo", 6 * 60 * 60, { sessionId: "s" });
+    store.forceDueForTest(watch.id);
+    let calls = 0;
+    await store.pollDue(ctx.clock.now(), async () => {
+      calls += 1;
+      return { content: [{ type: "text", text: "{\"items\":[]}" }] };
+    }, async () => {
+      throw new Error("over budget must not wake");
+    });
+    expect(calls).toBe(0);
+    expect(store.get(watch.id).consecutiveErrors).toBe(0);
+    expect(store.get(watch.id).lastError).toContain("resets 2026-02-01T00:00:00Z");
+
+    ctx.clock.set(Date.parse("2026-02-01T00:00:00Z"));
+    const again = JSON.parse(textOf(await callTool(twitterPlugin, ctx, "posts_list", { handle: "foo" }))) as { items?: { id: string }[] }[];
+    expect(again[0]?.items?.[0]?.id).toBe("555");
   });
 });

@@ -10,7 +10,6 @@ import {
   getAgent,
   getConfig,
   getMe,
-  patchConfig,
   getRoomUsers,
   listTools,
   type ApiClient,
@@ -18,7 +17,7 @@ import {
 import { api } from "@/app/lib/api";
 import type { Role } from "@/lib/door/users";
 import type { RoomUser } from "@/lib/chat/allow";
-import type { AgentCard, AgentConfigView, AgentRuntime, ContainerInfo, ToolEntry } from "@/lib/agents/types";
+import type { AgentCard, AgentConfigView, ToolEntry } from "@/lib/agents/types";
 import { assignHref } from "./follow";
 import { alertClass, dangerClass, FoldAllButton, FoldGroup, inputClass, labelClass, mainClass, primaryClass, quietClass } from "./Fold";
 import { LogFold } from "./LogFold";
@@ -116,18 +115,6 @@ export function AgentDashboard({
     void load();
   }, [load]);
 
-  async function chooseRuntime(runtime: AgentRuntime) {
-    if (!config || runtime === config.runtime) {
-      return;
-    }
-    setError(null);
-    try {
-      setConfig(await patchConfig(slug, { runtime }, client));
-    } catch (err) {
-      setError(codeOf(err));
-    }
-  }
-
   async function destroy() {
     setBusy(true);
     setError(null);
@@ -172,47 +159,17 @@ export function AgentDashboard({
                 Looking only. Changes belong to an admin or this agent&apos;s operator.
               </p>
             )}
-        <fieldset className="flex flex-wrap items-center gap-4">
-          <legend className={labelClass}>Runtime</legend>
-          {(["container", "native"] as const).map((value) => (
-            <label key={value} className="flex items-center gap-1.5 text-sm text-body">
-              <input
-                type="radio"
-                name="agent-runtime"
-                value={value}
-                checked={config.runtime === value}
-                disabled={!agent.canMutate}
-                onChange={() => {
-                  void chooseRuntime(value);
-                }}
-              />
-              {value}
-            </label>
-          ))}
-        </fieldset>
-        <StatusFold
-          slug={agent.slug}
-          status={agent.status}
-          container={agent.container}
-          canMutate={agent.canMutate}
-          runtime={config.runtime}
-          client={client}
-          onContainer={(info: ContainerInfo) => {
-            setAgent((prev) => prev ? { ...prev, container: info } : prev);
-          }}
-        />
+        <StatusFold status={agent.status} />
         {spend}
         <PersonaFold
           slug={agent.slug}
           persona={config.persona}
-          runtime={config.runtime}
           canMutate={agent.canMutate}
           client={client}
           onPersona={(persona) => setConfig((prev) => prev ? { ...prev, persona } : prev)}
         />
         <SelfFold
           slug={agent.slug}
-          runtime={config.runtime}
           canMutate={agent.canMutate}
           client={client}
         />
@@ -228,7 +185,6 @@ export function AgentDashboard({
           config={config}
           tools={tools}
           canMutate={agent.canMutate}
-          runtime={config.runtime}
           status={agent.status}
           client={client}
           onConfig={setConfig}
@@ -245,7 +201,7 @@ export function AgentDashboard({
           ? (
               <section aria-label="Danger zone" className="rounded-2xl border border-danger-line bg-danger-soft/40 px-5 py-5">
                 <h2 className="text-sm font-semibold text-danger">Delete agent</h2>
-                <p className="mt-1 text-xs text-dim">This stops the container. Type {agent.slug} to confirm.</p>
+                <p className="mt-1 text-xs text-dim">Type {agent.slug} to confirm.</p>
                 <div className="mt-3 flex flex-wrap items-end gap-2">
                   <div className="flex flex-col gap-1">
                     <label htmlFor="confirm-slug" className={labelClass}>Type the slug to confirm</label>

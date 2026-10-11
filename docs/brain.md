@@ -1,27 +1,15 @@
 # The brain — decision record
 
 **Decision.** 2026-10-11, later the same day as
-[runtime.md](runtime.md). Step A on that page is cancelled; it was
-not built. Option C is chosen, and the morning's tool-container step
-is not part of it. The brain is TypeScript running inside the Agent
-Durable Object. The native path is Vinext, TypeScript, and
-Cloudflare Workers throughout: the bundle Cloudflare runs, and the
-same bundle celld runs at home. The Go harness is frozen in
-`harness/`, the spec and the running system until cutover, then
-deprecated.
+[runtime.md](runtime.md). The lease on that page was not built. The
+brain is TypeScript running inside the Agent Durable Object: Vinext,
+TypeScript, and Cloudflare Workers throughout, the same bundle celld
+runs at home.
 
-The morning page remains the record of what the container does today,
-why Lambda lost, and what a lease would have looked like. Where its
-**Order** says "A then C", this page wins. `sleepAfter` stays `"15m"`
-until cutover.
-
-Pictures of the room: [architecture.md](architecture.md) §5 is the
-native lifecycle. The container pictures are
-[§13](architecture.md#13-legacy-container-runtime). The clock this has
-to keep: [cron.md](cron.md). Frames settings already reads:
-[contract.md](contract.md). The work: [todo.md](todo.md). Behavioral
-eval is Vitest (`brain/eval`, `npm run eval`,
-[eval_setup.md](eval_setup.md)).
+Pictures: [architecture.md](architecture.md) §5. The clock:
+[cron.md](cron.md). Frames settings reads: [contract.md](contract.md).
+The work: [todo.md](todo.md). Behavioral eval is Vitest (`brain/eval`,
+`npm run eval`, [eval_setup.md](eval_setup.md)).
 
 ---
 
@@ -54,9 +42,8 @@ Rejected.
 
 Workers isolates are single-threaded. Goroutines under WASM are
 concurrency on that one thread. They are not parallelism. Parallel
-tool calls in one batch were the reason the harness stayed Go
-([architecture.md](architecture.md#13-legacy-container-runtime)). WASM does not provide the
-cores that reason needs.
+tool calls in one batch were the reason a Go process looked
+attractive. WASM does not provide the cores that reason needs.
 
 Durable Object classes cannot be implemented in Go on the mainstream
 toolchain. `syumai/workers-go` calls Workers through generated stubs;
@@ -82,24 +69,12 @@ says a compute kernel is the slow part.
 
 ---
 
-## Where a native agent runs
+## Where the agent runs
 
-The brain is the Agent Durable Object. Agent config gains
-`runtime: "container" | "native"`. A native agent has no harness
-process, no image, and no socket between brain and room.
-`edge/agent.do.ts` fans the brain's frames out the same way it fans
-the crane socket, so a phone cannot tell which runtime answered. An
-agent left on `container` keeps the lifecycle in
-[architecture.md](architecture.md#13-legacy-container-runtime),
-including `"15m"` `sleepAfter`, until its own flag flips. One agent
-can go native while the rest stay on the container. The Agent DO
-alarm runs the brain only when the flag is `native`. It does not start
-a stopped container.
-
-`harness/` stays in the tree through that flip, frozen: the spec, and
-the running system. The Go tests are what the port is checked
-against. Wave 3 deletes the container classes and archives the
-directory.
+The brain is the Agent Durable Object. There is no second process, no
+image, and no socket between the brain and the room.
+`edge/agent.do.ts` fans the brain's frames to the phones on the room.
+The Agent DO alarm runs `brain.alarm()` and arms `nextAlarm()`.
 
 ---
 
@@ -215,30 +190,26 @@ access token, optional refresh token, expiry in epoch ms, scope,
 token type, and a string map of provider extras (Garmin consumer
 secrets, an athlete id). The implementation is in `brain/tools`, not
 on the interface. It stores the token AES-256-GCM in SQLite. The key
-is the Agent DO's snapshot key — the 32-byte `snapshot.key` already
-minted for the harness `tokens_tar`
+is the Agent DO's `snapshot.key`, 32 bytes, base64
 ([security.md](security.md)).
 
 A plugin with a provider login also implements `authStart` (the URL
 to show the human) and `authFinish` (exchange the code, store the
-token). `/auth <plugin>` calls `authStart` and, with a pasted code,
-`authFinish`. `GET /api/auth/catch` calls `authFinish` when `state` is
-an `oauth-catch` JWE. The slash command puts `auth-<ms>` in `state`
-and does not call `sealOAuthCatch`. Both routes landed with the room
-adapter. The methods were on the interface in wave 1 so the plugins
+token). `/auth <plugin>` seals an `oauth-catch` JWE (`{ slug, plugin }`)
+and returns the provider URL. `GET /api/auth/catch` opens that state
+and calls `authFinish`. Garmin stays email, password, and an MFA
+code. The methods were on the interface in wave 1 so the plugins
 could carry their login with them.
 
 ### Wire
 
-`brain/core/wire.ts` is the frame boundary. The brain emits the frames
-the crane socket emitted, and `edge/agent.do.ts` fans them out
-unchanged. Phone-facing kinds are `reply`, `draft`, `typing`,
-`react`, `cmds`, `aims`, `todo`, `allow`, and `push`. `push` is the
-kind `channel/chat` writes for a delivered turn, including a cron or
-watch wake. `status`, `perf`, and `log` are the harness-only frames.
-They fold into the Agent DO's status, samples, and log ring the same
-way (`lib/agents/status.ts`) and are not fanned to phones. Inbound,
-after the DO has stamped identity, is a `WireFrame` of kind
+`brain/core/wire.ts` is the frame boundary. `edge/agent.do.ts` fans
+the phone-facing frames out. Those kinds are `reply`, `draft`,
+`typing`, `react`, `cmds`, `aims`, `todo`, `allow`, and `push`.
+`push` is a delivered turn, including a cron or watch wake.
+`status`, `perf`, and `log` fold into the Agent DO's status, samples,
+and log ring (`lib/agents/status.ts`) and are not fanned to phones.
+Inbound, after the DO has stamped identity, is a `WireFrame` of kind
 `inbound`, `react`, `ack`, or `pin`, with `user_id` set. Phone-facing
 frames are the existing `WireFrame` from `lib/chat/frame.ts`.
 
@@ -246,19 +217,16 @@ frames are the existing `WireFrame` from `lib/chat/frame.ts`.
 `reason`). `perf` carries optional `turn`, `source`, and `outcome`,
 plus `tokens.prompt` and `tokens.completion`. `log` is one rate-capped
 line: `level`, `message`, optional `at`, optional `dropped`. The field
-lists the board already charts — the status JSON and the `perf` slog
-line in [contract.md](contract.md) — stay the ones a finished turn
-has to fill. The loop fills them on these kinds. The native
-brain does not invent a second vocabulary, and it does not emit
-`snapshot`. That frame belonged to the package that goes away.
+lists the board already charts stay the ones a finished turn has to
+fill. The loop fills them on these kinds. The brain does not emit
+`snapshot`.
 
 ---
 
 ## Package map
 
-Go paths are `harness/internal/<name>` unless the row says otherwise.
-Table names in SQLite stay the names the Go packages already use, so
-a later import of `gantry.db` is a copy.
+The left column is the package this row replaced. Table names in
+SQLite are the names those packages used.
 
 | Go | TypeScript | Wave |
 | --- | --- | --- |
@@ -273,14 +241,13 @@ a later import of `gantry.db` is a copy.
 | `agent` (the loop) | `brain/agent` | 2 |
 | `channel/chat` and the `cmd/gantry` wiring | `brain/room` | 2 |
 
-Persona and SELF.md live in SQL on the native path. `SELF.md` is the
-`selfnote` row. Persona files are `persona_file` (`PERSONA.md`, then
-any other `.md` name). The first native open copies `config.persona`
-into `PERSONA.md` once; after that the row is the text. The brain
-assembles those persona rows, then SELF.md from its own store. A
-missing persona is still an empty standing identity. A container
-agent keeps persona on the config frame the harness already receives.
-The R2 `self_md` object goes away with the snapshot.
+Persona and SELF.md live in SQL. `SELF.md` is the `selfnote` row.
+Persona files are `persona_file` (`PERSONA.md`, then any other `.md`
+name). The first open copies `config.persona` into `PERSONA.md` once,
+and only when the table is empty and the text is non-blank. After
+that the row is the text. The brain assembles those persona rows,
+then SELF.md from its own store. A missing persona is still an empty
+standing identity.
 
 `slash` is the command catalog (`harness/internal/slash`): the list
 the `cmds` frame publishes. Handlers stay next to the package that
@@ -291,9 +258,8 @@ Cron, examples, and watch share one alarm shape. The ticker goroutine
 same ticker) becomes `nextDue()` and `fireDue()`. `nextDue` is the
 soonest enabled row. The DO sets its alarm for that instant.
 `alarm()` calls `fireDue`, which runs the job and arms the next
-alarm. Cost between fires is zero, and the clock does not die when a
-process stops. For a native agent the alarm runs the job. It does not
-start a container. Job rows, `[silent]`, the daily planner, examples
+alarm. Cost between fires is zero. The alarm runs the job. Job
+rows, `[silent]`, the daily planner, examples
 pings, watch cursors, and push onto the current channel stay the
 behavior in [cron.md](cron.md). Learned sleep, ask-first, and the
 tool-first nudge on live-data jobs stay with the loop that `fireDue`
@@ -316,21 +282,19 @@ These do not get a TypeScript folder:
 | Go | Why it stops |
 | --- | --- |
 | `doctor`, `drain`, `heartbeat`, `logfwd` | They supervise a process: a one-shot boot report, a SIGTERM drain, a healthcheck row, a log forwarder. The isolate has no process to supervise. |
-| `snapshot` | DO SQLite is durable on its own. Presigned PUT/GET, restore-on-boot, and the `snapshot` frame go away. An R2 export of the DO database is optional later. |
+| `snapshot` | DO SQLite is durable on its own. |
 | `config` | Env is the DO's config map. There is no process environment to load. |
 | `mcp` transport, `mcpenable` process half | Spawn, stdio, and any HTTP MCP client. Enable rules and the drift check are the `brain/tools` row above. |
-| `channel/telegram`, `channel/discord`, `channel/slack`, `channel/stdio` | Later, and not one of the three waves. The three network channels come back as webhook routes on the Worker. A long-poll or a gateway socket is a process shape. `stdio` was a laptop mouth. |
+| `channel/telegram`, `channel/discord`, `channel/slack`, `channel/stdio` | Not ported. An open item ([channels.md](channels.md)). |
 
-`cmd/gantry` (`run`, `status`, `doctor`) is the container's
-entrypoint. The native entrypoint is the DO. The wiring that turns a
-room message into a turn moves to `brain/room`. `status` and `doctor`
-go away with the binary.
+The entrypoint is the Agent DO. The wiring that turns a room message
+into a turn is `brain/room`.
 
-The behavioral eval fixtures live under `brain/eval` (the same names
-the Go tree used). `npm run eval` runs Vitest with
-`vitest.eval.config.ts`. `eval.yml` calls that script. Setup:
-[eval_setup.md](eval_setup.md). The Go tests under `harness/` stay the
-frozen unit suite until that directory is archived.
+The behavioral eval fixtures live under `brain/eval`. `npm run eval`
+runs Vitest with `vitest.eval.config.ts`. `eval.yml` calls that script.
+Setup:
+[eval_setup.md](eval_setup.md). Unit tests are Vitest under
+`test/brain/`.
 
 ---
 
@@ -351,20 +315,14 @@ The rule is `.cursor/rules/brain-plugins-plural.mdc`. The checker is
 ## Waves
 
 Waves 1 and 2 have landed (2026-10-11). The behavioral eval is on
-Vitest (`npm run eval`, [eval_setup.md](eval_setup.md)). Wave 3's
-cutover is open: flip each agent, the one-shot import, delete the
-container classes, archive `harness/`. The list is [todo.md](todo.md).
+Vitest (`npm run eval`, [eval_setup.md](eval_setup.md)). The list of
+what is still open is [todo.md](todo.md).
 
 | Wave | What lands |
 | --- | --- |
 | **1** | `brain/core` and every wave-1 row in the map, including all twelve plugins. Landed. |
-| **2** | `brain/agent` (the loop), `brain/room` (the DO adapter), the per-agent `runtime` flag, and the `/auth <plugin>` OAuth catch. Landed. |
-| **3** | Eval fixtures on Vitest (landed: `brain/eval`, `npm run eval`). A cutover walk. Flip each agent. Delete the container classes. Archive `harness/`. The cutover is open. |
-
-A flip is the config field on one agent. The others keep their
-container, their socket, and their R2 snapshot until their own flag
-changes. Phones, the Tools grid, and the frame kinds do not change
-on the day an agent flips.
+| **2** | `brain/agent` (the loop), `brain/room` (the DO adapter), and `/auth <plugin>` with the Worker catch. Landed. |
+| **3** | Eval fixtures on Vitest (`brain/eval`, `npm run eval`). Landed. |
 
 ---
 
@@ -382,27 +340,58 @@ The platform limits the port has to fit. Waiting on the model and on
 
 ---
 
-## Data migration
+## Data
 
-An existing `gantry.db` in R2 is imported once into that agent's DO
-SQLite by a one-shot admin operation. The ports keep the Go table
-names, so the import is a copy into the schema `migrate` already
-creates. The one-shot admin operation is still to build. Until an agent
-flips, its durable brain is still the R2 snapshot the container
-writes ([architecture.md](architecture.md#13-legacy-container-runtime)).
+The Agent DO's SQLite is the brain. `migrate` creates the tables on
+first open. Table names match the packages that own them.
 
 ---
 
-## What still describes the container
+## What the other pages say
 
-[architecture.md](architecture.md) §1–§5 are the native path. The
-container pictures, including why that harness stayed Go, are
-[§13](architecture.md#13-legacy-container-runtime). Choice 6 is
-TypeScript for the product and Go frozen in `harness/` until cutover.
-[cron.md](cron.md) arms the native alarm with `fireDue`. It does not
-claim the alarm wakes a sleeping container: that wake was never built.
-[runtime.md](runtime.md) stays the morning's record, including the
-order this page cancelled. [contract.md](contract.md) still says
-settings reads frames, does not open a live database, and does not sit
-in a turn. The native writes (persona, `SELF.md`, runtime) are a
-section at the top of that page.
+[architecture.md](architecture.md) is the picture.
+[cron.md](cron.md) arms the alarm with `fireDue`.
+[runtime.md](runtime.md) is the short record of the morning's question.
+[contract.md](contract.md) says settings reads frames, does not open a
+live database, and does not sit in a turn.
+
+---
+
+## Watch polling
+
+The alarm polls watches. A fetch that finds nothing new does not
+call the model.
+
+`feeds__items_list` defaults to 60 minutes, floor 15 minutes.
+`twitter__posts_list` defaults to 6 hours, floor 1 hour. Any other
+tool defaults to 60 minutes, floor 15 minutes. The cap is 7 days.
+`watch_add` with no interval uses that default. A shorter interval
+is clamped up to the floor, and the result says so. `watches` adds
+several in one call; `tool` still adds one.
+
+Next-due times sit on a 5-minute grid, so watches that come due
+near each other share one alarm. One alarm polls every due watch,
+four fetches at a time. New items become one model turn, grouped by
+watch, capped at 20 (`+N more` after that). No new items anywhere
+means no model turn. The alarm time is that grid slot.
+
+Quiet hours are the `pref/hours` sleep window, the same window the
+planner already treats as do-not-disturb, plus a `quiet:` window
+when one is set. Work is not quiet. The poller does not fetch during
+those hours. The batch waits until the first grid slot after quiet
+ends. Items stay at the source until then. A watch alarm is not
+armed inside quiet hours. A cron job may still be.
+
+A failed fetch doubles that watch's interval, up to 24 hours, and
+increments `consecutive_errors`. A clean fetch resets both. Five
+failures in a row pause the watch (`state=paused`, `last_error`
+set). `watch_list` shows state, last error, and next due.
+`watch_add` for the same tool and args un-pauses it.
+
+Feed polls send `If-None-Match` and `If-Modified-Since` from the
+etag and last-modified stored on the watch. HTTP 304 is no items
+and no parse. Twitter reads share a monthly budget
+(`X_MONTHLY_READS`, default 100, one read per handle). The counter
+is the calendar month in the human's zone. Over budget, `posts_list`
+returns an error row naming the budget and when it resets, and the
+poller skips twitter watches until the month rolls.

@@ -1,8 +1,8 @@
 /**
  * OAuth tokens at rest. The blob is AES-256-GCM: 12-byte nonce, then the
- * WebCrypto seal (ciphertext and tag). The key is the agent snapshot key
- * (`mintSnapshotKey`: standard base64 of 32 bytes) or those raw bytes.
- * Plugins see plaintext through `TokenStore`.
+ * WebCrypto seal (ciphertext and tag). The key is `mintTokenKey` (standard
+ * base64 of 32 bytes) or those raw bytes. Plugins see plaintext through
+ * `TokenStore`.
  */
 import { type Clock } from "@/brain/core/clock";
 import { type Sql, type SqlValue } from "@/brain/core/sql";
@@ -13,7 +13,33 @@ const KEY_BYTES = 32;
 const NONCE_BYTES = 12;
 const KEY_B64 = /^[A-Za-z0-9+/]{43}=$/;
 
+/** Agent DO storage row, beside the room bearer. Not a config env key. */
+export const TOKEN_KEY_STORE_KEY = "token.key";
+
 export type SnapshotKey = string | Uint8Array | ArrayBuffer;
+
+/** True when `value` is standard base64 of exactly 32 bytes. */
+export function tokenKeyOk(value: string): boolean {
+  if (!KEY_B64.test(value)) {
+    return false;
+  }
+  try {
+    return atob(value).length === KEY_BYTES;
+  } catch {
+    return false;
+  }
+}
+
+/** One-time per-agent AES-256 key, standard base64. */
+export function mintTokenKey(): string {
+  const bytes = new Uint8Array(KEY_BYTES);
+  crypto.getRandomValues(bytes);
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary);
+}
 
 /** Standard base64 of 32 bytes, or the raw 32 bytes. */
 export function decodeSnapshotKey(key: SnapshotKey): Uint8Array {

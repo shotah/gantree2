@@ -1,11 +1,16 @@
 import { type Clock } from "@/brain/core/clock";
 import { type Logger, silentLogger } from "@/brain/core/log";
 import { migrate, type Migration, type Sql, type SqlValue } from "@/brain/core/sql";
+import { DEFAULT_MONTHLY_READS } from "@/brain/plugins/twitter/budget";
 import {
-  DEFAULT_INTERVAL_SEC,
+  BACKOFF_CAP_SEC,
   DEFAULT_MAX_WATCHES,
   formatDuration,
+  formatRfc3339,
   MIN_INTERVAL_SEC,
+  PAUSE_AFTER_ERRORS,
+  snapUpGrid,
+  WATCH_WAKE_MAX_ITEMS,
 } from "./interval";
 import { isRecord, isUnknownArray, parseJson } from "./json";
 import { pollDueWatches, type CallTool, type OnNewItems } from "./poll";
@@ -30,10 +35,22 @@ export type Watch = {
   seenIds: string[];
   enabled: boolean;
   running: boolean;
+  /** `active` polls. `paused` stays listed until `watch_add` of the same source. */
+  state: string;
+  /** Configured interval. Success restores `intervalSeconds` to this. */
+  baseIntervalSeconds: number;
+  consecutiveErrors: number;
+  etag: string;
+  lastModified: string;
   createdAt: number;
   updatedAt: number;
   lastRunAt: number | null;
   lastError: string;
+};
+
+/** First awake instant when `at` is inside quiet hours, otherwise null. */
+export type QuietHours = {
+  resumeAt(at: number): number | null;
 };
 
 /** Conversation a watch is added from. User, chat, and thread are not stored. */
@@ -47,9 +64,10 @@ export type WatchDelivery = {
 /** One agent conversation. Mouth session ids collapse to this on every open. */
 export const AGENT_SESSION = "gantry";
 
-const WATCH_SELECT = `SELECT id, tool, args, label, interval_seconds, next_poll_at,
+const WATCH_SELECT = `SELECT id, tool, args, label, interval_seconds, base_interval_seconds, next_poll_at,
   session_id, user_id, chat_id, thread_id, seen_ids,
-  enabled, running, created_at, updated_at, last_run_at, last_error
+  enabled, running, state, consecutive_errors, etag, last_modified,
+  created_at, updated_at, last_run_at, last_error
   FROM watch`;
 
 export const watchMigrations: Migration[] = [
@@ -84,6 +102,17 @@ export const watchMigrations: Migration[] = [
         ON watch(enabled, running, next_poll_at)`,
     ],
   },
+  {
+    id: "watch.003",
+    up: [
+      "ALTER TABLE watch ADD COLUMN base_interval_seconds INTEGER NOT NULL DEFAULT 0",
+      "ALTER TABLE watch ADD COLUMN consecutive_errors INTEGER NOT NULL DEFAULT 0",
+      "ALTER TABLE watch ADD COLUMN state TEXT NOT NULL DEFAULT 'active'",
+      "ALTER TABLE watch ADD COLUMN etag TEXT NOT NULL DEFAULT ''",
+      "ALTER TABLE watch ADD COLUMN last_modified TEXT NOT NULL DEFAULT ''",
+      "UPDATE watch SET base_interval_seconds = interval_seconds WHERE base_interval_seconds = 0",
+    ],
+  },
 ];
 
 type WatchRow = {
@@ -92,6 +121,7 @@ type WatchRow = {
   args: SqlValue;
   label: SqlValue;
   interval_seconds: SqlValue;
+  base_interval_seconds: SqlValue;
   next_poll_at: SqlValue;
   session_id: SqlValue;
   user_id: SqlValue;
@@ -100,6 +130,10 @@ type WatchRow = {
   seen_ids: SqlValue;
   enabled: SqlValue;
   running: SqlValue;
+  state: SqlValue;
+  consecutive_errors: SqlValue;
+  etag: SqlValue;
+  last_modified: SqlValue;
   created_at: SqlValue;
   updated_at: SqlValue;
   last_run_at: SqlValue;
@@ -117,6 +151,12 @@ export class WatchStore {
   readonly log: Logger;
   /** Active-watch cap. */
   readonly maxWatches: number;
+  /** Sleep / quiet windows. Unset means always awake. */
+  quiet: QuietHours | null = null;
+  /** `X_MONTHLY_READS`. The poller skips twitter watches at this cap. */
+  twitterReadLimit = DEFAULT_MONTHLY_READS;
+  /** Combined wake text cap. */
+  wakeMax = WATCH_WAKE_MAX_ITEMS;
 
   constructor(sql: Sql | null, clock: Clock, maxWatches = DEFAULT_MAX_WATCHES, log: Logger = silentLogger) {
     if (sql === null || sql === undefined) throw new Error("watch: nil db");
@@ -150,18 +190,21 @@ export class WatchStore {
       throw new Error(`watch: max active watches (${this.maxWatches}) reached`);
     }
     const now = this.clock.now();
+    const interval = Math.trunc(intervalSeconds);
     const rows = this.sql.exec<{ id: SqlValue }>(
       `INSERT INTO watch (
-        tool, args, label, interval_seconds, next_poll_at,
+        tool, args, label, interval_seconds, base_interval_seconds, next_poll_at,
         session_id, user_id, chat_id, thread_id,
-        seen_ids, enabled, running, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, '', '', 0, '[]', 1, 0, ?, ?)
+        seen_ids, enabled, running, state, consecutive_errors, etag, last_modified,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, '', '', 0, '[]', 1, 0, 'active', 0, '', '', ?, ?)
       RETURNING id`,
       name,
       argsJson,
       label.trim(),
-      Math.trunc(intervalSeconds),
-      now,
+      interval,
+      interval,
+      this.notBefore(now),
       delivery.sessionId,
       now,
       now,
@@ -207,23 +250,33 @@ export class WatchStore {
     if (n === 0) throw new Error(`watch: ${id} not found`);
   }
 
-  /** Enabled, idle watches with `next_poll_at <= now`. `limit < 1` means 10. */
+  /** Enabled, idle, active watches with `next_poll_at <= now`. `limit < 1` means 10. */
   due(now: number, limit: number): Watch[] {
     const n = limit < 1 ? 10 : limit;
     return this.sql.exec<WatchRow>(
       `${WATCH_SELECT}
-        WHERE enabled = 1 AND running = 0 AND next_poll_at <= ?
-        ORDER BY next_poll_at ASC LIMIT ?`,
+        WHERE enabled = 1 AND state = 'active' AND running = 0 AND next_poll_at <= ?
+        ORDER BY next_poll_at ASC, id ASC LIMIT ?`,
       now,
       n,
     ).map(scanWatch);
   }
 
-  /** Mark a watch running if it is still due and idle. */
+  /** Every enabled, idle, active watch that is due. One alarm polls all of them. */
+  dueAll(now: number): Watch[] {
+    return this.sql.exec<WatchRow>(
+      `${WATCH_SELECT}
+        WHERE enabled = 1 AND state = 'active' AND running = 0 AND next_poll_at <= ?
+        ORDER BY next_poll_at ASC, id ASC`,
+      now,
+    ).map(scanWatch);
+  }
+
+  /** Mark a watch running if it is still due, idle, and not paused. */
   claim(id: number, now: number): boolean {
     const n = this.write(
       `UPDATE watch SET running = 1, updated_at = ?
-        WHERE id = ? AND enabled = 1 AND running = 0 AND next_poll_at <= ?`,
+        WHERE id = ? AND enabled = 1 AND state = 'active' AND running = 0 AND next_poll_at <= ?`,
       now,
       id,
       now,
@@ -232,23 +285,98 @@ export class WatchStore {
   }
 
   /**
-   * Clear running, store the cursor, and schedule `now + interval`.
+   * Clear running and store the cursor. A fetch error backs off; a clean poll
+   * restores the configured interval and snaps the next due time to the grid.
    * `seen === null` keeps the current cursor. Does not re-enable a watch
-   * cancelled while it was claimed (the update matches `running = 1` only,
-   * and a disabled row stays disabled).
+   * cancelled while it was claimed (the update matches `running = 1` only).
    */
   finish(w: Watch, seen: string[] | null, err: unknown, now = this.clock.now()): void {
-    let intervalSec = w.intervalSeconds;
-    if (intervalSec < MIN_INTERVAL_SEC) intervalSec = DEFAULT_INTERVAL_SEC;
-    this.finishAt(w, seen, err, now + intervalSec * 1000, now);
+    if (err) this.finishBackoff(w, seen, err, now);
+    else this.finishOk(w, seen, now);
   }
 
-  /** `finish` with an explicit next poll — a budget refusal parks until then. */
+  /**
+   * Successful fetch. Restores the configured interval, clears the error
+   * streak, and stores validators when the response sent them.
+   * `lastError` is set when the fetch worked but the model turn did not.
+   */
+  finishOk(
+    w: Watch,
+    seen: string[] | null,
+    now = this.clock.now(),
+    meta?: { etag?: string; lastModified?: string; lastError?: string },
+  ): void {
+    const base = w.baseIntervalSeconds >= MIN_INTERVAL_SEC ? w.baseIntervalSeconds : Math.max(w.intervalSeconds, MIN_INTERVAL_SEC);
+    const when = this.notBefore(now + base * 1000);
+    const etag = meta?.etag ? meta.etag : w.etag;
+    const lastModified = meta?.lastModified ? meta.lastModified : w.lastModified;
+    this.write(
+      `UPDATE watch SET
+        running = 0,
+        enabled = CASE WHEN enabled = 0 THEN 0 ELSE 1 END,
+        state = CASE WHEN enabled = 0 THEN state ELSE 'active' END,
+        seen_ids = ?,
+        next_poll_at = ?,
+        last_run_at = ?,
+        last_error = ?,
+        updated_at = ?,
+        consecutive_errors = 0,
+        interval_seconds = ?,
+        etag = ?,
+        last_modified = ?
+      WHERE id = ? AND running = 1`,
+      JSON.stringify(seen ?? w.seenIds),
+      when,
+      now,
+      clip(meta?.lastError ?? ""),
+      now,
+      base,
+      etag,
+      lastModified,
+      w.id,
+    );
+  }
+
+  /**
+   * A fetch error doubles the interval (cap 24h) and increments
+   * `consecutive_errors`. The fifth error pauses the watch.
+   */
+  finishBackoff(w: Watch, seen: string[] | null, err: unknown, now = this.clock.now()): void {
+    const errors = w.consecutiveErrors + 1;
+    const current = Math.max(w.intervalSeconds, MIN_INTERVAL_SEC);
+    const nextInterval = Math.min(current * 2, BACKOFF_CAP_SEC);
+    const paused = errors >= PAUSE_AFTER_ERRORS;
+    const when = this.notBefore(now + nextInterval * 1000);
+    this.write(
+      `UPDATE watch SET
+        running = 0,
+        state = CASE WHEN ? = 1 THEN 'paused' ELSE state END,
+        consecutive_errors = ?,
+        interval_seconds = ?,
+        seen_ids = ?,
+        next_poll_at = ?,
+        last_run_at = ?,
+        last_error = ?,
+        updated_at = ?
+      WHERE id = ? AND running = 1`,
+      paused ? 1 : 0,
+      errors,
+      nextInterval,
+      JSON.stringify(seen ?? w.seenIds),
+      when,
+      now,
+      clip(err),
+      now,
+      w.id,
+    );
+    if (paused) {
+      this.log.info("watch paused", { id: w.id, tool: w.tool, errors });
+    }
+  }
+
+  /** `finish` with an explicit next poll — a budget refusal parks until then. No backoff. */
   finishAt(w: Watch, seen: string[] | null, err: unknown, next: number, now = this.clock.now()): void {
-    let errText = err === null || err === undefined ? "" : errorText(err);
-    if (errText.length > 500) errText = errText.slice(0, 500);
-    const seenJson = JSON.stringify(seen ?? w.seenIds);
-    const at = next < now ? now : next;
+    const at = this.notBefore(next < now ? now : next);
     this.write(
       `UPDATE watch SET
         running = 0,
@@ -259,13 +387,89 @@ export class WatchStore {
         last_error = ?,
         updated_at = ?
       WHERE id = ? AND running = 1`,
-      seenJson,
+      JSON.stringify(seen ?? w.seenIds),
       at,
       now,
-      errText,
+      clip(err),
       now,
       w.id,
     );
+  }
+
+  /**
+   * Push a watch to `next` without a fetch and without touching the error streak.
+   * Used when twitter reads are over budget. The row does not need to be claimed.
+   */
+  parkUntil(w: Watch, next: number, err: unknown, now = this.clock.now()): void {
+    const when = this.notBefore(Math.max(next, now));
+    this.write(
+      `UPDATE watch SET running = 0, next_poll_at = ?, last_error = ?, updated_at = ?
+        WHERE id = ? AND enabled = 1 AND state = 'active'`,
+      when,
+      clip(err),
+      now,
+      w.id,
+    );
+  }
+
+  /** Move every due active watch to `until` without fetching. Quiet hours use this. */
+  deferDue(until: number, now: number): number {
+    return this.write(
+      `UPDATE watch SET running = 0, next_poll_at = ?, updated_at = ?
+        WHERE enabled = 1 AND state = 'active' AND next_poll_at <= ?`,
+      until,
+      now,
+      now,
+    );
+  }
+
+  /** Newest paused row with the same tool and canonical args, if any. */
+  findPaused(tool: string, args: unknown): Watch | null {
+    const row = this.sql.one<WatchRow>(
+      `${WATCH_SELECT}
+        WHERE enabled = 1 AND state = 'paused' AND tool = ? AND args = ?
+        ORDER BY id DESC LIMIT 1`,
+      tool.trim(),
+      normalizeArgs(args),
+    );
+    return row ? scanWatch(row) : null;
+  }
+
+  /** Clear a pause, restore a configured interval, and schedule the next grid slot. */
+  resume(id: number, intervalSeconds: number, label: string): Watch {
+    if (!Number.isFinite(intervalSeconds) || intervalSeconds < MIN_INTERVAL_SEC) {
+      throw new Error(`watch: interval must be >= ${formatDuration(MIN_INTERVAL_SEC)}`);
+    }
+    const now = this.clock.now();
+    const interval = Math.trunc(intervalSeconds);
+    const n = this.write(
+      `UPDATE watch SET
+        state = 'active', enabled = 1, running = 0,
+        consecutive_errors = 0, last_error = '',
+        interval_seconds = ?, base_interval_seconds = ?,
+        label = ?, next_poll_at = ?, updated_at = ?
+      WHERE id = ?`,
+      interval,
+      interval,
+      label.trim(),
+      this.notBefore(now),
+      now,
+      id,
+    );
+    if (n === 0) throw new Error(`watch: ${id} not found`);
+    return this.get(id);
+  }
+
+  setQuiet(hours: QuietHours | null): void {
+    this.quiet = hours;
+  }
+
+  setTwitterReadLimit(limit: number): void {
+    this.twitterReadLimit = Number.isFinite(limit) && limit >= 0 ? Math.trunc(limit) : DEFAULT_MONTHLY_READS;
+  }
+
+  setWakeMax(max: number): void {
+    this.wakeMax = Number.isFinite(max) && max >= 1 ? Math.trunc(max) : WATCH_WAKE_MAX_ITEMS;
   }
 
   /**
@@ -273,20 +477,31 @@ export class WatchStore {
    * call). `onNewItems` runs a turn only when new ids appear after the seed poll.
    */
   async pollDue(now: number, callTool: CallTool, onNewItems: OnNewItems): Promise<void> {
+    this.clearStaleRunning(now);
+    const resume = this.quiet?.resumeAt(now);
+    if (resume != null) {
+      const until = snapUpGrid(resume);
+      if (until > now) {
+        const moved = this.deferDue(until, now);
+        this.log.info("watch batch deferred (quiet hours)", { until: formatRfc3339(until), moved });
+      }
+      return;
+    }
     await pollDueWatches(this, now, callTool, onNewItems);
   }
 
   /**
-   * Earliest `next_poll_at` among enabled watches, or `null` when none are enabled.
-   * Includes a watch left `running` so a crashed claim still schedules an alarm.
-   * A past timestamp means the Durable Object should alarm immediately.
+   * Earliest alarm for an active watch, snapped to the grid and never inside
+   * quiet hours. Includes a watch left `running` so a crashed claim still
+   * schedules an alarm. A past timestamp means the Durable Object should
+   * alarm immediately. Paused watches are not armed.
    */
   nextDue(): number | null {
     const row = this.sql.one<{ next: SqlValue }>(
-      "SELECT MIN(next_poll_at) AS next FROM watch WHERE enabled = 1",
+      "SELECT MIN(next_poll_at) AS next FROM watch WHERE enabled = 1 AND state = 'active'",
     );
     if (!row || row.next === null || row.next === undefined) return null;
-    return asNumber(row.next);
+    return this.alarmAt(asNumber(row.next));
   }
 
   /** Pull `next_poll_at` a minute into the past and clear `running`. */
@@ -298,6 +513,32 @@ export class WatchStore {
       id,
     );
     if (n === 0) throw new Error(`watch: ${id} not found`);
+  }
+
+  /** Grid slot at or after `at`, pushed past quiet hours when that slot is asleep. */
+  private notBefore(at: number): number {
+    const snapped = snapUpGrid(at);
+    const resume = this.quiet?.resumeAt(snapped);
+    if (resume != null) return snapUpGrid(resume);
+    return snapped;
+  }
+
+  /**
+   * Alarm instant for a stored `next_poll_at`. Overdue work fires now unless
+   * the human is in quiet hours. A future slot snaps up to the grid and, if
+   * that lands in quiet hours, waits until they end.
+   */
+  private alarmAt(raw: number): number {
+    const now = this.clock.now();
+    if (raw <= now) {
+      const resume = this.quiet?.resumeAt(now);
+      if (resume != null) return snapUpGrid(resume);
+      return raw;
+    }
+    const snapped = snapUpGrid(raw);
+    const resume = this.quiet?.resumeAt(snapped);
+    if (resume != null) return snapUpGrid(resume);
+    return snapped;
   }
 
   private write(query: string, ...params: SqlValue[]): number {
@@ -363,6 +604,11 @@ function scanWatch(row: WatchRow): Watch {
     seenIds: parseSeen(asString(row.seen_ids)),
     enabled: asNumber(row.enabled) === 1,
     running: asNumber(row.running) === 1,
+    state: asString(row.state) || "active",
+    baseIntervalSeconds: asNumber(row.base_interval_seconds),
+    consecutiveErrors: asNumber(row.consecutive_errors),
+    etag: asString(row.etag),
+    lastModified: asString(row.last_modified),
     createdAt: asNumber(row.created_at),
     updatedAt: asNumber(row.updated_at),
     lastRunAt: asNumberOrNull(row.last_run_at),
@@ -397,6 +643,12 @@ function asNumber(v: SqlValue | undefined): number {
   if (typeof v === "number") return v;
   if (typeof v === "string" && v.trim() !== "") return Number(v);
   return 0;
+}
+
+function clip(err: unknown): string {
+  if (err == null || err === "") return "";
+  const text = typeof err === "string" ? err : errorText(err);
+  return text.length > 500 ? text.slice(0, 500) : text;
 }
 
 function asNumberOrNull(v: SqlValue | undefined): number | null {

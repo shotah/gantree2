@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discussions
+    url: https://github.com/shotah/gantree2/discussions/categories/q-a
+    about: Questions and setup. A bug, a feature, or a plugin tool still belongs in an issue.

@@ -25,7 +25,7 @@ import { Consolidator } from "@/brain/memory/consolidate";
 import { MemoryStore } from "@/brain/memory/store";
 import { memoryTools } from "@/brain/memory/tools";
 import { todoBoard } from "@/brain/memory/todo";
-import { KIND_INSIGHT, SUBJECT_AIM_PREFIX, SUBJECT_TODO_PREFIX, KIND_FACT } from "@/brain/memory/types";
+import { KIND_INSIGHT, SUBJECT_AIM_PREFIX, SUBJECT_TODO_PREFIX, KIND_FACT, KIND_PREFERENCE, SUBJECT_HOURS } from "@/brain/memory/types";
 import { aimTools } from "@/brain/aims/tools";
 import { selfNoteTool } from "@/brain/selfnote/tools";
 import { graduateVoice } from "@/brain/selfnote/graduate";
@@ -35,8 +35,11 @@ import { SessionStore } from "@/brain/session/store";
 import { agentSession } from "@/brain/session/types";
 import { EnableStore } from "@/brain/tools/enable";
 import { Registry } from "@/brain/tools/registry";
+import { monthlyReadLimit } from "@/brain/plugins/twitter/budget";
 import { WatchStore } from "@/brain/watch/store";
 import { watchTools } from "@/brain/watch/tools";
+import { WATCH_WAKE_MAX_ITEMS } from "@/brain/watch/interval";
+import { quietResumeAt } from "@/brain/watch/quiet";
 import { WebSearch } from "@/brain/websearch/search";
 import type { Brain, BrainDeps } from "@/brain/core/brain";
 import type { CallContext, PluginContext } from "@/brain/core/tools";
@@ -85,6 +88,18 @@ export function createBrain(deps: BrainDeps): Brain {
   const cronStore = openStore(deps.sql, deps.clock);
 
   const loc = { zone: deps.clock.zone || "America/Los_Angeles" };
+  watch.setQuiet({
+    resumeAt(at) {
+      try {
+        const content = memory.activeByKindSubject(KIND_PREFERENCE, SUBJECT_HOURS)?.content ?? "";
+        return quietResumeAt(content, at, loc.zone || "UTC");
+      } catch {
+        return null;
+      }
+    },
+  });
+  watch.setTwitterReadLimit(monthlyReadLimit(env));
+  watch.setWakeMax(Math.max(1, envInt(env, "WATCH_WAKE_MAX_ITEMS", WATCH_WAKE_MAX_ITEMS)));
   const plannerOpts: PlannerOptions = {
     store: cronStore,
     zone: loc.zone,

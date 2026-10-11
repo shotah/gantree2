@@ -1,0 +1,19 @@
+name: dependency-review
+
+# Fails the check when a pull request adds a known-vulnerable dependency.
+# The dependency graph has to be on (it is, for a public repo).
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@v5

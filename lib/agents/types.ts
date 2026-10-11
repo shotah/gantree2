@@ -1,39 +1,24 @@
 /**
  * The agents contract. Frozen shapes shared by the Settings DO (inventory,
- * samples), the Agent DO (config, harness frames, room users), the Harness DO
- * (container), and the screens under `app/agents`. Change here only with the
- * owning side in the same PR.
+ * samples), the Agent DO (config, status frames, room users), and the
+ * screens under `app/agents`.
  *
  * HTTP — same origin, session cookie, role gate (`lib/door/users.ts`):
  *
  *   GET    /api/agents                      → { agents: AgentCard[] }     admin all · operator theirs · member 403
  *   POST   /api/agents  AgentCreate         → { agent: AgentCard } 201    admin
  *   GET    /api/agents/:slug                → { agent: AgentCard }        canRun
- *   DELETE /api/agents/:slug                → 204                         admin (stops container; R2 snapshot kept)
+ *   DELETE /api/agents/:slug                → 204                         admin
  *   GET    /api/agents/:slug/config         → AgentConfigView             canRun
- *   PATCH  /api/agents/:slug/config  AgentConfigPatch → AgentConfigView   canRun (env change → `recreate` hint)
+ *   PATCH  /api/agents/:slug/config  AgentConfigPatch → AgentConfigView   canRun
  *   GET    /api/agents/:slug/status         → AgentStatus                 canRun
  *   GET    /api/agents/:slug/log?after=N    → LogPage                     canRun
  *   GET    /api/agents/:slug/users          → { users: RoomUser[] }       canRun (Agent DO `allow`)
  *   PUT    /api/agents/:slug/users  { users: RoomUser[] } → same          canRun
- *   GET    /api/agents/:slug/container      → ContainerInfo               canRun
- *   POST   /api/agents/:slug/container  ContainerAction → ContainerInfo   canRun
- *   POST   /api/agents/:slug/auth/start { plugin } → { url }            canRun (native google, strava, google-health)
- *   GET    /api/agents/:slug/bearer         → { bearer }                  admin, loopback dev only (`npm run agent`)
+ *   POST   /api/agents/:slug/auth/start { plugin } → { url }            canRun (google, strava, google-health)
+ *   GET    /api/agents/:slug/bearer         → { bearer }                  admin, loopback dev only
  *   GET    /api/tools                       → { tools: ToolEntry[], house: string[] }  any signed-in
  *   GET    /api/samples?agent=&since=       → { samples: SampleRow[] }    canRun (admin: all when no agent)
- *
- * Snapshot — no cookie; the harness does a bare GET / PUT on a URL the Agent
- * DO minted into the `config` frame (`restore.*` / `put.*`):
- *
- *   GET/PUT /api/agents/:slug/snapshot/:file?exp=<ms>&sig=<hex>   file ∈ gantry_db | self_md | tokens_tar
- *   sig = HMAC-SHA256(roomBearer, `${slug}|${file}|${method}|${exp}`), exp ≤ 15 min ahead.
- *   R2 keys: backups/<slug>/latest/<file> and backups/<slug>/<stamp>/<file>.
- *   `tokens_tar` is AES-256-GCM ciphertext (12-byte nonce, then the seal) of a tar of
- *   OAuth token files. The Worker stores the object and does not decrypt it.
- *   The key is config-frame env `SNAPSHOT_KEY` (base64, 32 bytes), minted once by the
- *   Agent DO and stored beside the room bearer. No token files skips the PUT; a 404
- *   on GET is a no-op. A missing key skips the token archive; plaintext is never uploaded.
  *
  * Errors are `{ error: string }` with the status. `401` = door (see app/lib/api.ts), `403` = role.
  */
@@ -64,54 +49,30 @@ export type AgentCreate = {
   tags?: string[];
 };
 
-/** Cached on the Agent DO from the harness socket and its frames. */
+/** Cached on the Agent DO from the brain's `status`, `perf`, and `log` frames. */
 export type AgentStatus = {
   harness: "connected" | "disconnected";
-  /** ms epoch of the last harness socket open/close. */
+  /** ms epoch of the last brain connect. */
   since: number | null;
   /** From the last `status` frame. */
   published: string[];
   skipped: { name: string; reason: string }[];
   /** ms epoch of the last `perf` frame. */
   lastTurn: number | null;
-  /** From the last `snapshot` frame. */
-  lastSnapshot: { stamp: string; bytes: number; at: number } | null;
-  /**
-   * The harness's last error-level `log` line since it connected. A boot
-   * that dies before the room is up flushes its log on the handshake socket,
-   * so this is the "why" behind the container's `exit 1`.
-   */
+  /** Last error-level `log` line since the brain connected. */
   lastError: { message: string; at: string } | null;
-  /** Rolling since the harness connected. */
+  /** Rolling since the brain connected. */
   perf: { turns: number; prompt: number; completion: number; errors: number };
 };
 
-export type ContainerState = "stopped" | "starting" | "running" | "stopping" | "failed" | "unknown";
-
-export type ContainerInfo = {
-  state: ContainerState;
-  /** ms epoch of the last state change, when known. */
-  since: number | null;
-  lastError: string | null;
-  /** Image reference the binding started, when known. */
-  image: string | null;
-};
-
-export type ContainerAction = { action: "start" | "stop" | "recreate" };
-
-/** Where this agent's turns run. `container` is the harness; `native` is the brain inside the Agent DO. */
-export type AgentRuntime = "container" | "native";
-
-/** What the `config` frame carries to the harness. Stored on the Agent DO. */
+/** What the `config` frame carries. Stored on the Agent DO. */
 export type AgentConfig = {
   /** Secrets and keys. Values are write-only over HTTP. */
   env: Record<string, string>;
-  /** `mcp.toml` text. */
+  /** `mcp.toml` text. Server names are the plugin grants. */
   mcp: string;
   /** `PERSONA.md` text. */
   persona: string;
-  /** Missing on rows written before the flag existed — readers treat that as `container`. */
-  runtime: AgentRuntime;
   updatedAt: number | null;
 };
 
@@ -122,9 +83,8 @@ export type AgentConfigView = {
   house: string[];
   mcp: string;
   persona: string;
-  runtime: AgentRuntime;
   updatedAt: number | null;
-  /** True when env changed since the container last started. */
+  /** True when env changed since the last applied start marker. */
   recreate: boolean;
 };
 
@@ -133,13 +93,11 @@ export type AgentConfigPatch = {
   env?: Record<string, string | null>;
   mcp?: string;
   persona?: string;
-  runtime?: AgentRuntime;
 };
 
 export type AgentCard = AgentRow & {
   status: AgentStatus | null;
-  container: ContainerInfo | null;
-  /** This session may mutate (config, container, users). */
+  /** This session may mutate (config, users). */
   canMutate: boolean;
 };
 
@@ -154,13 +112,13 @@ export type LogLine = {
 
 export type LogPage = { lines: LogLine[]; next: number };
 
-/** One row of the tools catalog — a plugin baked into the image (`harness/mcp.lock`). */
+/** One in-process plugin, the row the tools grid toggles. */
 export type ToolEntry = {
-  /** Server id = `mcp.lock` id = `[[server]] name`. */
+  /** Plugin id, also the `mcp.toml` server name. */
   id: string;
-  /** mcp.toml command. The image file is `/opt/mcp/<id>/<id>`. */
+  /** Same as `id`. Grants store it as the command. */
   binary: string;
-  /** Required env keys; empty when none. */
+  /** Env keys `ready()` treats as `no_key`. */
   needs: string[];
   /** Redirect login via `/api/auth/catch` (google, google-health, strava). Garmin is not this flag. */
   oauth: boolean;
@@ -182,6 +140,4 @@ export type Grant = {
 export type AgentsEnv = HouseEnv & {
   SETTINGS?: DurableObjectNamespace;
   AGENT?: DurableObjectNamespace;
-  HARNESS?: DurableObjectNamespace;
-  STORE?: R2Bucket;
 };

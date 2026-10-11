@@ -27,9 +27,6 @@
   "kv_namespaces": [
     { "binding": "DIRECTORY", "id": "TODO" }
   ],
-  "r2_buckets": [
-    { "binding": "STORE", "bucket_name": "gantree2-store" }
-  ],
   // Optional var. Public origin for OAuth redirects (path stripped).
   // Unset locally: callers fall back to the request origin.
   // "vars": { "PUBLIC_ORIGIN": "https://gantree.example.com" }

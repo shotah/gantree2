@@ -30,10 +30,6 @@ export function nagsFor(agent: AgentCard): string[] {
   } else if (skipped > 1) {
     nags.push(`${skipped} tools skipped`);
   }
-  if (agent.container?.state === "failed") {
-    const why = agent.status?.lastError?.message ?? agent.container.lastError;
-    nags.push(why ? `Container failed: ${why}` : "Container failed");
-  }
   return nags;
 }
 
@@ -55,7 +51,6 @@ function AgentTile({ agent }: { agent: AgentCard }) {
   const published = agent.status ? agent.status.published.length : 0;
   const skipped = agent.status ? agent.status.skipped.length : 0;
   const harness = agent.status ? agent.status.harness : "unknown";
-  const state = agent.container ? agent.container.state : "unknown";
   const nags = nagsFor(agent);
   const lastTurn = agent.status ? agent.status.lastTurn : null;
   const connected = harness === "connected";
@@ -86,8 +81,7 @@ function AgentTile({ agent }: { agent: AgentCard }) {
             </ul>
           )
         : null}
-      <dl className="grid grid-cols-3 gap-2">
-        <Stat label="Container">{state}</Stat>
+      <dl className="grid grid-cols-2 gap-2">
         <Stat label="Tools">{published} published · {skipped} skipped</Stat>
         <Stat label="Last turn">
           <time dateTime={timeStamp(lastTurn)}>{relativeTime(lastTurn)}</time>

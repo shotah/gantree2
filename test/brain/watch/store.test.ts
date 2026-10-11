@@ -29,7 +29,7 @@ describe("WatchStore", () => {
     const { sql, clock, store } = open(5);
     expect(store.maxWatches).toBe(5);
     expect(sql.exec<{ id: string }>("SELECT id FROM brain_migration ORDER BY id").map((row) => row.id))
-      .toEqual(["watch.001", "watch.002"]);
+      .toEqual(["watch.001", "watch.002", "watch.003"]);
 
     const watch = store.add("feeds__items_list", { url: "https://x" }, "nws", 15 * 60, delivery("s1", "u", "c"));
     expect(watch.id).not.toBe(0);
@@ -118,7 +118,7 @@ describe("WatchStore", () => {
     const reopened = new WatchStore(sql, clock, 5);
     expect(reopened.get(watch.id).sessionId).toBe(AGENT_SESSION);
     expect(sql.exec<{ id: string }>("SELECT id FROM brain_migration").map((row) => row.id))
-      .toEqual(["watch.001", "watch.002"]);
+      .toEqual(["watch.001", "watch.002", "watch.003"]);
   });
 
   it("reports the earliest enabled next_poll_at", () => {
@@ -142,6 +142,6 @@ describe("migrate idempotence", () => {
     new WatchStore(sql, clock, 5);
     new WatchStore(sql, clock, 5);
     expect(sql.exec<{ id: string }>("SELECT id FROM brain_migration ORDER BY id").map((row) => row.id))
-      .toEqual(["watch.001", "watch.002"]);
+      .toEqual(["watch.001", "watch.002", "watch.003"]);
   });
 });

@@ -23,17 +23,8 @@ export type Decision
 const PUBLIC_EXACT = new Set(["/login", "/api/auth/google", "/api/auth/callback/google", "/api/auth/catch", "/api/auth/config", "/api/auth/nonce", "/api/auth/token", "/manifest.webmanifest", "/sw.js", "/icon.svg", "/favicon.ico", "/robots.txt"]);
 const PUBLIC_PREFIX = ["/_vinext/", "/.well-known/", "/_next/", "/assets/"];
 
-/**
- * Harness snapshot GET/PUT. Signed with the room bearer (`lib/agents/snapshot`);
- * no session cookie. Only the snapshot files, not the rest of `/api/agents`.
- */
-const SNAPSHOT_PATH = /^\/api\/agents\/[a-z][a-z0-9-]{0,62}\/snapshot\/(?:gantry_db|self_md|tokens_tar)$/;
-
 export function isPublicPath(pathname: string): boolean {
   if (PUBLIC_EXACT.has(pathname)) {
-    return true;
-  }
-  if (SNAPSHOT_PATH.test(pathname)) {
     return true;
   }
   return PUBLIC_PREFIX.some((p) => pathname.startsWith(p));
@@ -41,7 +32,7 @@ export function isPublicPath(pathname: string): boolean {
 
 /**
  * Agent face / wallpaper / mood (`chat__avatar_update` and friends). The
- * harness presents the room bearer, never a cookie — the same token it dials
+ * room presents its bearer, never a cookie — the same token it dials
  * `/ws/<slug>` with. Only these three paths, and only when a bearer header is
  * on the request; `admitRoom` (`lib/avatar/http`) then checks that token
  * against `AGENT_BEARERS` or the Agent DO row. A cookie here is gated as usual.
@@ -79,7 +70,7 @@ export function devIdentity(env: GateEnv, url: URL): { sub: string; email: strin
 
 export async function gate(req: Request, env: GateEnv, store: UserStore, now = Date.now()): Promise<Decision> {
   const url = new URL(req.url);
-  // A bearer on /api/chat/{avatar,backdrop,theme} is the harness room token,
+  // A bearer on /api/chat/{avatar,backdrop,theme} is the room token,
   // not a session JWE. isAgentRoomRequest stays ahead of the session read.
   if (isPublicPath(url.pathname) || isAgentRoomRequest(req)) {
     return { kind: "public" };

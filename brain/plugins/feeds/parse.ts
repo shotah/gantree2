@@ -16,6 +16,9 @@ export type FeedDoc = {
   title: string;
   url: string;
   items: FeedItem[];
+  etag?: string;
+  lastModified?: string;
+  notModified?: boolean;
 };
 
 const parser = new XMLParser({

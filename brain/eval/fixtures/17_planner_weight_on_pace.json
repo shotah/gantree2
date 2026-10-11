@@ -2,6 +2,7 @@
   "name": "planner_weight_on_pace",
   "why": "Weight trending down and Garmin has today's number: log it as a weigh-in (0) with that number, then [silent].",
   "planner": true,
+  "now": "2026-10-07T08:00:00-07:00",
   "memory": [
     { "kind": "insight", "subject": "aim/weight", "content": "lose 20 lbs by December; down 4 so far" },
     { "kind": "preference", "subject": "pref/hours", "content": "sleep: 23:00-06:00\nwork: 07:00-15:00" }

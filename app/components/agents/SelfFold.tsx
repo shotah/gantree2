@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { agentsMessage, codeOf, getSelf, putSelf, type ApiClient } from "@/app/lib/agentsHttp";
 import { api } from "@/app/lib/api";
-import type { AgentRuntime } from "@/lib/agents/types";
 import { alertClass, Fold, primaryClass, quietClass } from "./Fold";
 
 function utf8Length(text: string): number {
@@ -17,12 +16,10 @@ function lineLabel(line: string, index: number): string {
 
 export function SelfFold({
   slug,
-  runtime,
   canMutate,
   client = api,
 }: {
   slug: string;
-  runtime: AgentRuntime;
   canMutate: boolean;
   client?: ApiClient;
 }) {
@@ -33,10 +30,8 @@ export function SelfFold({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const native = runtime === "native";
-
   useEffect(() => {
-    if (!open || !native) {
+    if (!open) {
       return;
     }
     let gone = false;
@@ -56,7 +51,7 @@ export function SelfFold({
     return () => {
       gone = true;
     };
-  }, [open, native, slug, client]);
+  }, [open, slug, client]);
 
   async function save() {
     setBusy(true);
@@ -96,18 +91,11 @@ export function SelfFold({
   const lines = draft.split("\n");
 
   return (
-    <Fold title="Self notes" open={open} onOpen={setOpen} hint={native ? undefined : "container"}>
+    <Fold title="Self notes" open={open} onOpen={setOpen}>
       {error ? <p role="alert" className={`${alertClass} mb-3`}>{agentsMessage(error)}</p> : null}
       {notice ? <p role="status" className="mb-3 text-sm text-body">{notice}</p> : null}
-      {native
-        ? null
-        : (
-            <p className="text-sm text-body">
-              This agent runs in a container. SELF.md is on the container disk.
-            </p>
-          )}
-      {native && saved === null && !error ? <p className="text-sm text-muted">Loading self notes.</p> : null}
-      {native && saved !== null
+      {saved === null && !error ? <p className="text-sm text-muted">Loading self notes.</p> : null}
+      {saved !== null
         ? (
             <>
               <label htmlFor="self-draft" className="mb-1 block text-xs text-muted">Self notes text</label>

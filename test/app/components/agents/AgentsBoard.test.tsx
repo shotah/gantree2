@@ -4,7 +4,7 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AgentsBoard, BOARD_POLL_MS, nagsFor } from "@/app/components/agents/AgentsBoard";
 import type { ApiClient } from "@/app/lib/agentsHttp";
-import { CONTAINER, STATUS, card, json, session, href } from "./fixtures";
+import { STATUS, card, json, session, href } from "./fixtures";
 
 afterEach(() => {
   cleanup();
@@ -27,24 +27,15 @@ function boardClient(role: "admin" | "operator" = "admin", agents = [card()]): A
 }
 
 describe("nagsFor", () => {
-  it("flags skipped tools and a failed container", () => {
+  it("flags skipped tools", () => {
     expect(nagsFor(card())).toEqual([]);
-    expect(nagsFor(card({ status: null, container: null }))).toEqual([]);
+    expect(nagsFor(card({ status: null }))).toEqual([]);
     expect(nagsFor(card({
       status: { ...STATUS, skipped: [{ name: "maps", reason: "no key" }] },
     }))).toEqual(["1 tool skipped"]);
     expect(nagsFor(card({
       status: { ...STATUS, published: [], skipped: [{ name: "a", reason: "x" }, { name: "b", reason: "y" }] },
-      container: { ...CONTAINER, state: "failed", lastError: null },
-    }))).toEqual(["2 tools skipped", "Container failed"]);
-    expect(nagsFor(card({
-      container: { ...CONTAINER, state: "failed", lastError: "boom" },
-    }))).toEqual(["Container failed: boom"]);
-    // The harness's own last error says why; the supervisor's `exit 1` does not.
-    expect(nagsFor(card({
-      status: { ...STATUS, lastError: { message: "snapshot restore failed err=\"mkdir /etc/gantry: permission denied\"", at: "t" } },
-      container: { ...CONTAINER, state: "failed", lastError: "exit 1" },
-    }))).toEqual(["Container failed: snapshot restore failed err=\"mkdir /etc/gantry: permission denied\""]);
+    }))).toEqual(["2 tools skipped"]);
   });
 });
 
@@ -57,12 +48,10 @@ describe("AgentsBoard", () => {
       name: "Ada",
       tags: [],
       status: { ...STATUS, harness: "disconnected", published: [], skipped: [{ name: "maps", reason: "no key" }], lastTurn: null },
-      container: { ...CONTAINER, state: "failed", lastError: "boom" },
     });
     render(<AgentsBoard client={boardClient("admin", [kit, ada])} />);
     const kitCard = await screen.findByRole("listitem", { name: "Kit" });
     expect(within(kitCard).getByText("connected")).toBeTruthy();
-    expect(within(kitCard).getByText("running")).toBeTruthy();
     expect(within(kitCard).getByText("home")).toBeTruthy();
     expect(within(kitCard).getByText("1 published · 0 skipped")).toBeTruthy();
     expect(within(kitCard).getByText("10s ago")).toBeTruthy();
@@ -73,7 +62,6 @@ describe("AgentsBoard", () => {
     const adaCard = screen.getByRole("listitem", { name: "Ada" });
     expect(within(adaCard).getByText("disconnected")).toBeTruthy();
     expect(within(adaCard).getByText("1 tool skipped")).toBeTruthy();
-    expect(within(adaCard).getByText("Container failed: boom")).toBeTruthy();
     expect(within(adaCard).getByText("—")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Users" }).getAttribute("href")).toBe("/users");
     expect(screen.getByRole("link", { name: "Settings" }).getAttribute("href")).toBe("/settings");
@@ -88,7 +76,7 @@ describe("AgentsBoard", () => {
     expect(within(kitCard).getByText("connected").closest("p")?.className).toContain("bg-ok/15");
     expect(within(adaCard).getByText("disconnected").closest("p")?.className).toContain("bg-track");
     expect(within(kitCard).getByText("home").className).toContain("bg-accent-soft");
-    expect(within(kitCard).getByText("Container").className).toContain("uppercase");
+    expect(within(kitCard).getByText("Tools").className).toContain("uppercase");
     expect(within(adaCard).getByText("1 tool skipped").className).toContain("bg-danger-soft");
     expect(within(kitCard).getByRole("link", { name: "Open chat" }).className).toContain("rounded-xl");
     expect(within(kitCard).getByRole("link", { name: "Manage" }).className).toContain("border-line");

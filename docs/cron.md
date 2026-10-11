@@ -5,21 +5,13 @@ inside the agent loop (tools allowed), then **push** on the chat room.
 Jobs do not store a destination. A reminder next Tuesday is planning; a
 chatbot that only answers now is not.
 
-On `runtime: native` there is no ticker. `nextAlarm()` is the soonest
-due row across cron, watches, and memory consolidation.
-`edge/agent.do.ts` `alarm()` calls `brain.alarm()`, which runs
-`fireDue`, polls due watches, and runs a consolidation pass when
-`MEMORY_CONSOLIDATE_MINUTES` says so (default 30; `0` turns that pass
-off). The handler arms the next wake. Cost between fires is zero. The
-alarm does not start a container. One clock:
-[architecture.md](architecture.md) §5.
-
-A container agent still keeps this clock inside the Go process while
-the process is up (`CRON_TICK_SECONDS`, default 15). The Agent DO alarm
-does not wake that process. When the container stops, its clock stops.
-That path is [architecture.md](architecture.md#13-legacy-container-runtime).
-Switching `CHANNEL` is a container concern; a native push is a `push`
-frame on the room, including a cron or watch wake.
+There is no ticker. `nextAlarm()` is the soonest due row across cron,
+watches, and memory consolidation. `edge/agent.do.ts` `alarm()` calls
+`brain.alarm()`, which runs `fireDue`, polls due watches, and runs a
+consolidation pass when `MEMORY_CONSOLIDATE_MINUTES` says so (default
+30; `0` turns that pass off). The handler arms the next wake. Cost
+between fires is zero. One clock: [architecture.md](architecture.md) §5.
+A push is a `push` frame on the room, including a cron or watch wake.
 
 Live-data jobs (calendar, mail, fitness, search, sheets) get a tool-first
 wrapper plus a last-token system note so the model calls tools before drafting
@@ -38,10 +30,10 @@ explicit "remind me at 9pm" still fire. Pin follow-through with `memory_subject`
 wake is not a hydrate lottery — the subject is known before `memory_store`
 returns, so the store and the `cron_schedule` go out in one batch. A goal with no wake is a dusty row — [persona.md](persona.md#where-the-horizon-lives).
 
-Cron has no Telegram streaming / tool-trace bubble — only the final `Push`.
-Live-data replies append `— tools: name, …` or `— tools: (none)` so a skipped
-pull is visible in chat. Server logs still show `tool call` / `model call`
-(the `log` frame — [contract.md](contract.md)).
+Cron delivers one `push` when the job speaks. Live-data replies append
+`— tools: name, …` or `— tools: (none)` so a skipped pull is visible in
+chat. Server logs still show `tool call` / `model call` (the `log`
+frame — [contract.md](contract.md)).
 
 The model can skip the push by replying with `[silent]` (first line). The job
 still runs and the turn is stored; nothing is sent to chat. Use that for
@@ -55,8 +47,7 @@ planner when the day needs no human-facing message.
 | `CRON_ENABLED` | `true` | Master switch |
 | `CRON_TZ` | `America/Los_Angeles` | IANA timezone for clock times (Pacific — SJ / SF / SEA / LA) |
 | `CRON_MAX_JOBS` | `50` | Cap on enabled jobs |
-| `CRON_TICK_SECONDS` | `15` | Container poll interval. A native agent has no ticker; the DO alarm is the clock |
-| `MEMORY_CONSOLIDATE_MINUTES` | `30` | Native only. How often the alarm may run a consolidation pass. `0` skips it |
+| `MEMORY_CONSOLIDATE_MINUTES` | `30` | Consolidation period. `0` turns that pass off |
 | `DAILY_PLANNER_AT` | `07:10` | One planning session a day, local clock (`CRON_TZ`). `/planner 09:30` overrides it for this agent. `0` or `/planner off` disables it |
 | `EXAMPLES_QTY` | `1-2` | **On by default** capability-example pings. Empty or `0` = no proactive pings. `/examples` on-demand still works |
 | `EXAMPLES_START_HOUR` | `6` | Local window start for examples pings |
@@ -67,7 +58,7 @@ planner when the day needs no human-facing message.
 
 | Tool | Purpose |
 | --- | --- |
-| `cron_schedule` | Create a job for this agent. Optional `memory_id` / `memory_subject` pins a memory row; the wake injects `[job memory]`. Push uses the CHANNEL allowlist. |
+| `cron_schedule` | Create a job for this agent. Optional `memory_id` / `memory_subject` pins a memory row; the wake injects `[job memory]`. Push is a `push` frame on the room. |
 | `cron_list` | List active jobs |
 | `cron_cancel` | Disable by id |
 
@@ -100,9 +91,8 @@ Sick, vacation, holiday, or a quiet day: reply `[silent]` and do not schedule
 nag crons. The session still runs so the model can look and decide.
 
 On boot, one `daily_planner` job is bound to the agent conversation (`gantry`).
-`CHANNEL` is the mouth; jobs do not store a chat or user id. Push delivers to
-every allowlisted destination on that mouth. Switching Telegram → chat
-keeps the same cron, watches, memory, and history. `/planner off` opts out.
+Jobs do not store a chat or user id. Push delivers to the room.
+`/planner off` opts out.
 
 Chat and settings follow-ups: [planner-siblings.md](planner-siblings.md).
 
@@ -171,20 +161,10 @@ EXAMPLES_END_HOUR=21
 # EXAMPLES_SKIP_RECENT_MINUTES=60
 ```
 
-## Inspect with sqlite3
+## Inspect
 
-On a native agent the rows are in the Agent DO's SQLite. Settings does
-not open that database. The statements below are the same tables.
-
-On a container agent, `gantry.db` is on the container disk (`DATA_DIR`)
-and in the R2 snapshot under `backups/<slug>/latest/` and
-`backups/<slug>/<stamp>/`
-([architecture.md](architecture.md#13-legacy-container-runtime)).
-Settings does not open the live file. Unpack a stamp:
-
-```bash
-sqlite3 gantry.db
-```
+The rows are in the Agent DO's SQLite. Settings does not open that
+database.
 
 ```sql
 SELECT id, kind, expr, timezone, next_run_at, enabled, running,
@@ -199,10 +179,6 @@ Disable by hand:
 ```sql
 UPDATE cron_job SET enabled = 0, running = 0 WHERE id = 3;
 ```
-
-A hand edit of a container stamp is not live until that stamp is
-restored and the container recreates. A native agent's rows are already
-the DO database; there is no stamp to restore.
 
 ## Overlap policy
 
@@ -223,46 +199,21 @@ A cron fire disappearing from the enabled queue only means the job
 finished (one-shot disable, silent skip, empty reply, or push error).
 It does not mean the phone got a frame.
 
-On a native agent the hops are inside the DO: the alarm calls
+On this product the hops are inside the DO: the alarm calls
 `brain.alarm()`, the runner runs the turn, and a spoken result is a
 `push` frame the DO fans to `sub:<user_id>` (or every phone in the room
 when `user_id` is empty), plus Web Push if that socket is gone.
 
-A container agent still has the socket hops below.
-
-```text
-SQLite cron_job  →  runner.Handle (agent loop, session_id=gantry)
-                 →  channel.Push  {kind:push, user_id from CHANNEL allowlist, id:cron-<job>-<ms>}
-                 →  wss /ws/<slug>  bearer  (live socket, or a short dial)
-                 →  Agent DO routes to tag sub:<user_id>  (or role:phone if empty)
-                 →  phone WS + optional Web Push if that socket is gone
-```
-
-Grep the harness log (the `log` frame, or the platform tail) for the same
-`id` / `frame_id`:
+The `log` frame (or the platform tail) carries the same id:
 
 ```text
 cron job firing     id=319 session_id=gantry
 cron silent skip    outcome=silent          # Handle ran; nothing written to the room
 cron job pushed     outcome=push frame_id=cron-319-…
 cron push failed    outcome=error           # last_error on the row
-chat push           slug=… user_id=… via=live|dial frame_id=cron-319-…
 ```
 
-`via=dial` means the long-lived harness socket was down (or a live write
-failed) and Push opened a one-shot room connection. Jobs do not store a
-Telegram chat id or Google `sub` — the mouth allowlist is the destination.
-Boot collapse rewrites leftover `telegram:…` / `chat:…` rows onto `gantry`.
-Those jobs still fire — they are not skipped because they were scheduled on
-another mouth. The Worker does not log frame bodies; `chat push` is the
-last harness-side hop you can grep. On the phone the bubble `id` is that
-`frame_id`.
-
-Disable by hand:
-
-```sql
-UPDATE cron_job SET enabled = 0, running = 0 WHERE id = 3;
-```
+The phone bubble `id` is that `frame_id`. Session id is `gantry`.
 
 ---
 
@@ -270,20 +221,16 @@ UPDATE cron_job SET enabled = 0, running = 0 WHERE id = 3;
 
 A watch is a **cursor + poll**, not a chat loop. Quiet ticks call an MCP fetch
 tool and **never** touch the Completer. New item ids wake the same agent loop
-as cron, then **push** on the current CHANNEL — or skip if the reply is
-`[silent]`. A `feeds__items_list` subscription added on Telegram still wakes
-after `CHANNEL=chat`. First poll seeds the cursor (no backlog dump). Do
+as cron, then **push** on the room — or skip if the reply is
+`[silent]`. First poll seeds the cursor (no backlog dump). Do
 not fake this with `cron_schedule` + “fetch the feed.”
 
 ```text
-ticker → Host.CallRaw(tool, args) → compare ids → empty? stop
-                                 → new? agent.Handle → Push (or [silent])
+alarm → plugin call(tool, args) → compare ids → empty? stop
+                               → new? agent turn → push (or [silent])
 ```
 
-The poller uses `CallRaw`, not `Call`. `TOOL_RESULT_MAX_CHARS` is for the model;
-cutting a feed JSON mid-string makes `ParseItems` fail and the watch never seeds.
-
-Shares the cron ticker. Boot fails if watch is on and the channel cannot `Push`.
+The poller shares the cron alarm.
 
 | Env | Default | Meaning |
 | --- | --- | --- |
@@ -296,18 +243,16 @@ Shares the cron ticker. Boot fails if watch is on and the channel cannot `Push`.
 | `watch_list` | List active watches |
 | `watch_cancel` | Disable by id |
 
-The poller does not know RSS vs Twitter. A watch row is `tool` + `args`.
-Siblings return `{items:[{id,…}]}` JSON. Each plugin lands under
-`harness/mcp/<id>/` ([todo.md](todo.md) §6).
+The poller does not know RSS vs X. A watch row is `tool` + `args`.
+Plugins return `{items:[{id,…}]}` JSON. They live under
+`brain/plugins/<name>/`.
 
-| Server | Where | Tools | Watch args |
-| --- | --- | --- | --- |
-| `feeds` | `harness/mcp/feeds` | `items_list`, `source_resolve` | `{ url }` |
-| `twitter` | `harness/mcp/twitter` | `posts_list` | `{ handle }` — prefer 30–60m (pay-per-use) |
-| `rentals` / `flights` / `cars` | metered search MCPs | `listings_search`, `offers_search` | Set `budget = "1/day"` (or the plan's `N/month`) on the server — the 15m default is 96 calls a day. [mcp.md](mcp.md#call-budget-budget) |
-| `boards` | `harness/mcp/boards` | `challenges_list` | `{}` or `{ "all": true }` — hour interval; do not watch `notices_list` |
+| Plugin | Tools | Watch args |
+| --- | --- | --- |
+| `feeds` | `items_list`, `source_resolve` | `{ url }` |
+| `twitter` | `posts_list` | `{ handle }` — prefer 30–60m (pay-per-use). The plugin keeps its own monthly read budget |
+| `rentals` / `flights` | `listings_search`, `offers_search` | Set the interval to the plan. A 15m default is 96 calls a day |
 
-Uncomment in `harness/examples/mcp.toml.example` (lands with
-[todo.md](todo.md) §5). Put `X_BEARER_TOKEN` in `config.env`, not in the
-manifest. Prior `[watch]` / `[cron]` turns are omitted from the next
-scheduled prompt so they cannot few-shot the next summary.
+Put `X_BEARER_TOKEN` in `config.env`. Prior `[watch]` / `[cron]` turns
+are omitted from the next scheduled prompt so they cannot few-shot the
+next summary.

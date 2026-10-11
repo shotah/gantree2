@@ -284,3 +284,4 @@ asked for, `prices_from_tools` on the reply. **Reaction** fixtures: the
 agent's `[react 👍]` where a sentence would be noise, and the human's
 👍 / 👎 on the agent's message — free when idle, an answer when the
 agent was waiting, never nothing when negative.
+`planner_weight_on_pace` pins `now` to Wednesday 2026-10-07 08:00 Pacific, same as `planner_midweek_quiet`, so `[progress]` has no `weeks:` line.

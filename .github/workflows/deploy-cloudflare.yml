@@ -50,12 +50,12 @@ jobs:
           done
 
       # wrangler.jsonc ships with the KV id as "TODO" so a fork has nothing to
-      # scrub. Create the namespace and bucket once (idempotent) and patch
-      # the real id in for this run only; the file in git stays generic.
+      # scrub. Create the namespace once (idempotent) and patch the real id
+      # in for this run only; the file in git stays generic.
       # Every account-level name is `gantree2-*`: the same account runs the
       # originals (Worker `gantree`, pendant's KV `DIRECTORY`), and a bare
       # name collides with them or, worse, shares their data.
-      - name: Provision KV + R2
+      - name: Provision KV
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -83,8 +83,6 @@ jobs:
           [ -n "$id" ] || { echo "no KV namespace id for $KV_TITLE" >&2; exit 1; }
           sed -i "s/\"binding\": \"DIRECTORY\", \"id\": \"TODO\"/\"binding\": \"DIRECTORY\", \"id\": \"$id\"/" wrangler.jsonc
           grep -q "\"id\": \"$id\"" wrangler.jsonc || { echo "KV id not patched" >&2; exit 1; }
-          npx wrangler r2 bucket list | grep -qw "gantree2-store" \
-            || npx wrangler r2 bucket create gantree2-store
 
       # Build AFTER provisioning. vinext writes dist/server/wrangler.json and
       # a .wrangler/deploy/config.json redirect, and `wrangler deploy` reads

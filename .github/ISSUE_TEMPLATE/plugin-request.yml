@@ -1,0 +1,58 @@
+name: Plugin request
+description: A tool on an existing service, or a new service under brain/plugins.
+title: "plugin: "
+labels:
+  - plugins
+body:
+  - type: dropdown
+    id: service
+    attributes:
+      label: Which service
+      description: The plugin id. The host-facing tool name is {plugin}__{tool}.
+      options:
+        - chat
+        - feeds
+        - flights
+        - garmin
+        - google
+        - google-health
+        - image
+        - maps
+        - math
+        - rentals
+        - strava
+        - twitter
+        - new service
+    validations:
+      required: true
+  - type: input
+    id: new-service
+    attributes:
+      label: New service id
+      description: Directory name under brain/plugins. Lowercase. Blank when the service already exists.
+    validations:
+      required: false
+  - type: textarea
+    id: tools
+    attributes:
+      label: Which tools
+      description: |
+        One tool per line. The registered name is {service}_{verb}_{object}. Do not repeat the plugin id. The host name is {plugin}__{tool}.
+      placeholder: activities_list
+    validations:
+      required: true
+  - type: textarea
+    id: plural
+    attributes:
+      label: Plural shape
+      description: |
+        Input takes a set (a range, a list, or a prefix). Output is a list, including when there is one match. A miss on one item is a row in that list. If the tool is one thing only, say why. That reason becomes `single` on the tool.
+    validations:
+      required: true
+  - type: input
+    id: cap
+    attributes:
+      label: Cap
+      description: Default limit and the max. One call must not blow the context.
+    validations:
+      required: false

@@ -1,0 +1,16 @@
+# Last match wins. The catch-all is first. The rows under it name the
+# trees a review should not skim past. One owner.
+
+* @shotah
+
+# In-process plugins. Plural tools, Go names kept.
+/brain/plugins/** @shotah
+
+# Durable Objects.
+/edge/** @shotah
+
+# The door. Allowlist, session, gate. Security-sensitive.
+/lib/door/** @shotah
+
+# Workflows, templates, ownership.
+/.github/** @shotah

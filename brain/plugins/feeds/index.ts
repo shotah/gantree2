@@ -80,6 +80,10 @@ function collect(args: Record<string, unknown>, one: string, many: string): stri
   return out;
 }
 
+function stringArg(v: unknown): string {
+  return typeof v === "string" ? v.trim() : "";
+}
+
 function intArg(v: unknown, fallback: number): number {
   if (typeof v === "number" && Number.isFinite(v)) return Math.trunc(v);
   if (typeof v === "string" && /^-?\d+$/.test(v)) {
@@ -103,6 +107,9 @@ function feedRecord(doc: FeedDoc): Record<string, unknown> {
   if (doc.title) out.title = doc.title;
   if (doc.url) out.url = doc.url;
   out.items = doc.items.map(itemOut);
+  if (doc.notModified) out.not_modified = true;
+  if (doc.etag) out.etag = doc.etag;
+  if (doc.lastModified) out.last_modified = doc.lastModified;
   return out;
 }
 
@@ -250,6 +257,16 @@ export async function fetchFeed(get: FetchFn, rawURL: string, limit: number, sig
   const bad = validateURL(url);
   if (bad) throw new Error(bad);
   const got = await get(url, signal);
+  if (got.notModified) {
+    return {
+      title: "",
+      url: firstNonEmpty(got.finalURL, url),
+      items: [],
+      etag: got.etag ?? "",
+      lastModified: got.lastModified ?? "",
+      notModified: true,
+    };
+  }
   const text = new TextDecoder().decode(got.body);
   if (looksLikeHTML(text, got.contentType)) {
     throw new Error(`url looks like a web page, not a feed. Next: source_resolve(query=${JSON.stringify(url)})`);
@@ -258,6 +275,8 @@ export async function fetchFeed(get: FetchFn, rawURL: string, limit: number, sig
   const limited = applyLimit(doc, limit);
   if (!limited.url) limited.url = firstNonEmpty(got.finalURL, url);
   else limited.url = firstNonEmpty(limited.url, got.finalURL, url);
+  if (got.etag) limited.etag = got.etag;
+  if (got.lastModified) limited.lastModified = got.lastModified;
   return limited;
 }
 
@@ -326,13 +345,21 @@ export async function resolveFeed(get: FetchFn, queryRaw: string, signal?: Abort
   return { query, candidates };
 }
 
-function fetcher(ctx: PluginContext, signal?: AbortSignal): FetchFn {
+function fetcher(
+  ctx: PluginContext,
+  signal?: AbortSignal,
+  conditional?: { ifNoneMatch?: string; ifModifiedSince?: string },
+): FetchFn {
   const ua = userAgentFrom(ctx.env);
+  const ifNoneMatch = conditional?.ifNoneMatch?.trim() ?? "";
+  const ifModifiedSince = conditional?.ifModifiedSince?.trim() ?? "";
   return (url, inner) => httpGet({
     fetch: ctx.fetch,
     url,
     userAgent: ua,
     signal: inner ?? signal,
+    ifNoneMatch: ifNoneMatch || undefined,
+    ifModifiedSince: ifModifiedSince || undefined,
   });
 }
 
@@ -341,7 +368,10 @@ async function itemsCall(ctx: PluginContext, signal: AbortSignal | undefined, ar
   if (urls.length === 0) return errorResult(urlRequired);
   if (urls.length > maxFeeds) return errorResult("urls accepts at most 8");
   const limit = intArg(args.limit, 25);
-  const get = fetcher(ctx, signal);
+  const conditional = urls.length === 1
+    ? { ifNoneMatch: stringArg(args.if_none_match), ifModifiedSince: stringArg(args.if_modified_since) }
+    : undefined;
+  const get = fetcher(ctx, signal, conditional);
   const rows: Record<string, unknown>[] = [];
   for (const url of urls) {
     try {
@@ -390,6 +420,14 @@ export const feedsPlugin: Plugin = {
             items: { type: "string" },
           },
           limit: { type: "number", description: "Max items to return per feed (default 25, max 50)." },
+          if_none_match: {
+            type: "string",
+            description: "ETag from the last poll of this feed. Sends If-None-Match. Omit on a normal read. One url only.",
+          },
+          if_modified_since: {
+            type: "string",
+            description: "Last-Modified from the last poll. Sends If-Modified-Since. Omit on a normal read. One url only.",
+          },
         }, ["url"]),
         call: (args, call) => itemsCall(ctx, call.signal, args),
       },

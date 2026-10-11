@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PersonaFold } from "@/app/components/agents/PersonaFold";
 import type { ApiClient } from "@/app/lib/agentsHttp";
-import { config, json, areaOf, textBody } from "./fixtures";
+import { json, areaOf, textBody } from "./fixtures";
 
 afterEach(() => {
   cleanup();
@@ -17,16 +17,19 @@ describe("PersonaFold", () => {
     let fail = false;
     const client: ApiClient = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
       await Promise.resolve();
+      if ((init?.method ?? "GET") === "GET") {
+        return json(200, { files: [{ name: "PERSONA.md", text: "Be brief.", updatedAt: 1 }], maxChars: 100 });
+      }
       if (fail) {
         return json(500, { error: "bad_json" });
       }
-      const body = JSON.parse(textBody(init?.body)) as { persona: string };
-      sent.push(body.persona);
-      return json(200, config({ persona: body.persona }));
+      const body = JSON.parse(textBody(init?.body)) as { text: string };
+      sent.push(body.text);
+      return json(200, { files: [{ name: "PERSONA.md", text: body.text, updatedAt: 2 }], maxChars: 100 });
     });
     render(<PersonaFold slug="kit" persona="Be brief." canMutate client={client} onPersona={onPersona} />);
     fireEvent.click(screen.getByRole("button", { name: "Persona" }));
-    const field = areaOf(screen.getByLabelText("Persona text"));
+    const field = areaOf(await screen.findByLabelText("Persona text"));
     expect(field.value).toBe("Be brief.");
     fireEvent.change(field, { target: { value: "Be sharp." } });
     fireEvent.click(screen.getByRole("button", { name: "Save persona" }));
@@ -53,7 +56,7 @@ describe("PersonaFold", () => {
       sent.push(body);
       return json(200, { files: [{ name: "PERSONA.md", text: body.text ?? "", updatedAt: 2 }], maxChars: 100 });
     });
-    render(<PersonaFold slug="kit" persona="stale" runtime="native" canMutate client={client} onPersona={onPersona} />);
+    render(<PersonaFold slug="kit" persona="stale" canMutate client={client} onPersona={onPersona} />);
     fireEvent.click(screen.getByRole("button", { name: "Persona" }));
     const field = areaOf(await screen.findByLabelText("Persona text"));
     expect(field.value).toBe("Be brief.");
@@ -65,10 +68,14 @@ describe("PersonaFold", () => {
     expect(sent).toEqual([{ name: "PERSONA.md", text: "Be sharp." }]);
   });
 
-  it("hides save when the session cannot change the agent", () => {
-    render(<PersonaFold slug="kit" persona="Be brief." canMutate={false} client={vi.fn()} onPersona={vi.fn()} />);
+  it("hides save when the session cannot change the agent", async () => {
+    const client: ApiClient = vi.fn(async () => json(200, {
+      files: [{ name: "PERSONA.md", text: "Be brief.", updatedAt: 1 }],
+      maxChars: 100,
+    }));
+    render(<PersonaFold slug="kit" persona="Be brief." canMutate={false} client={client} onPersona={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "Persona" }));
-    expect((areaOf(screen.getByLabelText("Persona text"))).disabled).toBe(true);
+    expect((areaOf(await screen.findByLabelText("Persona text"))).disabled).toBe(true);
     expect(screen.queryByRole("button", { name: "Save persona" })).toBeNull();
   });
 });

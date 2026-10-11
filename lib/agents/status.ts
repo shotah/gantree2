@@ -1,8 +1,7 @@
 /**
- * Fold harness frames into the Agent DO. `status`, `perf`, `log`, and
- * `snapshot` stay here — they are never fanned out to phones.
+ * Fold brain frames into the Agent DO. `status`, `perf`, and `log` stay
+ * here — they are never fanned out to phones.
  */
-import { SNAPSHOT_STAMP } from "@/lib/agents/snapshot";
 import { AGENT_SLUG, type AgentStatus, type LogLine, type LogPage } from "@/lib/agents/types";
 import type { SampleInput } from "@/lib/door/settingsStore";
 
@@ -11,7 +10,7 @@ export const LOG_STORE_KEY = "agent.log";
 export const LOG_CAP = 500;
 export const LOG_PAGE = 200;
 
-const HARNESS_KINDS = new Set(["status", "perf", "log", "snapshot"]);
+const HARNESS_KINDS = new Set(["status", "perf", "log"]);
 /** slog prints `ERROR`; `foldLog` lowercases. The others are what a plugin's own logger might say. */
 const ERROR_LEVELS = new Set(["error", "fatal", "panic"]);
 const LIST_MAX = 128;
@@ -23,8 +22,6 @@ export type HarnessFold = {
   status: AgentStatus;
   log: LogRing;
   samples: SampleInput[];
-  /** Set when a snapshot frame names a stamp worth copying in R2. */
-  stamp: string | null;
 };
 
 export function emptyStatus(): AgentStatus {
@@ -34,7 +31,6 @@ export function emptyStatus(): AgentStatus {
     published: [],
     skipped: [],
     lastTurn: null,
-    lastSnapshot: null,
     lastError: null,
     perf: { turns: 0, prompt: 0, completion: 0, errors: 0 },
   };
@@ -50,18 +46,6 @@ function isSkipped(value: unknown): value is { name: string; reason: string } {
   }
   const row = value as { name?: unknown; reason?: unknown };
   return typeof row.name === "string" && typeof row.reason === "string";
-}
-
-function isSnapshotMeta(value: unknown): value is { stamp: string; bytes: number; at: number } {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-  const row = value as { stamp?: unknown; bytes?: unknown; at?: unknown };
-  return typeof row.stamp === "string"
-    && typeof row.bytes === "number"
-    && Number.isFinite(row.bytes)
-    && typeof row.at === "number"
-    && Number.isFinite(row.at);
 }
 
 function isLastError(value: unknown): value is { message: string; at: string } {
@@ -87,7 +71,6 @@ export function isAgentStatus(value: unknown): value is AgentStatus {
     && Array.isArray(row.published)
     && Array.isArray(row.skipped)
     && (row.lastTurn === null || typeof row.lastTurn === "number")
-    && (row.lastSnapshot === null || isSnapshotMeta(row.lastSnapshot))
     // Stored rows from before the field have no key at all.
     && (row.lastError == null || isLastError(row.lastError))
     && typeof counts.turns === "number"
@@ -106,7 +89,6 @@ export function parseStatus(raw: unknown): AgentStatus {
     published: raw.published.filter((item): item is string => typeof item === "string"),
     skipped: raw.skipped.filter(isSkipped).map((row) => ({ name: row.name, reason: row.reason })),
     lastTurn: raw.lastTurn,
-    lastSnapshot: isSnapshotMeta(raw.lastSnapshot) ? { ...raw.lastSnapshot } : null,
     lastError: isLastError(raw.lastError) ? { message: raw.lastError.message, at: raw.lastError.at } : null,
     perf: {
       turns: raw.perf.turns,
@@ -290,7 +272,7 @@ function foldPerf(status: AgentStatus, log: LogRing, raw: object, now: number, s
       { agent: slug, kind: "turn", value: 1 },
     );
   }
-  return { status: next, log, samples, stamp: null };
+  return { status: next, log, samples };
 }
 
 function truncateRunes(value: string, max: number): string {
@@ -344,30 +326,13 @@ function foldLog(ring: LogRing, raw: object, now: number): LogRing {
   return appendLog(ring, { level, message: truncateRunes(message, MESSAGE_RUNES), at, dropped });
 }
 
-function foldSnapshot(status: AgentStatus, log: LogRing, raw: object, now: number): HarnessFold {
-  const stamp = (raw as { stamp?: unknown }).stamp;
-  const bytes = (raw as { bytes?: unknown }).bytes;
-  if (typeof stamp !== "string" || !SNAPSHOT_STAMP.test(stamp)) {
-    return { status, log, samples: [], stamp: null };
-  }
-  if (typeof bytes !== "number" || !Number.isSafeInteger(bytes) || bytes < 0) {
-    return { status, log, samples: [], stamp: null };
-  }
-  return {
-    status: { ...status, lastSnapshot: { stamp, bytes, at: now } },
-    log,
-    samples: [],
-    stamp,
-  };
-}
-
 export function applyHarnessFrame(
   state: { status: AgentStatus; log: LogRing },
   raw: unknown,
   now: number,
   slug: string | null,
 ): HarnessFold {
-  const base: HarnessFold = { status: state.status, log: state.log, samples: [], stamp: null };
+  const base: HarnessFold = { status: state.status, log: state.log, samples: [] };
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     return base;
   }
@@ -385,9 +350,6 @@ export function applyHarnessFrame(
       ? { ...state.status, lastError: { message: line.message, at: line.at } }
       : state.status;
     return { ...base, status, log };
-  }
-  if (kind === "snapshot") {
-    return foldSnapshot(state.status, state.log, raw, now);
   }
   return base;
 }

@@ -4,7 +4,6 @@ import { MAX_CHARS } from "@/brain/persona";
 import { maxChars } from "@/brain/selfnote/stamp";
 import { CONFIG_STORE_KEY } from "@/lib/agents/config";
 import { openOAuthCatch, sessionKey } from "@/lib/door/session";
-import { mintSnapshotKey, SNAPSHOT_KEY_STORE_KEY, snapshotKeyOk, verifySnapshot } from "@/lib/agents/snapshot";
 import { HELD_DRAFT_TTL_MS } from "@/lib/chat/draft";
 import type { WireFrame } from "@/lib/chat/frame";
 import { QUEUE_STORE_PREFIX, type Queued } from "@/lib/chat/queue";
@@ -957,7 +956,6 @@ describe("Agent harness ops", () => {
   it("sends config before queued chat and keeps harness frames off phones", async () => {
     installPairs();
     const seen: { agent: string; kind: string; value: number }[] = [];
-    const store = new Map<string, Uint8Array>();
     const { state, box, crane, phone, say } = room({
       SETTINGS: {
         getByName: () => ({
@@ -967,28 +965,10 @@ describe("Agent harness ops", () => {
           },
         }),
       },
-      STORE: {
-        get: (key: string) => {
-          const hit = store.get(key);
-          if (!hit) {
-            return Promise.resolve(null);
-          }
-          const copy = hit.slice();
-          return Promise.resolve({
-            arrayBuffer: () => Promise.resolve(copy.buffer.slice(copy.byteOffset, copy.byteOffset + copy.byteLength)),
-          });
-        },
-        put: (key: string, value: ArrayBuffer) => {
-          store.set(key, new Uint8Array(value));
-          return Promise.resolve();
-        },
-      },
     });
     await state.storage.put("bearer", "room-secret");
     await state.storage.put("slug", "kit");
-    await state.storage.put(SNAPSHOT_KEY_STORE_KEY, "nope");
     await state.storage.put(CONFIG_STORE_KEY, { env: { LLM_API_KEY: "sekrit" }, mcp: "toml", persona: "be brief", updatedAt: 5 });
-    store.set("backups/kit/latest/gantry_db", new Uint8Array([1, 2, 3]));
     crane.close();
     const ada = phone("1182");
     await say(ada, { id: "m1", text: "ping" });
@@ -1009,25 +989,15 @@ describe("Agent harness ops", () => {
     const first = JSON.parse(fresh.sent[0] ?? "{}") as {
       kind?: string;
       env?: { LLM_API_KEY?: string; SNAPSHOT_KEY?: string };
-      restore?: { gantry_db?: string; tokens_tar?: string };
+      restore?: unknown;
     };
     expect(first.kind).toBe("config");
     expect(first.env?.LLM_API_KEY).toBe("sekrit");
-    const snap = first.env?.SNAPSHOT_KEY ?? "";
-    expect(snapshotKeyOk(snap)).toBe(true);
-    expect(snap).not.toBe("nope");
-    expect(await state.storage.get(SNAPSHOT_KEY_STORE_KEY)).toBe(snap);
+    expect(first.env?.SNAPSHOT_KEY).toBeUndefined();
+    expect(first.restore).toBeUndefined();
     expect(fresh.sent[1]).toContain("ping");
     expect(ada.sent.join("")).not.toContain("sekrit");
-    expect(ada.sent.join("")).not.toContain(snap);
     expect(ada.sent.join("")).not.toContain("\"kind\":\"config\"");
-    const restore = new URL(first.restore?.gantry_db ?? "https://invalid");
-    const tokens = new URL(first.restore?.tokens_tar ?? "https://invalid");
-    expect(tokens.pathname).toBe("/api/agents/kit/snapshot/tokens_tar");
-    expect(await verifySnapshot("room-secret", "kit", "tokens_tar", "GET", tokens.searchParams.get("exp") ?? "", tokens.searchParams.get("sig") ?? "", Date.now())).toBe(true);
-    const exp = Number(restore.searchParams.get("exp"));
-    expect(exp).toBeLessThanOrEqual(Date.now() + 15 * 60 * 1000);
-    expect(await verifySnapshot("room-secret", "kit", "gantry_db", "GET", restore.searchParams.get("exp") ?? "", restore.searchParams.get("sig") ?? "", Date.now())).toBe(true);
 
     const before = ada.sent.length;
     await box.webSocketMessage(fresh as unknown as WebSocket, JSON.stringify({
@@ -1062,24 +1032,14 @@ describe("Agent harness ops", () => {
       published: ["maps"],
       skipped: [{ name: "strava", reason: "no_key" }],
       perf: { turns: 1, prompt: 11, completion: 4, errors: 1 },
-      lastSnapshot: { stamp: "20261010T120000Z", bytes: 3 },
     });
     const log = await box.fetch(new Request("https://agent/log?after=0", { headers: { "X-Chat-Op": "log" } }));
     expect(await log.json()).toMatchObject({ lines: [{ level: "info", message: "booted", dropped: 2 }], next: 1 });
-
-    for (let i = 0; i < 5; i++) {
-      if (store.has("backups/kit/20261010T120000Z/gantry_db")) {
-        break;
-      }
-      await Promise.resolve();
-    }
-    expect(store.has("backups/kit/20261010T120000Z/gantry_db")).toBe(true);
 
     const view = await box.fetch(new Request("https://agent/config", { headers: { "X-Chat-Op": "config" } }));
     const viewBody = await view.json<{ envKeys: string[]; recreate: boolean }>();
     expect(viewBody.envKeys).toEqual(["LLM_API_KEY"]);
     expect(JSON.stringify(viewBody)).not.toContain("sekrit");
-    expect(JSON.stringify(viewBody)).not.toContain(snap);
     expect(viewBody.recreate).toBe(false);
 
     const patched = await box.fetch(new Request("https://agent/config", {
@@ -1106,8 +1066,6 @@ describe("Agent harness ops", () => {
   it("lays the house LLM keys under the agent env on the config frame and names them on the view", async () => {
     installPairs();
     const { state, box, crane } = room({ LLM_MODEL: "house-model", LLM_API_KEY: "house-key", LLM_BASE_URL: " " });
-    const kept = mintSnapshotKey();
-    await state.storage.put(SNAPSHOT_KEY_STORE_KEY, kept);
     await state.storage.put("slug", "kit");
     await state.storage.put(CONFIG_STORE_KEY, { env: { LLM_MODEL: "mine" }, mcp: "", persona: "be brief", updatedAt: 5 });
     crane.close();
@@ -1117,7 +1075,7 @@ describe("Agent harness ops", () => {
     expect(res.status).toBe(101);
     const fresh = state.getWebSockets("role:crane").find((socket) => socket.sent.some((line) => line.includes("\"kind\":\"config\"")));
     const first = JSON.parse(fresh?.sent[0] ?? "{}") as { env?: Record<string, string> };
-    expect(first.env).toEqual({ LLM_MODEL: "mine", LLM_API_KEY: "house-key", SNAPSHOT_KEY: kept });
+    expect(first.env).toEqual({ LLM_MODEL: "mine", LLM_API_KEY: "house-key" });
 
     const view = await box.fetch(new Request("https://agent/config", { headers: { "X-Chat-Op": "config" } }));
     const body = await view.text();
@@ -1125,7 +1083,7 @@ describe("Agent harness ops", () => {
     expect(body).not.toContain("house-key");
   });
 
-  it("does not reset perf when a second crane socket opens, and marks the room down when the last one closes", async () => {
+  it("does not reset perf when a second crane socket opens, and stays connected when the last one closes", async () => {
     installPairs();
     const { state, box, crane } = room();
     crane.close();
@@ -1154,7 +1112,7 @@ describe("Agent harness ops", () => {
       }
     }
     const down = await box.fetch(new Request("https://agent/status", { headers: { "X-Chat-Op": "status" } }));
-    expect((await down.json<{ harness: string }>()).harness).toBe("disconnected");
+    expect((await down.json<{ harness: string }>()).harness).toBe("connected");
   });
 
   it("refuses a phone status frame and answers config and log errors", async () => {
@@ -1320,49 +1278,42 @@ describe("Agent native runtime", () => {
     expect(await status.json()).toMatchObject({ harness: "connected" });
   });
 
-  it("round-trips runtime and rebuilds the brain when env or persona changes", async () => {
+  it("rebuilds the brain when grants, env, or persona change", async () => {
     const { state, box } = room();
     Object.assign(state.storage, { sql: sqlStorage() });
     const view = await box.fetch(new Request("https://agent/config", { headers: { "X-Chat-Op": "config" } }));
-    expect(await view.json()).toMatchObject({ runtime: "container" });
-    const patched = await box.fetch(new Request("https://agent/config", {
-      method: "PATCH",
-      headers: { "X-Chat-Op": "config", "content-type": "application/json" },
-      body: JSON.stringify({ runtime: "native" }),
-    }));
-    expect(await patched.json()).toMatchObject({ runtime: "native" });
-    expect(roomMock.dropRoomBrain).toHaveBeenCalledTimes(1);
-    expect(roomMock.brain.announce).toHaveBeenCalledTimes(1);
+    expect(await view.json()).toMatchObject({ mcp: "", persona: "" });
 
-    const mcp = await box.fetch(new Request("https://agent/config", {
+    const granted = await box.fetch(new Request("https://agent/config", {
       method: "PATCH",
       headers: { "X-Chat-Op": "config", "content-type": "application/json" },
       body: JSON.stringify({ mcp: "[[server]]\nname = \"math\"\n" }),
     }));
-    const mcpBody: { runtime?: string } = await mcp.json();
-    expect(mcpBody.runtime).toBe("native");
+    expect(await granted.json()).toMatchObject({ mcp: "[[server]]\nname = \"math\"\n" });
     expect(roomMock.dropRoomBrain).toHaveBeenCalledTimes(1);
     expect(roomMock.brain.announce).toHaveBeenCalledTimes(1);
+
+    const revoked = await box.fetch(new Request("https://agent/config", {
+      method: "PATCH",
+      headers: { "X-Chat-Op": "config", "content-type": "application/json" },
+      body: JSON.stringify({ mcp: "" }),
+    }));
+    expect(await revoked.json()).toMatchObject({ mcp: "" });
+    expect(roomMock.dropRoomBrain).toHaveBeenCalledTimes(2);
+    expect(roomMock.brain.announce).toHaveBeenCalledTimes(2);
 
     await box.fetch(new Request("https://agent/config", {
       method: "PATCH",
       headers: { "X-Chat-Op": "config", "content-type": "application/json" },
       body: JSON.stringify({ persona: "Be brief.", env: { LLM_MODEL: "mine" } }),
     }));
-    expect(roomMock.dropRoomBrain).toHaveBeenCalledTimes(2);
-    expect(roomMock.openRoomBrain).toHaveBeenCalledTimes(2);
-    expect(roomMock.brain.announce).toHaveBeenCalledTimes(2);
+    expect(roomMock.dropRoomBrain).toHaveBeenCalledTimes(3);
+    expect(roomMock.openRoomBrain).toHaveBeenCalledTimes(3);
+    expect(roomMock.brain.announce).toHaveBeenCalledTimes(3);
   });
 
-  it("finishes oauth on the native brain and refuses it on a container agent", async () => {
+  it("finishes oauth on the brain", async () => {
     const { state, box, phone } = room();
-    const denied = await box.fetch(new Request("https://agent/auth", {
-      method: "POST",
-      headers: { "X-Chat-Op": "auth", "content-type": "application/json" },
-      body: JSON.stringify({ plugin: "google", code: "abc", redirectUri: "https://g.test/api/auth/catch" }),
-    }));
-    expect(denied.status).toBe(409);
-
     await state.storage.put(CONFIG_STORE_KEY, nativeConfig());
     const user = "118212345678901234567";
     const mouth = phone(user);
@@ -1386,13 +1337,6 @@ describe("Agent native runtime", () => {
   it("starts a sealed catch redirect for native oauth plugins", async () => {
     const secret = "0123456789abcdef0123456789abcdef-more";
     const { state, box } = room({ SESSION_SECRET: secret, PUBLIC_ORIGIN: "https://gantree2.bldhosting.com" });
-    const denied = await box.fetch(new Request("https://agent/auth/start", {
-      method: "POST",
-      headers: { "X-Chat-Op": "auth_start", "content-type": "application/json" },
-      body: JSON.stringify({ plugin: "google", origin: "http://127.0.0.1:3000", slug: "kit" }),
-    }));
-    expect(denied.status).toBe(409);
-
     await state.storage.put(CONFIG_STORE_KEY, nativeConfig());
     const garmin = await box.fetch(new Request("https://agent/auth/start", {
       method: "POST",
@@ -1428,11 +1372,6 @@ describe("Agent native runtime", () => {
     expect(await openOAuthCatch(await sessionKey(secret), stateArg)).toEqual({ slug: "kit", plugin: "strava" });
 
     const { box: dev } = room({ SESSION_SECRET: secret });
-    await dev.fetch(new Request("https://agent/config", {
-      method: "PATCH",
-      headers: { "X-Chat-Op": "config", "content-type": "application/json" },
-      body: JSON.stringify({ runtime: "native" }),
-    }));
     roomMock.brain.authStart.mockClear();
     roomMock.brain.authStart.mockImplementation(async () => ({ url: "https://accounts.example/dev" }));
     const local = await dev.fetch(new Request("https://agent/auth/start", {
@@ -1463,13 +1402,6 @@ function sqlStorage() {
 }
 
 describe("Agent self notes", () => {
-  it("refuses a container agent", async () => {
-    const { box } = room();
-    const res = await box.fetch(new Request("https://agent/self", { headers: { "X-Chat-Op": "self_get" } }));
-    expect(res.status).toBe(409);
-    expect(await res.json()).toEqual({ error: "container runtime" });
-  });
-
   it("reads, stamps, and prunes the same SELF.md row", async () => {
     const { state, box } = room();
     Object.assign(state.storage, { sql: sqlStorage() });
@@ -1544,13 +1476,6 @@ describe("Agent self notes", () => {
 });
 
 describe("Agent persona files", () => {
-  it("refuses a container agent", async () => {
-    const { box } = room();
-    const res = await box.fetch(new Request("https://agent/persona", { headers: { "X-Chat-Op": "persona_get" } }));
-    expect(res.status).toBe(409);
-    expect(await res.json()).toEqual({ error: "container runtime" });
-  });
-
   it("imports the config persona once, then keeps the row", async () => {
     const { state, box } = room();
     Object.assign(state.storage, { sql: sqlStorage() });

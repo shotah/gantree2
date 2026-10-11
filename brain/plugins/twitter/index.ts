@@ -1,11 +1,12 @@
-import type { JsonSchema, Plugin, Tool, ToolResult } from "@/brain/core/tools";
+import type { JsonSchema, Plugin, PluginContext, Tool, ToolResult } from "@/brain/core/tools";
 import { errorResult, textResult } from "@/brain/core/tools";
+import { budgetMessage, consumeRead, monthlyReadLimit } from "./budget";
 import { clientFromEnv, isAPIError, listTweets, lookupUser, missingTokenError, type XClient } from "./client";
 
 const defaultLimit = 25;
 const maxLimit = 50;
 
-const description = "List recent public posts from X/Twitter handles (id, title, url, summary). Use for “watch this account” and “what did @foo post”. Official X API only — pay-per-use; prefer a 30–60m watch interval. Not a scrape, not RSS, not a home timeline. handles accepts up to 8; handle still works for one. One bad handle is an error row.";
+const description = "List recent public posts from X/Twitter handles (id, title, url, summary). Use for “watch this account” and “what did @foo post”. Official X API only — one read per handle against the monthly budget (X_MONTHLY_READS, default 100). watch_add defaults this tool to 6h. Not a scrape, not RSS, not a home timeline. handles accepts up to 8; handle still works for one. One bad handle is an error row.";
 
 const maxHandles = 8;
 
@@ -122,27 +123,45 @@ function handlesOf(args: Record<string, unknown>): string[] {
   return out;
 }
 
-async function postsCall(env: Readonly<Record<string, string>>, fetchImpl: typeof fetch, signal: AbortSignal | undefined, args: Record<string, unknown>): Promise<ToolResult> {
+async function postsCall(ctx: PluginContext, signal: AbortSignal | undefined, args: Record<string, unknown>): Promise<ToolResult> {
   const handles = handlesOf(args);
   if (handles.length === 0) return errorResult(handleRequired);
   if (handles.length > maxHandles) return errorResult("handles accepts at most 8");
   let client: XClient;
   try {
-    client = clientFromEnv(env, fetchImpl, signal);
+    client = clientFromEnv(ctx.env, ctx.fetch, signal);
   } catch (err) {
     return errorResult(err instanceof Error ? err.message : missingTokenError().message);
   }
   const limit = intArg(args.limit, defaultLimit);
+  const reads = monthlyReadLimit(ctx.env);
+  const zone = ctx.clock.zone || "UTC";
   const rows: Record<string, unknown>[] = [];
+  let retryAfter: number | undefined;
   for (const handle of handles) {
+    let name: string;
     try {
-      const result = await listPosts(client, handle, limit);
-      rows.push({ handle: normalizeHandle(handle), items: result.items });
+      name = normalizeHandle(handle);
     } catch (err) {
-      rows.push({ handle, error: teachIn(err, handle) });
+      rows.push({ handle, error: err instanceof Error ? err.message : handleRequired });
+      continue;
+    }
+    const taken = consumeRead(ctx.sql, ctx.clock.now(), zone, reads);
+    if (!taken.ok) {
+      rows.push({ handle: name, error: budgetMessage(taken.budget) });
+      retryAfter = taken.budget.resetsAt;
+      continue;
+    }
+    try {
+      const result = await listPosts(client, name, limit);
+      rows.push({ handle: name, items: result.items });
+    } catch (err) {
+      rows.push({ handle: name, error: teachIn(err, name) });
     }
   }
-  return textResult(goJSON(rows));
+  const result = textResult(goJSON(rows));
+  if (retryAfter !== undefined) result.retryAfter = retryAfter;
+  return result;
 }
 
 export const twitterPlugin: Plugin = {
@@ -153,7 +172,7 @@ export const twitterPlugin: Plugin = {
       name: "posts_list",
       description,
       inputSchema: schema(),
-      call: (args, call) => postsCall(ctx.env, ctx.fetch, call.signal, args),
+      call: (args, call) => postsCall(ctx, call.signal, args),
     }];
   },
 };

@@ -28,17 +28,19 @@ Tags say where a rule is enforced:
 
 | Tag | Meaning | In `PERSONA.md`? |
 | --- | --- | --- |
-| **kernel** | Go stamps or drives it (`[wait]` pokes, Self-notes / Location pins / Follow-up sections, `[hours]` `[aims]` `[loops]`, `[surface]` `[input]`, the daily planner prompt). Cannot be edited away. | **No** — once verified. |
+| **kernel** | The brain stamps or drives it (`[wait]` pokes, Self-notes / Location pins / Follow-up sections, `[hours]` `[aims]` `[loops]`, `[surface]` `[input]`, the daily planner prompt). Cannot be edited away. | **No** — once verified. |
 | **persona** | Needs the model's cooperation; only the text you write can say it. | Yes — once, in one place. |
 | **per-human** | True for one person only (canonical email, house notes). | Their **Directives** or a `pref/` row. |
 
 Naming note: do **not** ship a runtime file called `RULES.md` next to
-`PERSONA.md`. `LegacyFiles` merges it into `PERSONA.md` and deletes it on
-boot. This document lives in `docs/` and is never in the prompt.
+`PERSONA.md`. The assembler folds leftover `RULES.md` / `SOUL.md` /
+`USER.md` / `TOOLS.md` into `PERSONA.md`. This document lives in
+`docs/` and is never in the prompt.
 
-The seed file is `harness/examples/persona/PERSONA.example.md`. It lands
-with [todo.md](todo.md) §5. Settings reads that one file; there is no
-second copy ([persona.md](persona.md#settings-seed)).
+The seed is `app/components/agents/personaTemplate.ts`. A new agent's
+`config.persona` starts as that string, and the first open copies it
+into the `PERSONA.md` row once
+([persona.md](persona.md#settings-seed)).
 
 ---
 
@@ -81,7 +83,7 @@ goal, nudges toward it, does the legwork, and does not report nothing.
   pulls calendar, mail, and Garmin, sets that day's crons, and is `[silent]`
   on a sick day, vacation, or when nothing needs a message. The agent moves
   the clock with `repeat=planner`. — **kernel wake prompt**
-  (`DefaultDailyPlannerPrompt`, `harness/internal/cron/planner.go`).
+  (`DefaultDailyPlannerPrompt`, `brain/cron`).
 
 ### Follow-through
 
@@ -90,7 +92,7 @@ A question it asks does not evaporate. A time it commits to has a wake.
 - A question they should answer → `[wait]` on its own line. Two pokes if
   they ghost (2 min, 15 min), then stop. `[nowait]` drops it. While
   `waiting_for_reply=true`, no new different question. — **kernel**
-  (`harness/internal/cron/wait.go`, `WaitSection`, `waitReplyNote`).
+  (`brain/cron/wait.ts`, `WaitSection`, `waitReplyNote`).
 - A clock time the agent commits to (“scoop at 2”, “leave at 5”) is a
   `cron_schedule` pinned by `memory_subject`, or **one** offer to ping. A
   calendar event is not the reminder. Never a timed checklist with no wake.
@@ -206,7 +208,7 @@ How it shows up. Steers tone. Lives in **Identity** + **Voice**, grows in
   preference. Stays as example #1.
 - **Languages: fact only.** No reply-language rule.
 - **Daily planner recipe: kernel wake prompt owns it.** `DefaultDailyPlannerPrompt`
-  in `harness/internal/cron/planner.go` carries the clauses — one session, calendar /
+  in `brain/cron` carries the clauses — one session, calendar /
   mail / Garmin, today's crons, sick or vacation → `[silent]`, empty calendar
   → one question, clock move with `repeat=planner`. The persona copy points
   at the same wake and does not restate the kernel prompt.
@@ -236,14 +238,12 @@ bullet (quote the joke), not an example. The daily planner is kernel.
 
 ## Scenario checks
 
-What “pinned” means. Each row is a fixture under
-`harness/internal/agent/testdata/eval/`, replayed against the live model with the
-shipped seed by `npm run eval` — how it works is in
+What “pinned” means. Each row is a fixture under `brain/eval/fixtures/`,
+replayed against the live model with the shipped seed by `npm run eval`
+— how it works is in
 [evaluation_fable.md](evaluation_fable.md#the-behavior-contract). The check
 is shape (tools called, `[wait]` armed, a row stored, a job on the board),
-never the sentence. (The prompt goldens in `prompt_payload_test.go` pin
-what the model **sees**, not what it does.) The fixture tree lands with
-[todo.md](todo.md) §5. Setup: [eval_setup.md](eval_setup.md).
+never the sentence. Setup: [eval_setup.md](eval_setup.md).
 
 | Send | Must see in the turn | Fixture |
 | --- | --- | --- |
@@ -273,9 +273,8 @@ what the model **sees**, not what it does.) The fixture tree lands with
 | `[cron]` daily rental check; `aim/housing` = 2BR Ballard/Fremont under $2,400 (metered API, 50/month) | On the **real** `rentals` catalog: exactly **one** `listings_search` with the neighborhoods comma-joined, the free `account_get` welcome, **no** `listings_get` / `markets_get` / `rent_estimate_get` nobody asked for; both listings with who to call in the reply, prices only from the tool. | `11_rental_daily_cron` |
 
 The one without a fixture is next: `self_note` on a landed joke needs an
-`expect` that reads `SELF.md`. Two fixtures now run on real MCP catalogs
-(`tools_from`: the plugin under `harness/mcp/<name>/`, built at run time,
-nothing checked in) — see [eval_setup.md](eval_setup.md#real-catalogs-tools_from).
+`expect` that reads `SELF.md`. Two fixtures now run on real plugin
+catalogs — see [eval_setup.md](eval_setup.md#real-catalogs-tools_from).
 A fixture is one JSON file; add the row, add the file.
 
 ## Candidates to cut (repetition only)
@@ -297,16 +296,14 @@ Target after distill: **2–4k characters**, three examples, one closer.
 
 - [ ] More `self_note`s: persona push only, or add the kernel `[self]`
       drought stamp?
-- [x] Daily planner prompt carries the recipe — `harness/internal/cron/planner.go`.
-      `/planner` is `harness/internal/agent/plannercmd.go`.
+- [x] Daily planner prompt carries the recipe — `brain/cron`.
+      `/planner` is `brain/slash`.
 
 ## Order of work
 
 1. [x] Build the scenario checks — `npm run eval` (fixtures above).
-   Run it against the distilled seed with a key in `harness/.env` and record what
-   passes; tune the fixture `expect` to what the model actually does.
    [eval_setup.md](eval_setup.md).
-2. [x] Distill the one seed `harness/examples/persona/PERSONA.example.md`.
+2. [x] Distill the one seed `app/components/agents/personaTemplate.ts`.
    Landed at ~5.6k characters (from 5.7k): the **Goals** section is new, and
    what came out was only verified duplicates — daily planner recipe (kernel), the
    follow-up rule said four times (now example + closer), the `pref/*`

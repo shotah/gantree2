@@ -1,0 +1,29 @@
+name: stale
+
+# Stale at 90 days. Close after another quiet 30. pinned and security
+# stay. A newer comment takes the stale label off.
+
+on:
+  schedule:
+    - cron: "30 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v11
+        with:
+          days-before-stale: 90
+          days-before-close: 30
+          exempt-issue-labels: pinned,security
+          exempt-pr-labels: pinned,security
+          remove-stale-when-updated: true
+          stale-issue-message: "No activity for 90 days. Comment if this should stay open."
+          stale-pr-message: "No activity for 90 days. Comment if this should stay open."
+          close-issue-message: "Closed after another quiet month. Open a new issue if it still matters."
+          close-pr-message: "Closed after another quiet month. Open a new pull request if it still matters."

@@ -117,13 +117,11 @@ import {
 import type { AgentConfig } from "@/lib/agents/types";
 import { houseEnv, houseKeys } from "@/lib/agents/house";
 import { oauthCatchRedirect, oauthRedirectPlugin } from "@/lib/agents/oauth";
-import { archiveLatest, emptySnapshotUrls, mintSnapshotKey, signedSnapshotUrls, SNAPSHOT_KEY_STORE_KEY, SNAPSHOT_TTL_MS, snapshotKeyOk } from "@/lib/agents/snapshot";
 import {
   applyHarnessFrame,
   harnessKind,
   LOG_STORE_KEY,
   noteConnected,
-  noteDisconnected,
   pageLog,
   parseLog,
   parseStatus,
@@ -256,7 +254,7 @@ export class Agent extends DurableObject<AgentEnv> {
     }));
     if (role === "crane") {
       await this.noteHarnessOpen();
-      await this.sendConfig(pair[1], request);
+      await this.sendConfig(pair[1]);
     }
     await this.flush(pair[1], role, userId);
     return new Response(null, { status: 101, webSocket: pair[0] });
@@ -274,9 +272,6 @@ export class Agent extends DurableObject<AgentEnv> {
 
   async alarm(): Promise<void> {
     const brain = await this.nativeBrain();
-    if (!brain) {
-      return;
-    }
     let next: number | null = null;
     await this.withEmit(async (emit) => {
       next = await brain.alarm(emit);
@@ -463,25 +458,9 @@ export class Agent extends DurableObject<AgentEnv> {
         fanOut(ws ? exceptSender(mouths, ws) : mouths, body);
       }
       if (meta.role === "phone") {
-        // Crane down: keep it like an inbound. Keyed by the bubble, so a
-        // second reaction on the same bubble replaces the first — latest wins.
-        // Native: the brain sees it; nothing is queued for a crane.
-        if (await this.isNative()) {
-          await this.handToBrain(out);
-        } else {
-          const sent = fanOut(this.peers(roleTag("crane")), body);
-          if (queueForAgent(sent.length)) {
-            await this.putQueued({
-              id: reaction.id,
-              to: "crane",
-              body,
-              at: now,
-              userId: reaction.userId || undefined,
-              kind: "react",
-              bytes: utf8Bytes(body),
-            });
-          }
-        }
+        // Keyed by the bubble, so a second reaction on the same bubble
+        // replaces the first — latest wins. The brain sees it.
+        await this.handToBrain(out);
       }
       return;
     }
@@ -524,7 +503,7 @@ export class Agent extends DurableObject<AgentEnv> {
       return;
     }
     if (dest === "crane") {
-      const nativeTurn = meta.role === "phone" && out.kind === "inbound" && (await this.isNative());
+      const nativeTurn = meta.role === "phone" && out.kind === "inbound";
       if (!nativeTurn) {
         const sent = fanOut(peers, body);
         if (queueForAgent(sent.length)) {
@@ -559,20 +538,18 @@ export class Agent extends DurableObject<AgentEnv> {
     fanOut(peers, body);
   }
 
-  async webSocketClose(ws: WebSocket) {
+  webSocketClose(ws: WebSocket) {
     // Hibernation keeps tags; nothing to log (bodies stay off the wire logs).
     this.forgetDraftsIfCraneGone(ws);
-    await this.noteHarnessClosed(ws);
   }
 
-  async webSocketError(ws: WebSocket) {
+  webSocketError(ws: WebSocket) {
     try {
       ws.close(1011, "error");
     } catch {
       // already closing
     }
     this.forgetDraftsIfCraneGone(ws);
-    await this.noteHarnessClosed(ws);
   }
 
   /**
@@ -1114,7 +1091,7 @@ export class Agent extends DurableObject<AgentEnv> {
         return Response.json({ error: applied.error }, { status: 400 });
       }
       if (applied.changed) {
-        if (applied.config.runtime === "native" && applied.config.persona !== loaded.config.persona) {
+        if (applied.config.persona !== loaded.config.persona) {
           const refused = await this.writePersonaFile(filePersona, applied.config.persona);
           if (refused) {
             return refused;
@@ -1177,39 +1154,13 @@ export class Agent extends DurableObject<AgentEnv> {
     return parseLog(await this.ctx.storage.get(LOG_STORE_KEY));
   }
 
-  /** 32-byte AES key, minted once and kept beside the room bearer. */
-  private async ensureSnapshotKey(): Promise<string> {
-    const cur = await this.ctx.storage.get<string>(SNAPSHOT_KEY_STORE_KEY);
-    if (typeof cur === "string" && snapshotKeyOk(cur)) {
-      return cur;
-    }
-    const key = mintSnapshotKey();
-    await this.ctx.storage.put(SNAPSHOT_KEY_STORE_KEY, key);
-    return key;
-  }
-
-  /** Config is the first frame on a harness socket. Phones never see it. */
-  private async sendConfig(ws: WebSocket, request: Request): Promise<void> {
+  /** Config is the first frame on a crane socket. Phones never see it. */
+  private async sendConfig(ws: WebSocket): Promise<void> {
     try {
       const { config } = await this.loadConfig();
-      const slug = parseStoredSlug(await this.ctx.storage.get<string>(SLUG_STORE_KEY)) ?? "";
-      const bearer = await this.ctx.storage.get<string>(BEARER_STORE_KEY);
-      const snapKey = await this.ensureSnapshotKey();
-      let urls = { restore: emptySnapshotUrls(), put: emptySnapshotUrls() };
-      if (slug && typeof bearer === "string" && bearer) {
-        const signed = await signedSnapshotUrls({
-          origin: new URL(request.url).origin,
-          slug,
-          bearer,
-          exp: Date.now() + SNAPSHOT_TTL_MS,
-        });
-        if (signed) {
-          urls = signed;
-        }
-      }
-      ws.send(configFrame(config, urls, houseEnv(this.env), snapKey));
+      ws.send(configFrame(config, houseEnv(this.env)));
     } catch {
-      // the harness redials
+      // the crane redials
     }
   }
 
@@ -1220,24 +1171,6 @@ export class Agent extends DurableObject<AgentEnv> {
       if (next !== cur) {
         await this.ctx.storage.put(STATUS_STORE_KEY, next);
       }
-    } catch {
-      // presence is advisory
-    }
-  }
-
-  private async noteHarnessClosed(ws: WebSocket): Promise<void> {
-    try {
-      if (parseSocketTags(this.ctx.getTags(ws)).role !== "crane") {
-        return;
-      }
-      if (await this.isNative()) {
-        return;
-      }
-      const others = exceptSender(this.peers(roleTag("crane")), ws).filter(isSocketOpen);
-      if (others.length) {
-        return;
-      }
-      await this.ctx.storage.put(STATUS_STORE_KEY, noteDisconnected(await this.loadStatus(), Date.now()));
     } catch {
       // presence is advisory
     }
@@ -1258,10 +1191,6 @@ export class Agent extends DurableObject<AgentEnv> {
       await this.ctx.storage.put(LOG_STORE_KEY, folded.log);
       if (folded.samples.length) {
         this.later(this.emitSamples(folded.samples));
-      }
-      if (folded.stamp && slug && this.env.STORE) {
-        const store = this.env.STORE as unknown as Parameters<typeof archiveLatest>[0];
-        this.later(archiveLatest(store, slug, folded.stamp));
       }
     } catch {
       // a bad harness frame must not drop the socket
@@ -1292,17 +1221,8 @@ export class Agent extends DurableObject<AgentEnv> {
     }
   }
 
-  private async isNative(): Promise<boolean> {
-    const loaded = await this.loadConfig();
-    return loaded.config.runtime === "native";
-  }
-
   /** First use connects the status row and publishes the brain's catalog. */
-  private async nativeBrain(): Promise<Brain | null> {
-    const loaded = await this.loadConfig();
-    if (loaded.config.runtime !== "native") {
-      return null;
-    }
+  private async nativeBrain(): Promise<Brain> {
     const slug = parseStoredSlug(await this.ctx.storage.get<string>(SLUG_STORE_KEY)) ?? "";
     await this.loadSeenOrigin();
     const brain = await openRoomBrain(this.ctx, this.env, {
@@ -1333,15 +1253,8 @@ export class Agent extends DurableObject<AgentEnv> {
   private async retargetBrain(prev: AgentConfig, next: AgentConfig): Promise<void> {
     const envChanged = canonicalEnv(prev.env) !== canonicalEnv(next.env);
     const personaChanged = prev.persona !== next.persona;
-    const runtimeChanged = prev.runtime !== next.runtime;
-    if (next.runtime !== "native") {
-      if (runtimeChanged) {
-        this.forgetBrain();
-        await this.ctx.storage.deleteAlarm();
-      }
-      return;
-    }
-    if (envChanged || personaChanged || runtimeChanged) {
+    const mcpChanged = prev.mcp !== next.mcp;
+    if (envChanged || personaChanged || mcpChanged) {
       this.forgetBrain();
       await this.nativeBrain();
     }
@@ -1352,9 +1265,6 @@ export class Agent extends DurableObject<AgentEnv> {
       return;
     }
     const brain = await this.nativeBrain();
-    if (!brain) {
-      return;
-    }
     const inbound: Inbound = { ...frame, kind: frame.kind, user_id: frame.user_id ?? "" };
     await this.withEmit((emit) => brain.handleInbound(inbound, emit));
     await this.armAlarm(brain.nextAlarm());
@@ -1382,9 +1292,6 @@ export class Agent extends DurableObject<AgentEnv> {
   }
 
   private async personaHttp(request: Request): Promise<Response> {
-    if (!(await this.isNative())) {
-      return Response.json({ error: "container runtime" }, { status: 409 });
-    }
     const op = request.headers.get("X-Chat-Op");
     if (op === "persona_get" && request.method !== "GET") {
       return new Response("method", { status: 405 });
@@ -1478,9 +1385,6 @@ export class Agent extends DurableObject<AgentEnv> {
   }
 
   private async selfHttp(request: Request): Promise<Response> {
-    if (!(await this.isNative())) {
-      return Response.json({ error: "container runtime" }, { status: 409 });
-    }
     const op = request.headers.get("X-Chat-Op");
     if (op === "self_get" && request.method !== "GET") {
       return new Response("method", { status: 405 });
@@ -1543,9 +1447,6 @@ export class Agent extends DurableObject<AgentEnv> {
       return Response.json({ error: "bad_auth" }, { status: 400 });
     }
     const brain = await this.nativeBrain();
-    if (!brain) {
-      return Response.json({ error: "native runtime" }, { status: 409 });
-    }
     try {
       await brain.authFinish(plugin, redirectUri, code);
     } catch {
@@ -1592,9 +1493,6 @@ export class Agent extends DurableObject<AgentEnv> {
       return Response.json({ error: "no_origin" }, { status: 503 });
     }
     const brain = await this.nativeBrain();
-    if (!brain) {
-      return Response.json({ error: "container runtime" }, { status: 409 });
-    }
     let state: string;
     try {
       state = await this.sealPlugin(slug, plugin);

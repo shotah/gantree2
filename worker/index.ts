@@ -1,7 +1,7 @@
 /**
  * Worker entry. Vinext's fetch handler answers everything except `/ws/<slug>`,
  * which goes straight to the Agent Durable Object (before middleware, so the
- * harness bearer is not refused for lacking a cookie). The DO classes are
+ * room bearer is not refused for lacking a cookie). The DO classes are
  * exported beside it so wrangler can bind them.
  */
 import vinext from "vinext/server/fetch-handler";

@@ -91,6 +91,97 @@ function formatNumber(n: number): string {
   return String(n).trim();
 }
 
+/** What a poll makes of one fetch-tool body. */
+export type FetchParse = {
+  items: Item[] | null;
+  /** HTTP 304 (or a row that says so). No parse, no new ids. */
+  notModified: boolean;
+  etag: string;
+  lastModified: string;
+  /** Set when every row failed and there is nothing to seed. */
+  error: string | null;
+};
+
+/**
+ * `parseItems` plus the feed/twitter envelopes and conditional-GET markers.
+ * A plural tool returns `[{ url|handle, items|error, etag?, last_modified? }]`.
+ * `{"not_modified":true}` is an empty poll.
+ */
+export function parseFetch(raw: string): FetchParse {
+  const text = raw.trim();
+  if (text === "") return { items: null, notModified: false, etag: "", lastModified: "", error: null };
+  const parsed = tryParse(text);
+  if (!parsed.ok) {
+    if (text.includes("…[truncated]")) {
+      throw new Error(`watch: fetch result was truncated mid-JSON: ${parsed.error.message}`);
+    }
+    throw new Error(`watch: fetch result is not JSON: ${parsed.error.message}`);
+  }
+  if (isRecord(parsed.value) && parsed.value.not_modified === true) {
+    return {
+      items: [],
+      notModified: true,
+      etag: strField(parsed.value.etag),
+      lastModified: strField(parsed.value.last_modified),
+      error: null,
+    };
+  }
+  if (isUnknownArray(parsed.value) && parsed.value.some(isEnvelope)) {
+    return fromEnvelope(parsed.value);
+  }
+  const items = parseItems(text);
+  const etag = isRecord(parsed.value) ? strField(parsed.value.etag) : "";
+  const lastModified = isRecord(parsed.value) ? strField(parsed.value.last_modified) : "";
+  return { items, notModified: false, etag, lastModified, error: null };
+}
+
+function isEnvelope(v: unknown): boolean {
+  if (!isRecord(v)) return false;
+  if (v.not_modified === true) return true;
+  if (isUnknownArray(v.items)) return true;
+  return typeof v.error === "string" && v.error.trim() !== "";
+}
+
+function fromEnvelope(rows: unknown[]): FetchParse {
+  const items: Item[] = [];
+  let etag = "";
+  let lastModified = "";
+  let notModified = 0;
+  let errors = 0;
+  let firstError = "";
+  for (const row of rows) {
+    if (!isRecord(row)) continue;
+    if (row.not_modified === true) {
+      notModified += 1;
+      if (etag === "") etag = strField(row.etag);
+      if (lastModified === "") lastModified = strField(row.last_modified);
+      continue;
+    }
+    if (isUnknownArray(row.items)) {
+      if (etag === "") etag = strField(row.etag);
+      if (lastModified === "") lastModified = strField(row.last_modified);
+      const parsed = parseItems(JSON.stringify({ items: row.items }));
+      if (parsed) items.push(...parsed);
+      continue;
+    }
+    if (typeof row.error === "string" && row.error.trim() !== "") {
+      errors += 1;
+      if (firstError === "") firstError = row.error.trim();
+    }
+  }
+  if (items.length === 0 && notModified > 0 && errors === 0) {
+    return { items: [], notModified: true, etag, lastModified, error: null };
+  }
+  if (items.length === 0 && errors > 0) {
+    return { items: [], notModified: false, etag, lastModified, error: firstError };
+  }
+  return { items, notModified: false, etag, lastModified, error: null };
+}
+
+function strField(v: unknown): string {
+  return typeof v === "string" ? v.trim() : "";
+}
+
 /** Items whose ids are not in `seen`, in input order. */
 export function diffNew(items: readonly Item[], seen: readonly string[]): Item[] {
   const have = new Set(seen);

@@ -1,21 +1,20 @@
 # MCP tool naming
 
-Canonical contract for every plugin. On `runtime: native` the modules
-live under `brain/plugins/<name>/` and `brain/tools/names.ts` prefixes
-`{plugin}__{tool}`. The Go copies under `harness/mcp/<name>/` are the
-frozen container image. This page is what goes on the right of the
+Canonical contract for every plugin. Modules live under
+`brain/plugins/<name>/` and `brain/tools/names.ts` prefixes
+`{plugin}__{tool}`. This page is what goes on the right of the
 `__`. Plugins do not get a local dialect.
 
 Tools take a set and return a list. The rule is
 `.cursor/rules/brain-plugins-plural.mdc`. A tool that is one thing
 sets `single` and says why.
 
-**Why it matters:** small models and the harness's closest-match repair
+**Why it matters:** small models and the host's closest-match repair
 pick tools by **name tokens + description**. Synonyms and double
 prefixes break matching, and a broken match is a serial round the Go
 loop could have batched.
 
-Related: how a plugin gets into the image ([custom-mcp.md](custom-mcp.md));
+Related: how a plugin is added ([custom-mcp.md](custom-mcp.md));
 the eval that fails a fixture when a plugin renames a tool
 ([eval_setup.md](eval_setup.md#real-catalogs-tools_from)).
 
@@ -25,7 +24,7 @@ the eval that fails a fixture when a plugin renames a tool
 
 | Layer | Who owns it | Example |
 | --- | --- | --- |
-| Plugin id | directory name under `brain/plugins/` (and `harness/mcp.lock` `name` on the container) | `strava`, `google`, `garmin` |
+| Plugin id | directory name under `brain/plugins/` | `strava`, `google`, `garmin` |
 | Tool name | what the plugin registers | `activities_list`, `calendar_list_events` |
 | **Host-facing name** | `{plugin}__{tool}` | `strava__activities_list` |
 
@@ -41,17 +40,16 @@ the eval that fails a fixture when a plugin renames a tool
    Service first (resource / domain), then verb, then object. Same
    family as google-mcp (`calendar_list_events`, `gmail_search_messages`).
 
-2. **Never put the server id in the tool name**
-   The harness already prefixes.
+2. **Never put the plugin id in the tool name**
+   The host already prefixes.
    - Bad: `garmin_sleep_get` → `garmin__garmin_sleep_get`
    - Bad: `strava_get_activities` → `strava__strava_get_activities`
    - Good: `activities_list` → `strava__activities_list`
 
 3. **No dual aliases**
    One name set per release. A breaking rename is a semver bump on the
-   plugin, a `mcp.lock` bump, and the eval fixtures updated **in the
-   same PR** — `harness.yml` runs the fixture well-formedness check and
-   `eval.yml` fails the catalog drift before any model call.
+   plugin, and the eval fixtures updated **in the same PR**.
+   `npm run eval` fails catalog drift before any model call.
 
 4. **Stable verb set** (prefer these; don't invent synonyms)
 
@@ -75,7 +73,7 @@ the eval that fails a fixture when a plugin renames a tool
    | Saved Strava courses / share links | `routes_` / `urls_` | strava (`urls_resolve`; not `maps__link_resolve`) |
    | Devices (hardware) | `devices_` | garmin |
    | Math | `expression_` / `units_` | math |
-   | Web search | `web_` | harness builtin `web_search` (not a plugin) |
+   | Web search | `web_` | builtin `web_search` (not a plugin) |
    | Flight offers / dates / airports / returns / booking / quota | `offers_` / `dates_` / `airports_` / `returns_` / `booking_` / `link_` / `account_` | flights |
    | Rental listings / rent estimate / markets / areas / quota | `listings_` / `rent_` / `markets_` / `areas_` / `link_` / `account_` | rentals |
    | Car listings / VIN / markets / quota | `listings_` / `vin_` / `markets_` / `link_` / `account_` | cars (prefix disambiguates from rentals) |
@@ -101,21 +99,20 @@ the eval that fails a fixture when a plugin renames a tool
    (or excluded from the core tier).
 
 9. **Lean catalogs**
-   Prefer `--tool-tier core` / presets / `exclude` so the published set
-   stays small. Fat schemas starve local models even when names are
-   perfect. Google ships about a hundred tools; the eval's manifest
-   allowlists two.
+   Prefer `GARMIN_TOOL_TIER` and `GOOGLE_TOOL_PRESET` so the published
+   set stays small. Fat schemas starve local models even when names are
+   perfect.
 
 10. **Tests lock names**
     Every plugin asserts each registered tool matches `^[a-z]+_[a-z]+`
-    and does **not** start with the server id string. That test runs
-    under `harness.yml` and its coverage rolls into the harness badge.
+    and does **not** start with the plugin id string. That test lives
+    under `test/brain/plugins/`.
 
 ---
 
 ## Host forms
 
-| Server id | Example tools | Harness calls |
+| Server id | Example tools | Host-facing name |
 | --- | --- | --- |
 | `google` | `calendar_list_events` | `google__calendar_list_events` |
 | `garmin` | `sleep_get`, `activities_list` | `garmin__sleep_get` |
@@ -130,8 +127,8 @@ the eval that fails a fixture when a plugin renames a tool
 | `image` | `photo_generate`, `photo_edit` | `image__photo_generate` |
 | `chat` | `avatar_update`, `backdrop_update`, `theme_list` | `chat__avatar_update` |
 
-Hyphenated server ids are fine; tool suffixes stay underscores. The
-harness aliases underscored prefixes (`google_health__…` →
+Hyphenated plugin ids are fine; tool suffixes stay underscores. The
+host aliases underscored prefixes (`google_health__…` →
 `google-health__…`) on call — **suffixes are never rewritten**. Web
 search is the unprefixed builtin `web_search`.
 

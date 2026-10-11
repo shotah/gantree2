@@ -5,7 +5,6 @@ import {
   agentsMessage,
   codeOf,
   patchConfig,
-  recreateForKeys,
   type ApiClient,
 } from "@/app/lib/agentsHttp";
 import { api } from "@/app/lib/api";
@@ -61,18 +60,6 @@ export function SecretsFold({
     }
   }
 
-  async function recreate() {
-    setBusy(true);
-    setError(null);
-    try {
-      onConfig(await recreateForKeys(slug, client));
-    } catch (err) {
-      setError(codeOf(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
   function add(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     const key = cleanSecretKey(keyName);
@@ -95,20 +82,6 @@ export function SecretsFold({
       <p className="mb-3 text-xs text-dim">
         Values stay on the agent. This list is keys only. Saving a name that is already here replaces its value; a tool&apos;s own keys can also be pasted under Tools.
       </p>
-      {config.recreate
-        ? (
-            <div role="status" className={`${alertClass} mb-3`}>
-              <p>Keys changed. Recreate the container so they take effect.</p>
-              {canMutate
-                ? (
-                    <button type="button" disabled={busy} onClick={() => void recreate()} className={`${quietClass} mt-2`}>
-                      Recreate to apply keys
-                    </button>
-                  )
-                : null}
-            </div>
-          )
-        : null}
       {error ? <p role="alert" className={`${alertClass} mb-3`}>{agentsMessage(error)}</p> : null}
       {config.house.length > 0
         ? (

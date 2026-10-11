@@ -19,9 +19,6 @@ export type ChatAuthEnv = {
 export type AgentEnv = ChatAuthEnv & HouseEnv & {
   AGENT?: DurableObjectNamespace;
   SETTINGS?: DurableObjectNamespace;
-  /** One Harness (container) Durable Object per slug. */
-  HARNESS?: DurableObjectNamespace;
-  STORE?: R2Bucket;
   DIRECTORY?: DirectoryKv;
   LOCATION_HINT?: string;
   VAPID_PUBLIC_KEY?: string;

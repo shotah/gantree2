@@ -6,9 +6,8 @@ clock is [cron.md](cron.md). What settings may write is
 [contract.md](contract.md).
 
 Neither surface gets a new socket, frame kind, or `status` field.
-On a native agent, `announce` emits `cmds` when the brain opens. On a
-container agent, the harness sends that frame when it dials. Work is
-menus and any string that still names spark.
+`announce` emits `cmds` when the brain opens. Work is menus and any
+string that still names spark.
 
 ---
 
@@ -16,10 +15,8 @@ menus and any string that still names spark.
 
 The room receives the menu as a `cmds` frame. The catalog includes
 `planner` (`args: true`, hint `daily planning session (on|off|HH:MM)`)
-and does not have `spark` or `engagement`. A native brain publishes it
-from `brain/slash`. A container harness publishes it from
-`internal/channel/chat` (that tree may still say `pendant` until Phase
-4).
+and does not have `spark` or `engagement`. The brain publishes it
+from `brain/slash`.
 
 Chat pushes are still `{ kind: "push", text }`. A planning session that
 speaks starts with `[cron] Daily planner`. A `[silent]` session sends
@@ -41,49 +38,37 @@ this repo ([todo.md](todo.md) §0).
 
 ## Settings
 
-The harness boots without a new required env var. The `status` JSON is
-unchanged ([contract.md](contract.md)). Planner turns still log
-`msg=turn perf` with `source=cron`, and that line arrives as a `perf`
-frame.
+No new required env var. Planner turns log `source=cron` on the `perf`
+frame ([contract.md](contract.md)).
 
 ### Persona seed
 
-`harness/examples/persona/PERSONA.example.md` is the only seed (lands
-with [todo.md](todo.md) §5). **Replace from template** loads that file.
-It has to include the `[cron] Daily planner` example and the
-`cron / daily planner` layer. Drop Spark of life, `/spark`, and
-`/engagement`. Seed tests on the settings side should pin the planner
-wording the way they pin `pref/hours` and `pref/calendar`. Those tests
-land with [todo.md](todo.md) §4.
+`app/components/agents/personaTemplate.ts` is the seed a new agent
+copies into `config.persona`. It includes the `[cron] Daily planner`
+example and the `cron / daily planner` layer. Drop Spark of life,
+`/spark`, and `/engagement`.
 
 ### Env form
 
-Optional, same place as the other cron knobs (`config.env`; the example
-file is `harness/.env.example`):
+Optional, same place as the other cron knobs (`config.env`):
 
 | Key | Default | Meaning |
 | --- | --- | --- |
 | `DAILY_PLANNER_AT` | `07:10` | Local clock (`CRON_TZ`). `HH:MM` or `H:MM`. |
 
-There is no spark quantity env to remove. `/planner 09:30` on the agent
-overrides this and is stored in `gantry.db`, not in `config.env`.
-
-### SQLite the board may already read
-
-`gantry.db` on the container disk, and in the R2 snapshot
-([architecture.md](architecture.md)). Settings does not open the live
-file.
+There is no spark quantity env. `/planner 09:30` on the agent overrides
+this and is stored in the Agent DO's SQLite, not in `config.env`.
+Settings does not open that database.
 
 | What | Now |
 | --- | --- |
 | `cron_job.kind` | `daily_planner` for the one session. `expr` is `HH:MM` (for example `07:10`). |
 | `cron_job.kind` | `examples` / `examples_ping` are unchanged. |
-| `session_pref.planner_at` | `''` inherit `DAILY_PLANNER_AT`, `0` off, or `HH:MM` override. Added with `ALTER TABLE`; new databases create the column directly. |
+| `session_pref.planner_at` | `''` inherit `DAILY_PLANNER_AT`, `0` off, or `HH:MM` override. |
 
-This binary does not read `spark_qty` and does not rewrite old `spark` /
-`spark_ping` rows. A board that filters on those kinds will not show the
-daily session. Label `daily_planner` as the planning session. Leave
-`spark_qty` alone.
+The brain does not read `spark_qty`. A board that filters on `spark` or
+`spark_ping` will not show the daily session. Label `daily_planner` as
+the planning session.
 
 ### Docs and UI copy
 

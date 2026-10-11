@@ -118,4 +118,58 @@ describe("watch tools", () => {
     expect(plain).toContain("interval=15m0s");
     expect(plain).not.toContain("raised");
   });
+
+  it("uses kind defaults and clamps under the floor", async () => {
+    const { store } = open();
+    const tools = watchTools(store);
+    const context = ctx("s", "u");
+    const feeds = await invoke(tools, TOOL_ADD, { tool: "feeds__items_list", args: { url: "https://a" } }, context);
+    expect(feeds).toContain("interval=1h0m0s");
+    expect(feeds).not.toContain("clamped");
+
+    const twitter = await invoke(tools, TOOL_ADD, { tool: "twitter__posts_list", args: { handle: "foo" } }, context);
+    expect(twitter).toContain("interval=6h0m0s");
+    expect(twitter).not.toContain("clamped");
+
+    const shortFeed = await invoke(tools, TOOL_ADD, {
+      tool: "feeds__items_list",
+      args: { url: "https://b" },
+      interval: "5m",
+    }, context);
+    expect(shortFeed).toContain("interval=15m0s");
+    expect(shortFeed).toContain("interval clamped to 15m0s");
+
+    const shortTweet = await invoke(tools, TOOL_ADD, {
+      tool: "twitter__posts_list",
+      args: { handle: "bar" },
+      interval: "30m",
+    }, context);
+    expect(shortTweet).toContain("interval=1h0m0s");
+    expect(shortTweet).toContain("interval clamped to 1h0m0s");
+
+    const seconds = await invoke(tools, TOOL_ADD, {
+      tool: "feeds__items_list",
+      args: { url: "https://c" },
+      interval: "30s",
+    }, context);
+    expect(seconds).toContain("interval clamped to 15m0s");
+  });
+
+  it("adds a list of watches and keeps a per-row error", async () => {
+    const { store } = open();
+    const tools = watchTools(store);
+    const context = ctx("s");
+    const added = await invoke(tools, TOOL_ADD, {
+      watches: [
+        { tool: "feeds__items_list", args: { url: "https://a" }, label: "a" },
+        { tool: "feeds__items_list", args: { url: "https://b" }, label: "b" },
+        { tool: "not-prefixed" },
+      ],
+    }, context);
+    expect(added).toContain("label=\"a\"");
+    expect(added).toContain("label=\"b\"");
+    expect(added).toContain("error:");
+    expect(store.listSession("s", false)).toHaveLength(2);
+    await expect(invoke(tools, TOOL_ADD, { watches: [{ tool: "nope" }] }, context)).rejects.toThrow(/prefixed/);
+  });
 });

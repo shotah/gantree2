@@ -1,8 +1,7 @@
 /**
  * `/api/agents` and `/api/samples` as HTTP. Role gate, then the Settings DO
- * for inventory and the Agent DO for the room. Snapshot URLs carry no cookie.
+ * for inventory and the Agent DO for the room.
  */
-import { containerAct, containerInfo, UNKNOWN_CONTAINER } from "@/lib/agents/container";
 import { oauthRedirectPlugin } from "@/lib/agents/oauth";
 import {
   normalizeSlug,
@@ -10,17 +9,8 @@ import {
   type AgentDelete,
   type AgentWrite,
 } from "@/lib/agents/registry";
-import {
-  isSnapshotFile,
-  readSnapshot,
-  SNAPSHOT_CONTENT_TYPE,
-  snapshotTooBig,
-  type SnapshotStore,
-  verifySnapshot,
-  writeSnapshot,
-} from "@/lib/agents/snapshot";
 import { isAgentStatus } from "@/lib/agents/status";
-import type { AgentCard, AgentRow, AgentStatus, AgentsEnv, ContainerInfo } from "@/lib/agents/types";
+import type { AgentCard, AgentRow, AgentStatus, AgentsEnv } from "@/lib/agents/types";
 import { fetchRoomBearer } from "@/lib/chat/bearer";
 import { randomToken } from "@/lib/door/google";
 import { agentStub } from "@/lib/chat/location";
@@ -131,20 +121,9 @@ async function readStatus(env: AgentsHttpEnv, slug: string): Promise<AgentStatus
   }
 }
 
-async function readContainer(env: AgentsHttpEnv, slug: string): Promise<ContainerInfo> {
-  try {
-    return await containerInfo(env, slug);
-  } catch {
-    return UNKNOWN_CONTAINER;
-  }
-}
-
 async function cardFor(env: AgentsHttpEnv, who: Principal, row: AgentRow): Promise<AgentCard> {
-  const [status, container] = await Promise.all([
-    readStatus(env, row.slug),
-    readContainer(env, row.slug),
-  ]);
-  return { ...row, status, container, canMutate: canRunAgent(who, row.slug) };
+  const status = await readStatus(env, row.slug);
+  return { ...row, status, canMutate: canRunAgent(who, row.slug) };
 }
 
 async function callAgent(env: AgentsHttpEnv, slug: string, url: string, init?: RequestInit): Promise<Response> {
@@ -218,10 +197,9 @@ export async function postAgent(req: Request, env: AgentsHttpEnv): Promise<Respo
 }
 
 /**
- * A new room gets its bearer at birth, so the `config` frame can sign snapshot
- * URLs and the container start has a token to hand the harness. Keeps an
- * existing one (a re-create after delete). Best effort: a room without the
- * AGENT binding (local dev) is still created.
+ * A new room gets its bearer at birth so a crane socket and the chat face
+ * have a token. Keeps an existing one (a re-create after delete). Best effort:
+ * a room without the AGENT binding (local dev) is still created.
  */
 async function mintBearer(env: AgentsHttpEnv, slug: string): Promise<void> {
   try {
@@ -235,7 +213,7 @@ async function mintBearer(env: AgentsHttpEnv, slug: string): Promise<void> {
       body: JSON.stringify({ bearer: randomToken() }),
     }));
   } catch {
-    // The room is still listed; the bearer can be minted on first container start.
+    // The room is still listed; the bearer can be minted on the next open.
   }
 }
 
@@ -283,11 +261,6 @@ export async function deleteAgent(req: Request, env: AgentsHttpEnv, slugRaw: str
   const api = settingsApi(env);
   if (!api) {
     return json({ error: "settings_unavailable" }, 503);
-  }
-  try {
-    await containerAct(env, slug, { action: "stop" });
-  } catch {
-    return json({ error: "container_unavailable" }, 503);
   }
   let outcome: AgentDelete;
   try {
@@ -616,68 +589,5 @@ export async function getSamples(req: Request, env: AgentsHttpEnv): Promise<Resp
     return json({ samples });
   } catch {
     return json({ error: "settings_unavailable" }, 503);
-  }
-}
-
-export async function handleSnapshot(
-  req: Request,
-  env: AgentsHttpEnv,
-  slugRaw: string,
-  fileRaw: string,
-  opts: { now?: number; maxBytes?: number } = {},
-): Promise<Response> {
-  if (req.method !== "GET" && req.method !== "PUT") {
-    return new Response("method", { status: 405 });
-  }
-  const slug = normalizeSlug(slugRaw);
-  const file = fileRaw;
-  if (!slug || !isSnapshotFile(file)) {
-    return new Response(null, { status: 404 });
-  }
-  const stub = agentStub(env, slug);
-  if (!stub) {
-    return json({ error: "agent_unavailable" }, 503);
-  }
-  const bearer = await fetchRoomBearer(stub);
-  if (!bearer) {
-    return json({ error: "unauthorized" }, 401);
-  }
-  const url = new URL(req.url);
-  const exp = url.searchParams.get("exp") ?? "";
-  const sig = url.searchParams.get("sig") ?? "";
-  const now = opts.now ?? Date.now();
-  let ok: boolean;
-  try {
-    ok = await verifySnapshot(bearer, slug, file, req.method, exp, sig, now);
-  } catch {
-    ok = false;
-  }
-  if (!ok) {
-    return json({ error: "unauthorized" }, 401);
-  }
-  if (!env.STORE) {
-    return json({ error: "store_unavailable" }, 503);
-  }
-  const store: SnapshotStore = env.STORE;
-  const stamp = url.searchParams.get("stamp") ?? undefined;
-  try {
-    if (req.method === "GET") {
-      const body = await readSnapshot(store, slug, file, stamp);
-      if (!body) {
-        return new Response(null, { status: 404 });
-      }
-      return new Response(body, {
-        status: 200,
-        headers: { "content-type": SNAPSHOT_CONTENT_TYPE, "cache-control": "no-store" },
-      });
-    }
-    const bytes = await req.arrayBuffer();
-    if (snapshotTooBig(bytes.byteLength, opts.maxBytes)) {
-      return json({ error: "too_large" }, 413);
-    }
-    await writeSnapshot(store, slug, file, bytes, stamp);
-    return new Response(null, { status: 204 });
-  } catch {
-    return json({ error: "store_unavailable" }, 503);
   }
 }
