@@ -13,14 +13,13 @@ harness directory and no container. `wrangler.jsonc` is Settings
 and Agent (SQLite) plus KV `DIRECTORY`. The catalog is
 `toolCatalog()` from `brain/plugins`. `npm run agent` is a local
 REPL on `createBrain`. Live eval is 30/30. `package.json` is
-0.2.15. Kit files tasks and goals from chat. Phones can sign in
-without a browser (`/api/auth/{config,nonce,token}`). A file count
-while this note was written was 280 test files. The reported gate
-was 279 files / 1945 tests, eslint, tsc, and the build clean. This
-note did not re-run the suite. **Not yet done:** the GitHub ruleset
-and labels, the provider-console redirects, the first deploy and
-the walks, the CodeQL-to-eslint pass, and the owner's release of
-0.2.15.
+0.2.18, deployed from `main` `c3fa813`.
+`GET https://gantree2.bldhosting.com/api/health` returns
+`{"ok":true,"version":"0.2.18"}`. Tag eval for v0.2.18 is in
+progress. Kit files tasks and goals from chat. Phones can sign in
+without a browser (`/api/auth/{config,nonce,token}`). **Not yet
+done:** the provider-console redirects, Bob's walk, the §4 native
+walk, a stranger's README walk, and the one-week soak.
 
 Legend: `[ ]` open · **owner** needs a human with a console · tags are
 `easy` / `medium` / `hard` for effort. Each list is ordered easiest
@@ -30,7 +29,7 @@ pricing, in the Hosted section.
 
 ---
 
-## Now — blocks the first deploy or the first stranger
+## Now — blocks the first stranger
 
 - [ ] **owner · easy** Provider consoles for the tools (§7): the
       **tools** Google client, Strava, and Google Health list
@@ -39,21 +38,6 @@ pricing, in the Hosted section.
       consent screen's privacy URL is
       `https://github.bldhosting.com/privacy/`. Proof is a
       `/auth google` round trip in chat that lands a token.
-- [ ] **owner · easy** Owner clicks in [ci.md](ci.md): the seven
-      labels and the `main` ruleset (pull request, one approval,
-      code owner, strict checks `app` and
-      `Analyze (javascript-typescript)`). An authenticated agent
-      runs those `gh` commands. Close the TypeScript 7 pull request
-      if it is still open ([ci.md](ci.md) records pull request 3
-      as closed). The deploy still needs the variables and secrets
-      in the [ci.md](ci.md) deploy row, then `wrangler secret put`
-      for the house keys.
-- [ ] **owner · easy** First deploy of the native tree
-      ([deploy-cloudflare.yml](../.github/workflows/deploy-cloudflare.yml)).
-      `gate` fails the run unless `ci` succeeded on `main`. Prove
-      the door and one agent at `https://gantree2.bldhosting.com`.
-      The owner runs the deploy and is releasing `package.json`
-      0.2.15.
 - [ ] **owner · easy** Walk: add Bob on `/users`; he gets in; remove;
       `401` next click (§2).
 - [ ] **owner · medium** Walk: build Kit on `/agents/new`; grant maps;
@@ -67,9 +51,13 @@ pricing, in the Hosted section.
 
 What has landed is in [todo_done.md](todo_done.md) §10.
 
-- [ ] **medium** CodeQL second pass. [ci.md](ci.md) records the
-      workflow as green. The pass that points the queries at eslint
-      is in flight. There is no `docs/codeql.md` in the tree.
+- [ ] Tag eval in progress. Run 38172210169 (v0.2.18) was still on
+      the fixture step.
+- [ ] **medium** `braces` (high) and `fflate` (moderate). Both are
+      transitive under vinext: `vite-plugin-dynamic-import` →
+      micromatch → braces, and `@vercel/og` → satori pins fflate
+      0.7.3. No safe lockfile fix. Waits on vinext/satori upstream;
+      re-check weekly with `npm audit`.
 - [ ] **hard** Deferred ports. Garmin `complete`: 81 tools past
       extended (core is 10, extended is 19;
       `GARMIN_TOOL_TIER=complete` currently publishes that same

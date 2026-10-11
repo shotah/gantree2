@@ -635,11 +635,13 @@ Decision and the package map: [brain.md](brain.md). Landed
       `harness-image.yml`, no `scripts/coverage-harness.sh`. No
       Harness class (`wrangler.jsonc` migration v3 is
       `deleted_classes: ["Harness"]`; `worker/` does not export
-      one). No `container`, `containerHttp`, `snapshot`, or `lock`
-      module under `lib/agents`, and no container or snapshot
-      route. No `runtime` field on the agent types. No R2 `STORE`
-      binding and no `containers` block. Bindings are Settings,
-      Agent (SQLite), and KV `DIRECTORY`.
+      one). Migrations stay append-only: v1 new sqlite Settings and
+      Agent, v2 new sqlite Harness, v3 `deleted_classes` Harness.
+      Do not rewrite them. No `container`, `containerHttp`,
+      `snapshot`, or `lock` module under `lib/agents`, and no
+      container or snapshot route. No `runtime` field on the agent
+      types. No R2 `STORE` binding and no `containers` block.
+      Bindings are Settings, Agent (SQLite), and KV `DIRECTORY`.
 - [x] **Catalog and grants (2026-10-11).** `toolCatalog()` in
       `lib/agents/catalog.ts` reads `brain/plugins`.
       `grantedPlugins` keeps an ungranted plugin on the list so
@@ -694,10 +696,24 @@ Decision and the package map: [brain.md](brain.md). Landed
       tag runs eval beside the release at `EVAL_N=1` and does not
       block it. `deploy-cloudflare.yml` `gate` fails unless `ci`
       succeeded (`::error::ci failed on main`). Dependabot ignores
-      `typescript` majors. [ci.md](ci.md) is the page. There is no
-      `docs/codeql.md`. The CodeQL-to-eslint pass stays open.
+      `typescript` majors. [ci.md](ci.md) is the page.
+      [codeql.md](codeql.md) landed later the same day.
 - [x] **Gate reported with this pass (2026-10-11).** 279 files /
       1945 tests, eslint clean, tsc clean, build ok. `package.json`
       is 0.2.15. A count of `test/**/*.test.ts(x)` while this note
       was written was 280 files. This note did not re-run the
       suite.
+- [x] **First native deploy (2026-10-11).** v0.2.18 from `main`
+      `c3fa813`. `ci`, `codeql`, `scorecard`, `release`, and
+      `deploy-cloudflare` were green. Public
+      `GET https://gantree2.bldhosting.com/api/health` returned
+      `{"ok":true,"version":"0.2.18"}`.
+- [x] **GitHub labels (2026-10-11).** The seven labels exist:
+      `brain`, `plugins`, `edge`, `app`, `docs`, `ci`, `tests`.
+      The TypeScript 7 pull request is closed. A `main` ruleset
+      was created and then deleted on purpose: one developer.
+      [ci.md](ci.md) says add one when a second committer arrives.
+- [x] **CodeQL to eslint (2026-10-11).** A local
+      `security-extended` rescan went from 15 alerts to 0.
+      `eslint-plugin-security` and `eslint-plugin-regexp` rules
+      are errors. [codeql.md](codeql.md) is the page.
