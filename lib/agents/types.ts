@@ -18,6 +18,7 @@
  *   PUT    /api/agents/:slug/users  { users: RoomUser[] } → same          canRun
  *   GET    /api/agents/:slug/container      → ContainerInfo               canRun
  *   POST   /api/agents/:slug/container  ContainerAction → ContainerInfo   canRun
+ *   POST   /api/agents/:slug/auth/start { plugin } → { url }            canRun (native google, strava, google-health)
  *   GET    /api/agents/:slug/bearer         → { bearer }                  admin, loopback dev only (`npm run agent`)
  *   GET    /api/tools                       → { tools: ToolEntry[], house: string[] }  any signed-in
  *   GET    /api/samples?agent=&since=       → { samples: SampleRow[] }    canRun (admin: all when no agent)
@@ -98,6 +99,9 @@ export type ContainerInfo = {
 
 export type ContainerAction = { action: "start" | "stop" | "recreate" };
 
+/** Where this agent's turns run. `container` is the harness; `native` is the brain inside the Agent DO. */
+export type AgentRuntime = "container" | "native";
+
 /** What the `config` frame carries to the harness. Stored on the Agent DO. */
 export type AgentConfig = {
   /** Secrets and keys. Values are write-only over HTTP. */
@@ -106,6 +110,8 @@ export type AgentConfig = {
   mcp: string;
   /** `PERSONA.md` text. */
   persona: string;
+  /** Missing on rows written before the flag existed — readers treat that as `container`. */
+  runtime: AgentRuntime;
   updatedAt: number | null;
 };
 
@@ -116,6 +122,7 @@ export type AgentConfigView = {
   house: string[];
   mcp: string;
   persona: string;
+  runtime: AgentRuntime;
   updatedAt: number | null;
   /** True when env changed since the container last started. */
   recreate: boolean;
@@ -126,6 +133,7 @@ export type AgentConfigPatch = {
   env?: Record<string, string | null>;
   mcp?: string;
   persona?: string;
+  runtime?: AgentRuntime;
 };
 
 export type AgentCard = AgentRow & {
@@ -154,7 +162,7 @@ export type ToolEntry = {
   binary: string;
   /** Required env keys; empty when none. */
   needs: string[];
-  /** Needs an OAuth paste flow (`/auth <id>`) before it publishes. */
+  /** Redirect login via `/api/auth/catch` (google, google-health, strava). Garmin is not this flag. */
   oauth: boolean;
   /** LAN-only; hidden on Cloudflare, shown under celld. */
   homeOnly: boolean;

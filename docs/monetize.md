@@ -63,11 +63,12 @@ money per hour of effort of the three while the user count is small.
 
 ## Path 2 — hosted door (weeks, LLC first)
 
-The product: **we run the Worker and the container; they bring every
-key.** No shared brain, no shared Google client for the
-tools, no billing for tokens. The existing design already does the
-hard part — one Agent DO and one container per agent, Google sign-in
-per person, keys pasted into the agent's own env.
+The product: **we run the Worker; they bring every key.** No shared
+brain, no shared Google client for the tools, no billing for tokens.
+The existing design already does the hard part — one Agent DO per
+agent, Google sign-in per person, keys pasted into the agent's own
+env. A native agent has no container to bill. A container agent is
+the legacy line item below.
 
 ### Why it has been free so far, and where the charge comes from
 
@@ -86,17 +87,29 @@ Cloudflare's own pages, read 2026-10-10:
 | GitHub Pages | docs site, OAuth catch page, privacy page | free for public repos | — | GitHub |
 | GHCR | prebuilt harness image | free for public images | — | GitHub |
 
-So: `npm run dev` and `npm run agent` cost nothing; a Cloudflare deploy
-of the Worker alone costs nothing; the first time a container starts,
-the account must be on Workers Paid, and that is the $5. Durable
-Object SQLite storage only started billing in January 2026 and our
-objects are kilobytes, so it stays at $0 on either plan.
+So: `npm run dev` costs nothing. A native agent on Cloudflare has no
+container cost. The first time a container starts, the account must be
+on Workers Paid, and that is the $5 — only for agents still on
+`runtime: container`. Durable Object SQLite storage only started
+billing in January 2026 and our objects are small, so it stays at $0
+on either plan while a turn is not running.
 
 ### What one hosted agent costs us
 
-`edge/harness.do.ts` holds a WebSocket from the harness to the Agent
-DO, so a hosted agent never sleeps (`sleepAfter` only matters when the
-socket drops). Containers bill memory and disk on what is
+A native agent (`runtime: native`) has no container. It does not hold
+a WebSocket open and it does not snapshot to R2. The bill is Durable
+Object requests and duration while a turn or an alarm runs, plus the
+model tokens the customer pays their provider. Waiting on the model
+and on `fetch` does not spend CPU time. Between alarms the cost is
+zero. Workers Paid is not required for that agent. The manifest in
+this tree still declares the Harness binding, so a deploy of the whole
+manifest still needs the Containers API until that binding is removed
+([install.md](install.md#containers-legacy)).
+
+The arithmetic below is a container agent. `edge/harness.do.ts` holds
+a WebSocket from the harness to the Agent DO, so that agent never
+sleeps (`sleepAfter` only matters when the socket drops). Containers
+bill memory and disk on what is
 *provisioned* and CPU on what is *used*, per the pricing page above.
 On the default `lite` instance (1/16 vCPU, 256 MiB, 2 GB disk — the
 [instance table](https://developers.cloudflare.com/containers/platform/limits/)),

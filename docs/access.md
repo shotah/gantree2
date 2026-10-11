@@ -143,7 +143,7 @@ Authorization Code + PKCE (`S256`), scopes `openid email profile`,
 | on a list | through, `x-gantree-sub/email/role/agents` set | same |
 
 Public: `/login`, `/api/auth/google`, `/api/auth/callback/google`,
-`/api/auth/config`, `/api/auth/nonce`, `/api/auth/token`,
+`/api/auth/catch`, `/api/auth/config`, `/api/auth/nonce`, `/api/auth/token`,
 `/manifest.webmanifest`, `/sw.js`, `/icon.svg`, `/favicon.ico`,
 `/robots.txt`, `/_vinext/*`, `/_next/*`, `/assets/*`, `/.well-known/*`.
 Code: `lib/door/gate.ts`, `lib/door/http.ts`, `middleware.ts`. A cookie
@@ -227,9 +227,12 @@ Room list = last `allow` frame stored on that slug's Agent DO. New
 Admins are **not** exempt from the room list: operating Kit and
 talking to Kit are different grants.
 
-### Frames (harness ↔ room)
+### Frames (brain ↔ room)
 
-Harness → room, right after `cmds`, and again on every reconnect:
+A native brain emits these inside the DO. A container harness sends them
+on the crane socket. The DO fans the phone-facing kinds either way.
+
+Brain → room, right after `cmds`, and again when the allow list changes:
 
 ```json
 { "kind": "allow", "users": [
@@ -238,15 +241,17 @@ Harness → room, right after `cmds`, and again on every reconnect:
 ] }
 ```
 
-Room → harness, `email` beside `user_id`:
+Room → brain, `email` beside `user_id`. The phone kind is `inbound`:
 
 ```json
-{ "kind": "msg", "user_id": "118212345678901234567",
-  "email": "ada@example.com", "text": "…", "context": { } }
+{ "kind": "inbound", "user_id": "118212345678901234567",
+  "email": "ada@example.com", "text": "…" }
 ```
 
-The harness admits a frame when `user_id` **or** `email` is on its
-list. Session id: `pendant:<slug>:<sub>` (wire name; Phase 4 renames).
+The DO admits the socket when `user_id` **or** a verified `email` is on
+the room list, then stamps `user_id` before the brain sees the frame.
+A native brain keeps one session id, `gantry`. The container wire name
+`pendant:<slug>:<sub>` is the alias until Phase 4.
 
 ---
 

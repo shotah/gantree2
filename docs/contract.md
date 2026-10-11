@@ -1,18 +1,31 @@
 # Settings contract
 
-What settings may **write** and **read** against the harness. Settings
-never sits in a chat turn. The harness never learns a slug. If a field
-is not on this page, do not invent a hook for it.
+What settings may **write** and **read**. Settings never sits in a chat
+turn. Settings does not open the live database and does not sit in a
+turn. If a field is not on this page, do not invent a hook for it.
 
 Pictures: [architecture.md](architecture.md). Who may edit: [access.md](access.md).
+
+A native agent (`runtime: native`) keeps persona, `SELF.md`, and the
+brain in the Agent DO's SQLite. Settings edits persona and `SELF.md`
+through `GET` / `PUT` / `DELETE /api/agents/:slug/persona` and
+`GET` / `PUT /api/agents/:slug/self`, and the runtime through the
+dashboard radios (`PATCH` config, `container` or `native`). The brain
+emits `status`, `perf`, and `log` frames; the DO folds them the same
+way it folds a crane frame (`lib/agents/status.ts`). `status` on this
+path is `published` and `skipped` (`name`, `reason`). It does not emit
+`snapshot`.
+
+The rest of this page is the container harness, still the contract for
+`runtime: container`.
 
 ---
 
 ## Speed
 
-`status` is a frame on the socket the harness already opened. It carries
-the same JSON `gantry status` prints. Settings does not exec into the
-container. No scrape, no port.
+On a container agent, `status` is a frame on the socket the harness
+already opened. It carries the same JSON `gantry status` prints.
+Settings does not exec into the container. No scrape, no port.
 
 The binary's `gantry status` / `gantry doctor` (read-only SQLite, `stat`
 the persona files, parse `mcp.toml`, read `doctor.json`, never dial MCP,
@@ -30,8 +43,23 @@ container. `ok: false` with `reason: mcp_all_skipped` is health, not a crash.
 
 ## What settings may write
 
-The Agent DO is the disk. Settings edits it; the harness reads it at
-boot. [architecture.md](architecture.md).
+The Agent DO is the disk. On `container`, settings edits it and the
+harness reads it at boot. On `native`, the brain reads the same DO.
+[architecture.md](architecture.md).
+
+Native writes:
+
+| What | Where | Who |
+| --- | --- | --- |
+| `runtime` | `config.runtime` | admin / operator, dashboard radios |
+| `PERSONA.md` | `persona_file` | admin / operator, persona fold. First open copies `config.persona` once if the table is empty |
+| `SELF.md` | `selfnote` | the agent, and the operator on the self fold |
+| `config.env` | DO config | admin / operator. A change drops the memoised brain and opens a new one |
+| OAuth tokens | `oauth_token`, AES-256-GCM | the plugin, via `authFinish`. Key is `snapshot.key` |
+
+`config.mcp` is still stored. The container harness treats it as the
+grant list. The native registry loads all twelve plugins and does not
+read it.
 
 | On the DO / in the container | Env the process reads | Who writes | Notes |
 | --- | --- | --- | --- |

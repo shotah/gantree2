@@ -16,6 +16,8 @@ vi.mock("@/lib/door/runtime", () => ({
 import { GET as listAgents, POST as createAgent } from "@/app/api/agents/route";
 import { DELETE as removeAgent, GET as readAgent } from "@/app/api/agents/[slug]/route";
 import { GET as readConfig } from "@/app/api/agents/[slug]/config/route";
+import { GET as readSelf, PUT as writeSelf } from "@/app/api/agents/[slug]/self/route";
+import { DELETE as removePersona, GET as readPersona, PUT as writePersona } from "@/app/api/agents/[slug]/persona/route";
 import { GET as readStatus } from "@/app/api/agents/[slug]/status/route";
 import { GET as readLog } from "@/app/api/agents/[slug]/log/route";
 import { GET as readUsers } from "@/app/api/agents/[slug]/users/route";
@@ -94,6 +96,11 @@ describe("agent routes", () => {
     expect((await listAgents(admin("/api/agents"))).status).toBe(200);
     expect((await readAgent(admin("/api/agents/kit"), slug)).status).toBe(200);
     expect((await readConfig(admin("/api/agents/kit/config"), slug)).status).toBe(200);
+    expect((await readSelf(admin("/api/agents/kit/self"), slug)).status).toBe(200);
+    expect((await writeSelf(admin("/api/agents/kit/self", "PUT", JSON.stringify({ text: "- dry" })), slug)).status).toBe(200);
+    expect((await readPersona(admin("/api/agents/kit/persona"), slug)).status).toBe(200);
+    expect((await writePersona(admin("/api/agents/kit/persona", "PUT", JSON.stringify({ name: "PERSONA.md", text: "Be brief." })), slug)).status).toBe(200);
+    expect((await removePersona(admin("/api/agents/kit/persona", "DELETE", JSON.stringify({ name: "PERSONA.md" })), slug)).status).toBe(200);
     expect((await readStatus(admin("/api/agents/kit/status"), slug)).status).toBe(200);
     expect((await readLog(admin("/api/agents/kit/log"), slug)).status).toBe(200);
     expect((await readUsers(admin("/api/agents/kit/users"), slug)).status).toBe(200);

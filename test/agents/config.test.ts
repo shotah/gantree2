@@ -21,20 +21,20 @@ describe("config", () => {
       updatedAt: 4,
     });
     const view = configView(parseConfig({ env: { B: "2", A: "1" }, mcp: "", persona: "", updatedAt: null }), null);
-    expect(view).toEqual({ envKeys: ["A", "B"], house: [], mcp: "", persona: "", updatedAt: null, recreate: false });
+    expect(view).toEqual({ envKeys: ["A", "B"], house: [], mcp: "", persona: "", runtime: "container", updatedAt: null, recreate: false });
     expect(JSON.stringify(view)).not.toContain("sekrit");
     expect(configView(emptyConfig(), null, ["LLM_MODEL"]).house).toEqual(["LLM_MODEL"]);
   });
 
   it("patches env with null deletes, leaves omitted fields, and bumps updatedAt only on change", () => {
-    const start = { env: { A: "1", B: "2" }, mcp: "old", persona: "p", updatedAt: 1 };
+    const start = { env: { A: "1", B: "2" }, mcp: "old", persona: "p", runtime: "container" as const, updatedAt: 1 };
     const same = applyConfigPatch(start, { env: { A: "1" }, mcp: "old" }, 9);
     expect(same).toEqual({ ok: true, changed: false, config: start });
     const next = applyConfigPatch(start, { env: { B: null, C: "3" }, persona: "next" }, 9);
     expect(next).toEqual({
       ok: true,
       changed: true,
-      config: { env: { A: "1", C: "3" }, mcp: "old", persona: "next", updatedAt: 9 },
+      config: { env: { A: "1", C: "3" }, mcp: "old", persona: "next", runtime: "container", updatedAt: 9 },
     });
     expect(start.env).toEqual({ A: "1", B: "2" });
   });
@@ -51,6 +51,8 @@ describe("config", () => {
       { env: { A: "line\n" } },
       { mcp: 1 },
       { persona: 1 },
+      { runtime: "wasm" },
+      { runtime: null },
     ];
     for (const patch of bad) {
       expect(applyConfigPatch(start, patch, 1)).toEqual({ ok: false, error: "bad_config" });
@@ -74,9 +76,29 @@ describe("config", () => {
     expect(configView({ ...config, env: { A: "2" } }, started).recreate).toBe(true);
   });
 
+  it("toggles runtime and leaves the container as the default", () => {
+    const start = emptyConfig();
+    expect(start.runtime).toBe("container");
+    expect(parseConfig({ mcp: "x" }).runtime).toBe("container");
+    const same = applyConfigPatch(start, { runtime: "container" }, 4);
+    expect(same).toEqual({ ok: true, changed: false, config: start });
+    const next = applyConfigPatch(start, { runtime: "native" }, 4);
+    expect(next).toEqual({
+      ok: true,
+      changed: true,
+      config: { env: {}, mcp: "", persona: "", runtime: "native", updatedAt: 4 },
+    });
+    if (!next.ok) {
+      return;
+    }
+    expect(configView(next.config, null).runtime).toBe("native");
+    const back = applyConfigPatch(next.config, { runtime: "container" }, 8);
+    expect(back).toMatchObject({ ok: true, changed: true, config: { runtime: "container", updatedAt: 8 } });
+  });
+
   it("builds a config frame and drops empty snapshot urls", () => {
     const frame = JSON.parse(configFrame(
-      { env: { LLM_API_KEY: "sekrit" }, mcp: "", persona: "be brief", updatedAt: 1 },
+      { env: { LLM_API_KEY: "sekrit" }, mcp: "", persona: "be brief", runtime: "container", updatedAt: 1 },
       { restore: { gantry_db: "https://r2.example/db", self_md: "", tokens_tar: "" }, put: { gantry_db: "", self_md: "", tokens_tar: "" } },
     )) as { kind: string; env: { LLM_API_KEY: string }; restore: { gantry_db?: string; self_md?: string; tokens_tar?: string }; put: Record<string, string> };
     expect(frame.kind).toBe("config");
@@ -88,7 +110,7 @@ describe("config", () => {
 
   it("lays the house floor under the agent env; the agent's own key wins", () => {
     const frame = JSON.parse(configFrame(
-      { env: { LLM_MODEL: "mine" }, mcp: "", persona: "", updatedAt: 1 },
+      { env: { LLM_MODEL: "mine" }, mcp: "", persona: "", runtime: "native", updatedAt: 1 },
       { restore: { gantry_db: "", self_md: "", tokens_tar: "" }, put: { gantry_db: "", self_md: "", tokens_tar: "" } },
       { LLM_MODEL: "house", LLM_API_KEY: "house-key" },
     )) as { env: Record<string, string> };
@@ -97,7 +119,7 @@ describe("config", () => {
 
   it("sends the DO snapshot key and drops an empty token url", () => {
     const frame = JSON.parse(configFrame(
-      { env: { SNAPSHOT_KEY: "user-key", LLM_API_KEY: "sekrit" }, mcp: "", persona: "", updatedAt: 1 },
+      { env: { SNAPSHOT_KEY: "user-key", LLM_API_KEY: "sekrit" }, mcp: "", persona: "", runtime: "container", updatedAt: 1 },
       { restore: { gantry_db: "", self_md: "", tokens_tar: "https://r2.example/tokens" }, put: { gantry_db: "", self_md: "", tokens_tar: "" } },
       { SNAPSHOT_KEY: "house-key" },
       "minted-key",

@@ -74,6 +74,13 @@ Nothing here is a plan; the plan is [proposal.md](proposal.md).
       rasterises everything else. Palette from `lib/theme/catalog.ts`.
       Monochrome variant (`currentColor`) for favicons and the Paper
       theme. Wordmark `gantree` lowercase beside it on the banner only.
+- [x] **D — Greenfield: no legacy container (2026-10-11).** The
+      native brain is the only runtime. There is no cutover, no
+      freeze, and no archive. `harness/`, the Harness DO, the
+      Containers bindings, the harness workflows, the R2 snapshot
+      set, the crane socket, and the `runtime` flag are being
+      deleted. Nothing was deployed, so there is no `gantry.db` to
+      import.
 
 ## 1. Run it locally
 
@@ -540,3 +547,87 @@ shipping-yard art is gone, not restyled.
       badge row, the pitch ("Why this one"), shot tables, a Mermaid
       flow, run/deploy table, the eleven tools, reliability, docs,
       layout, lineage.
+
+## 10. Workers-native brain
+
+Decision and the package map: [brain.md](brain.md). Landed
+2026-10-11. What is still open is in [todo.md](todo.md).
+
+- [x] **`brain/core` (2026-10-11).** The contract: `sql`, `clock`,
+      `log`, `provider`, `tools`, `wire`, `brain`. `index.ts`
+      re-exports them. Tests pass a `node:sqlite` database into
+      `nodeSql`. The package does not import `node:sqlite`.
+- [x] **`brain/provider` (2026-10-11).** OpenAI-compatible chat
+      completions on the `openai` package at major 7 (`^7.32.0`),
+      against `LLM_BASE_URL`, `LLM_API_KEY`, and `LLM_MODEL`.
+- [x] **Session, here, self-note, persona, slash (2026-10-11).**
+      `brain/session`, `brain/here`, `brain/selfnote`,
+      `brain/persona`, `brain/slash`. Slash is the command catalog
+      the `cmds` frame publishes.
+- [x] **`brain/memory` (2026-10-11).** SQLite plus FTS5
+      (`memory_fts`, external content). Recall orders by FTS5 rank
+      and recency.
+- [x] **`brain/aims` (2026-10-11).** Board, store, tools, rubric.
+- [x] **`brain/cron` and `brain/examples` (2026-10-11).** Schedule
+      tables, due calculation, daily planner, examples seeds.
+      `nextDue` / `fireDue` are the alarm shape. The loop that runs
+      the job is `brain/agent`.
+- [x] **`brain/watch` and `brain/websearch` (2026-10-11).** Watch
+      rows and the `web_search` builtin.
+- [x] **`brain/tools` (2026-10-11).** Registry, manifest comparison,
+      `EnableStore` (`mcp_enable`; brief idle 6h, short 27h;
+      unprefixed builtins do not idle-drop), and `AesTokenStore`
+      (AES-256-GCM in SQLite; the key is the Agent DO's
+      `snapshot.key`).
+- [x] **Twelve in-process plugins (2026-10-11).** `chat`, `feeds`,
+      `math`, `twitter`, `image`, `strava`, `maps`, `flights`,
+      `rentals`, `google-health`, `google`, `garmin`. Google preset
+      `all` is 88 tools; unset / `everyday` is 38. Garmin publishes
+      `core` (10) and `extended` (19). `GARMIN_TOOL_TIER=complete`
+      publishes that same extended set. No stdio and no MCP
+      transport.
+- [x] **Plugins are plural (2026-10-11).** Rule
+      `.cursor/rules/brain-plugins-plural.mdc`. Checker
+      `test/brain/plugins/plural.test.ts` walks every folder under
+      `brain/plugins`, plus `web_search`.
+- [x] **`brain/agent` (2026-10-11).** `createBrain`. One turn
+      refreshes tools, calls the provider, and runs a tool batch
+      with `Promise.all`. `/help`, reactions, `/cancel`, and bound
+      collapse of old tool results (`collapseOldToolResults`).
+- [x] **`brain/room` (2026-10-11).** The Agent DO adapter. Config
+      `runtime: "container" | "native"`. Dashboard Runtime radios.
+      `GET /api/auth/catch` (`brain/room/catch`). A native agent
+      has no harness process. Phones still see the same frames.
+- [x] **SELF.md in SQL (2026-10-11).** The self-note row.
+      `X-Chat-Op: self_get` / `self_put` on the Agent DO. `GET` and
+      `PUT /api/agents/:slug/self`. The Self notes fold edits that
+      row when runtime is `native`. A container agent keeps
+      SELF.md on the container disk.
+- [x] **Persona in SQL (2026-10-11).** `persona_file`.
+      `importLegacy` copies `config.persona` into `PERSONA.md`
+      once; after that the row is the text. `GET`, `PUT`, and
+      `DELETE /api/agents/:slug/persona`. The Persona fold reads
+      the SQL row when runtime is `native`, and the config string
+      when it is `container`.
+- [x] **Vitest (2026-10-11).** Include is `test/**/*.test.ts` and
+      `test/**/*.test.tsx`, so `test/brain` is in `npm test` and
+      `npm run test:coverage`. The 11:00 run was green: 274 files,
+      1949 tests. This note did not re-run the suite. A count of
+      `test/**/*.test.ts(x)` while the note was written was already
+      past 274.
+- [x] **Live eval on Vitest (2026-10-11).** `brain/eval` holds the
+      30 fixtures and `fixtures/mcp.toml`. The runner's unit tests
+      are 27 (`test/brain/eval`, the live file aside).
+      `vitest.eval.config.ts`, `scripts/eval.mjs`, and `npm run
+      eval` load `.dev.vars` and run that config.
+      `.github/workflows/eval.yml` is Node: the same `runs` and
+      `only` inputs, the same skip notice when `LLM_*` secrets are
+      absent, then `npm ci` and `npm run eval`. `release.yml` still
+      calls it. A failed eval still blocks the tag. A skipped one
+      does not.
+- [x] **First live tally (2026-10-11).** `EVAL_N=1`: 28 of 30
+      fixtures passed. Failures: `react_to_thanks` (a bare thumbs-up
+      in the text, no reaction frame) and `planner_weight_on_pace` (the reply
+      was not `[silent]`). Tally: 31 runs, mean 2.29 rounds, mean
+      17.8k prompt / 142 completion tokens per turn, 4 over the
+      round budget.

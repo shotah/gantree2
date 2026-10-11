@@ -9,10 +9,76 @@ like you would a friend’s inside jokes. Writing a tight `PERSONA.md` (no MCP
 catalog, north-star vs tracker): [persona.md](persona.md). Horizon split:
 [persona.md](persona.md#where-the-horizon-lives).
 
-The files below live on the container disk. The durable copy of
-`gantry.db` and `SELF.md` is the R2 snapshot.
-[architecture.md](architecture.md). Settings does not open the live
-files, and there is no sock to exec through.
+On a native agent, persona and `SELF.md` are rows in the Agent DO.
+Settings edits them on the folds. There is no sock to exec through.
+The container-disk notes are under
+[Legacy: container runtime](#legacy-container-runtime).
+
+## Alarm not firing
+
+A native clock is the Agent DO alarm. `nextAlarm()` is null when
+nothing is due, and then no alarm is armed. `alarm()` returns
+immediately when `runtime` is not `native`, so a container agent's
+jobs do not run from this alarm. Flipping the radio back to
+`container` deletes the alarm.
+
+If a native agent is quiet past a job you scheduled: open the dashboard
+and confirm the runtime is `native`, then send any message so the brain
+opens and arms the next wake. `MEMORY_CONSOLIDATE_MINUTES=0` skips the
+consolidation pass only. Cron and watches still use the same alarm.
+
+## `mcp_enable` — the tool is not in this turn
+
+Prefixes stay off until the model calls `mcp_enable`, then the schema
+is on the next model call in that turn. A call before that is refused
+with `not enabled`. Brief holds drop after 6 hours idle, short holds
+after 27. Unprefixed builtins (`memory_*`, `cron_*`, `self_note`,
+`web_search`, `mcp_enable`) never drop.
+
+`DYNAMIC_TOOLS=false` publishes the full catalog and there is no
+`mcp_enable` step. `MCP_ENABLE_FORCE` is a comma-separated list of
+prefixes that stay on (`google__calendar,garmin`). `/tools` shows what
+this chat can call right now.
+
+## Plugin skipped (`no_key`, `no_oauth`)
+
+The status fold lists `published` and `skipped`. `no_key` means a
+required env value is missing (`GOOGLE_MAPS_API_KEY`,
+`X_BEARER_TOKEN`, `FEEDS_USER_AGENT`, Garmin email and password, the
+Google or Strava client id and secret). `no_oauth` means the key is
+there and the token is not: `/auth <plugin>`, then the catch or a
+pasted code ([auth.md](auth.md)). `disabled` and `error` are the other
+skip reasons.
+
+`GARMIN_TOOL_TIER` (`core`, `extended`, `complete`) and
+`GOOGLE_TOOL_PRESET` (`lean`, `everyday`, `all`) change which tools
+those plugins publish. They do not by themselves mark the plugin
+skipped. The native registry does not read the Tools-grid `config.mcp`
+grant. Unchecking a server there hides it from a container agent, not
+from a native one.
+
+## Persona imported once
+
+The first time a native brain opens its persona store, `config.persona`
+is copied into `PERSONA.md` if `persona_file` has no rows and the
+string is not blank. That copy does not run again once any row
+exists. Saving the persona fold writes the row, and so does a `PATCH`
+of `config.persona` on a native agent. Edit the fold, or
+`PUT /api/agents/:slug/persona`
+with `{ "name": "PERSONA.md", "text": "…" }`. `DELETE` removes one
+file. A blank config does not block a later seed: import skips blank
+text without writing a row.
+
+## Runtime 409s
+
+| Call | Agent | Status |
+| --- | --- | --- |
+| `GET` / `PUT` / `DELETE /api/agents/:slug/persona` | `container` | 409 `container runtime` |
+| `GET` / `PUT /api/agents/:slug/self` | `container` | 409 `container runtime` |
+| `POST` the DO auth finish (`/api/auth/catch`) | `container` | the DO returns 409 `native runtime`; the catch route shows `could not connect` |
+| `POST /api/agents/:slug/container` start, stop, or recreate | `native` | body `lastError: "native runtime"` (the status fold hides those buttons) |
+
+Flip the runtime radio to match the call. Default is `container`.
 
 ## `SELF.md` — personality drift
 
@@ -51,9 +117,14 @@ Open `SELF.md` (or wipe it) when:
 
 ### How to fix
 
-`SELF.md` sits beside `PERSONA.md` (`PERSONA_DIR`) on the container disk.
-The copy you can keep is the R2 snapshot (`backups/<slug>/<stamp>.tar`),
-same stamp as `gantry.db`. Unpack it, prune, restore that stamp, recreate.
+On a native agent, prune the self fold, or `PUT /api/agents/:slug/self`
+with the shorter text. The next turn reads that row. There is no
+snapshot to restore.
+
+On a container agent, `SELF.md` sits beside `PERSONA.md` (`PERSONA_DIR`)
+on the container disk. The copy you can keep is the R2 object
+`backups/<slug>/<stamp>/self_md` (and `gantry_db` beside it). Unpack
+it, prune, restore that stamp, recreate.
 
 `SELF_NOTES_ENABLED=false` in `config.env` disables `self_note` and
 distill. Env change recreates. A persona dir the process cannot write
@@ -87,6 +158,13 @@ treat `SELF.md` like a log you review, not a sacred file you never open.
 
 The door's threats are in [access.md](access.md#threats). The harness
 threat-model write-up is not carried.
+
+## Legacy: container runtime
+
+The files below live on the container disk. The durable copy of
+`gantry.db` and `SELF.md` is the R2 snapshot.
+[architecture.md](architecture.md#13-legacy-container-runtime). Settings
+does not open the live files, and there is no sock to exec through.
 
 ## Self-notes silently off
 

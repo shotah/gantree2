@@ -1,13 +1,19 @@
 # Custom MCP servers
 
-The Tools grid on `/agents/<slug>` is the **catalog**: every MCP server
-baked into the harness image. Granting one to an agent is a `[[server]]`
-in that agent's `config.mcp` (TOML, on the Agent DO). Omit it and it
-does not exist for that agent.
+On `runtime: native` a plugin is a module under `brain/plugins/<name>/`
+that exports a `Plugin`: `name`, `ready`, `tools`, and `call` on each
+tool. It is compiled into the Worker. There is no process to spawn and
+no image to rebuild. Tool names follow [mcp-naming.md](mcp-naming.md),
+and the host prefixes `{plugin}__{tool}`. Plural inputs and list
+outputs are `.cursor/rules/brain-plugins-plural.mdc`. `ready()` returns
+`no_key`, `no_oauth`, `disabled`, or `error` when the plugin cannot
+serve; otherwise `null`. The native registry loads every module in
+`brain/plugins/index.ts` and does not read `config.mcp`.
 
-A custom server is still first-class. It is a row in `harness/mcp.lock`
-and an image rebuild — not a download at agent start. There is no
-`/mcp/add?url=` route and no `tools-fetch` on a running agent.
+There is still no `/mcp/add?url=` route and no download at agent start.
+
+The rest of this page is the container image: a row in `harness/mcp.lock`
+and a rebuild. That is `runtime: container`, kept until cutover.
 
 ---
 
@@ -65,7 +71,7 @@ in the agent's `config.env` — never `/auth rentals <apikey>` in chat.
 
 ---
 
-## B. Bake it in
+## B. Bake it in (legacy container)
 
 Add a row to `harness/mcp.lock`:
 

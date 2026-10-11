@@ -20,7 +20,7 @@ export type Decision
     | { kind: "login"; next: string }
     | { kind: "unauthorized"; status: 401 | 503; reason: string };
 
-const PUBLIC_EXACT = new Set(["/login", "/api/auth/google", "/api/auth/callback/google", "/api/auth/config", "/api/auth/nonce", "/api/auth/token", "/manifest.webmanifest", "/sw.js", "/icon.svg", "/favicon.ico", "/robots.txt"]);
+const PUBLIC_EXACT = new Set(["/login", "/api/auth/google", "/api/auth/callback/google", "/api/auth/catch", "/api/auth/config", "/api/auth/nonce", "/api/auth/token", "/manifest.webmanifest", "/sw.js", "/icon.svg", "/favicon.ico", "/robots.txt"]);
 const PUBLIC_PREFIX = ["/_vinext/", "/.well-known/", "/_next/", "/assets/"];
 
 /**

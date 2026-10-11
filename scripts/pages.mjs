@@ -90,7 +90,7 @@ export function rewriteHref(href) {
     return href;
   }
   if (path.startsWith("../")) {
-    // Source files in this repo (lib/, harness/, .github/): point at GitHub.
+    // Source files outside docs (lib/, .github/): point at GitHub.
     return `${REPO}/blob/main/${path.slice(3)}${hash}`;
   }
   return href;

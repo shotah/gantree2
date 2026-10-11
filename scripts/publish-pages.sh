@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copy files into the gh-pages branch and push. Additive: only the paths you
-# pass are replaced, so the app badge, the harness badge, and the docs site can
+# pass are replaced, so the app badge and the docs site can
 # each publish from their own workflow without erasing the others.
 #
 #   scripts/publish-pages.sh "<msg>" src1:dest1 [src2:dest2 ...]

@@ -1,8 +1,8 @@
 name: pages
 
 # Builds the static site (home, docs, oauth-catch, privacy) and publishes it
-# to gh-pages beside the coverage badges. Additive: only the site's own paths
-# are replaced, so ci.yml / harness.yml badges survive and vice versa.
+# to gh-pages beside the coverage badge. Additive: only the site's own paths
+# are replaced, so the ci.yml badge survives and vice versa.
 #
 # Pages source: branch gh-pages / (root). Enable once in Settings → Pages,
 # then "Enforce HTTPS" — the oauth-catch page needs a secure context to copy.

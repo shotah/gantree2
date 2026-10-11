@@ -10,7 +10,6 @@ import type { AgentEnv } from "@/lib/chat/env";
 
 export { Agent } from "@/edge/agent.do";
 export { Settings } from "@/edge/settings.do";
-export { Harness } from "@/edge/harness.do";
 
 const app = vinext as unknown as ExportedHandler<AgentEnv>;
 

@@ -2,9 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { openRegistry, type AgentCreateBody } from "@/lib/agents/registry";
 import {
   deleteAgent,
+  deleteAgentPersona,
   getAgent,
   getAgentBearer,
   getAgentConfig,
+  getAgentPersona,
+  getAgentSelf,
   getAgentLog,
   getAgents,
   getAgentStatus,
@@ -12,6 +15,9 @@ import {
   getSamples,
   handleSnapshot,
   patchAgentConfig,
+  putAgentPersona,
+  putAgentSelf,
+  startAgentAuth,
   postAgent,
   putAgentUsers,
   settingsApi,
@@ -272,6 +278,75 @@ describe("agents http", () => {
     expect(await users.json()).toEqual({ users: [{ sub: ADA }] });
     expect((await getAgentUsers(asRole("admin", "/api/agents/kit/users"), env, "kit")).status).toBe(200);
     expect((await getAgentUsers(asRole("operator", "/api/agents/ada/users", ["kit"]), env, "ada")).status).toBe(403);
+  });
+
+  it("gates self notes the way config is gated", async () => {
+    const { env, agents, calls } = world();
+    await agents.create({ slug: "kit", name: "Kit" }, ADA);
+    expect((await getAgentSelf(new Request("https://g.test/api/agents/kit/self"), env, "kit")).status).toBe(401);
+    expect((await getAgentSelf(asRole("member", "/api/agents/kit/self"), env, "kit")).status).toBe(403);
+    expect((await getAgentSelf(asRole("operator", "/api/agents/ada/self", ["kit"]), env, "ada")).status).toBe(403);
+    expect((await getAgentSelf(asRole("admin", "/api/agents/nope/self"), env, "Bad_Slug")).status).toBe(400);
+    expect((await getAgentSelf(asRole("operator", "/api/agents/kit/self", ["kit"]), env, "kit")).status).toBe(200);
+    expect(calls.at(-1)).toMatchObject({ method: "GET", op: "self_get" });
+    const put = await putAgentSelf(
+      asRole("admin", "/api/agents/kit/self", [], "PUT", JSON.stringify({ text: "- dry" })),
+      env,
+      "kit",
+    );
+    expect(put.status).toBe(200);
+    expect(calls.at(-1)).toMatchObject({ method: "PUT", op: "self_put", body: JSON.stringify({ text: "- dry" }) });
+  });
+
+  it("gates auth start the way config is gated and skips garmin", async () => {
+    const { env, agents, calls } = world();
+    await agents.create({ slug: "kit", name: "Kit" }, ADA);
+    const post = (role: "admin" | "operator" | "member", slug: string, agentsFor: string[], body: string) =>
+      startAgentAuth(asRole(role, `/api/agents/${slug}/auth/start`, agentsFor, "POST", body), env, slug);
+    expect((await startAgentAuth(new Request("https://g.test/api/agents/kit/auth/start", { method: "POST", body: "{}" }), env, "kit")).status).toBe(401);
+    expect((await post("member", "kit", [], JSON.stringify({ plugin: "google" }))).status).toBe(403);
+    expect((await post("operator", "ada", ["kit"], JSON.stringify({ plugin: "google" }))).status).toBe(403);
+    expect((await startAgentAuth(asRole("admin", "/api/agents/nope/auth/start", [], "POST", JSON.stringify({ plugin: "google" })), env, "Bad_Slug")).status).toBe(400);
+    const before = calls.length;
+    expect((await post("admin", "kit", [], JSON.stringify({ plugin: "garmin" }))).status).toBe(400);
+    expect((await post("admin", "kit", [], "not-json")).status).toBe(400);
+    expect(calls.length).toBe(before);
+    const ok = await post("operator", "kit", ["kit"], JSON.stringify({ plugin: "google" }));
+    expect(ok.status).toBe(200);
+    expect(calls.at(-1)).toMatchObject({
+      method: "POST",
+      op: "auth_start",
+      body: JSON.stringify({ plugin: "google", origin: "https://g.test", slug: "kit" }),
+    });
+  });
+
+  it("gates persona files the way config is gated", async () => {
+    const { env, agents, calls } = world();
+    await agents.create({ slug: "kit", name: "Kit" }, ADA);
+    expect((await getAgentPersona(new Request("https://g.test/api/agents/kit/persona"), env, "kit")).status).toBe(401);
+    expect((await getAgentPersona(asRole("member", "/api/agents/kit/persona"), env, "kit")).status).toBe(403);
+    expect((await getAgentPersona(asRole("operator", "/api/agents/ada/persona", ["kit"]), env, "ada")).status).toBe(403);
+    expect((await getAgentPersona(asRole("admin", "/api/agents/nope/persona"), env, "Bad_Slug")).status).toBe(400);
+    expect((await getAgentPersona(asRole("operator", "/api/agents/kit/persona", ["kit"]), env, "kit")).status).toBe(200);
+    expect(calls.at(-1)).toMatchObject({ method: "GET", op: "persona_get" });
+    const put = await putAgentPersona(
+      asRole("admin", "/api/agents/kit/persona", [], "PUT", JSON.stringify({ name: "PERSONA.md", text: "Be brief." })),
+      env,
+      "kit",
+    );
+    expect(put.status).toBe(200);
+    expect(calls.at(-1)).toMatchObject({
+      method: "PUT",
+      op: "persona_put",
+      body: JSON.stringify({ name: "PERSONA.md", text: "Be brief." }),
+    });
+    const removed = await deleteAgentPersona(
+      asRole("admin", "/api/agents/kit/persona", [], "DELETE", JSON.stringify({ name: "SOUL.md" })),
+      env,
+      "kit",
+    );
+    expect(removed.status).toBe(200);
+    expect(calls.at(-1)).toMatchObject({ method: "DELETE", op: "persona_delete", body: JSON.stringify({ name: "SOUL.md" }) });
   });
 
   it("returns 503 when settings or the agent stub fails", async () => {

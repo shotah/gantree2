@@ -9,11 +9,15 @@ import {
   agentsUrl,
   codeOf,
   configUrl,
+  selfUrl,
+  personaUrl,
   containerUrl,
   createAgent,
   deleteAgent,
   getAgent,
   getConfig,
+  getSelf,
+  getPersona,
   getContainer,
   getLog,
   getMe,
@@ -89,6 +93,8 @@ describe("agentsHttp", () => {
     expect(agentUrl("kit")).toBe("/api/agents/kit");
     expect(agentUrl("a/b")).toBe("/api/agents/a%2Fb");
     expect(configUrl("kit")).toBe("/api/agents/kit/config");
+    expect(selfUrl("kit")).toBe("/api/agents/kit/self");
+    expect(personaUrl("kit")).toBe("/api/agents/kit/persona");
     expect(statusUrl("kit")).toBe("/api/agents/kit/status");
     expect(logUrl("kit")).toBe("/api/agents/kit/log");
     expect(logUrl("kit", 0)).toBe("/api/agents/kit/log?after=0");
@@ -254,6 +260,8 @@ describe("agentsHttp", () => {
     await expect(listAgents(missing)).rejects.toMatchObject({ name: "AgentsError", code: "bad_body", status: 200 });
     await expect(getAgent("kit", missing)).rejects.toMatchObject({ code: "bad_body" });
     await expect(getConfig("kit", missing)).rejects.toMatchObject({ code: "bad_body" });
+    await expect(getSelf("kit", missing)).rejects.toMatchObject({ code: "bad_body" });
+    await expect(getPersona("kit", missing)).rejects.toMatchObject({ code: "bad_body" });
     await expect(getStatus("kit", missing)).rejects.toMatchObject({ code: "bad_body" });
     await expect(getLog("kit", 1, missing)).rejects.toMatchObject({ code: "bad_body" });
     await expect(getRoomUsers("kit", missing)).rejects.toMatchObject({ code: "bad_body" });

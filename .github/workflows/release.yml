@@ -7,8 +7,7 @@ name: release
 # eval.yml runs first via workflow_call. A failed eval blocks this
 # release. A skipped eval (missing LLM_* secrets) succeeds, so the
 # release still happens. Deploys are not here: deploy-cloudflare.yml
-# follows ci on main, and harness-image.yml publishes the container
-# image on its own.
+# follows ci on main.
 
 on:
   push:

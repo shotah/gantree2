@@ -3,10 +3,11 @@
  * middleware stamped on the request (`canRunAgent`: admin, or operator of
  * this slug). Logic stays here so the route file is a shell.
  */
+import { agentStub } from "@/lib/chat/location";
 import { principalFromHeaders } from "@/lib/door/gate";
 import { canRunAgent } from "@/lib/door/users";
 import { containerAct, containerInfo } from "./container";
-import { AGENT_SLUG, type AgentsEnv, type ContainerAction } from "./types";
+import { AGENT_SLUG, type AgentsEnv, type ContainerAction, type ContainerInfo } from "./types";
 
 function json(body: unknown, status = 200): Response {
   return Response.json(body, { status, headers: { "cache-control": "no-store" } });
@@ -50,8 +51,35 @@ export async function postContainer(request: Request, env: AgentsEnv, slug: stri
   if (action instanceof Response) {
     return action;
   }
+  if (await nativeRuntime(env, name)) {
+    return json(nativeRefusal());
+  }
   const origin = new URL(request.url).origin;
   return json(await containerAct(env, name, action, origin));
+}
+
+/** The harness is not this agent's runtime. Callers of `containerAct` stop here. */
+function nativeRefusal(): ContainerInfo {
+  return { state: "failed", since: Date.now(), lastError: "native runtime", image: null };
+}
+
+async function nativeRuntime(env: AgentsEnv, slug: string): Promise<boolean> {
+  const agent = agentStub(env, slug);
+  if (!agent) {
+    return false;
+  }
+  try {
+    const res = await agent.fetch(new Request("https://agent/config", {
+      headers: { "X-Chat-Op": "config" },
+    }));
+    if (!res.ok) {
+      return false;
+    }
+    const body: unknown = await res.json();
+    return Boolean(body && typeof body === "object" && (body as { runtime?: unknown }).runtime === "native");
+  } catch {
+    return false;
+  }
 }
 
 async function readAction(request: Request): Promise<ContainerAction | Response> {

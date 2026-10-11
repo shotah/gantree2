@@ -37,11 +37,19 @@ export class AgentsError extends Error {
 const COPY: Record<string, string> = {
   forbidden: "You do not have access to that.",
   not_found: "That agent is not here.",
+  "container runtime": "This agent runs in a container. That file lives on the container.",
+  bad_persona: "Use a markdown file name like PERSONA.md.",
+  too_long: "That persona is over the size limit.",
+  empty: "SELF.md cannot be empty.",
+  bad_self: "That self note was not valid.",
   bad_slug: "Use a letter, then lowercase letters, digits, or hyphens.",
   bad_json: "That request was not valid JSON.",
   bad_body: "The agents service sent an unexpected reply.",
   request_failed: "Could not reach agents. Try again.",
   unauthorized: "Sign in again.",
+  bad_plugin: "That tool does not connect from here.",
+  no_origin: "This agent has no public address yet.",
+  no_login: "That tool has no connect link.",
 };
 
 export function agentsMessage(code: string): string {
@@ -65,6 +73,14 @@ export function agentUrl(slug: string): string {
 
 export function configUrl(slug: string): string {
   return `${agentUrl(slug)}/config`;
+}
+
+export function selfUrl(slug: string): string {
+  return `${agentUrl(slug)}/self`;
+}
+
+export function personaUrl(slug: string): string {
+  return `${agentUrl(slug)}/persona`;
 }
 
 export function statusUrl(slug: string): string {
@@ -255,6 +271,63 @@ export async function getConfig(slug: string, client: ApiClient = api): Promise<
 
 export async function patchConfig(slug: string, patch: AgentConfigPatch, client: ApiClient = api): Promise<AgentConfigView> {
   return asConfig(await send(client, configUrl(slug), jsonInit("PATCH", patch)));
+}
+
+export type SelfNote = { text: string; maxChars: number };
+
+function asSelf(body: unknown): SelfNote {
+  if (!isRecord(body) || typeof body.text !== "string" || typeof body.maxChars !== "number" || !Number.isFinite(body.maxChars)) {
+    bad();
+  }
+  return { text: body.text, maxChars: body.maxChars };
+}
+
+export async function getSelf(slug: string, client: ApiClient = api): Promise<SelfNote> {
+  return asSelf(await send(client, selfUrl(slug), { method: "GET" }));
+}
+
+export async function putSelf(slug: string, text: string, client: ApiClient = api): Promise<SelfNote> {
+  return asSelf(await send(client, selfUrl(slug), jsonInit("PUT", { text })));
+}
+
+export async function startAuth(slug: string, plugin: string, client: ApiClient = api): Promise<{ url: string }> {
+  const body = await send(client, `${agentUrl(slug)}/auth/start`, jsonInit("POST", { plugin }));
+  if (!isRecord(body) || typeof body.url !== "string" || body.url.length === 0) {
+    bad();
+  }
+  return { url: body.url };
+}
+
+export type PersonaFile = { name: string; text: string; updatedAt: number };
+
+export type PersonaPage = { files: PersonaFile[]; maxChars: number };
+
+const PERSONA_FILE = "PERSONA.md";
+
+function asPersona(body: unknown): PersonaPage {
+  if (!isRecord(body) || !Array.isArray(body.files) || typeof body.maxChars !== "number" || !Number.isFinite(body.maxChars)) {
+    bad();
+  }
+  const files: PersonaFile[] = [];
+  for (const item of body.files) {
+    if (!isRecord(item) || typeof item.name !== "string" || typeof item.text !== "string" || typeof item.updatedAt !== "number") {
+      bad();
+    }
+    files.push({ name: item.name, text: item.text, updatedAt: item.updatedAt });
+  }
+  return { files, maxChars: body.maxChars };
+}
+
+export async function getPersona(slug: string, client: ApiClient = api): Promise<PersonaPage> {
+  return asPersona(await send(client, personaUrl(slug), { method: "GET" }));
+}
+
+export async function putPersona(slug: string, text: string, client: ApiClient = api): Promise<PersonaPage> {
+  return asPersona(await send(client, personaUrl(slug), jsonInit("PUT", { name: PERSONA_FILE, text })));
+}
+
+export async function deletePersona(slug: string, client: ApiClient = api): Promise<PersonaPage> {
+  return asPersona(await send(client, personaUrl(slug), jsonInit("DELETE", { name: PERSONA_FILE })));
 }
 
 export async function getStatus(slug: string, client: ApiClient = api): Promise<AgentStatus> {

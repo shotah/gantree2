@@ -18,6 +18,7 @@ describe("public paths", () => {
     expect(isPublicPath("/login")).toBe(true);
     expect(isPublicPath("/api/auth/google")).toBe(true);
     expect(isPublicPath("/api/auth/callback/google")).toBe(true);
+    expect(isPublicPath("/api/auth/catch")).toBe(true);
     expect(isPublicPath("/api/auth/config")).toBe(true);
     expect(isPublicPath("/api/auth/nonce")).toBe(true);
     expect(isPublicPath("/api/auth/token")).toBe(true);

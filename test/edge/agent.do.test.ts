@@ -1,12 +1,38 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { DatabaseSync } from "node:sqlite";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { MAX_CHARS } from "@/brain/persona";
+import { maxChars } from "@/brain/selfnote/stamp";
 import { CONFIG_STORE_KEY } from "@/lib/agents/config";
+import { openOAuthCatch, sessionKey } from "@/lib/door/session";
 import { mintSnapshotKey, SNAPSHOT_KEY_STORE_KEY, snapshotKeyOk, verifySnapshot } from "@/lib/agents/snapshot";
 import { HELD_DRAFT_TTL_MS } from "@/lib/chat/draft";
 import type { WireFrame } from "@/lib/chat/frame";
 import { QUEUE_STORE_PREFIX, type Queued } from "@/lib/chat/queue";
+import { asTranscript, transcriptStoreKey } from "@/lib/chat/transcript";
 import { socketTags } from "@/lib/chat/tags";
 import { PUSH_STORE_PREFIX } from "@/lib/chat/push/subscription";
 import { encodeBase64Url, generateVapidKeys } from "@/lib/chat/push/vapid";
+
+const roomMock = vi.hoisted(() => {
+  const brain = {
+    handleInbound: vi.fn(async (_frame: object, _emit: (frame: object) => void) => undefined),
+    alarm: vi.fn(async (_emit: (frame: object) => void) => null as number | null),
+    nextAlarm: vi.fn(() => null as number | null),
+    announce: vi.fn(async (_emit: (frame: object) => void) => undefined),
+    authStart: vi.fn(async (_plugin: string, _redirect: string, _state: string): Promise<{ url: string } | null> => null),
+    authFinish: vi.fn(async () => undefined),
+  };
+  return {
+    brain,
+    openRoomBrain: vi.fn(async () => brain),
+    dropRoomBrain: vi.fn(),
+  };
+});
+
+vi.mock("@/brain/room", () => ({
+  openRoomBrain: roomMock.openRoomBrain,
+  dropRoomBrain: roomMock.dropRoomBrain,
+}));
 
 vi.mock("cloudflare:workers", () => ({
   DurableObject: class {
@@ -78,6 +104,18 @@ class FakeStorage {
       }
     }
     return Promise.resolve(out);
+  }
+
+  alarmAt: number | null = null;
+
+  setAlarm(at: number): Promise<void> {
+    this.alarmAt = at;
+    return Promise.resolve();
+  }
+
+  deleteAlarm(): Promise<void> {
+    this.alarmAt = null;
+    return Promise.resolve();
   }
 
   queued(): Queued[] {
@@ -1176,5 +1214,424 @@ describe("Agent harness ops", () => {
     );
     const log = await box.fetch(new Request("https://agent/log", { headers: { "X-Chat-Op": "log" } }));
     expect((await log.json<{ lines: { message: string }[] }>()).lines[0]?.message).toBe("bin");
+  });
+});
+
+function withoutAt(frame: WireFrame): WireFrame {
+  const next = { ...frame };
+  delete next.at;
+  return next;
+}
+
+function nativeConfig() {
+  return { env: {}, mcp: "", persona: "", runtime: "native" as const, updatedAt: 1 };
+}
+
+describe("Agent native runtime", () => {
+  beforeEach(() => {
+    roomMock.openRoomBrain.mockReset();
+    roomMock.openRoomBrain.mockImplementation(async () => roomMock.brain);
+    roomMock.dropRoomBrain.mockReset();
+    roomMock.brain.handleInbound.mockReset();
+    roomMock.brain.alarm.mockReset();
+    roomMock.brain.alarm.mockResolvedValue(null);
+    roomMock.brain.nextAlarm.mockReset();
+    roomMock.brain.nextAlarm.mockReturnValue(null);
+    roomMock.brain.announce.mockReset();
+    roomMock.brain.announce.mockResolvedValue(undefined);
+    roomMock.brain.authStart.mockReset();
+    roomMock.brain.authFinish.mockReset();
+    roomMock.brain.authFinish.mockResolvedValue(undefined);
+  });
+
+  it("fans a native inbound the way a crane reply does, and does not queue it for the crane", async () => {
+    const craneRoom = room();
+    const cranePhone = craneRoom.phone("1182");
+    const craneSibling = craneRoom.phone("1182");
+    await craneRoom.say(cranePhone, { id: "m1", text: "are you there" });
+    await craneRoom.say(craneRoom.crane, { kind: "reply", user_id: "1182", id: "r1", text: "Looks like rain." });
+
+    roomMock.brain.announce.mockImplementation(async (emit) => {
+      emit({ kind: "status", published: ["math"], skipped: [{ name: "strava", reason: "no_key" }] });
+    });
+    roomMock.brain.handleInbound.mockImplementation(async (frame, emit) => {
+      expect(frame).toMatchObject({ kind: "inbound", user_id: "1182", text: "are you there", id: "m1" });
+      emit({ kind: "reply", user_id: "1182", id: "r1", text: "Looks like rain." });
+    });
+    roomMock.brain.nextAlarm.mockReturnValue(4_200_000_000_000);
+
+    const native = room();
+    await native.state.storage.put("slug", "kit");
+    await native.state.storage.put(CONFIG_STORE_KEY, nativeConfig());
+    native.crane.close();
+    const phone = native.phone("1182");
+    const sibling = native.phone("1182");
+    await native.say(phone, { id: "m1", text: "are you there" });
+
+    expect(phone.frames().map(withoutAt)).toEqual(cranePhone.frames().map(withoutAt));
+    expect(sibling.frames().map(withoutAt)).toEqual(craneSibling.frames().map(withoutAt));
+    expect(native.crane.sent).toEqual([]);
+    expect(native.state.storage.queued().filter((row) => row.to === "crane")).toEqual([]);
+
+    const phoneQueue = (state: typeof native.state) => state.storage.queued()
+      .filter((row) => row.to === "phone")
+      .map((row) => ({
+        id: row.id,
+        kind: row.kind,
+        seq: row.seq,
+        userId: row.userId,
+        frame: withoutAt(JSON.parse(row.body) as WireFrame),
+      }));
+    expect(phoneQueue(native.state)).toEqual(phoneQueue(craneRoom.state));
+
+    const thread = (state: typeof native.state) => asTranscript(state.storage.rows.get(transcriptStoreKey("1182"))).map((row) => ({
+      kind: row.kind,
+      seq: row.seq,
+      userId: row.userId,
+      frame: withoutAt(JSON.parse(row.body) as WireFrame),
+    }));
+    expect(thread(native.state)).toEqual(thread(craneRoom.state));
+
+    const status = await native.box.fetch(new Request("https://agent/status", { headers: { "X-Chat-Op": "status" } }));
+    expect(await status.json()).toMatchObject({
+      harness: "connected",
+      published: ["math"],
+      skipped: [{ name: "strava", reason: "no_key" }],
+    });
+    expect(native.state.storage.alarmAt).toBe(4_200_000_000_000);
+    expect(roomMock.brain.announce).toHaveBeenCalledTimes(1);
+  });
+
+  it("sets the next alarm from alarm() and keeps the harness connected", async () => {
+    roomMock.brain.alarm.mockImplementation(async (emit) => {
+      emit({ kind: "push", user_id: "1182", id: "wake", text: "ping" });
+      return 9_000_000_000_000;
+    });
+    const { state, box, phone } = room();
+    await state.storage.put("slug", "kit");
+    await state.storage.put(CONFIG_STORE_KEY, nativeConfig());
+    const ada = phone("1182");
+    await box.alarm();
+    expect(ada.frames().map(withoutAt)).toEqual([
+      expect.objectContaining({ kind: "push", user_id: "1182", id: "wake", text: "ping" }),
+    ]);
+    expect(state.storage.alarmAt).toBe(9_000_000_000_000);
+    const status = await box.fetch(new Request("https://agent/status", { headers: { "X-Chat-Op": "status" } }));
+    expect(await status.json()).toMatchObject({ harness: "connected" });
+  });
+
+  it("round-trips runtime and rebuilds the brain when env or persona changes", async () => {
+    const { state, box } = room();
+    Object.assign(state.storage, { sql: sqlStorage() });
+    const view = await box.fetch(new Request("https://agent/config", { headers: { "X-Chat-Op": "config" } }));
+    expect(await view.json()).toMatchObject({ runtime: "container" });
+    const patched = await box.fetch(new Request("https://agent/config", {
+      method: "PATCH",
+      headers: { "X-Chat-Op": "config", "content-type": "application/json" },
+      body: JSON.stringify({ runtime: "native" }),
+    }));
+    expect(await patched.json()).toMatchObject({ runtime: "native" });
+    expect(roomMock.dropRoomBrain).toHaveBeenCalledTimes(1);
+    expect(roomMock.brain.announce).toHaveBeenCalledTimes(1);
+
+    const mcp = await box.fetch(new Request("https://agent/config", {
+      method: "PATCH",
+      headers: { "X-Chat-Op": "config", "content-type": "application/json" },
+      body: JSON.stringify({ mcp: "[[server]]\nname = \"math\"\n" }),
+    }));
+    const mcpBody: { runtime?: string } = await mcp.json();
+    expect(mcpBody.runtime).toBe("native");
+    expect(roomMock.dropRoomBrain).toHaveBeenCalledTimes(1);
+    expect(roomMock.brain.announce).toHaveBeenCalledTimes(1);
+
+    await box.fetch(new Request("https://agent/config", {
+      method: "PATCH",
+      headers: { "X-Chat-Op": "config", "content-type": "application/json" },
+      body: JSON.stringify({ persona: "Be brief.", env: { LLM_MODEL: "mine" } }),
+    }));
+    expect(roomMock.dropRoomBrain).toHaveBeenCalledTimes(2);
+    expect(roomMock.openRoomBrain).toHaveBeenCalledTimes(2);
+    expect(roomMock.brain.announce).toHaveBeenCalledTimes(2);
+  });
+
+  it("finishes oauth on the native brain and refuses it on a container agent", async () => {
+    const { state, box, phone } = room();
+    const denied = await box.fetch(new Request("https://agent/auth", {
+      method: "POST",
+      headers: { "X-Chat-Op": "auth", "content-type": "application/json" },
+      body: JSON.stringify({ plugin: "google", code: "abc", redirectUri: "https://g.test/api/auth/catch" }),
+    }));
+    expect(denied.status).toBe(409);
+
+    await state.storage.put(CONFIG_STORE_KEY, nativeConfig());
+    const user = "118212345678901234567";
+    const mouth = phone(user);
+    const other = phone("118212345678901234568");
+    const ok = await box.fetch(new Request("https://agent/auth", {
+      method: "POST",
+      headers: { "X-Chat-Op": "auth", "content-type": "application/json" },
+      body: JSON.stringify({
+        plugin: "google",
+        code: "abc",
+        redirectUri: "https://g.test/api/auth/catch",
+        userId: user,
+      }),
+    }));
+    expect(ok.status).toBe(200);
+    expect(roomMock.brain.authFinish).toHaveBeenCalledWith("google", "https://g.test/api/auth/catch", "abc");
+    expect(mouth.frames().some((frame) => frame.kind === "reply" && frame.user_id === user && frame.text === "google connected")).toBe(true);
+    expect(other.frames().some((frame) => frame.text === "google connected")).toBe(false);
+  });
+
+  it("starts a sealed catch redirect for native oauth plugins", async () => {
+    const secret = "0123456789abcdef0123456789abcdef-more";
+    const { state, box } = room({ SESSION_SECRET: secret, PUBLIC_ORIGIN: "https://gantree2.bldhosting.com" });
+    const denied = await box.fetch(new Request("https://agent/auth/start", {
+      method: "POST",
+      headers: { "X-Chat-Op": "auth_start", "content-type": "application/json" },
+      body: JSON.stringify({ plugin: "google", origin: "http://127.0.0.1:3000", slug: "kit" }),
+    }));
+    expect(denied.status).toBe(409);
+
+    await state.storage.put(CONFIG_STORE_KEY, nativeConfig());
+    const garmin = await box.fetch(new Request("https://agent/auth/start", {
+      method: "POST",
+      headers: { "X-Chat-Op": "auth_start", "content-type": "application/json" },
+      body: JSON.stringify({ plugin: "garmin", origin: "http://127.0.0.1:3000", slug: "kit" }),
+    }));
+    expect(garmin.status).toBe(400);
+    expect(roomMock.brain.authStart).not.toHaveBeenCalled();
+
+    const missing = await box.fetch(new Request("https://agent/auth/start", {
+      method: "POST",
+      headers: { "X-Chat-Op": "auth_start", "content-type": "application/json" },
+      body: JSON.stringify({ plugin: "google", origin: "http://127.0.0.1:3000", slug: "kit" }),
+    }));
+    expect(missing.status).toBe(404);
+
+    roomMock.brain.authStart.mockImplementation(async () => ({ url: "https://accounts.example/start" }));
+    const ok = await box.fetch(new Request("https://agent/auth/start", {
+      method: "POST",
+      headers: { "X-Chat-Op": "auth_start", "content-type": "application/json" },
+      body: JSON.stringify({ plugin: "strava", origin: "http://127.0.0.1:3000", slug: "kit" }),
+    }));
+    expect(ok.status).toBe(200);
+    expect(await ok.json()).toEqual({ url: "https://accounts.example/start" });
+    const args = roomMock.brain.authStart.mock.calls.at(-1);
+    expect(args?.[0]).toBe("strava");
+    expect(args?.[1]).toBe("https://gantree2.bldhosting.com/api/auth/catch");
+    const stateArg = args?.[2];
+    expect(typeof stateArg).toBe("string");
+    if (typeof stateArg !== "string") {
+      throw new Error("state");
+    }
+    expect(await openOAuthCatch(await sessionKey(secret), stateArg)).toEqual({ slug: "kit", plugin: "strava" });
+
+    const { box: dev } = room({ SESSION_SECRET: secret });
+    await dev.fetch(new Request("https://agent/config", {
+      method: "PATCH",
+      headers: { "X-Chat-Op": "config", "content-type": "application/json" },
+      body: JSON.stringify({ runtime: "native" }),
+    }));
+    roomMock.brain.authStart.mockClear();
+    roomMock.brain.authStart.mockImplementation(async () => ({ url: "https://accounts.example/dev" }));
+    const local = await dev.fetch(new Request("https://agent/auth/start", {
+      method: "POST",
+      headers: { "X-Chat-Op": "auth_start", "content-type": "application/json" },
+      body: JSON.stringify({ plugin: "google", origin: "http://127.0.0.1:3000", slug: "kit" }),
+    }));
+    expect(local.status).toBe(200);
+    expect(roomMock.brain.authStart.mock.calls.at(-1)?.[1]).toBe("http://127.0.0.1:3000/api/auth/catch");
+  });
+});
+
+function sqlStorage() {
+  const db = new DatabaseSync(":memory:");
+  return {
+    exec(query: string, ...params: unknown[]) {
+      const stmt = db.prepare(query);
+      const head = query.trimStart().slice(0, 6).toUpperCase();
+      const reads = head.startsWith("SELECT") || head.startsWith("WITH") || head.startsWith("PRAGMA") || /\bRETURNING\b/i.test(query);
+      if (reads) {
+        const rows = stmt.all(...(params as []));
+        return { toArray: () => rows, rowsWritten: 0 };
+      }
+      const result = stmt.run(...(params as []));
+      return { toArray: () => [], rowsWritten: Number(result.changes) };
+    },
+  };
+}
+
+describe("Agent self notes", () => {
+  it("refuses a container agent", async () => {
+    const { box } = room();
+    const res = await box.fetch(new Request("https://agent/self", { headers: { "X-Chat-Op": "self_get" } }));
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: "container runtime" });
+  });
+
+  it("reads, stamps, and prunes the same SELF.md row", async () => {
+    const { state, box } = room();
+    Object.assign(state.storage, { sql: sqlStorage() });
+    await state.storage.put(CONFIG_STORE_KEY, nativeConfig());
+
+    const first = await box.fetch(new Request("https://agent/self", { headers: { "X-Chat-Op": "self_get" } }));
+    expect(first.status).toBe(200);
+    const opened = await first.json<{ text: string; maxChars: number }>();
+    expect(opened.maxChars).toBe(maxChars);
+    expect(opened.text.startsWith("# SELF.md")).toBe(true);
+
+    const put = await box.fetch(new Request("https://agent/self", {
+      method: "PUT",
+      headers: { "X-Chat-Op": "self_put", "content-type": "application/json" },
+      body: JSON.stringify({ text: "- dry humor\n- calls them Boss" }),
+    }));
+    expect(put.status).toBe(200);
+    const saved = await put.json<{ text: string; maxChars: number }>();
+    expect(saved.text).toContain("- dry humor");
+    expect(saved.text).toContain("- calls them Boss");
+    expect(saved.text.startsWith("# SELF.md")).toBe(true);
+    expect(saved.maxChars).toBe(maxChars);
+
+    const again = await box.fetch(new Request("https://agent/self", { headers: { "X-Chat-Op": "self_get" } }));
+    expect(await again.json()).toEqual(saved);
+
+    const pruned = await box.fetch(new Request("https://agent/self", {
+      method: "PUT",
+      headers: { "X-Chat-Op": "self_put", "content-type": "application/json" },
+      body: JSON.stringify({ text: saved.text.replace("- dry humor\n", "") }),
+    }));
+    const next = await pruned.json<{ text: string }>();
+    expect(next.text).not.toContain("dry humor");
+    expect(next.text).toContain("- calls them Boss");
+    expect(next.text).toContain("Who You Are Becoming");
+
+    const log = await box.fetch(new Request("https://agent/log", { headers: { "X-Chat-Op": "log" } }));
+    const lines = (await log.json<{ lines: { message: string }[] }>()).lines;
+    expect(lines.some((line) => line.message === "selfnote updated")).toBe(true);
+
+    const empty = await box.fetch(new Request("https://agent/self", {
+      method: "PUT",
+      headers: { "X-Chat-Op": "self_put", "content-type": "application/json" },
+      body: JSON.stringify({ text: "   " }),
+    }));
+    expect(empty.status).toBe(400);
+    expect(await empty.json()).toEqual({ error: "empty" });
+
+    const bad = await box.fetch(new Request("https://agent/self", {
+      method: "PUT",
+      headers: { "X-Chat-Op": "self_put", "content-type": "application/json" },
+      body: "{",
+    }));
+    expect(bad.status).toBe(400);
+    expect(await bad.json()).toEqual({ error: "bad_self" });
+
+    const method = await box.fetch(new Request("https://agent/self", {
+      method: "POST",
+      headers: { "X-Chat-Op": "self_put" },
+    }));
+    expect(method.status).toBe(405);
+
+    const clipped = await box.fetch(new Request("https://agent/self", {
+      method: "PUT",
+      headers: { "X-Chat-Op": "self_put", "content-type": "application/json" },
+      body: JSON.stringify({ text: "y".repeat(maxChars * 2) }),
+    }));
+    const clippedBody = await clipped.json<{ text: string }>();
+    expect(new TextEncoder().encode(clippedBody.text).length).toBeLessThanOrEqual(maxChars);
+    expect(clippedBody.text.startsWith("# SELF.md")).toBe(true);
+  });
+});
+
+describe("Agent persona files", () => {
+  it("refuses a container agent", async () => {
+    const { box } = room();
+    const res = await box.fetch(new Request("https://agent/persona", { headers: { "X-Chat-Op": "persona_get" } }));
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: "container runtime" });
+  });
+
+  it("imports the config persona once, then keeps the row", async () => {
+    const { state, box } = room();
+    Object.assign(state.storage, { sql: sqlStorage() });
+    await state.storage.put(CONFIG_STORE_KEY, {
+      env: {},
+      mcp: "",
+      persona: "Be brief.",
+      runtime: "native",
+      updatedAt: 1,
+    });
+
+    const first = await box.fetch(new Request("https://agent/persona", { headers: { "X-Chat-Op": "persona_get" } }));
+    expect(first.status).toBe(200);
+    const opened = await first.json<{ files: { name: string; text: string }[]; maxChars: number }>();
+    expect(opened.maxChars).toBe(MAX_CHARS);
+    expect(opened.files).toEqual([expect.objectContaining({ name: "PERSONA.md", text: "Be brief." })]);
+
+    await state.storage.put(CONFIG_STORE_KEY, {
+      env: {},
+      mcp: "",
+      persona: "replaced too late",
+      runtime: "native",
+      updatedAt: 2,
+    });
+    const again = await box.fetch(new Request("https://agent/persona", { headers: { "X-Chat-Op": "persona_get" } }));
+    const kept = await again.json<{ files: { name: string; text: string }[] }>();
+    expect(kept.files.map((file) => file.text)).toEqual(["Be brief."]);
+
+    const put = await box.fetch(new Request("https://agent/persona", {
+      method: "PUT",
+      headers: { "X-Chat-Op": "persona_put", "content-type": "application/json" },
+      body: JSON.stringify({ name: "PERSONA.md", text: "Be sharp." }),
+    }));
+    expect(put.status).toBe(200);
+    const saved = await put.json<{ files: { name: string; text: string }[] }>();
+    expect(saved.files).toEqual([expect.objectContaining({ name: "PERSONA.md", text: "Be sharp." })]);
+    const config = await box.fetch(new Request("https://agent/config", { headers: { "X-Chat-Op": "config" } }));
+    expect(await config.json()).toMatchObject({ persona: "Be sharp." });
+
+    const extra = await box.fetch(new Request("https://agent/persona", {
+      method: "PUT",
+      headers: { "X-Chat-Op": "persona_put", "content-type": "application/json" },
+      body: JSON.stringify({ name: "SOUL.md", text: "legacy soul" }),
+    }));
+    const both = await extra.json<{ files: { name: string }[] }>();
+    expect(both.files.map((file) => file.name)).toEqual(["PERSONA.md", "SOUL.md"]);
+
+    const dropped = await box.fetch(new Request("https://agent/persona", {
+      method: "DELETE",
+      headers: { "X-Chat-Op": "persona_delete", "content-type": "application/json" },
+      body: JSON.stringify({ name: "SOUL.md" }),
+    }));
+    const left = await dropped.json<{ files: { name: string }[] }>();
+    expect(left.files.map((file) => file.name)).toEqual(["PERSONA.md"]);
+
+    const bad = await box.fetch(new Request("https://agent/persona", {
+      method: "PUT",
+      headers: { "X-Chat-Op": "persona_put", "content-type": "application/json" },
+      body: JSON.stringify({ name: "notes", text: "nope" }),
+    }));
+    expect(bad.status).toBe(400);
+    expect(await bad.json()).toEqual({ error: "bad_persona" });
+
+    const huge = await box.fetch(new Request("https://agent/persona", {
+      method: "PUT",
+      headers: { "X-Chat-Op": "persona_put", "content-type": "application/json" },
+      body: JSON.stringify({ name: "PERSONA.md", text: "x".repeat(MAX_CHARS + 1) }),
+    }));
+    expect(huge.status).toBe(400);
+    expect(await huge.json()).toEqual({ error: "too_long" });
+
+    roomMock.brain.announce.mockClear();
+    const patched = await box.fetch(new Request("https://agent/config", {
+      method: "PATCH",
+      headers: { "X-Chat-Op": "config", "content-type": "application/json" },
+      body: JSON.stringify({ persona: "from the old client" }),
+    }));
+    expect(patched.status).toBe(200);
+    const after = await box.fetch(new Request("https://agent/persona", { headers: { "X-Chat-Op": "persona_get" } }));
+    const files = await after.json<{ files: { name: string; text: string }[] }>();
+    expect(files.files.find((file) => file.name === "PERSONA.md")?.text).toBe("from the old client");
+    expect(roomMock.brain.announce).toHaveBeenCalled();
   });
 });

@@ -1,17 +1,25 @@
 # Cron, daily planner, and watches
 
-Proactive jobs are **long-horizon harness work**: they live in SQLite and
-fire inside the harness — run the normal agent loop (MCP tools allowed), then
-**push** on the current CHANNEL (Telegram, chat, Discord, Slack, or
-stdio). Jobs do not store a destination. Switching `CHANNEL=telegram` to
-`CHANNEL=chat` keeps the 7am morning summary: same row, same `next_run`,
-Push now uses the chat allowlist. Pure-MCP cron cannot deliver outbound
-chat by itself. A reminder next Tuesday is planning; a chatbot that only
-answers now is not.
+Proactive jobs are **long-horizon work**: they live in SQLite and fire
+inside the agent loop (tools allowed), then **push** on the chat room.
+Jobs do not store a destination. A reminder next Tuesday is planning; a
+chatbot that only answers now is not.
 
-The harness keeps this clock while the container runs. The Agent DO's
-alarm only wakes a sleeping container for the next tick. One clock:
-[architecture.md](architecture.md).
+On `runtime: native` there is no ticker. `nextAlarm()` is the soonest
+due row across cron, watches, and memory consolidation.
+`edge/agent.do.ts` `alarm()` calls `brain.alarm()`, which runs
+`fireDue`, polls due watches, and runs a consolidation pass when
+`MEMORY_CONSOLIDATE_MINUTES` says so (default 30; `0` turns that pass
+off). The handler arms the next wake. Cost between fires is zero. The
+alarm does not start a container. One clock:
+[architecture.md](architecture.md) §5.
+
+A container agent still keeps this clock inside the Go process while
+the process is up (`CRON_TICK_SECONDS`, default 15). The Agent DO alarm
+does not wake that process. When the container stops, its clock stops.
+That path is [architecture.md](architecture.md#13-legacy-container-runtime).
+Switching `CHANNEL` is a container concern; a native push is a `push`
+frame on the room, including a cron or watch wake.
 
 Live-data jobs (calendar, mail, fitness, search, sheets) get a tool-first
 wrapper plus a last-token system note so the model calls tools before drafting
@@ -47,7 +55,8 @@ planner when the day needs no human-facing message.
 | `CRON_ENABLED` | `true` | Master switch |
 | `CRON_TZ` | `America/Los_Angeles` | IANA timezone for clock times (Pacific — SJ / SF / SEA / LA) |
 | `CRON_MAX_JOBS` | `50` | Cap on enabled jobs |
-| `CRON_TICK_SECONDS` | `15` | Due-job poll interval |
+| `CRON_TICK_SECONDS` | `15` | Container poll interval. A native agent has no ticker; the DO alarm is the clock |
+| `MEMORY_CONSOLIDATE_MINUTES` | `30` | Native only. How often the alarm may run a consolidation pass. `0` skips it |
 | `DAILY_PLANNER_AT` | `07:10` | One planning session a day, local clock (`CRON_TZ`). `/planner 09:30` overrides it for this agent. `0` or `/planner off` disables it |
 | `EXAMPLES_QTY` | `1-2` | **On by default** capability-example pings. Empty or `0` = no proactive pings. `/examples` on-demand still works |
 | `EXAMPLES_START_HOUR` | `6` | Local window start for examples pings |
@@ -164,8 +173,13 @@ EXAMPLES_END_HOUR=21
 
 ## Inspect with sqlite3
 
-`gantry.db` is on the container disk (`DATA_DIR`) and in the R2 snapshot
-`backups/<slug>/<stamp>.tar` ([architecture.md](architecture.md)).
+On a native agent the rows are in the Agent DO's SQLite. Settings does
+not open that database. The statements below are the same tables.
+
+On a container agent, `gantry.db` is on the container disk (`DATA_DIR`)
+and in the R2 snapshot under `backups/<slug>/latest/` and
+`backups/<slug>/<stamp>/`
+([architecture.md](architecture.md#13-legacy-container-runtime)).
 Settings does not open the live file. Unpack a stamp:
 
 ```bash
@@ -186,9 +200,9 @@ Disable by hand:
 UPDATE cron_job SET enabled = 0, running = 0 WHERE id = 3;
 ```
 
-A hand edit of a stamp is not live until that stamp is restored and the
-container recreates. Write-through to DO SQLite is later
-([architecture.md](architecture.md#12-later-and-not-the-product)).
+A hand edit of a container stamp is not live until that stamp is
+restored and the container recreates. A native agent's rows are already
+the DO database; there is no stamp to restore.
 
 ## Overlap policy
 
@@ -203,11 +217,18 @@ One-shot jobs disable after a successful (or failed) fire. Daily/every advance
 `next_run_at`. Push failures are recorded in `last_error`. `cron_list` still
 shows that row (`enabled=0`) — gone from the *enabled* set is not a delivery.
 
-## Trace a wake (agent → channel → room)
+## Trace a wake (agent → room)
 
-A cron fire is four hops. Job 319 disappearing from the enabled queue only
-means `Finish` ran (one-shot disable, silent skip, empty reply, or push
-error). It does not mean the phone got a frame.
+A cron fire disappearing from the enabled queue only means the job
+finished (one-shot disable, silent skip, empty reply, or push error).
+It does not mean the phone got a frame.
+
+On a native agent the hops are inside the DO: the alarm calls
+`brain.alarm()`, the runner runs the turn, and a spoken result is a
+`push` frame the DO fans to `sub:<user_id>` (or every phone in the room
+when `user_id` is empty), plus Web Push if that socket is gone.
+
+A container agent still has the socket hops below.
 
 ```text
 SQLite cron_job  →  runner.Handle (agent loop, session_id=gantry)

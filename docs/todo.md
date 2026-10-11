@@ -6,14 +6,20 @@ The plan is [proposal.md](proposal.md); the pictures are
 same thing in both). This is what is left, in the order to do it.
 
 **State today (2026-10-11):** every screen, the door, the chat PWA,
-the agent registry, the harness with twelve plugins, the mark, the
-docs site on `github.bldhosting.com`, release tooling. Kit answers
-through `npm run agent` and files tasks and goals from chat. Phones
-can sign in without a browser (`/api/auth/{config,nonce,token}`). Vitest,
-type-aware ESLint, `tsc`, and the Go gate are green; CI is green so
+the agent registry, the mark, the docs site on
+`github.bldhosting.com`, release tooling. The Workers-native brain
+is the runtime: the loop, the room, SQL persona and SELF, and the
+live eval ([todo_done.md](todo_done.md) §10). The first live run
+(`EVAL_N=1`) was 28 of 30. `npm run eval` loads `.dev.vars`. The
+Go harness is still in the tree and is being deleted; there is no
+container cutover and nothing to import. Kit files tasks and goals
+from chat. Phones can sign in without a browser
+(`/api/auth/{config,nonce,token}`). Vitest, type-aware ESLint,
+`tsc`, and the Go gate are green; CI is green so
 `deploy-cloudflare` runs on the next push. **Not yet done:** a real
-Google sign-in on the laptop, the first Cloudflare deploy, and a
-stranger's walk from the README.
+Google sign-in on the laptop, the first Cloudflare deploy, the two
+eval failures, deleting the container tree, and a stranger's walk
+from the README.
 
 Legend: `[ ]` open · **owner** needs a human with a console · tags are
 `easy` / `medium` / `hard` for effort. Each list is ordered easiest
@@ -35,11 +41,12 @@ pricing, in the Hosted section.
       register both. A mismatch shows Google's `redirect_uri_mismatch`
       page, not ours.
 - [ ] **owner · easy** Provider consoles for the tools (§7): the
-      **tools** Google client lists `https://github.bldhosting.com/oauth-catch/`
-      as a redirect; Strava's Authorization Callback Domain is
-      `github.bldhosting.com`; Google Health's client likewise; the
-      consent screen's privacy URL is `https://github.bldhosting.com/privacy/`.
-      Proof is a `/auth google` round trip in chat that lands a token.
+      **tools** Google client, Strava, and Google Health list
+      `https://gantree2.bldhosting.com/api/auth/catch` and
+      `http://127.0.0.1:3000/api/auth/catch` as redirects. The
+      consent screen's privacy URL is
+      `https://github.bldhosting.com/privacy/`. Proof is a
+      `/auth google` round trip in chat that lands a token.
 - [ ] **owner · easy** GitHub settings. Every variable and secret any
       workflow reads is one table:
       [install.md → GitHub settings](install.md#github-settings--the-whole-list).
@@ -48,45 +55,82 @@ pricing, in the Hosted section.
 - [ ] **owner · easy** `deploy-cloudflare.yml` first run (§8). CI is
       green and the workflow provisions KV + R2 itself; it needs the
       table above filled. Then `https://gantree2.bldhosting.com`
-      resolves. The Worker alone is on the free plan; the first
-      container start needs Workers Paid ($5/month) — the only paid
-      piece, see [monetize.md](monetize.md#why-it-has-been-free-so-far-and-where-the-charge-comes-from).
+      resolves. The Worker is on the free plan.
 - [ ] **owner · easy** Walk: add Bob on `/users`; he gets in; remove;
       `401` next click (§2).
 - [ ] **owner · medium** Walk: build Kit on `/agents/new`; grant maps;
       put the key in; Kit's card goes green; Kit's log fold streams
-      (§4). Half walked: Kit talks through `npm run agent`; the
-      container path is the open half.
-- [ ] **owner · medium** Walk: Agent DO starts the image; harness
-      dials with the DO's bearer; `status` lists published MCP;
-      `snapshot` lands in R2 (§5). Needs only the deploy above —
-      `wrangler deploy` builds the image into Cloudflare's registry;
-      GHCR is not on this path.
+      (§4). The path is the native brain.
 - [ ] **owner · hard** Walk: a stranger with **one** README stands up
       Kit for two humans, yanks one, never opens the Cloudflare
       dashboard after the token (§8). The last box.
 
 ## Next — ship quality
 
-- [ ] **medium** Agent runtime, step A of [runtime.md](runtime.md):
-      container lease 15 min renewed by harness frames (`alive`),
-      wake on phone `inbound` (debounced, `waking` status), wake on
-      cron via `next_wake` frame → Agent DO alarm. Today the container
-      idles two hours on a timer and nothing ever starts it (§5).
-      Steps 2–3 (shared tool container, Workers-native brain) are
-      decided but not scheduled — same page.
+Workers-native brain (§10). Greenfield: the container path is
+being deleted, not cut over. What has landed is in
+[todo_done.md](todo_done.md).
 
-- [ ] **medium** Two eval fixtures flaked one run of three on the
-      full live set (`react_to_thanks` reached for `cron_schedule`;
-      `chat_todo_add` for `memory_recall`). Not catalog drift — model
-      judgement on fixtures without `tools_from`. Re-run the full set
-      once; if either repeats, tighten the fixture's persona text or
-      allow the tool, don't loosen the judge (§5).
-- [ ] **medium** Walk: `tools/list` from the image matches the Tools
-      grid for all twelve; the eval's drift check already covers the
-      three `tools_from` servers (rentals, flights, google) — extend
-      the sibling build to every `mcp.lock` row and compare each
-      `tools/list` against its `host-manifest` (§6).
+- [ ] **medium** Two failures from the first live tally
+      (`EVAL_N=1`, 28/30). `react_to_thanks` answered with a bare
+      thumbs-up in the text and no reaction frame.
+      `planner_weight_on_pace` did not answer `[silent]`.
+      Diagnosis in progress: a port gap, or model judgement.
+- [ ] **easy** `ci.yml` runs `npm run test:coverage`.
+      `vitest.config.ts` already includes `test/**/*.test.ts`, so
+      `test/brain` is in that run. Coverage `include` is `lib/**`,
+      `edge/**`, and `app/lib/**` (floor 60). `brain/` stays out of
+      that number. Confirm one coverage run leaves the floor.
+- [ ] **hard** Delete the container tree, phase 1. Still in the
+      tree: `harness/` (the Go harness and the twelve MCP
+      servers), `.github/workflows/harness.yml`,
+      `.github/workflows/harness-image.yml`,
+      `scripts/coverage-harness.sh`, and in `wrangler.jsonc` the
+      Harness DO, the `containers` image, and the `HARNESS`
+      binding. The Containers preflight in
+      `deploy-cloudflare.yml` goes with them.
+- [ ] **hard** Delete the container tree, phase 2. Queued behind
+      phase 1: the crane socket and container branches in
+      `edge/agent.do.ts`; `lib/agents` (`containerHttp`, the
+      `runtime: "container" | "native"` flag); the Runtime radios
+      and container copy on the agent folds; the R2 snapshot set
+      (`gantry_db`, `self_md`, `tokens_tar` on `STORE`).
+- [ ] **medium** Integrated OAuth, in progress. `/auth <plugin>`
+      seals the state. `GET /api/auth/catch` is cookie-gated and
+      writes a room line. The Tools fold grows a Connect button.
+      `OAUTH_REDIRECT_URI` and the Pages oauth-catch page are
+      retired. Provider consoles list
+      `https://gantree2.bldhosting.com/api/auth/catch` and
+      `http://127.0.0.1:3000/api/auth/catch`.
+- [ ] **medium** Watch and Twitter polling on the DO alarm, in
+      progress. RSS is 60m with a 15m floor. Twitter is 6h with a
+      1h floor. A 5-minute grid, one combined wake, quiet hours,
+      backoff and pause, ETag 304. `X_MONTHLY_READS=100`.
+- [ ] **medium** Docs sync, in progress. README,
+      [architecture.md](architecture.md) §5,
+      [cron.md](cron.md), [contract.md](contract.md),
+      [runtime.md](runtime.md), and the pages that still describe
+      a container harness.
+- [ ] **hard** Deferred, outside the three waves. Garmin
+      `complete`: 81 tools past extended (core is 10, extended is
+      19; `GARMIN_TOOL_TIER=complete` currently publishes that same
+      19). Google Drive, Docs, and Sheets past the everyday cores
+      (9 + 15 + 10) and Apps Script (17). 88 tools are ported; the
+      catalog has 139. Telegram, Discord, and Slack come back as
+      webhook routes on the Worker.
+- [ ] **medium** Decide: restore or drop. Left out of the loop port
+      on purpose: process RSS on the log (`selfRSSMB`, VmRSS; the
+      feeds plugin is the RSS reader and has landed), coalesce
+      settle, spinup notice, reaction debounce, typing refresh
+      (every 4s), draft throttle (250ms), and the `[room]` stamp
+      (theme, wallpaper, face). Judgment strips a `[room]` line if
+      one appears. Nothing writes the stamp.
+
+- [ ] **medium** Tools grid for a native agent matches the twelve
+      in-process plugins (`brain/plugins`). `brain/eval` already
+      reads rentals, flights, and google from those plugins
+      (allowlist in `brain/eval/fixtures/mcp.toml`). Extend that
+      comparison to every plugin (§6).
 - [ ] **medium** Chat pitch (carried): one multi-step turn with tool
       trace from a real agent on this stack, for the README. Needs the
       provider consoles above.
@@ -176,7 +220,7 @@ product.
       is the only OAuth a hosted customer does, but they still need a
       GCP project and a client. A wizard step with the five console
       clicks and a paste box, checked live (the redirect must be
-      `https://github.bldhosting.com/oauth-catch/`). This is also the
+      `https://gantree2.bldhosting.com/api/auth/catch`). This is also the
       free "set it up with me" product from monetize.md Path 1.
 - [ ] **owner · easy** Price: $8–10 a month for one agent, $3–4 per
       extra agent on the household, 14-day trial, no one-time tier

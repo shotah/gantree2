@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AgentDashboard } from "@/app/components/agents/AgentDashboard";
 import type { ApiClient } from "@/app/lib/agentsHttp";
-import { CONTAINER, MAPS, card, config, json, session, href, buttonOf, textBody } from "./fixtures";
+import { CONTAINER, MAPS, card, config, json, session, href, areaOf, buttonOf, textBody } from "./fixtures";
 
 afterEach(() => {
   cleanup();
@@ -29,10 +29,27 @@ function dashClient(options?: { role?: "admin" | "operator"; canMutate?: boolean
     }
     if (url.endsWith("/config")) {
       if (method === "PATCH") {
-        const body = JSON.parse(textBody(init?.body)) as { persona?: string };
-        return json(200, { ...view, persona: body.persona ?? view.persona });
+        const body = JSON.parse(textBody(init?.body)) as { persona?: string; runtime?: string };
+        return json(200, {
+          ...view,
+          persona: body.persona ?? view.persona,
+          runtime: body.runtime ?? view.runtime,
+        });
       }
       return json(200, view);
+    }
+    if (url.endsWith("/persona")) {
+      if (method === "PUT") {
+        const body = JSON.parse(textBody(init?.body)) as { text?: string };
+        return json(200, {
+          files: [{ name: "PERSONA.md", text: body.text ?? "", updatedAt: 2 }],
+          maxChars: 262144,
+        });
+      }
+      return json(200, {
+        files: [{ name: "PERSONA.md", text: view.persona, updatedAt: 1 }],
+        maxChars: 262144,
+      });
     }
     if (url.endsWith("/container")) {
       return json(200, { ...CONTAINER, state: "stopped" });
@@ -78,7 +95,7 @@ describe("AgentDashboard", () => {
     expect(await screen.findByText("stopped")).toBeTruthy();
 
     // One header button shuts every fold on the page, wherever its state lives, then offers to open them again.
-    const foldHeads = () => ["Status", "Persona", "Keys", "Tools", "Who can chat", "Log"].map((name) => screen.getByRole("button", { name }));
+    const foldHeads = () => ["Status", "Persona", "Self notes", "Keys", "Tools", "Who can chat", "Log"].map((name) => screen.getByRole("button", { name }));
     expect(screen.getByRole("button", { name: "Status" }).getAttribute("aria-expanded")).toBe("true");
     fireEvent.click(screen.getByRole("button", { name: "Collapse all" }));
     for (const head of foldHeads()) {
@@ -108,6 +125,37 @@ describe("AgentDashboard", () => {
     expect(remove.disabled).toBe(false);
     fireEvent.click(remove);
     await vi.waitFor(() => expect(go).toHaveBeenCalledWith("/agents"));
+  });
+
+  it("patches the runtime from the Runtime radios and shows native in place of the container row", async () => {
+    const client = dashClient();
+    render(<AgentDashboard slug="kit" client={client} go={vi.fn()} />);
+    expect(await screen.findByRole("radio", { name: "container" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: "native" }));
+    await vi.waitFor(() => expect(screen.queryByRole("button", { name: "start container" })).toBeNull());
+    expect(screen.getByText("native", { selector: "p" })).toBeTruthy();
+    const patches = vi.mocked(client).mock.calls.filter((call) => {
+      const init = call[1];
+      return init?.method === "PATCH" && href(call[0]).endsWith("/config");
+    });
+    const body = JSON.parse(textBody(patches[0]?.[1]?.body)) as { runtime?: string };
+    expect(body.runtime).toBe("native");
+  });
+
+  it("saves persona through the persona route after switching to native", async () => {
+    const client = dashClient();
+    render(<AgentDashboard slug="kit" client={client} go={vi.fn()} />);
+    expect(await screen.findByRole("radio", { name: "container" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: "native" }));
+    await vi.waitFor(() => expect(screen.queryByRole("button", { name: "start container" })).toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: "Persona" }));
+    const field = areaOf(await screen.findByLabelText("Persona text"));
+    expect(field.value).toBe("Be brief.");
+    fireEvent.change(field, { target: { value: "Be sharp." } });
+    fireEvent.click(screen.getByRole("button", { name: "Save persona" }));
+    expect(await screen.findByText("Saved.")).toBeTruthy();
+    const puts = vi.mocked(client).mock.calls.filter((call) => call[1]?.method === "PUT" && href(call[0]).endsWith("/persona"));
+    expect(JSON.parse(textBody(puts[0]?.[1]?.body))).toEqual({ name: "PERSONA.md", text: "Be sharp." });
   });
 
   it("stays put when delete fails and assigns the board when no router is passed", async () => {

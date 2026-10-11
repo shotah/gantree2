@@ -1,12 +1,10 @@
 #!/usr/bin/env node
 /**
- * Shields-style coverage badge. Two inputs, one SVG.
+ * Shields-style coverage badge. One input, one SVG.
  *
- *   node scripts/badge.mjs vitest  coverage/coverage-summary.json  badges/coverage.svg          [label]
- *   node scripts/badge.mjs gofunc  coverage/harness-func.txt       badges/harness-coverage.svg  [label]
+ *   node scripts/badge.mjs vitest  coverage/coverage-summary.json  badges/coverage.svg  [label]
  *
  * `vitest` reads `total.lines.pct` from `--coverage.reporter=json-summary`.
- * `gofunc` reads the `total:` line of `go tool cover -func=…`.
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -19,14 +17,6 @@ export function pctFromVitestSummary(json) {
     throw new Error("vitest summary has no total.lines.pct");
   }
   return pct;
-}
-
-export function pctFromGoFunc(text) {
-  const m = /^total:\s+\S+\s+([\d.]+)%/m.exec(text);
-  if (!m) {
-    throw new Error("go cover -func output has no total: line");
-  }
-  return Number(m[1]);
 }
 
 export function badgeColor(pct) {
@@ -83,16 +73,13 @@ export function pctFromFile(kind, path) {
   if (kind === "vitest") {
     return pctFromVitestSummary(JSON.parse(text));
   }
-  if (kind === "gofunc") {
-    return pctFromGoFunc(text);
-  }
   throw new Error(`unknown input kind: ${kind}`);
 }
 
 export function main(argv) {
   const [kind, input, out, label = "coverage"] = argv;
   if (!kind || !input || !out) {
-    throw new Error("usage: badge.mjs <vitest|gofunc> <input> <out.svg> [label]");
+    throw new Error("usage: badge.mjs vitest <input> <out.svg> [label]");
   }
   const pct = pctFromFile(kind, input);
   mkdirSync(dirname(out), { recursive: true });

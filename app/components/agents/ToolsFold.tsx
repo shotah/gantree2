@@ -2,10 +2,10 @@
 
 import { useEffect, useState, type SubmitEvent } from "react";
 import { chipClass } from "@/app/components/shared/PageHeader";
-import { agentsMessage, codeOf, patchConfig, recreateForKeys, type ApiClient } from "@/app/lib/agentsHttp";
+import { agentsMessage, codeOf, patchConfig, recreateForKeys, startAuth, type ApiClient } from "@/app/lib/agentsHttp";
 import { api } from "@/app/lib/api";
 import { grantsFromToml, tomlFromGrants } from "@/lib/agents/mcpToml";
-import type { AgentConfigView, Grant, ToolEntry } from "@/lib/agents/types";
+import type { AgentConfigView, AgentRuntime, AgentStatus, Grant, ToolEntry } from "@/lib/agents/types";
 import { alertClass, Fold, inputClass, labelClass, primaryClass, quietClass } from "./Fold";
 
 export function grantFor(tool: ToolEntry): Grant {
@@ -55,6 +55,21 @@ export function envPatchFor(tool: ToolEntry, drafts: Readonly<Record<string, str
 
 export const KEY_PLACEHOLDER_SET = "set — paste to replace";
 export const KEY_PLACEHOLDER_MISSING = "paste the key";
+
+/** Published means connected. `no_oauth` means not connected. Anything else is not an oauth verdict. */
+export function oauthLine(status: AgentStatus | null | undefined, id: string): "connected" | "not connected" | null {
+  if (!status) {
+    return null;
+  }
+  if (status.published.includes(id)) {
+    return "connected";
+  }
+  const skip = status.skipped.find((item) => item.name === id);
+  if (skip?.reason === "no_oauth") {
+    return "not connected";
+  }
+  return null;
+}
 
 function KeyFields({
   tool,
@@ -132,6 +147,8 @@ export function ToolsFold({
   canMutate,
   client = api,
   onConfig,
+  runtime = "container",
+  status = null,
 }: {
   slug: string;
   config: AgentConfigView;
@@ -139,6 +156,8 @@ export function ToolsFold({
   canMutate: boolean;
   client?: ApiClient;
   onConfig: (config: AgentConfigView) => void;
+  runtime?: AgentRuntime;
+  status?: AgentStatus | null;
 }) {
   const [open, setOpen] = useState(false);
   const [grants, setGrants] = useState<Grant[]>(() => grantsFromToml(config.mcp));
@@ -178,6 +197,19 @@ export function ToolsFold({
         }
         return next;
       });
+    } catch (err) {
+      setError(codeOf(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function connect(tool: ToolEntry) {
+    setBusy(true);
+    setError(null);
+    try {
+      const started = await startAuth(slug, tool.id, client);
+      window.open(started.url, "_blank", "noopener,noreferrer");
     } catch (err) {
       setError(codeOf(err));
     } finally {
@@ -226,6 +258,7 @@ export function ToolsFold({
       <ul className="space-y-2">
         {tools.map((tool) => {
           const on = grants.some((grant) => grant.name === tool.id);
+          const line = runtime === "native" && tool.oauth ? oauthLine(status, tool.id) : null;
           return (
             <li key={tool.id} className="rounded-xl border border-line bg-canvas/40 px-3 py-2">
               <label className="flex items-center gap-2 text-sm text-fg">
@@ -239,7 +272,15 @@ export function ToolsFold({
               </label>
               <p className="mt-1 text-xs text-dim">{tool.binary}</p>
               {tool.homeOnly ? <p className="text-xs text-dim">Home</p> : null}
-              {tool.oauth ? <p className="text-xs text-dim">Sign in from chat before this publishes.</p> : null}
+              {line ? <p className="text-xs text-dim">{line}</p> : null}
+              {runtime === "native" && tool.oauth && canMutate
+                ? (
+                    <button type="button" disabled={busy} onClick={() => void connect(tool)} className={`${quietClass} mt-2`}>
+                      Connect {tool.id}
+                    </button>
+                  )
+                : null}
+              {runtime !== "native" && tool.oauth ? <p className="text-xs text-dim">Sign in from chat before this publishes.</p> : null}
               {on && tool.needs.length > 0
                 ? (
                     <KeyFields

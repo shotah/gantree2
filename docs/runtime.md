@@ -3,48 +3,57 @@
 **Question.** The harness container for an agent gets stopped and
 nothing wakes it. The owner wants an agent that is *active* — it talks
 first, it keeps its own clock — and that is **not billed while idle**.
-"Ideally it would be a Lambda, not a container." This page is what is
-true today, the three ways out, and the order to do them. Decided
-2026-10-11; nothing here is built yet.
+"Ideally it would be a Lambda, not a container." This page is the
+morning's record of the container, of why Lambda lost, and of an order
+that was cancelled later the same day. Decided 2026-10-11. Option C
+is the brain in the tree; option A was not built. Record:
+[brain.md](brain.md).
 
-Pictures of the pieces named below: [architecture.md](architecture.md)
-§5. The cron contract this has to keep: [cron.md](cron.md).
+Pictures: native lifecycle in [architecture.md](architecture.md) §5,
+container pictures in
+[§13](architecture.md#13-legacy-container-runtime). The cron contract:
+[cron.md](cron.md).
 
 ---
 
 ## What happens today
 
+This section is `runtime: container`. A native agent's clock is the
+Agent DO alarm (`brain.alarm()` / `nextAlarm()`), not a lease.
+
 - `edge/harness.do.ts` set `sleepAfter = "2h"` (now `"15m"`, the
   stop-the-bleeding change of 2026-10-11; the rest of this section is
-  still true) on the
+  still true of a container) on the
   `@cloudflare/containers` base class. That library's idle clock is
   reset only by requests **into the Harness DO** (`fetch`,
   `containerFetch`, `renewActivityTimeout()`). The harness's own work —
   its outbound socket to the Agent DO, turns, cron ticks, snapshots —
   never touches the Harness DO. So from the library's point of view the
-  container is idle from the moment it starts, and two hours after
-  Start it calls `onActivityExpired()` → `stop()` → "Container stopped"
-  (exit 0, `reason: exit`). The only thing that keeps it up by accident
-  is the agents board polling `info` while someone has the page open.
-- Nothing wakes it. There is no `setAlarm` / `alarm()` anywhere in
-  `edge/` or `lib/`. The only start paths are the operator's Start and
-  Recreate buttons (`lib/agents/container.ts`).
+  container is idle from the moment it starts, and fifteen minutes
+  after Start it calls `onActivityExpired()` → `stop()` → "Container
+  stopped" (exit 0, `reason: exit`). The only thing that keeps it up
+  by accident is the agents board polling `info` while someone has the
+  page open.
+- Nothing wakes the container. The Agent DO does have `alarm()`: on
+  `runtime: native` it runs the brain and arms the next wake; on
+  `container` it returns without calling the Harness DO. The only
+  start paths are the operator's Start and Recreate buttons
+  (`lib/agents/container.ts`).
   - A phone `inbound` with no harness socket is queued
     (`lib/chat/route.ts` `persistRole`) and waits for a human to press
     Start. The Agent DO never pokes the Harness DO.
   - Cron lives inside the harness (SQLite `next_run`,
     `CRON_TICK_SECONDS`). When the process stops, the clock stops.
-    [cron.md](cron.md) says "the Agent DO's alarm only wakes a sleeping
-    container for the next tick" and [architecture.md](architecture.md)
-    §5 draws `Stopped → Starting : Cron tick with work`. Both describe
-    a design that is not in the code: the Agent DO never learns when
-    the next job is due.
+    The Agent DO does not learn that container's next job, and it does
+    not start the box. [architecture.md](architecture.md#13-legacy-container-runtime)
+    draws the container without a cron-start edge.
   - `webSocketClose` on the Agent DO notes the harness is gone. No
-    restart, no backoff, no alarm.
+    restart and no backoff. The DO alarm is not a container restart.
 
-So the design is half-built, not wrong: the Agent DO owns config, room,
-bearer, and container, but has no clock and no triggers. And the two
-hours of idle compute is a constant we chose.
+So the container design is half-built, not wrong: the Agent DO owns
+config, room, bearer, and container, and does not start the box for a
+cron tick. Fifteen minutes of idle compute is the constant
+`sleepAfter` chose. A native agent does not pay it.
 
 ## What the harness needs from a runtime
 
@@ -130,10 +139,12 @@ each is testable in Vitest + the Go suite.
    bearer, and status live on the Agent DO, so the alarm belongs
    there.
 
-Docs to correct when this lands: [architecture.md](architecture.md) §5
-(the `Cron tick with work` edge becomes true), [cron.md](cron.md) (the
-"alarm wakes a sleeping container" sentence becomes true),
-[contract.md](contract.md) (two new frames: `alive`, `next_wake`).
+The morning's note, kept with this unbuilt step: correct
+[architecture.md](architecture.md), [cron.md](cron.md), and
+[contract.md](contract.md) if the lease lands. It did not. Those pages
+now describe the native alarm. The container wake is still absent. The
+two frames this step would have added, `alive` and `next_wake`, were
+not added.
 
 ---
 
@@ -201,6 +212,10 @@ with both runtimes alive. Weeks of focused agent work.
 
 ## Order
 
+2026-10-11, later the same day: A cancelled, C chosen; see
+[brain.md](brain.md). `sleepAfter` stays `"15m"` until cutover. The
+rest of this section is that morning's order, kept as history.
+
 A is step one of C, not a detour: its three pieces move the
 scheduler's authority from the process into the DO, which is where C
 needs it.
@@ -216,5 +231,7 @@ needs it.
    the rest stay on the container. Per-agent containers deleted when
    the last agent flips.
 
-Decided: A then C. Not decided: when step 2 starts; that waits on the
-first deploy and the first stranger ([todo.md](todo.md) Now).
+That morning's decision, kept here: A then C.
+[brain.md](brain.md) cancelled it. Not decided that morning: when step
+2 starts. Step 2 was cancelled with A. The brain that landed is
+in-process plugins, not a tool container.

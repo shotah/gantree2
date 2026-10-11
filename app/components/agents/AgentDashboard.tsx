@@ -10,6 +10,7 @@ import {
   getAgent,
   getConfig,
   getMe,
+  patchConfig,
   getRoomUsers,
   listTools,
   type ApiClient,
@@ -17,12 +18,13 @@ import {
 import { api } from "@/app/lib/api";
 import type { Role } from "@/lib/door/users";
 import type { RoomUser } from "@/lib/chat/allow";
-import type { AgentCard, AgentConfigView, ContainerInfo, ToolEntry } from "@/lib/agents/types";
+import type { AgentCard, AgentConfigView, AgentRuntime, ContainerInfo, ToolEntry } from "@/lib/agents/types";
 import { assignHref } from "./follow";
 import { alertClass, dangerClass, FoldAllButton, FoldGroup, inputClass, labelClass, mainClass, primaryClass, quietClass } from "./Fold";
 import { LogFold } from "./LogFold";
 import { PersonaFold } from "./PersonaFold";
 import { SecretsFold } from "./SecretsFold";
+import { SelfFold } from "./SelfFold";
 import { StatusFold } from "./StatusFold";
 import { ToolsFold } from "./ToolsFold";
 import { UsersFold } from "./UsersFold";
@@ -114,6 +116,18 @@ export function AgentDashboard({
     void load();
   }, [load]);
 
+  async function chooseRuntime(runtime: AgentRuntime) {
+    if (!config || runtime === config.runtime) {
+      return;
+    }
+    setError(null);
+    try {
+      setConfig(await patchConfig(slug, { runtime }, client));
+    } catch (err) {
+      setError(codeOf(err));
+    }
+  }
+
   async function destroy() {
     setBusy(true);
     setError(null);
@@ -158,11 +172,30 @@ export function AgentDashboard({
                 Looking only. Changes belong to an admin or this agent&apos;s operator.
               </p>
             )}
+        <fieldset className="flex flex-wrap items-center gap-4">
+          <legend className={labelClass}>Runtime</legend>
+          {(["container", "native"] as const).map((value) => (
+            <label key={value} className="flex items-center gap-1.5 text-sm text-body">
+              <input
+                type="radio"
+                name="agent-runtime"
+                value={value}
+                checked={config.runtime === value}
+                disabled={!agent.canMutate}
+                onChange={() => {
+                  void chooseRuntime(value);
+                }}
+              />
+              {value}
+            </label>
+          ))}
+        </fieldset>
         <StatusFold
           slug={agent.slug}
           status={agent.status}
           container={agent.container}
           canMutate={agent.canMutate}
+          runtime={config.runtime}
           client={client}
           onContainer={(info: ContainerInfo) => {
             setAgent((prev) => prev ? { ...prev, container: info } : prev);
@@ -172,9 +205,16 @@ export function AgentDashboard({
         <PersonaFold
           slug={agent.slug}
           persona={config.persona}
+          runtime={config.runtime}
           canMutate={agent.canMutate}
           client={client}
           onPersona={(persona) => setConfig((prev) => prev ? { ...prev, persona } : prev)}
+        />
+        <SelfFold
+          slug={agent.slug}
+          runtime={config.runtime}
+          canMutate={agent.canMutate}
+          client={client}
         />
         <SecretsFold
           slug={agent.slug}
@@ -188,6 +228,8 @@ export function AgentDashboard({
           config={config}
           tools={tools}
           canMutate={agent.canMutate}
+          runtime={config.runtime}
+          status={agent.status}
           client={client}
           onConfig={setConfig}
         />

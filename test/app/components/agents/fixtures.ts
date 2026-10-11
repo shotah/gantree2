@@ -81,6 +81,7 @@ export function config(over: Partial<AgentConfigView> = {}): AgentConfigView {
     house: [],
     mcp: "",
     persona: "Be brief.",
+    runtime: "container",
     updatedAt: 1,
     recreate: false,
     ...over,

@@ -1,6 +1,0 @@
-.env
-persona/*.md
-!persona/*.example.md
-!persona/.gitkeep
-data/*
-!data/.gitkeep

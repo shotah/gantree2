@@ -1,17 +1,19 @@
 # Channels
 
-One `CHANNEL` per agent. All mouths are outbound-only + allowlist (empty
-list fails boot). The mouth this product runs is **chat**: the harness
-dials the Agent DO, and the phone joins the same room.
-[architecture.md](architecture.md). Cab and helm are native apps on that
-same room, not a second channel. Android Auto is one surface of cab.
-Their backlog is not in this repo ([todo.md](todo.md) §0). Telegram,
-Discord, and Slack are vendor options the harness still speaks. An unset
-`CHANNEL` still defaults to `telegram`. Stdio is the local REPL
-(`make run` inside `harness/`, which lands with [todo.md](todo.md) §5).
+The mouth this product runs is **chat**. On `runtime: native` the brain
+is the Agent Durable Object, and the phone joins that room. There is no
+`CHANNEL` and no dial. Cab and helm are native apps on that same room,
+not a second channel. Android Auto is one surface of cab. Their backlog
+is not in this repo ([todo.md](todo.md) §0).
+[architecture.md](architecture.md).
 
-Two mouths means two agents — one container each, one allowlist each.
-[architecture.md](architecture.md). The three-repo diagram is not carried.
+Telegram, Discord, Slack, and stdio are mouths the Go harness still
+speaks. They are not in the TypeScript brain. An unset `CHANNEL` on a
+container agent still defaults to `telegram`. Stdio is `make run` inside
+`harness/`. Two mouths means two agents, one allowlist each. A native
+agent has no container. The three-repo diagram is not carried.
+
+The sections below are the container harness.
 
 Allowlist grammar: [access.md](access.md#allowlist-entry-grammar).
 
@@ -67,7 +69,12 @@ required (`xapp-` is not the bot token).
 
 ## Chat
 
-Outbound WSS to this Worker's room. The harness dials; nothing listens.
+On a native agent this is the only mouth. The DO fans `reply`, `draft`,
+`typing`, `react`, `cmds`, `aims`, `todo`, `allow`, and `push` to
+phones. A container agent still dials the same room; the harness-side
+notes below are that path.
+
+Container: outbound WSS to this Worker's room. The harness dials; nothing listens.
 There is no mailbox URL to paste — the Agent DO's origin is
 `wss://<this origin>/ws/<slug>`, and the DO injects the bearer.
 [architecture.md](architecture.md).
@@ -76,9 +83,9 @@ On dial the harness sends `aims` then `todo` after `cmds`, and sends either
 frame again when a turn or a cron push changed those rows. A `todo` row
 carries `priority` (`2` urgent, `1` high, absent when normal) with the
 `!` marker stripped from `text`. The tasks write-up is not carried.
-No new socket, no `gantry status` field, no HTTP route. The chat PWA
-lands with [todo.md](todo.md) §3. Cab uses this same room. Android Auto
-is one surface of that app. The harness uses `CHANNEL=chat`.
+No new socket and no `gantry status` field. The chat PWA is this repo.
+Cab uses this same room. Android Auto is one surface of that app. The
+container harness uses `CHANNEL=chat`.
 
 ```bash
 CHANNEL=chat

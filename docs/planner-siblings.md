@@ -1,25 +1,25 @@
 # Daily planner: chat and settings
 
-The harness replaced Spark of life with one daily planning session. This
-file is the checklist for the chat PWA and the settings screens in this
-repo. The harness side is [cron.md](cron.md). What settings may write is
+The daily planner replaced Spark of life with one planning session. This
+file is the checklist for the chat PWA and the settings screens. The
+clock is [cron.md](cron.md). What settings may write is
 [contract.md](contract.md).
 
 Neither surface gets a new socket, frame kind, or `status` field.
-The chat room lands with [todo.md](todo.md) §3; the settings screens
-land with [todo.md](todo.md) §4. Until then this is the copy those
-screens have to match. Work is menus and any string that still names spark.
+On a native agent, `announce` emits `cmds` when the brain opens. On a
+container agent, the harness sends that frame when it dials. Work is
+menus and any string that still names spark.
 
 ---
 
 ## Chat
 
-The room already receives the menu once the harness dials. On connect the
-harness sends `kind: "cmds"` from `slash.Catalog()` (in the harness,
-`internal/channel/chat/inbound.go` — the copied tree may still say
-`pendant` until Phase 4; lands with [todo.md](todo.md) §5).
-That list now has `planner` (`args: true`, hint `daily planning session
-(on|off|HH:MM)`) and does not have `spark` or `engagement`.
+The room receives the menu as a `cmds` frame. The catalog includes
+`planner` (`args: true`, hint `daily planning session (on|off|HH:MM)`)
+and does not have `spark` or `engagement`. A native brain publishes it
+from `brain/slash`. A container harness publishes it from
+`internal/channel/chat` (that tree may still say `pendant` until Phase
+4).
 
 Chat pushes are still `{ kind: "push", text }`. A planning session that
 speaks starts with `[cron] Daily planner`. A `[silent]` session sends

@@ -1,14 +1,25 @@
 # MCP host
 
-How the harness loads tools, names them for the model, recovers from common
-hallucinations, and how to exercise that path locally.
+How tools are named for the model, how a prefix is turned on, and how
+the host recovers from a bad name.
 
-Capabilities live in **external MCP stdio binaries**, plus a few harness
-builtins (memory, cron, watch, `self_note`, `web_search`). The harness
-supervises MCP children inside its container: spawn → list → call →
-truncate → restart. The process around that container is
-[architecture.md](architecture.md); this page is the contract for naming
-and local use.
+On `runtime: native` the twelve plugins are in-process modules under
+`brain/plugins`. There is no stdio transport and no child process.
+`brain/tools` is the registry: `{plugin}__{tool}`, `mcp_enable`,
+truncation, and the skip list. Builtins (memory, cron, watch,
+`self_note`, `web_search`, aims) have no prefix and never idle-drop.
+The shapes stay MCP-shaped so manifests, the Tools grid, and eval
+fixtures do not change. Pictures:
+[architecture.md](architecture.md).
+
+A plugin `ready()` returns `null` or a skip: `no_key`, `no_oauth`,
+`disabled`, `error`. That list is the `status` frame. `GARMIN_TOOL_TIER`
+and `GOOGLE_TOOL_PRESET` narrow those two catalogs before publish.
+The native registry does not read `config.mcp`.
+
+The stdio supervisor — spawn, list, call, restart — is the container
+harness. It is [Legacy: the stdio host](#legacy-the-stdio-host) at the
+bottom of this page. Naming and `mcp_enable` below are both runtimes.
 
 Long-horizon planning uses tools over days (cron, watches). The host has to
 repair names and finish turns or the horizon collapses into ERROR.
@@ -19,9 +30,9 @@ repair names and finish turns or the horizon collapses into ERROR.
 
 | Goal | How MCP helps |
 | --- | --- |
-| Keep the harness small | Calendar, Cast, etc. stay out of the `gantry` binary. Web search is a builtin. |
-| Clear grant model | A server in `mcp.toml` is granted; omit it and it does not exist |
-| Distroless-friendly | Static Go binaries over stdio — no shell, no npm in the image |
+| Keep the loop small | Calendar and mail stay in the `google` plugin. Web search is a builtin. |
+| Clear grant model | On `container`, a server in `mcp.toml` is granted; omit it and it does not exist. On `native`, `ready()` skips a plugin that has no key or no token |
+| One bundle | Native plugins ship in the Worker. The distroless image is the container path |
 | Swappable brains | Same tool schemas work for Gemini, ChatGPT, Ollama — OpenAI-compat tool calls |
 
 Chat, memory, cron, and web search work with **zero** MCP servers. Other tools are optional.
@@ -308,7 +319,9 @@ model to review that list and enable a needed off prefix this turn. Brief hold
 idles out at 6h (morning/afternoon); short at 27h. Harness builtins stay on.
 Go-live is from zero — no seed of today's catalog.
 
-Small models / rollback — full catalog every turn, no `mcp_enable`:
+Small models / rollback — full catalog every turn, no `mcp_enable`.
+On a native agent set `DYNAMIC_TOOLS=false`. On a container agent the
+manifest switch is:
 
 ```toml
 dynamic_tools = false
@@ -322,15 +335,18 @@ name = "google"
 force = true          # whole server prefix; pair with a tight `tools` allowlist
 ```
 
-Or `MCP_ENABLE_FORCE=google__calendar,garmin__sleep`. Human overrides:
-`/brief` `/short` `/off`. `/tools` shows published vs available.
+Or `MCP_ENABLE_FORCE=google__calendar,garmin__sleep` on either runtime.
+Human overrides: `/brief` `/short` `/off`. `/tools` shows published vs
+available. Unprefixed builtins never idle-drop.
 
 ---
 
-## Using this locally
+## Legacy: the stdio host
 
-The harness tree (`Makefile`, `examples/`) lands with [todo.md](todo.md) §5.
-Until then these commands have nothing to run.
+This is `runtime: container`, and a laptop `make run` inside `harness/`.
+A native agent does not spawn these binaries. Exercise it with
+`npm run dev`, set the agent's runtime to `native`, and talk on
+`/chat/<slug>`. Plugin tests are `test/brain/plugins/`.
 
 ### A — REPL (fastest feedback)
 
@@ -364,12 +380,13 @@ $env:MCP_MANIFEST="./deploy/mcp.toml"
 make run
 ```
 
-### B — An agent on the board
+### B — A container agent on the board
 
-Compose is not carried. Grant servers in that agent's `config.mcp`, put
-`LLM_*` in `config.env`, and recreate. The Agent DO starts the container;
-the harness dials back. [architecture.md](architecture.md),
-[custom-mcp.md](custom-mcp.md).
+Grant servers in that agent's `config.mcp`, put `LLM_*` in `config.env`,
+and recreate. The Agent DO starts the container; the harness dials back.
+[architecture.md](architecture.md#13-legacy-container-runtime),
+[custom-mcp.md](custom-mcp.md). A native agent ignores `config.mcp` and
+skips a plugin that is not `ready()`.
 
 Same `/tools` / `/status` in chat once the agent is up.
 
@@ -391,8 +408,8 @@ hints without spawning real MCP binaries. The tree lands with
 
 ## Checklist
 
-- [ ] Only list servers this persona should have (`mcp.toml` = grant)
-- [ ] Prefer MCP `--tool-tier` / `tools = […]` so Flash/local models see tens of tools, not hundreds
+- [ ] Container: only list servers this persona should have (`mcp.toml` = grant). Native: leave a plugin's key unset and it skips
+- [ ] Prefer `GARMIN_TOOL_TIER` / `GOOGLE_TOOL_PRESET` (native) or `--tool-tier` / `tools = […]` (container) so the model sees tens of tools, not hundreds
 - [ ] After deploy, `/tools` once and confirm the published names
 - [ ] On weird tool loops: check logs for `aliased` vs repeated `unknown tool`
 - [ ] Static MCP binaries only — the image is distroless (no libc/shell for children)
@@ -401,8 +418,8 @@ hints without spawning real MCP binaries. The tree lands with
 
 ## Related
 
-- [architecture.md](architecture.md) — Agent DO, container, R2 snapshot
-- [custom-mcp.md](custom-mcp.md) — baking a server into the image
+- [architecture.md](architecture.md) — native brain; container pictures in §13
+- [custom-mcp.md](custom-mcp.md) — a native module, or baking a server into the legacy image
 - [persona.md](persona.md) — `PERSONA.md` is not the tool catalog
 - [cron.md](cron.md#event-watches) — poller + `feeds` / `twitter` / `boards`
 - [mcp-naming.md](mcp-naming.md) — package-author naming contract

@@ -5,8 +5,7 @@ name: eval
 # be run by hand. LLM_BASE_URL, LLM_API_KEY, and LLM_MODEL are repository
 # secrets. When any is absent the job prints a notice and succeeds, so a
 # fork without them still releases. Secret values are never written to
-# the log. Sibling plugins named by tools_from are built here; the test
-# reuses them via EVAL_MCP_BIN instead of downloading a release.
+# the log.
 
 on:
   workflow_dispatch:
@@ -37,9 +36,8 @@ jobs:
   eval:
     name: Live model eval
     runs-on: ubuntu-latest
-    # ~15s a turn; the full fixture set x 3 runs is well under an hour,
-    # including the sibling plugin builds.
-    timeout-minutes: 60
+    # A turn is slow; thirty fixtures × 3 runs can outlast an hour.
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v7
         with:
@@ -64,27 +62,15 @@ jobs:
             echo "run=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-node@v7
         if: steps.llm.outputs.run == 'true'
         with:
-          go-version-file: harness/go.mod
-          cache-dependency-path: |
-            harness/go.sum
-            harness/mcp/flights/go.sum
-            harness/mcp/google/go.sum
-            harness/mcp/rentals/go.sum
+          node-version: 22
+          cache: npm
 
-      - name: Build sibling plugins
+      - name: Install
         if: steps.llm.outputs.run == 'true'
-        working-directory: harness
-        run: |
-          set -euo pipefail
-          out="${RUNNER_TEMP}/gantry-eval-mcp"
-          mkdir -p "$out"
-          (cd mcp/rentals && CGO_ENABLED=0 go build -o "$out/rentals-search-mcp" ./cmd/rentals-search-mcp)
-          (cd mcp/flights && CGO_ENABLED=0 go build -o "$out/flights-search-mcp" ./cmd/flights-search-mcp)
-          (cd mcp/google && CGO_ENABLED=0 go build -o "$out/google-mcp" .)
-          echo "EVAL_MCP_BIN=${out}" >> "$GITHUB_ENV"
+        run: npm ci
 
       - name: Eval fixtures against the model
         if: steps.llm.outputs.run == 'true'
@@ -94,6 +80,4 @@ jobs:
           LLM_MODEL: ${{ secrets.LLM_MODEL }}
           EVAL_N: ${{ inputs.runs || '3' }}
           EVAL_ONLY: ${{ inputs.only || '' }}
-        run: |
-          set -euo pipefail
-          make -C harness integration-test EVAL_ARGS="-eval.n=${EVAL_N} -eval.only=${EVAL_ONLY}"
+        run: npm run eval

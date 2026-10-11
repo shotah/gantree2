@@ -97,6 +97,31 @@ export async function sealNonce(key: Uint8Array, now = Date.now()): Promise<stri
   return seal(key, "nonce", { n: randomToken(16) }, NONCE_TTL_S, now);
 }
 
+/**
+ * OAuth catch. The brain puts this in the provider's `state`; the redirect
+ * back to `/api/auth/catch` opens it and learns which agent and plugin
+ * finished. A nonce or a session does not open here.
+ */
+export const OAUTH_CATCH_TTL_S = 30 * 60;
+
+export type OAuthCatchClaims = {
+  slug: string;
+  plugin: string;
+};
+
+export async function sealOAuthCatch(key: Uint8Array, claims: OAuthCatchClaims, now = Date.now()): Promise<string> {
+  return seal(key, "oauth-catch", { slug: claims.slug, plugin: claims.plugin }, OAUTH_CATCH_TTL_S, now);
+}
+
+/** Null when the token is not ours, expired, tampered, or not an oauth-catch. */
+export async function openOAuthCatch(key: Uint8Array, token: string, now = Date.now()): Promise<OAuthCatchClaims | null> {
+  const p = await open(key, "oauth-catch", token, now);
+  if (!p || typeof p.slug !== "string" || !p.slug || typeof p.plugin !== "string" || !p.plugin) {
+    return null;
+  }
+  return { slug: p.slug, plugin: p.plugin };
+}
+
 /** Null when the nonce is not ours, expired, or tampered. */
 export async function openNonce(key: Uint8Array, token: string, now = Date.now()): Promise<NonceClaims | null> {
   const p = await open(key, "nonce", token, now);

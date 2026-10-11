@@ -1,17 +1,14 @@
 # Emoji reactions
 
 Both directions: the agent reacting to the human's message, and the human
-reacting to the agent's. The harness half is built and pinned by tests;
-the chat room, the PWA, and Cab are named at the end. The harness tree
-lands with [todo.md](todo.md) §5. The chat room and PWA land with
-[todo.md](todo.md) §3. Cab is not in this repo ([todo.md](todo.md) §0).
+reacting to the agent's. Cab is not in this repo ([todo.md](todo.md) §0).
 
 ## Where it stands
 
-| | Telegram | Chat (PWA / Cab) | stdio / Discord / Slack |
+| | Telegram (container) | Chat (this repo) | stdio / Discord / Slack (container) |
 | --- | --- | --- | --- |
-| Human reacts to the agent | `message_reaction` updates settle 3 s, then `[reaction] 👍 on: <agent text>` is a turn; kernel triage decides whether the model is called. | Harness side ready: `react` frame in → settle → same turn. The room, the PWA, and Cab do not send it yet. | — |
-| Agent reacts to the human | `SetMessageReaction` on their message. | Harness side ready: `react` frame out on their inbound frame id. Nothing paints it yet. | Text fallback (`👍` as the reply). |
+| Human reacts to the agent | `message_reaction` updates settle 3 s, then `[reaction] 👍 on: <agent text>` is a turn; kernel triage decides whether the model is called. | The PWA sends `{ kind: "react", id, text }`. The DO stores it and fans it to that person's other mouths. On `native` the brain takes it as a turn (`handleInbound`). On `container` it is forwarded to the crane, or queued if the socket is down. | — |
+| Agent reacts to the human | `SetMessageReaction` on their message. | The brain (or the crane) emits `react` on the inbound id. The DO fans it to that person's phones. | Text fallback (`👍` as the reply). |
 
 ## The rule
 

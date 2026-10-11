@@ -12,32 +12,17 @@
     "not_found_handling": "none",
     "binding": "ASSETS"
   },
-  // Workers Logs. Without this the harness container's stdout/stderr
-  // (its slog lines: config, LLM errors, plugin boots) is captured
-  // nowhere; with it they show in the dashboard Logs tab and `wrangler
-  // tail`. Free tier: 200k events/day, 3-day retention.
+  // Workers Logs show in the dashboard Logs tab and `wrangler tail`.
+  // Free tier: 200k events/day, 3-day retention.
   "observability": { "enabled": true },
-  // Local `vite dev` has no Docker. Containers stay on for deploy;
-  // the dashboard treats a missing runtime as unknown.
-  "dev": { "enable_containers": false },
-  "containers": [
-    {
-      "class_name": "Harness",
-      "image": "./harness/Dockerfile",
-      "max_instances": 5,
-      "name": "gantree2-harness"
-    }
-  ],
   "durable_objects": {
     "bindings": [
       { "name": "SETTINGS", "class_name": "Settings" },
-      { "name": "AGENT", "class_name": "Agent" },
-      { "name": "HARNESS", "class_name": "Harness" }
+      { "name": "AGENT", "class_name": "Agent" }
     ]
   },
   "migrations": [
-    { "tag": "v1", "new_sqlite_classes": ["Settings", "Agent"] },
-    { "tag": "v2", "new_sqlite_classes": ["Harness"] }
+    { "tag": "v1", "new_sqlite_classes": ["Settings", "Agent"] }
   ],
   "kv_namespaces": [
     { "binding": "DIRECTORY", "id": "TODO" }
@@ -45,7 +30,7 @@
   "r2_buckets": [
     { "binding": "STORE", "bucket_name": "gantree2-store" }
   ],
-  // Optional var. Origin the harness dials, no path.
-  // Unset locally: start falls back to the request origin.
+  // Optional var. Public origin for OAuth redirects (path stripped).
+  // Unset locally: callers fall back to the request origin.
   // "vars": { "PUBLIC_ORIGIN": "https://gantree.example.com" }
 }

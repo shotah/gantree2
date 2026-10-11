@@ -10,13 +10,14 @@ import {
   KEY_PLACEHOLDER_MISSING,
   KEY_PLACEHOLDER_SET,
   missingNeeds,
+  oauthLine,
   ToolsFold,
   withGrant,
 } from "@/app/components/agents/ToolsFold";
 import { tomlFromGrants } from "@/lib/agents/mcpToml";
 import type { ApiClient } from "@/app/lib/agentsHttp";
-import type { AgentConfigView, ToolEntry } from "@/lib/agents/types";
-import { CAST, MAPS, config, json, href, inputOf, textBody } from "./fixtures";
+import type { AgentConfigView, AgentStatus, ToolEntry } from "@/lib/agents/types";
+import { CAST, MAPS, STATUS, config, json, href, inputOf, textBody } from "./fixtures";
 
 afterEach(() => {
   cleanup();
@@ -43,12 +44,16 @@ describe("tool grants", () => {
   });
 });
 
-function Harness({ client, tools, start, canMutate = true, seen }: {
+const GARMIN: ToolEntry = { id: "garmin", binary: "garmin-bin", needs: [], oauth: false, homeOnly: false };
+
+function Harness({ client, tools, start, canMutate = true, seen, runtime = "container", status = null }: {
   client: ApiClient;
   tools: ToolEntry[];
   start: AgentConfigView;
   canMutate?: boolean;
   seen?: AgentConfigView[];
+  runtime?: "container" | "native";
+  status?: AgentStatus | null;
 }) {
   const [view, setView] = useState(start);
   return (
@@ -57,6 +62,8 @@ function Harness({ client, tools, start, canMutate = true, seen }: {
       config={view}
       tools={tools}
       canMutate={canMutate}
+      runtime={runtime}
+      status={status}
       client={client}
       onConfig={(next) => {
         seen?.push(next);
@@ -168,5 +175,43 @@ describe("ToolsFold", () => {
     expect(within(form).getByLabelText<HTMLInputElement>(/MAPS_KEY/).disabled).toBe(true);
     expect(within(form).queryByRole("button")).toBeNull();
     expect(screen.queryByRole("button", { name: "Recreate to apply keys" })).toBeNull();
+  });
+
+  it("opens Connect for a native oauth plugin and skips garmin", async () => {
+    const status: AgentStatus = {
+      ...STATUS,
+      published: ["strava"],
+      skipped: [{ name: "google", reason: "no_oauth" }, { name: "maps", reason: "no_key" }],
+    };
+    expect(oauthLine(status, "google")).toBe("not connected");
+    expect(oauthLine(status, "strava")).toBe("connected");
+    expect(oauthLine(status, "maps")).toBeNull();
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+    const client: ApiClient = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      await Promise.resolve();
+      expect(href(input)).toBe("/api/agents/kit/auth/start");
+      expect(JSON.parse(textBody(init?.body))).toEqual({ plugin: "google" });
+      return json(200, { url: "https://accounts.example/auth?redirect_uri=http://127.0.0.1:3000/api/auth/catch" });
+    });
+    render(
+      <Harness
+        client={client}
+        tools={[GOOGLE, GARMIN]}
+        start={config({ runtime: "native" })}
+        runtime="native"
+        status={status}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Tools" }));
+    expect(screen.getByText("not connected")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Connect garmin" })).toBeNull();
+    expect(screen.queryByText("Sign in from chat before this publishes.")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Connect google" }));
+    await vi.waitFor(() => expect(open).toHaveBeenCalledWith(
+      "https://accounts.example/auth?redirect_uri=http://127.0.0.1:3000/api/auth/catch",
+      "_blank",
+      "noopener,noreferrer",
+    ));
+    open.mockRestore();
   });
 });

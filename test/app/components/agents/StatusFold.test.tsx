@@ -61,6 +61,23 @@ describe("StatusFold", () => {
     expect(screen.queryByLabelText("Harness last error")).toBeNull();
   });
 
+  it("shows native instead of the container row and hides container actions", () => {
+    render(
+      <StatusFold
+        slug="kit"
+        status={STATUS}
+        container={CONTAINER}
+        runtime="native"
+        canMutate
+        client={vi.fn()}
+        onContainer={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("native", { selector: "p" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "start container" })).toBeNull();
+    expect(screen.queryByText("exit 1")).toBeNull();
+  });
+
   it("shows an empty harness and hides controls when looking only", () => {
     render(
       <StatusFold

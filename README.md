@@ -19,36 +19,46 @@
   <a href="LICENSE"><img src="https://img.shields.io/github/license/shotah/gantree2" alt="License"></a>
 </p>
 
+The harness badge stays while [harness.yml](.github/workflows/harness.yml)
+exists. That workflow is frozen with the Go tree pending cutover.
+
 **Personal AI assistants with real tools, running where you say.** Your
-Cloudflare account, or a box at home — same manifest, same image. Sign in
-with Google, add the people you trust, give each assistant a persona and
-the tools it may touch, and talk to it from the browser, the Android app,
-or the iPhone app. Fast to stand up, simple to run, yours to read.
+Cloudflare account, or a box at home — same manifest. Sign in with
+Google, add the people you trust, give each assistant a persona and the
+tools it may touch, and talk to it from the browser, the Android app, or
+the iPhone app. Fast to stand up, simple to run, yours to read. The
+brain is TypeScript inside the Agent Durable Object. An assistant still
+on `runtime: container` keeps the Go harness until you flip it.
 
 The tree is the harness. The level bough is the hoist. The orange is what
 it hands you.
 
 ## Why this one
 
-- **No open ports. Ever.** The assistant runs in a container that dials
-  *out* to its chat room. Nothing listens on your network, nothing is
-  exposed to the internet but one Cloudflare Worker behind Google sign-in.
+- **No open ports. Ever.** A native assistant is the Agent Durable
+  Object. Nothing listens on your network, and nothing is exposed to
+  the internet but one Cloudflare Worker behind Google sign-in. An
+  assistant still on the container dials *out* to that same room.
 - **One door.** Google account, then an allowlist. An admin keeps the
   list on **Users**; a member sees only the assistants they were given.
   No passphrases, no second login, no role in the cookie.
-- **Real tools, granted per assistant.** Maps, Google (mail, calendar,
-  docs, drive), Garmin, Strava, Google Health, image generation, feeds,
-  X, rentals, math — baked into one image, switched on per assistant in
-  **Tools**. Keys live on the assistant, not in your repo.
-- **Memory you can open.** Each assistant has a SQLite file and a
-  `SELF.md` it edits. Snapshots land in your R2 bucket; **Recreate**
-  restores from the last one.
+- **Real tools, in the Worker.** Maps, Google (mail, calendar, docs,
+  drive), Garmin, Strava, Google Health, image generation, feeds, X,
+  rentals, math — twelve plugins in the same bundle as the brain. A
+  missing key or login shows up as skipped. Keys live on the assistant,
+  not in your repo. The container image is only for assistants still on
+  `runtime: container`.
+- **Memory you can open.** A native assistant keeps SQLite, persona,
+  and `SELF.md` in its Durable Object. Edit them on the dashboard. A
+  container assistant still snapshots `gantry.db` and `SELF.md` to R2.
 - **A chat that follows you.** A PWA that installs on a phone, with
   push, voice, photos, and themes the assistant can set — and native
   Android and iPhone apps on the same room.
 - **Provisioned, not configured.** One `wrangler.jsonc` describes the
-  Worker, the Durable Objects, the KV, the R2, and the container. `wrangler
-  deploy` for Cloudflare; `celld deploy` for the machine under your desk.
+  Worker, the Durable Objects, the KV, and the R2. The Harness container
+  binding is still there for assistants on `runtime: container`.
+  `wrangler deploy` for Cloudflare; `celld deploy` for the machine under
+  your desk.
 
 ## A look
 
@@ -88,19 +98,22 @@ flowchart LR
   subgraph worker[One Cloudflare Worker · or celld at home]
     door[the door<br/>allowlist + session]
     settings[(Settings DO<br/>users · agents · spend)]
-    room[(Agent DO · one per assistant<br/>room · config · log · snapshots)]
+    room[(Agent DO · one per assistant<br/>room · config · SQLite brain · alarm)]
     door --> settings
     door --> room
   end
-  harness[Harness container<br/>Go · persona · SQLite · MCP tools] -- dials out, bearer --> room
-  room -- snapshot --> r2[(R2)]
+  room -- chat completions --> llm[OpenAI-compatible model]
 ```
 
-The Worker is the only thing on the internet. The harness dials *in* to
-its room with a bearer the room minted; the room sends it its config,
-keeps its log, and signs the URLs it uses to restore and snapshot its
-memory. Phones only ever see chat. Diagrams and the long version:
-[architecture](docs/architecture.md) · [proposal](docs/proposal.md).
+The Worker is the only thing on the internet. On `runtime: native` the
+brain runs inside the Agent Durable Object: the turn, the twelve
+plugins, persona, `SELF.md`, and the alarm that fires cron, watches,
+and memory consolidation. It emits the same frames a crane socket used
+to, so phones only ever see chat. An assistant left on
+`runtime: container` still dials in from the Go harness and snapshots
+to R2. Diagrams: [architecture](docs/architecture.md). The decision:
+[brain](docs/brain.md). The morning's plan, kept as history:
+[proposal](docs/proposal.md).
 
 ## Run it
 
@@ -110,27 +123,31 @@ npm ci
 npm run dev                      # http://127.0.0.1:3000 — sign in, you land on /agents
 ```
 
-Then **New agent**: a name, a persona (there is a template), the tools it
-may use, the people who may talk to it. Its card goes green when the
-harness connects. [install.md](docs/install.md) walks the Google client,
-Cloudflare, and home setups; [access.md](docs/access.md) is the people
-side.
+Then **New agent**: a name, a persona (there is a template), the people
+who may talk to it. Set **Runtime** to `native` on its dashboard — that
+is the brain in the Durable Object, and it does not need Docker. Left
+on `container`, the card goes green when the harness connects.
+[install.md](docs/install.md) walks the Google client, Cloudflare, and
+home setups; [access.md](docs/access.md) is the people side.
 
 | Where | Command | What holds state |
 | --- | --- | --- |
 | Your laptop | `npm run dev` | Miniflare, under `.wrangler/` |
-| Cloudflare | `npm run deploy` (CI on `main`) | Durable Objects · KV · R2 · Containers |
+| Cloudflare | `npm run deploy` (CI on `main`) | Durable Objects · KV · R2 · Containers (legacy) |
 | A box at home | `npm run deploy:home` ([celld](https://github.com/denoland/celld)) | celld's SQLite + an S3 bucket you own, behind Tailscale or a Tunnel |
 
 ```sh
 npm run build && npm run start   # the built Worker under wrangler dev
-cd harness && docker build -t gantree-harness:local .   # the assistant image; rootless podman works
 npm test · npm run lint · npm run typecheck             # what CI runs
+npm run eval                     # live-model eval; Vitest, brain/eval (docs/eval_setup.md)
 ```
+
+`cd harness && docker build -t gantree-harness:local .` builds the
+legacy container image. A native assistant does not use it.
 
 ## Tools in the box
 
-Twelve MCP servers, one image, switched on per assistant:
+Twelve plugins, in the Worker, named `{plugin}__{tool}`:
 
 | | | |
 | --- | --- | --- |
@@ -140,24 +157,26 @@ Twelve MCP servers, one image, switched on per assistant:
 | **flights** — Google Flights via SerpAPI | **math** | **chat** — the room itself |
 | [custom servers](docs/custom-mcp.md) | | |
 
-Each lists what it needs (a key, an OAuth client) and the dashboard tells
-you what is missing before the assistant tries. Naming is a contract:
+Each plugin is skipped until it has what it needs (a key, an OAuth
+login). The dashboard lists published and skipped. Naming is a contract:
 [mcp-naming.md](docs/mcp-naming.md) — a renamed tool fails the eval before
-any model call.
+any model call. `mcp_enable` turns a prefix on for the chat; idle drops
+are 6h and 27h. [mcp.md](docs/mcp.md).
 
 ## Reliability
 
 Two coverage numbers, both published to `gh-pages` on every push to
 `main` and shown above. **coverage** is the Worker (`lib/**`, `edge/**`,
 `app/lib/**`; Vitest, 60 % floor in `vitest.config.ts`). **harness
-coverage** is the Go harness *and every baked-in plugin*, merged into one
-profile — an untested plugin lowers the number instead of hiding behind
-its own badge. `HARNESS_COVERAGE_MIN` in `harness.yml` is the floor.
+coverage** stays while `harness.yml` exists. That workflow is frozen
+with the Go tree: the harness and the baked-in plugins, one merged
+profile. `HARNESS_COVERAGE_MIN` is the floor and only goes up. It is
+not the native brain's number.
 
 ```sh
 npm run test:coverage     # Worker, with the threshold gate
 npm run coverage:harness  # harness + plugins, merged
-npm run eval              # live-model behaviour eval; the release gate (docs/eval_setup.md)
+npm run eval              # live-model behaviour eval, Vitest (docs/eval_setup.md)
 ```
 
 ESLint is type-aware (`no-explicit-any`, `no-unsafe-*`, `no-deprecated`,
@@ -171,7 +190,7 @@ Same files under [`docs/`](docs/):
 
 | Running it | The assistant | The rules |
 | --- | --- | --- |
-| [install](docs/install.md) · [access](docs/access.md) · [security](docs/security.md) · [troubleshooting](docs/troubleshooting.md) | [persona](docs/persona.md) · [channels](docs/channels.md) · [cron](docs/cron.md) · [reactions](docs/reactions.md) · [planner-siblings](docs/planner-siblings.md) · [connecting accounts](docs/auth.md) | [architecture](docs/architecture.md) · [runtime](docs/runtime.md) · [contract](docs/contract.md) · [mcp](docs/mcp.md) · [custom-mcp](docs/custom-mcp.md) · [mcp-naming](docs/mcp-naming.md) · [evals](docs/eval_setup.md) · [evaluation fable](docs/evaluation_fable.md) |
+| [install](docs/install.md) · [access](docs/access.md) · [security](docs/security.md) · [troubleshooting](docs/troubleshooting.md) — door, keys, and the failures | [persona](docs/persona.md) · [channels](docs/channels.md) · [cron](docs/cron.md) · [reactions](docs/reactions.md) · [planner-siblings](docs/planner-siblings.md) · [connecting accounts](docs/auth.md) — what one assistant does | [architecture](docs/architecture.md) · [runtime](docs/runtime.md) · [brain](docs/brain.md) · [contract](docs/contract.md) · [mcp](docs/mcp.md) · [custom-mcp](docs/custom-mcp.md) · [mcp-naming](docs/mcp-naming.md) · [evals](docs/eval_setup.md) · [evaluation fable](docs/evaluation_fable.md) — the native brain, and the frozen container |
 
 Plan and backlog: [proposal](docs/proposal.md) · [todo](docs/todo.md) ·
 [done](docs/todo_done.md). Contributing: [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -188,11 +207,12 @@ lib/door/         allowlist · users · google · session · gate · landing    
 lib/chat/         room · bearer · frames · allow · push · membership          the room
 lib/agents/       registry · config · status · container · tools · snapshot  the assistants
 lib/theme/        fifteen themes, contrast gate                              from pendant
-edge/             Durable Objects: Settings · Agent · Harness (container)
+brain/            the native agent: core · agent loop · room · plugins
+edge/             Durable Objects: Settings · Agent · Harness (legacy container)
 worker/           the Worker entry: Vinext + /ws/<slug>
-harness/          the Go harness + harness/mcp/<plugin>/ + Dockerfile
-scripts/          icons · seed · shot · badge · pages · coverage-harness
-test/             mirrors lib/, app/, edge/, scripts/
+harness/          frozen Go harness + harness/mcp/<plugin>/ + Dockerfile
+scripts/          icons · seed · shot · badge · pages · eval · coverage-harness
+test/             mirrors lib/, app/, edge/, brain/, scripts/
 ```
 
 ## Lineage

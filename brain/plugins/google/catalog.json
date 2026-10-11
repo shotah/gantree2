@@ -1,0 +1,3905 @@
+[
+  {
+    "description": "Create new deployment of script_id (API executable, web app, etc.). Use after appscript_update_content. Not for run — use appscript_evaluate_function.",
+    "inputSchema": {
+      "properties": {
+        "description": {
+          "description": "Deployment description.",
+          "type": "string"
+        },
+        "script_id": {
+          "description": "The script project ID.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        },
+        "version_description": {
+          "description": "Optional version description.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_google_email",
+        "script_id",
+        "description"
+      ],
+      "type": "object"
+    },
+    "name": "appscript_create_deployment"
+  },
+  {
+    "description": "Create empty Apps Script project (title). Returns script_id. Then appscript_update_content.",
+    "inputSchema": {
+      "properties": {
+        "title": {
+          "description": "Project title.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "type": "object"
+    },
+    "name": "appscript_create_project"
+  },
+  {
+    "description": "Snapshot current script code as immutable version on script_id. Use before risky deploys. Versions cannot be edited — appscript_create_version again for new snapshot.",
+    "inputSchema": {
+      "properties": {
+        "description": {
+          "description": "Optional description for this version.",
+          "type": "string"
+        },
+        "script_id": {
+          "description": "The script project ID.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_google_email",
+        "script_id"
+      ],
+      "type": "object"
+    },
+    "name": "appscript_create_version"
+  },
+  {
+    "description": "Delete deployment by deployment_id on script_id. Destructive — confirm when unclear.",
+    "inputSchema": {
+      "properties": {
+        "deployment_id": {
+          "description": "The deployment ID to delete.",
+          "type": "string"
+        },
+        "script_id": {
+          "description": "The script project ID.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_google_email",
+        "script_id",
+        "deployment_id"
+      ],
+      "type": "object"
+    },
+    "name": "appscript_delete_deployment"
+  },
+  {
+    "description": "Permanently delete script_id and all files. Cannot undo — confirm always. Not for undeploy only — use appscript_delete_deployment.",
+    "inputSchema": {
+      "properties": {
+        "script_id": {
+          "description": "The script project ID to delete.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_google_email",
+        "script_id"
+      ],
+      "type": "object"
+    },
+    "name": "appscript_delete_project"
+  },
+  {
+    "description": "Run a deployed function (script_id + function_name). Confirm side effects. Deployments: appscript_list_deployments.",
+    "inputSchema": {
+      "properties": {
+        "function_name": {
+          "description": "Function to execute.",
+          "type": "string"
+        },
+        "script_id": {
+          "description": "Script id.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "script_id",
+        "function_name"
+      ],
+      "type": "object"
+    },
+    "name": "appscript_evaluate_function"
+  },
+  {
+    "description": "Generate trigger setup snippet (API cannot add triggers). Paste into the script editor.",
+    "inputSchema": {
+      "properties": {
+        "function_name": {
+          "description": "Function the trigger should call.",
+          "type": "string"
+        },
+        "schedule": {
+          "description": "Interval/hour/weekday when needed for time_* types.",
+          "type": "string"
+        },
+        "trigger_type": {
+          "description": "time_minutes|time_hours|time_daily|time_weekly|on_open|on_edit|on_form_submit|on_change.",
+          "enum": [
+            "time_minutes",
+            "time_hours",
+            "time_daily",
+            "time_weekly",
+            "on_open",
+            "on_edit",
+            "on_form_submit",
+            "on_change"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "trigger_type",
+        "function_name"
+      ],
+      "type": "object"
+    },
+    "name": "appscript_generate_trigger_code"
+  },
+  {
+    "description": "Read one source file by script_id + file_name. Full project: appscript_get_project.",
+    "inputSchema": {
+      "properties": {
+        "file_name": {
+          "description": "Source file name (e.g. Code).",
+          "type": "string"
+        },
+        "script_id": {
+          "description": "Script id.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "script_id",
+        "file_name"
+      ],
+      "type": "object"
+    },
+    "name": "appscript_get_content"
+  },
+  {
+    "description": "Execution metrics for script_id (usage stats). Use for monitoring. Not live run — use appscript_evaluate_function or appscript_list_processes.",
+    "inputSchema": {
+      "properties": {
+        "metrics_granularity": {
+          "description": "Granularity of metrics — \"DAILY\" or \"WEEKLY\". Defaults to \"DAILY\".",
+          "enum": [
+            "DAILY",
+            "WEEKLY"
+          ],
+          "type": "string"
+        },
+        "script_id": {
+          "description": "The script project ID.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_google_email",
+        "script_id"
+      ],
+      "type": "object"
+    },
+    "name": "appscript_get_metrics"
+  },
+  {
+    "description": "Get project metadata + all source for script_id. Prefer appscript_get_content for one file.",
+    "inputSchema": {
+      "properties": {
+        "script_id": {
+          "description": "Script id from appscript_list_projects or appscript_create_project.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "script_id"
+      ],
+      "type": "object"
+    },
+    "name": "appscript_get_project"
+  },
+  {
+    "description": "Get one script version by version number on script_id. Use after appscript_list_versions.",
+    "inputSchema": {
+      "properties": {
+        "script_id": {
+          "description": "The script project ID.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        },
+        "version_number": {
+          "description": "The version number to retrieve (1, 2, 3, etc.).",
+          "type": "number"
+        }
+      },
+      "required": [
+        "user_google_email",
+        "script_id",
+        "version_number"
+      ],
+      "type": "object"
+    },
+    "name": "appscript_get_version"
+  },
+  {
+    "description": "List deployments for script_id (deployment ids, entry points). Use before appscript_evaluate_function or appscript_update_deployment.",
+    "inputSchema": {
+      "properties": {
+        "script_id": {
+          "description": "The script project ID.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_google_email",
+        "script_id"
+      ],
+      "type": "object"
+    },
+    "name": "appscript_list_deployments"
+  },
+  {
+    "description": "Recent script execution processes (status, errors). Use for 'why did my script fail'. Not project source — use appscript_get_project.",
+    "inputSchema": {
+      "properties": {
+        "page_size": {
+          "description": "Number of results (default: 50).",
+          "type": "number"
+        },
+        "script_id": {
+          "description": "Optional filter by script ID.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_google_email"
+      ],
+      "type": "object"
+    },
+    "name": "appscript_list_processes"
+  },
+  {
+    "description": "List Apps Script projects (script_id, title). Then appscript_get_project. Not run — appscript_evaluate_function.",
+    "inputSchema": {
+      "properties": {
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "name": "appscript_list_projects"
+  },
+  {
+    "description": "List immutable versions for script_id. Use before appscript_get_version or appscript_create_deployment. Snapshots for rollback — appscript_create_version to add new.",
+    "inputSchema": {
+      "properties": {
+        "script_id": {
+          "description": "The script project ID.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_google_email",
+        "script_id"
+      ],
+      "type": "object"
+    },
+    "name": "appscript_list_versions"
+  },
+  {
+    "description": "Create/update .gs files in script_id. Not execute — appscript_evaluate_function.",
+    "inputSchema": {
+      "properties": {
+        "files": {
+          "description": "Files: [{name, type, source}].",
+          "items": {
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "script_id": {
+          "description": "Script id.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "script_id",
+        "files"
+      ],
+      "type": "object"
+    },
+    "name": "appscript_update_content"
+  },
+  {
+    "description": "Update deployment config by deployment_id on script_id. Not for delete — use appscript_delete_deployment.",
+    "inputSchema": {
+      "properties": {
+        "deployment_id": {
+          "description": "The deployment ID to update.",
+          "type": "string"
+        },
+        "description": {
+          "description": "Optional new description.",
+          "type": "string"
+        },
+        "script_id": {
+          "description": "The script project ID.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_google_email",
+        "script_id",
+        "deployment_id"
+      ],
+      "type": "object"
+    },
+    "name": "appscript_update_deployment"
+  },
+  {
+    "description": "Rare re-auth escape hatch. Prefer human CLI setup: `google-mcp auth` (or login) once; MCP tools refresh tokens automatically. Returns an auth URL if re-auth is needed. Disabled when MCP_ENABLE_OAUTH21=true. Requires service_name (e.g. Gmail).",
+    "inputSchema": {
+      "properties": {
+        "service_name": {
+          "description": "Name of the Google service requiring authentication (e.g., 'Google Calendar', 'Gmail')",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User's Google email address for authentication",
+          "type": "string"
+        }
+      },
+      "required": [
+        "service_name"
+      ],
+      "type": "object"
+    },
+    "name": "auth_generate_url"
+  },
+  {
+    "description": "List Google accounts signed in on this host (email addresses only). Use to choose an account, then pass that address as user_google_email. Not for finding people — use contacts_search.",
+    "inputSchema": {
+      "properties": {},
+      "required": [],
+      "type": "object"
+    },
+    "name": "auth_list_accounts"
+  },
+  {
+    "description": "Create one or many events in one call. Required: events[{summary, start_time, end_time}]. A single event is a one-element list. Attendees are invited by default. Existing events → calendar_update_events.",
+    "inputSchema": {
+      "properties": {
+        "calendar_id": {
+          "description": "Default calendar id. Default: primary. Overridden per event.",
+          "type": "string"
+        },
+        "events": {
+          "description": "Events to create. Each needs summary, start_time, end_time. Optional: description, location, attendees, timezone, calendar_id, add_google_meet, send_updates.",
+          "items": {
+            "properties": {
+              "add_google_meet": {
+                "type": "boolean"
+              },
+              "attendees": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "calendar_id": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "end_time": {
+                "description": "RFC3339 or YYYY-MM-DD.",
+                "type": "string"
+              },
+              "event_id": {
+                "description": "Opaque event id from calendar_list_events.",
+                "type": "string"
+              },
+              "location": {
+                "type": "string"
+              },
+              "send_updates": {
+                "type": "string"
+              },
+              "start_time": {
+                "description": "RFC3339 or YYYY-MM-DD.",
+                "type": "string"
+              },
+              "summary": {
+                "type": "string"
+              },
+              "timezone": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "summary",
+              "start_time",
+              "end_time"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "send_updates": {
+          "description": "Invite email policy for every event: all (default when attendees set), externalOnly, or none.",
+          "type": "string"
+        },
+        "timezone": {
+          "description": "Default timezone (e.g. America/Los_Angeles). Overridden per event.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "events"
+      ],
+      "type": "object"
+    },
+    "name": "calendar_create_events"
+  },
+  {
+    "description": "Delete an event. Required: event_id from calendar_list_events. Confirm when unclear.",
+    "inputSchema": {
+      "properties": {
+        "calendar_id": {
+          "description": "Calendar id. Default: primary.",
+          "type": "string"
+        },
+        "event_id": {
+          "description": "Opaque event id from calendar_list_events (ID: …).",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id"
+      ],
+      "type": "object"
+    },
+    "name": "calendar_delete_event"
+  },
+  {
+    "description": "Get one event by event_id (details). Required: event_id from calendar_list_events. Day/range listing → calendar_list_events(time_min, time_max). Never event_id=\"primary\" or a date.",
+    "inputSchema": {
+      "properties": {
+        "calendar_id": {
+          "description": "Calendar id. Default: primary.",
+          "type": "string"
+        },
+        "event_id": {
+          "description": "Opaque event id from calendar_list_events (ID: …). Not 'primary' or a date.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id"
+      ],
+      "type": "object"
+    },
+    "name": "calendar_get_event"
+  },
+  {
+    "description": "List calendar ids/names. Skip for everyday primary work — use calendar_id=\"primary\".",
+    "inputSchema": {
+      "properties": {
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "name": "calendar_list_calendars"
+  },
+  {
+    "description": "List every event in a time range in one call (title, times, id). Use for today/tomorrow / find before edit. Do not call calendar_get_event per event. Day query: time_min + time_max, calendar_id=\"primary\". Change many → calendar_update_events.",
+    "inputSchema": {
+      "properties": {
+        "calendar_id": {
+          "description": "Calendar id. Default: primary.",
+          "type": "string"
+        },
+        "max_results": {
+          "description": "Max events. Default: 25.",
+          "type": "number"
+        },
+        "query": {
+          "description": "Optional keyword filter (title/description/location).",
+          "type": "string"
+        },
+        "time_max": {
+          "description": "Range end RFC3339. Default: time_min+24h. Pass both for a clean day query.",
+          "type": "string"
+        },
+        "time_min": {
+          "description": "Range start RFC3339 (e.g. 2026-07-28T00:00:00-07:00). Default: now.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "name": "calendar_list_events"
+  },
+  {
+    "description": "Busy blocks for one or more calendars (ids or person emails). Use for mutual availability / find a time between people. Titles → calendar_list_events. Book → calendar_create_events with attendees.",
+    "inputSchema": {
+      "properties": {
+        "calendar_ids": {
+          "description": "Calendar ids or emails; pass 2+ for mutual free/busy. Default: primary.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "time_max": {
+          "description": "Range end RFC3339.",
+          "type": "string"
+        },
+        "time_min": {
+          "description": "Range start RFC3339.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "time_min",
+        "time_max"
+      ],
+      "type": "object"
+    },
+    "name": "calendar_search_freebusy"
+  },
+  {
+    "description": "Update one or many events in one call (time, title, guests, location). Required: events[{event_id, …}] from calendar_list_events. A single event is a one-element list. New events → calendar_create_events.",
+    "inputSchema": {
+      "properties": {
+        "calendar_id": {
+          "description": "Default calendar id. Default: primary. Overridden per event.",
+          "type": "string"
+        },
+        "events": {
+          "description": "Events to change. Each needs event_id. Set only fields to change: summary, start_time, end_time, description, location, attendees, timezone, calendar_id, add_google_meet, send_updates.",
+          "items": {
+            "properties": {
+              "add_google_meet": {
+                "type": "boolean"
+              },
+              "attendees": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "calendar_id": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "end_time": {
+                "description": "RFC3339 or YYYY-MM-DD.",
+                "type": "string"
+              },
+              "event_id": {
+                "description": "Opaque event id from calendar_list_events.",
+                "type": "string"
+              },
+              "location": {
+                "type": "string"
+              },
+              "send_updates": {
+                "type": "string"
+              },
+              "start_time": {
+                "description": "RFC3339 or YYYY-MM-DD.",
+                "type": "string"
+              },
+              "summary": {
+                "type": "string"
+              },
+              "timezone": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "event_id"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "send_updates": {
+          "description": "Guest email policy for every event: all (default when guests exist), externalOnly, or none.",
+          "type": "string"
+        },
+        "timezone": {
+          "description": "Default timezone (e.g. America/Los_Angeles). Overridden per event.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "events"
+      ],
+      "type": "object"
+    },
+    "name": "calendar_update_events"
+  },
+  {
+    "description": "Send a message to space_id. Confirm unless user asked to send. Required: space_id from chat_list_spaces (spaces/…). Read history → chat_list_messages.",
+    "inputSchema": {
+      "properties": {
+        "message_text": {
+          "description": "Message body text.",
+          "type": "string"
+        },
+        "space_id": {
+          "description": "Chat space resource name from chat_list_spaces (spaces/…). Not a display name.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "space_id",
+        "message_text"
+      ],
+      "type": "object"
+    },
+    "name": "chat_create_message"
+  },
+  {
+    "description": "Read messages in space_id (paginated). Required: space_id from chat_list_spaces (spaces/…, not display name). Send → chat_create_message.",
+    "inputSchema": {
+      "properties": {
+        "space_id": {
+          "description": "Chat space resource name from chat_list_spaces (spaces/…). Not a display name.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "space_id"
+      ],
+      "type": "object"
+    },
+    "name": "chat_list_messages"
+  },
+  {
+    "description": "List Chat spaces (space_id like spaces/…, DMs, rooms). Use before chat_list_messages or chat_create_message. Message search → chat_search_messages.",
+    "inputSchema": {
+      "properties": {
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "name": "chat_list_spaces"
+  },
+  {
+    "description": "Search Chat messages by text. Optional space_id (spaces/… from chat_list_spaces). Full thread in one space → chat_list_messages.",
+    "inputSchema": {
+      "properties": {
+        "query": {
+          "description": "Text to find in messages.",
+          "type": "string"
+        },
+        "space_id": {
+          "description": "Optional space resource name (spaces/…) to limit search.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "type": "object"
+    },
+    "name": "chat_search_messages"
+  },
+  {
+    "description": "Create many contacts in one call. Use for imports/bulk add. Prefer contacts_create for one person.",
+    "inputSchema": {
+      "properties": {
+        "contacts": {
+          "description": "List of contact objects with fields: given_name, family_name, email, phone, organization, job_title.",
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contacts"
+      ],
+      "type": "object"
+    },
+    "name": "contacts_batch_create"
+  },
+  {
+    "description": "Delete many contacts by resource names. Destructive — confirm when unclear.",
+    "inputSchema": {
+      "properties": {
+        "contact_ids": {
+          "description": "List of contact IDs to delete.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contact_ids"
+      ],
+      "type": "object"
+    },
+    "name": "contacts_batch_delete"
+  },
+  {
+    "description": "Update many contacts (replace fields each). Confirm bulk overwrites. Prefer contacts_update for one.",
+    "inputSchema": {
+      "properties": {
+        "updates": {
+          "description": "List of update objects with fields: contact_id (required), given_name, family_name, email, phone, organization, job_title.",
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "updates"
+      ],
+      "type": "object"
+    },
+    "name": "contacts_batch_update"
+  },
+  {
+    "description": "Create a contact. Pass given_name/family_name and/or email/phone. Returns contact_id. Many people → contacts_batch_create.",
+    "inputSchema": {
+      "properties": {
+        "email": {
+          "description": "Email address.",
+          "type": "string"
+        },
+        "family_name": {
+          "description": "Last name.",
+          "type": "string"
+        },
+        "given_name": {
+          "description": "First name.",
+          "type": "string"
+        },
+        "phone": {
+          "description": "Phone number.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "name": "contacts_create"
+  },
+  {
+    "description": "Create a contact group/label. Use for 'new group called…'. Add members with contacts_update_group_members.",
+    "inputSchema": {
+      "properties": {
+        "name": {
+          "description": "The name of the new contact group.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "name": "contacts_create_group"
+  },
+  {
+    "description": "Delete one contact by contact_id. Destructive — confirm when unclear. Find id → contacts_search. Many → contacts_batch_delete.",
+    "inputSchema": {
+      "properties": {
+        "contact_id": {
+          "description": "Contact id from contacts_search/list (people/c… or c…).",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contact_id"
+      ],
+      "type": "object"
+    },
+    "name": "contacts_delete"
+  },
+  {
+    "description": "Delete a contact group (label). Does not delete contacts. Destructive — confirm when unclear.",
+    "inputSchema": {
+      "properties": {
+        "delete_contacts": {
+          "description": "If true, also delete contacts in the group (default: false).",
+          "type": "boolean"
+        },
+        "group_id": {
+          "description": "The contact group ID to delete.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "group_id"
+      ],
+      "type": "object"
+    },
+    "name": "contacts_delete_group"
+  },
+  {
+    "description": "Get one contact by contact_id (full fields). Required: contact_id from contacts_search/list (people/… or bare id). Lookup by name → contacts_search.",
+    "inputSchema": {
+      "properties": {
+        "contact_id": {
+          "description": "Contact id from contacts_search/list (people/c… or c…). Not a display name.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contact_id"
+      ],
+      "type": "object"
+    },
+    "name": "contacts_get"
+  },
+  {
+    "description": "Get one contact group + member list by group resource name. Use before adding/removing members.",
+    "inputSchema": {
+      "properties": {
+        "group_id": {
+          "description": "The contact group ID.",
+          "type": "string"
+        },
+        "max_members": {
+          "description": "Maximum number of members to return (default: 100, max: 1000).",
+          "type": "number"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "group_id"
+      ],
+      "type": "object"
+    },
+    "name": "contacts_get_group"
+  },
+  {
+    "description": "List contacts (names, emails, phones, resource names). Use for 'show my contacts'. Find someone → contacts_search. One id → contacts_get.",
+    "inputSchema": {
+      "properties": {
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "name": "contacts_list"
+  },
+  {
+    "description": "List contact groups/labels (group ids + names). Use before contacts_update_group_members. Not individual people — use contacts_list.",
+    "inputSchema": {
+      "properties": {
+        "page_size": {
+          "description": "Maximum number of groups to return (default: 100, max: 1000).",
+          "type": "number"
+        },
+        "page_token": {
+          "description": "Token for pagination.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "name": "contacts_list_groups"
+  },
+  {
+    "description": "Search contacts by name/email/phone (returns contact_id + fields). Use for 'find John's email'. Known id → contacts_get. Browse all → contacts_list.",
+    "inputSchema": {
+      "properties": {
+        "query": {
+          "description": "Name, email, or phone to search.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "type": "object"
+    },
+    "name": "contacts_search"
+  },
+  {
+    "description": "Update a contact (replace provided fields). Required: contact_id from contacts_search. Confirm before overwriting. New person → contacts_create.",
+    "inputSchema": {
+      "properties": {
+        "contact_id": {
+          "description": "Contact id from contacts_search/list (people/c… or c…).",
+          "type": "string"
+        },
+        "email": {
+          "description": "New email address.",
+          "type": "string"
+        },
+        "family_name": {
+          "description": "New last name.",
+          "type": "string"
+        },
+        "given_name": {
+          "description": "New first name.",
+          "type": "string"
+        },
+        "phone": {
+          "description": "New phone number.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contact_id"
+      ],
+      "type": "object"
+    },
+    "name": "contacts_update"
+  },
+  {
+    "description": "Rename a contact group. Required group resource name. Not for membership — use contacts_update_group_members.",
+    "inputSchema": {
+      "properties": {
+        "group_id": {
+          "description": "The contact group ID to update.",
+          "type": "string"
+        },
+        "name": {
+          "description": "The new name for the contact group.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "group_id",
+        "name"
+      ],
+      "type": "object"
+    },
+    "name": "contacts_update_group"
+  },
+  {
+    "description": "Add or remove contacts from a group. Required group id + contact resource names. Use after contacts_list_groups / contacts_search.",
+    "inputSchema": {
+      "properties": {
+        "add_contact_ids": {
+          "description": "Contact IDs to add to the group.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "group_id": {
+          "description": "The contact group ID.",
+          "type": "string"
+        },
+        "remove_contact_ids": {
+          "description": "Contact IDs to remove from the group.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "group_id"
+      ],
+      "type": "object"
+    },
+    "name": "contacts_update_group_members"
+  },
+  {
+    "description": "Multi-step / formatting edits on document_id (insert, format, tables, find_replace). Simple text insert/replace → docs_update_text.",
+    "inputSchema": {
+      "properties": {
+        "document_id": {
+          "description": "ID of the document to update.",
+          "type": "string"
+        },
+        "operations": {
+          "description": "List of operation dictionaries.",
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id",
+        "operations"
+      ],
+      "type": "object"
+    },
+    "name": "docs_batch_update"
+  },
+  {
+    "description": "Export document_id to PDF saved in Drive. Use for 'save doc as PDF'. Not for editing body — use docs_update_text. Export URL only — drive_get_file_download_url.",
+    "inputSchema": {
+      "properties": {
+        "document_id": {
+          "description": "ID of the Google Doc to export.",
+          "type": "string"
+        },
+        "folder_id": {
+          "description": "Drive folder ID to save PDF in. If not provided, saves in root.",
+          "type": "string"
+        },
+        "pdf_filename": {
+          "description": "Name for the PDF file. If not provided, uses original name + \"_PDF\".",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id"
+      ],
+      "type": "object"
+    },
+    "name": "docs_convert_to_pdf"
+  },
+  {
+    "description": "Create a Google Doc. Required: title. Returns document_id. Then docs_update_text / docs_get_content.",
+    "inputSchema": {
+      "properties": {
+        "content": {
+          "description": "Optional initial body text.",
+          "type": "string"
+        },
+        "title": {
+          "description": "Document title.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "type": "object"
+    },
+    "name": "docs_create"
+  },
+  {
+    "description": "Add a comment on a document. Required document_id + comment_content. Reply → docs_create_reply.",
+    "inputSchema": {
+      "properties": {
+        "comment_content": {
+          "description": "Comment text.",
+          "type": "string"
+        },
+        "document_id": {
+          "description": "document id id or share URL.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id",
+        "comment_content"
+      ],
+      "type": "object"
+    },
+    "name": "docs_create_comment"
+  },
+  {
+    "description": "Insert tables, lists, or page breaks at index in document_id. Use docs_get_structure for index. Tables with data: docs_create_table_with_data.",
+    "inputSchema": {
+      "properties": {
+        "columns": {
+          "description": "Number of columns for table (required for table).",
+          "type": "number"
+        },
+        "document_id": {
+          "description": "ID of the document to update.",
+          "type": "string"
+        },
+        "element_type": {
+          "description": "Type of element to insert ('table', 'list', 'page_break').",
+          "type": "string"
+        },
+        "index": {
+          "description": "Position to insert element (0-based).",
+          "type": "number"
+        },
+        "list_type": {
+          "description": "Type of list ('UNORDERED', 'ORDERED') (required for list).",
+          "type": "string"
+        },
+        "rows": {
+          "description": "Number of rows for table (required for table).",
+          "type": "number"
+        },
+        "text": {
+          "description": "Initial text content for list items.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id",
+        "element_type",
+        "index"
+      ],
+      "type": "object"
+    },
+    "name": "docs_create_elements"
+  },
+  {
+    "description": "Insert image in document_id from Drive file_id or URL at index. Use for 'add logo/picture'. Not text — use docs_update_text.",
+    "inputSchema": {
+      "properties": {
+        "document_id": {
+          "description": "ID of the document to update.",
+          "type": "string"
+        },
+        "height": {
+          "description": "Image height in points (optional).",
+          "type": "number"
+        },
+        "image_source": {
+          "description": "Drive file ID or public image URL.",
+          "type": "string"
+        },
+        "index": {
+          "description": "Position to insert image (0-based).",
+          "type": "number"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        },
+        "width": {
+          "description": "Image width in points (optional).",
+          "type": "number"
+        }
+      },
+      "required": [
+        "document_id",
+        "image_source",
+        "index"
+      ],
+      "type": "object"
+    },
+    "name": "docs_create_image"
+  },
+  {
+    "description": "Reply to comment_id on a document. Required document_id, comment_id, reply_content. Ids from docs_list_comments.",
+    "inputSchema": {
+      "properties": {
+        "comment_id": {
+          "description": "Comment id from docs_list_comments.",
+          "type": "string"
+        },
+        "document_id": {
+          "description": "document id id or share URL.",
+          "type": "string"
+        },
+        "reply_content": {
+          "description": "Reply text.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id",
+        "comment_id",
+        "reply_content"
+      ],
+      "type": "object"
+    },
+    "name": "docs_create_reply"
+  },
+  {
+    "description": "Create table + fill cells in document_id at index (2D string array). MUST call docs_get_structure first; use index < total_length. Prefer over docs_create_elements + manual fill.",
+    "inputSchema": {
+      "properties": {
+        "bold_headers": {
+          "description": "Whether to make first row bold (default: true).",
+          "type": "boolean"
+        },
+        "document_id": {
+          "description": "ID of the document to update.",
+          "type": "string"
+        },
+        "index": {
+          "description": "Document position (MANDATORY: get from docs_get_structure 'total_length').",
+          "type": "number"
+        },
+        "table_data": {
+          "description": "2D list of strings - EXACT format: [[\"col1\", \"col2\"], [\"row1col1\", \"row1col2\"]]",
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id",
+        "table_data",
+        "index"
+      ],
+      "type": "object"
+    },
+    "name": "docs_create_table_with_data"
+  },
+  {
+    "description": "Read plain text by document_id or share URL. Edit → docs_update_text. New doc → docs_create. Find by title → docs_search.",
+    "inputSchema": {
+      "properties": {
+        "document_id": {
+          "description": "Document id or Docs/Drive share URL.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id"
+      ],
+      "type": "object"
+    },
+    "name": "docs_get_content"
+  },
+  {
+    "description": "Doc layout stats: total_length, indices, tables (safe insert index). Use BEFORE docs_create_table_with_data or docs_create_elements — pick index < total_length. Not full text — use docs_get_content.",
+    "inputSchema": {
+      "properties": {
+        "detailed": {
+          "description": "Whether to return detailed structure information. Defaults to false.",
+          "type": "boolean"
+        },
+        "document_id": {
+          "description": "ID of the document to inspect.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id"
+      ],
+      "type": "object"
+    },
+    "name": "docs_get_structure"
+  },
+  {
+    "description": "Debug table grid: rows/cols, cell indices, content. Use when populate failed or 'table not found'. Before populate_existing flows. Not general layout — use docs_get_structure.",
+    "inputSchema": {
+      "properties": {
+        "document_id": {
+          "description": "ID of the document containing the table.",
+          "type": "string"
+        },
+        "table_index": {
+          "description": "Which table to debug (0 = first table, 1 = second table, etc.). Defaults to 0.",
+          "type": "number"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id"
+      ],
+      "type": "object"
+    },
+    "name": "docs_get_table_structure"
+  },
+  {
+    "description": "List comments on a document. Required document_id. Not file body — use docs read tools.",
+    "inputSchema": {
+      "properties": {
+        "document_id": {
+          "description": "document id id or share URL.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id"
+      ],
+      "type": "object"
+    },
+    "name": "docs_list_comments"
+  },
+  {
+    "description": "List Google Docs in a Drive folder_id (document ids + names). Use for 'docs in this folder'. Not title search — use docs_search.",
+    "inputSchema": {
+      "properties": {
+        "folder_id": {
+          "description": "The ID of the folder to list docs from. Defaults to 'root'.",
+          "type": "string"
+        },
+        "page_size": {
+          "description": "Maximum number of documents to return. Defaults to 100.",
+          "type": "number"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "name": "docs_list_in_folder"
+  },
+  {
+    "description": "Resolve (close) comment_id on a document. Required document_id + comment_id. Destructive — confirm when unclear.",
+    "inputSchema": {
+      "properties": {
+        "comment_id": {
+          "description": "Comment id from docs_list_comments.",
+          "type": "string"
+        },
+        "document_id": {
+          "description": "document id id or share URL.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id",
+        "comment_id"
+      ],
+      "type": "object"
+    },
+    "name": "docs_resolve_comment"
+  },
+  {
+    "description": "Find Google Docs by title (returns document_id). Paste a share URL to resolve one doc. Use for 'find my doc called…'. Then docs_get_content. In-folder browse: docs_list_in_folder.",
+    "inputSchema": {
+      "properties": {
+        "page_size": {
+          "description": "Number of results to return. Defaults to 10.",
+          "type": "number"
+        },
+        "query": {
+          "description": "Document title text or Docs/Drive share URL.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "type": "object"
+    },
+    "name": "docs_search"
+  },
+  {
+    "description": "Update header/footer content in document_id. Use for 'fix the header'. Not body text — use docs_update_text.",
+    "inputSchema": {
+      "properties": {
+        "content": {
+          "description": "Text content for the header/footer.",
+          "type": "string"
+        },
+        "document_id": {
+          "description": "ID of the document to update.",
+          "type": "string"
+        },
+        "header_footer_type": {
+          "description": "Type of header/footer ('DEFAULT', 'FIRST_PAGE_ONLY', 'EVEN_PAGE'). Defaults to 'DEFAULT'.",
+          "type": "string"
+        },
+        "section_type": {
+          "description": "Type of section to update ('header' or 'footer').",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id",
+        "section_type",
+        "content"
+      ],
+      "type": "object"
+    },
+    "name": "docs_update_headers_footers"
+  },
+  {
+    "description": "Apply heading styles (H1–H6) and/or paragraph alignment/spacing on a range in document_id. Use for 'make this a heading'. Inline bold: docs_update_text.",
+    "inputSchema": {
+      "properties": {
+        "alignment": {
+          "description": "Text alignment - 'START' (left), 'CENTER', 'END' (right), or 'JUSTIFIED'.",
+          "type": "string"
+        },
+        "document_id": {
+          "description": "Document ID to modify.",
+          "type": "string"
+        },
+        "end_index": {
+          "description": "End position (exclusive) - should cover the entire paragraph.",
+          "type": "number"
+        },
+        "heading_level": {
+          "description": "Heading level 0-6 (0 = NORMAL_TEXT, 1 = H1, 2 = H2, etc.).",
+          "type": "number"
+        },
+        "indent_end": {
+          "description": "Right/end indent in points.",
+          "type": "number"
+        },
+        "indent_first_line": {
+          "description": "First line indent in points (e.g., 36 for 0.5 inch).",
+          "type": "number"
+        },
+        "indent_start": {
+          "description": "Left/start indent in points.",
+          "type": "number"
+        },
+        "line_spacing": {
+          "description": "Line spacing multiplier (1.0 = single, 1.5 = 1.5x, 2.0 = double).",
+          "type": "number"
+        },
+        "space_above": {
+          "description": "Space above paragraph in points (e.g., 12 for one line).",
+          "type": "number"
+        },
+        "space_below": {
+          "description": "Space below paragraph in points.",
+          "type": "number"
+        },
+        "start_index": {
+          "description": "Start position (1-based).",
+          "type": "number"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id",
+        "start_index",
+        "end_index"
+      ],
+      "type": "object"
+    },
+    "name": "docs_update_paragraph_style"
+  },
+  {
+    "description": "Find/replace all occurrences of text in document_id. Use for 'change every X to Y'. Not for single indexed edit — use docs_update_text.",
+    "inputSchema": {
+      "properties": {
+        "document_id": {
+          "description": "ID of the document to update.",
+          "type": "string"
+        },
+        "find_text": {
+          "description": "Text to search for.",
+          "type": "string"
+        },
+        "match_case": {
+          "description": "Whether to match case exactly. Defaults to false.",
+          "type": "boolean"
+        },
+        "replace_text": {
+          "description": "Text to replace with.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id",
+        "find_text",
+        "replace_text"
+      ],
+      "type": "object"
+    },
+    "name": "docs_update_replace"
+  },
+  {
+    "description": "Insert or replace text at start_index in document_id. Required: document_id, start_index, text. Replace range: also end_index. Bold/colors → docs_batch_update. Global replace → docs_update_replace.",
+    "inputSchema": {
+      "properties": {
+        "document_id": {
+          "description": "Document id from docs_create / docs_get_content.",
+          "type": "string"
+        },
+        "end_index": {
+          "description": "If set with text, replaces [start_index, end_index).",
+          "type": "number"
+        },
+        "start_index": {
+          "description": "Insert/replace start index (use 1 near top of body).",
+          "type": "number"
+        },
+        "text": {
+          "description": "Text to insert, or replacement text when end_index is set.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id",
+        "start_index",
+        "text"
+      ],
+      "type": "object"
+    },
+    "name": "docs_update_text"
+  },
+  {
+    "description": "Share file_id with multiple recipients (roles/expiry per person). Use for bulk sharing. Confirm when unclear. Prefer drive_create_permission for one recipient.",
+    "inputSchema": {
+      "properties": {
+        "email_message": {
+          "description": "Custom message for notification emails.",
+          "type": "string"
+        },
+        "file_id": {
+          "description": "The ID of the file or folder to share. Required.",
+          "type": "string"
+        },
+        "recipients": {
+          "description": "List of recipient objects. Each should have: email (str), role (str, optional, default 'reader'), share_type (str, optional, default 'user'), expiration_time (str, optional). For domain shares, use 'domain' field instead of 'email'.",
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "send_notification": {
+          "description": "Whether to send notification emails. Defaults to true.",
+          "type": "boolean"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file_id",
+        "recipients"
+      ],
+      "type": "object"
+    },
+    "name": "drive_batch_create_permission"
+  },
+  {
+    "description": "Import content as a native Google Doc (returns document_id). Use for 'convert to Google Doc'. Then docs_get_content. Plain upload → drive_create_file.",
+    "inputSchema": {
+      "properties": {
+        "content": {
+          "description": "Text body (md/txt/html).",
+          "type": "string"
+        },
+        "file_name": {
+          "description": "Doc title (extension ignored / used for format hint).",
+          "type": "string"
+        },
+        "folder_id": {
+          "description": "Parent folder id. Default: root.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file_name"
+      ],
+      "type": "object"
+    },
+    "name": "drive_convert_to_doc"
+  },
+  {
+    "description": "Duplicate a file by file_id. Returns new file id. Use for 'make a copy of…'. Not for in-place edits — use drive_update_file or app-specific tools.",
+    "inputSchema": {
+      "properties": {
+        "file_id": {
+          "description": "The ID of the file to copy. Required.",
+          "type": "string"
+        },
+        "new_name": {
+          "description": "New name for the copied file. If not provided, uses \"Copy of [original name]\".",
+          "type": "string"
+        },
+        "parent_folder_id": {
+          "description": "The ID of the folder where the copy should be created. Defaults to 'root' (My Drive).",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file_id"
+      ],
+      "type": "object"
+    },
+    "name": "drive_create_copy"
+  },
+  {
+    "description": "Create a Drive file from content (returns file id + link). Use for 'save this to Drive'. MD/DOCX→Google Doc → drive_convert_to_doc.",
+    "inputSchema": {
+      "properties": {
+        "content": {
+          "description": "File body text.",
+          "type": "string"
+        },
+        "file_name": {
+          "description": "New file name.",
+          "type": "string"
+        },
+        "folder_id": {
+          "description": "Parent folder id. Default: root.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file_name"
+      ],
+      "type": "object"
+    },
+    "name": "drive_create_file"
+  },
+  {
+    "description": "Share file_id with one recipient (email + role). Confirm sensitive shares. Link-only → share_type=anyone. Many people → drive_batch_create_permission. URL only → drive_get_shareable_link.",
+    "inputSchema": {
+      "properties": {
+        "file_id": {
+          "description": "Drive file or folder id.",
+          "type": "string"
+        },
+        "role": {
+          "description": "reader, commenter, or writer. Default: reader.",
+          "type": "string"
+        },
+        "share_type": {
+          "description": "user, group, domain, or anyone. Default: user.",
+          "type": "string"
+        },
+        "share_with": {
+          "description": "Recipient email (or domain). Omit for share_type=anyone.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file_id"
+      ],
+      "type": "object"
+    },
+    "name": "drive_create_permission"
+  },
+  {
+    "description": "Revoke access: remove permission_id on file_id. Destructive — confirm when unclear. List permissions with drive_get_file_permissions first.",
+    "inputSchema": {
+      "properties": {
+        "file_id": {
+          "description": "The ID of the file or folder. Required.",
+          "type": "string"
+        },
+        "permission_id": {
+          "description": "The ID of the permission to remove (from drive_get_file_permissions). Required.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file_id",
+        "permission_id"
+      ],
+      "type": "object"
+    },
+    "name": "drive_delete_permission"
+  },
+  {
+    "description": "Read file by file_id (Docs→text, Sheets→CSV, Slides→text; else UTF-8). Use for 'what's in this file'. Download URL → drive_get_file_download_url. Edit Docs → docs_get_content.",
+    "inputSchema": {
+      "properties": {
+        "file_id": {
+          "description": "Drive file id or share/edit URL.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file_id"
+      ],
+      "type": "object"
+    },
+    "name": "drive_get_file_content"
+  },
+  {
+    "description": "Download/export bytes for file_id (optional export_format: pdf/docx/xlsx/csv/pptx). Use when user needs the file. Prefer drive_get_file_content to read text in chat.",
+    "inputSchema": {
+      "properties": {
+        "export_format": {
+          "description": "Native export: pdf, docx, xlsx, csv, pptx.",
+          "type": "string"
+        },
+        "file_id": {
+          "description": "Drive file id from drive_search_files.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file_id"
+      ],
+      "type": "object"
+    },
+    "name": "drive_get_file_download_url"
+  },
+  {
+    "description": "File metadata + sharing permissions for file_id. Use before drive_create_permission or update/remove permission. Not for file body — use drive_get_file_content.",
+    "inputSchema": {
+      "properties": {
+        "file_id": {
+          "description": "The ID of the file to check permissions for.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file_id"
+      ],
+      "type": "object"
+    },
+    "name": "drive_get_file_permissions"
+  },
+  {
+    "description": "Find a Drive file by name and report if link sharing is public. Use for 'is this doc public'. Prefer drive_search_files + drive_get_file_permissions for full control.",
+    "inputSchema": {
+      "properties": {
+        "file_name": {
+          "description": "The name of the file to check.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file_name"
+      ],
+      "type": "object"
+    },
+    "name": "drive_get_file_public_access"
+  },
+  {
+    "description": "Get view/download link for file_id. Use after drive_search_files for the URL. Not for changing permissions — use drive_create_permission.",
+    "inputSchema": {
+      "properties": {
+        "file_id": {
+          "description": "Drive file or folder id.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file_id"
+      ],
+      "type": "object"
+    },
+    "name": "drive_get_shareable_link"
+  },
+  {
+    "description": "Browse folder contents (optional folder_id; drive_id for shared drives). Use for 'what's in this folder'. Not for name search — use drive_search_files.",
+    "inputSchema": {
+      "properties": {
+        "corpora": {
+          "description": "Corpus to query ('user', 'drive', 'allDrives').",
+          "type": "string"
+        },
+        "drive_id": {
+          "description": "ID of the shared drive.",
+          "type": "string"
+        },
+        "folder_id": {
+          "description": "The ID of the Google Drive folder. Defaults to 'root'.",
+          "type": "string"
+        },
+        "include_items_from_all_drives": {
+          "description": "Whether items from all accessible shared drives should be included. Defaults to True.",
+          "type": "boolean"
+        },
+        "page_size": {
+          "description": "The maximum number of items to return. Defaults to 100.",
+          "type": "number"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "name": "drive_list_items"
+  },
+  {
+    "description": "Find Drive files by title (falls back to fullText). Paste a share URL to resolve one file. Returns ids + names. Then drive_get_file_content / docs_get_content / sheets_get_values. Folder browse → drive_list_items.",
+    "inputSchema": {
+      "properties": {
+        "page_size": {
+          "description": "Max files. Default: 10.",
+          "type": "number"
+        },
+        "query": {
+          "description": "File title text, share/edit URL, or Drive operators (name contains, mimeType=, …).",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "type": "object"
+    },
+    "name": "drive_search_files"
+  },
+  {
+    "description": "Update Drive file metadata (name, description, parents) by file_id. Not for Doc/Sheet/Slide body edits — use Docs/Sheets/Slides tools.",
+    "inputSchema": {
+      "properties": {
+        "add_parents": {
+          "description": "Comma-separated folder IDs to add as parents.",
+          "type": "string"
+        },
+        "copy_requires_writer_permission": {
+          "description": "Whether copying requires writer permission.",
+          "type": "boolean"
+        },
+        "description": {
+          "description": "New description for the file.",
+          "type": "string"
+        },
+        "file_id": {
+          "description": "The ID of the file to update. Required.",
+          "type": "string"
+        },
+        "mime_type": {
+          "description": "New MIME type (note: changing type may require content upload).",
+          "type": "string"
+        },
+        "name": {
+          "description": "New name for the file.",
+          "type": "string"
+        },
+        "properties": {
+          "description": "Custom key-value properties for the file.",
+          "properties": {},
+          "type": "object"
+        },
+        "remove_parents": {
+          "description": "Comma-separated folder IDs to remove from parents.",
+          "type": "string"
+        },
+        "starred": {
+          "description": "Whether to star/unstar the file.",
+          "type": "boolean"
+        },
+        "trashed": {
+          "description": "Whether to move file to/from trash.",
+          "type": "boolean"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        },
+        "writers_can_share": {
+          "description": "Whether editors can share the file.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "file_id"
+      ],
+      "type": "object"
+    },
+    "name": "drive_update_file"
+  },
+  {
+    "description": "Transfer file/folder ownership by file_id (irreversible; you become editor). Confirm always. Same-domain/personal rules apply. Not for sharing only — use drive_create_permission.",
+    "inputSchema": {
+      "properties": {
+        "file_id": {
+          "description": "The ID of the file or folder to transfer. Required.",
+          "type": "string"
+        },
+        "move_to_new_owners_root": {
+          "description": "If true, moves the file to the new owner's My Drive root. Defaults to false.",
+          "type": "boolean"
+        },
+        "new_owner_email": {
+          "description": "Email address of the new owner. Required.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file_id",
+        "new_owner_email"
+      ],
+      "type": "object"
+    },
+    "name": "drive_update_ownership"
+  },
+  {
+    "description": "Change an existing permission on file_id. Required permission_id from drive_get_file_permissions. Not for new shares — use drive_create_permission.",
+    "inputSchema": {
+      "properties": {
+        "expiration_time": {
+          "description": "Expiration time in RFC 3339 format (e.g., \"2025-01-15T00:00:00Z\").",
+          "type": "string"
+        },
+        "file_id": {
+          "description": "The ID of the file or folder. Required.",
+          "type": "string"
+        },
+        "permission_id": {
+          "description": "The ID of the permission to update (from drive_get_file_permissions). Required.",
+          "type": "string"
+        },
+        "role": {
+          "description": "New role - 'reader', 'commenter', or 'writer'.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file_id",
+        "permission_id"
+      ],
+      "type": "object"
+    },
+    "name": "drive_update_permission"
+  },
+  {
+    "description": "Add/update/delete form items and metadata on form_id (questions, sections, settings). Use for 'add a question', restructure form. Prefer forms_get first. Not for reading responses — use forms_list_responses.",
+    "inputSchema": {
+      "properties": {
+        "form_id": {
+          "description": "The ID of the form to update.",
+          "type": "string"
+        },
+        "requests": {
+          "description": "List of update requests to apply. Supported types: createItem, updateItem, deleteItem, moveItem, updateFormInfo, updateSettings.",
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "form_id",
+        "requests"
+      ],
+      "type": "object"
+    },
+    "name": "forms_batch_update"
+  },
+  {
+    "description": "Create a Google Form. Required: title. Returns form_id + URLs. Then forms_batch_update / forms_get.",
+    "inputSchema": {
+      "properties": {
+        "title": {
+          "description": "Form title.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "type": "object"
+    },
+    "name": "forms_create"
+  },
+  {
+    "description": "Get form structure (title, questions, settings, URLs) by form_id. Not answers — use forms_list_responses.",
+    "inputSchema": {
+      "properties": {
+        "form_id": {
+          "description": "Form id from forms_create or a prior result.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "form_id"
+      ],
+      "type": "object"
+    },
+    "name": "forms_get"
+  },
+  {
+    "description": "Get one form submission by form_id + response_id. Use after forms_list_responses when you need full answers for one response.",
+    "inputSchema": {
+      "properties": {
+        "form_id": {
+          "description": "The ID of the form.",
+          "type": "string"
+        },
+        "response_id": {
+          "description": "The ID of the response to retrieve.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "form_id",
+        "response_id"
+      ],
+      "type": "object"
+    },
+    "name": "forms_get_response"
+  },
+  {
+    "description": "List form responses for form_id (paginated). Use for 'show survey results', export answers. Prefer forms_get_response for one submission.",
+    "inputSchema": {
+      "properties": {
+        "form_id": {
+          "description": "The ID of the form.",
+          "type": "string"
+        },
+        "page_size": {
+          "description": "Maximum number of responses to return. Defaults to 10.",
+          "type": "number"
+        },
+        "page_token": {
+          "description": "Token for retrieving next page of results.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "form_id"
+      ],
+      "type": "object"
+    },
+    "name": "forms_list_responses"
+  },
+  {
+    "description": "Change publish/accept-response settings for form_id. Use for 'open/close the form'. Not for editing questions — use forms_batch_update.",
+    "inputSchema": {
+      "properties": {
+        "form_id": {
+          "description": "The ID of the form to update publish settings for.",
+          "type": "string"
+        },
+        "publish_as_template": {
+          "description": "Whether to publish as a template. Defaults to false.",
+          "type": "boolean"
+        },
+        "require_authentication": {
+          "description": "Whether to require authentication to view/submit. Defaults to false.",
+          "type": "boolean"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "form_id"
+      ],
+      "type": "object"
+    },
+    "name": "forms_update_publish_settings"
+  },
+  {
+    "description": "Batch add/remove labels on many message IDs. Use for bulk archive/label. Prefer gmail_update_message_labels for one message.",
+    "inputSchema": {
+      "properties": {
+        "add_label_ids": {
+          "description": "Label IDs to add to messages.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "message_ids": {
+          "description": "List of message IDs to modify.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "remove_label_ids": {
+          "description": "Label IDs to remove from messages.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "message_ids"
+      ],
+      "type": "object"
+    },
+    "name": "gmail_batch_update_message_labels"
+  },
+  {
+    "description": "Create a Gmail DRAFT (not sent). Use for 'draft a reply', prepare mail for later. To send immediately use gmail_create_message after confirmation.",
+    "inputSchema": {
+      "properties": {
+        "attachments": {
+          "description": "Optional list of attachments. Each can have: 'path' (file path, auto-encodes), OR 'content' (standard base64, not urlsafe) + 'filename'. Optional 'mime_type' (auto-detected from path if not provided).",
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "bcc": {
+          "description": "BCC email address.",
+          "type": "string"
+        },
+        "body": {
+          "description": "Email body content (plain text or HTML).",
+          "type": "string"
+        },
+        "body_format": {
+          "description": "Email body format.",
+          "enum": [
+            "plain",
+            "html"
+          ],
+          "type": "string"
+        },
+        "cc": {
+          "description": "CC email address.",
+          "type": "string"
+        },
+        "from_email": {
+          "description": "\"Send As\" alias email (must be configured in Gmail settings).",
+          "type": "string"
+        },
+        "from_name": {
+          "description": "Sender display name for \"Name <email>\" formatting.",
+          "type": "string"
+        },
+        "in_reply_to": {
+          "description": "Message-ID of message being replied to.",
+          "type": "string"
+        },
+        "references": {
+          "description": "Chain of Message-IDs for proper threading.",
+          "type": "string"
+        },
+        "subject": {
+          "description": "Email subject.",
+          "type": "string"
+        },
+        "thread_id": {
+          "description": "Gmail thread ID to reply within.",
+          "type": "string"
+        },
+        "to": {
+          "description": "Recipient email address.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "subject",
+        "body"
+      ],
+      "type": "object"
+    },
+    "name": "gmail_create_draft"
+  },
+  {
+    "description": "Create a Gmail filter (criteria + actions). Use for 'auto-archive mail from…'. Confirm before creating noisy rules.",
+    "inputSchema": {
+      "properties": {
+        "action": {
+          "description": "Filter action object. Supports: forward, addLabelIds, removeLabelIds.",
+          "properties": {},
+          "type": "object"
+        },
+        "criteria": {
+          "description": "Filter criteria object. Supports: from, to, subject, query, negatedQuery, hasAttachment, excludeChats, size, sizeComparison.",
+          "properties": {},
+          "type": "object"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "criteria",
+        "action"
+      ],
+      "type": "object"
+    },
+    "name": "gmail_create_filter"
+  },
+  {
+    "description": "Send email now. Confirm with user unless they explicitly said send. Draft → gmail_create_draft. Read → gmail_search_messages / gmail_get_message.",
+    "inputSchema": {
+      "properties": {
+        "attachments": {
+          "description": "Optional attachments: {\"path\":\"/file.pdf\"} or {\"filename\",\"content\"(base64),\"mime_type\"}.",
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "bcc": {
+          "description": "BCC email.",
+          "type": "string"
+        },
+        "body": {
+          "description": "Body (plain text or HTML).",
+          "type": "string"
+        },
+        "cc": {
+          "description": "CC email.",
+          "type": "string"
+        },
+        "subject": {
+          "description": "Subject.",
+          "type": "string"
+        },
+        "thread_id": {
+          "description": "Thread id to reply in.",
+          "type": "string"
+        },
+        "to": {
+          "description": "Recipient email.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "to",
+        "subject",
+        "body"
+      ],
+      "type": "object"
+    },
+    "name": "gmail_create_message"
+  },
+  {
+    "description": "Delete a Gmail filter by id (from gmail_list_filters). Destructive — confirm when unclear.",
+    "inputSchema": {
+      "properties": {
+        "filter_id": {
+          "description": "ID of the filter to delete.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "filter_id"
+      ],
+      "type": "object"
+    },
+    "name": "gmail_delete_filter"
+  },
+  {
+    "description": "Download one Gmail attachment by message_id + attachment_id. Use when the user needs a file from mail. Not for message body — use gmail_get_message.",
+    "inputSchema": {
+      "properties": {
+        "attachment_id": {
+          "description": "The ID of the attachment to download.",
+          "type": "string"
+        },
+        "message_id": {
+          "description": "The ID of the Gmail message containing the attachment.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "message_id",
+        "attachment_id"
+      ],
+      "type": "object"
+    },
+    "name": "gmail_get_attachment"
+  },
+  {
+    "description": "Read one message by message_id (subject/from/body). After search. Many ids → gmail_get_messages_batch. Thread → gmail_get_thread.",
+    "inputSchema": {
+      "properties": {
+        "message_id": {
+          "description": "Gmail message id from gmail_search_messages.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "message_id"
+      ],
+      "type": "object"
+    },
+    "name": "gmail_get_message"
+  },
+  {
+    "description": "Batch-read up to 25 messages by id (subject/from/body). Prefer over repeated gmail_get_message.",
+    "inputSchema": {
+      "properties": {
+        "message_ids": {
+          "description": "Message ids from gmail_search_messages (max 25).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "message_ids"
+      ],
+      "type": "object"
+    },
+    "name": "gmail_get_messages_batch"
+  },
+  {
+    "description": "Read a full Gmail thread by thread_id (all messages). Use for 'show the whole conversation'. Prefer gmail_get_message for a single message.",
+    "inputSchema": {
+      "properties": {
+        "thread_id": {
+          "description": "The unique ID of the Gmail thread to retrieve.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "thread_id"
+      ],
+      "type": "object"
+    },
+    "name": "gmail_get_thread"
+  },
+  {
+    "description": "Batch-read up to 25 Gmail threads by ID. Use when summarizing several conversations. Prefer gmail_get_thread for one thread.",
+    "inputSchema": {
+      "properties": {
+        "thread_ids": {
+          "description": "A list of Gmail thread IDs to retrieve. The function will automatically batch requests in chunks of 25.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "thread_ids"
+      ],
+      "type": "object"
+    },
+    "name": "gmail_get_threads_batch"
+  },
+  {
+    "description": "List configured Gmail filters. Use before create/delete filter or to audit automation rules.",
+    "inputSchema": {
+      "properties": {
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "name": "gmail_list_filters"
+  },
+  {
+    "description": "List Gmail labels (ids + names). Use before apply/remove labels or to discover label ids. Not for reading mail — use gmail_search_messages.",
+    "inputSchema": {
+      "properties": {
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "name": "gmail_list_labels"
+  },
+  {
+    "description": "Search Gmail (from:, subject:, newer_than:, is:unread, …). Returns message/thread ids. Then gmail_get_message or gmail_get_messages_batch. Send → gmail_create_message.",
+    "inputSchema": {
+      "properties": {
+        "page_size": {
+          "description": "Max messages. Default: 10.",
+          "type": "number"
+        },
+        "page_token": {
+          "description": "Next page token from a prior result.",
+          "type": "string"
+        },
+        "query": {
+          "description": "Gmail search query.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "type": "object"
+    },
+    "name": "gmail_search_messages"
+  },
+  {
+    "description": "Create/update/delete Gmail labels (label definitions). Use for 'make a label called…'. To apply labels to messages use gmail_update_message_labels.",
+    "inputSchema": {
+      "properties": {
+        "action": {
+          "description": "Action to perform.",
+          "enum": [
+            "create",
+            "update",
+            "delete"
+          ],
+          "type": "string"
+        },
+        "label_id": {
+          "description": "Label ID. Required for update and delete.",
+          "type": "string"
+        },
+        "label_list_visibility": {
+          "description": "Show in label list.",
+          "enum": [
+            "labelShow",
+            "labelHide"
+          ],
+          "type": "string"
+        },
+        "message_list_visibility": {
+          "description": "Show in message list.",
+          "enum": [
+            "show",
+            "hide"
+          ],
+          "type": "string"
+        },
+        "name": {
+          "description": "Label name. Required for create, optional for update.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "type": "object"
+    },
+    "name": "gmail_update_label"
+  },
+  {
+    "description": "Add/remove labels on one message. Trash spam: add TRASH. Archive: remove INBOX. Mark spam: add SPAM. After gmail_search_messages. Many ids → gmail_batch_update_message_labels.",
+    "inputSchema": {
+      "properties": {
+        "add_label_ids": {
+          "description": "Label IDs to add.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "message_id": {
+          "description": "ID of the message to modify.",
+          "type": "string"
+        },
+        "remove_label_ids": {
+          "description": "Label IDs to remove.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "message_id"
+      ],
+      "type": "object"
+    },
+    "name": "gmail_update_message_labels"
+  },
+  {
+    "description": "Metadata about the configured Programmable Search Engine (cx). Needs GOOGLE_PSE_API_KEY + GOOGLE_PSE_ENGINE_ID. Not for running a query — use pse_search.",
+    "inputSchema": {
+      "properties": {},
+      "required": [],
+      "type": "object"
+    },
+    "name": "pse_get_engine_info"
+  },
+  {
+    "description": "Programmable Search (needs GOOGLE_PSE_API_KEY + GOOGLE_PSE_ENGINE_ID). General web: use web_search. Not Gmail — use gmail_search_messages. Site-limited: pse_search_siterestrict.",
+    "inputSchema": {
+      "properties": {
+        "q": {
+          "description": "Search query.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "q"
+      ],
+      "type": "object"
+    },
+    "name": "pse_search"
+  },
+  {
+    "description": "Web search limited to specific site(s) via Programmable Search. Needs GOOGLE_PSE_API_KEY + GOOGLE_PSE_ENGINE_ID. Broader web: web_search or pse_search.",
+    "inputSchema": {
+      "properties": {
+        "num": {
+          "description": "Number of results to return (1-10). Defaults to 10.",
+          "type": "number"
+        },
+        "q": {
+          "description": "The search query.",
+          "type": "string"
+        },
+        "safe": {
+          "description": "Safe search level. Defaults to \"off\".",
+          "enum": [
+            "active",
+            "moderate",
+            "off"
+          ],
+          "type": "string"
+        },
+        "sites": {
+          "description": "List of sites/domains to search within.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "start": {
+          "description": "The index of the first result to return (1-based). Defaults to 1.",
+          "type": "number"
+        }
+      },
+      "required": [
+        "q",
+        "sites"
+      ],
+      "type": "object"
+    },
+    "name": "pse_search_siterestrict"
+  },
+  {
+    "description": "Add a comment on a spreadsheet. Required spreadsheet_id + comment_content. Reply → sheets_create_reply.",
+    "inputSchema": {
+      "properties": {
+        "comment_content": {
+          "description": "Comment text.",
+          "type": "string"
+        },
+        "spreadsheet_id": {
+          "description": "spreadsheet id id or share URL.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "spreadsheet_id",
+        "comment_content"
+      ],
+      "type": "object"
+    },
+    "name": "sheets_create_comment"
+  },
+  {
+    "description": "Add conditional formatting rule on spreadsheet_id + range_name (condition_type, colors). Use for highlight rules. Update/delete by rule_index with update/sheets_delete_conditional_formatting.",
+    "inputSchema": {
+      "properties": {
+        "background_color": {
+          "description": "Hex background color",
+          "type": "string"
+        },
+        "condition_type": {
+          "description": "Sheets condition type",
+          "type": "string"
+        },
+        "condition_values": {
+          "description": "Values for the condition (JSON array or string)",
+          "type": "string"
+        },
+        "gradient_points": {
+          "description": "Gradient points as JSON array",
+          "type": "string"
+        },
+        "range_name": {
+          "description": "A1-style range",
+          "type": "string"
+        },
+        "rule_index": {
+          "description": "Position to insert the rule (0-based)",
+          "type": "number"
+        },
+        "spreadsheet_id": {
+          "description": "The ID of the spreadsheet",
+          "type": "string"
+        },
+        "text_color": {
+          "description": "Hex text color",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address",
+          "type": "string"
+        }
+      },
+      "required": [
+        "spreadsheet_id",
+        "range_name",
+        "condition_type"
+      ],
+      "type": "object"
+    },
+    "name": "sheets_create_conditional_formatting"
+  },
+  {
+    "description": "Reply to comment_id on a spreadsheet. Required spreadsheet_id, comment_id, reply_content. Ids from sheets_list_comments.",
+    "inputSchema": {
+      "properties": {
+        "comment_id": {
+          "description": "Comment id from sheets_list_comments.",
+          "type": "string"
+        },
+        "reply_content": {
+          "description": "Reply text.",
+          "type": "string"
+        },
+        "spreadsheet_id": {
+          "description": "spreadsheet id id or share URL.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "spreadsheet_id",
+        "comment_id",
+        "reply_content"
+      ],
+      "type": "object"
+    },
+    "name": "sheets_create_reply"
+  },
+  {
+    "description": "Add a new tab (sheet_name) inside existing spreadsheet_id. Use for 'add a sheet called…'. Not a new file — use sheets_create_spreadsheet.",
+    "inputSchema": {
+      "properties": {
+        "sheet_name": {
+          "description": "Name of the new sheet",
+          "type": "string"
+        },
+        "spreadsheet_id": {
+          "description": "The ID of the spreadsheet",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address",
+          "type": "string"
+        }
+      },
+      "required": [
+        "spreadsheet_id",
+        "sheet_name"
+      ],
+      "type": "object"
+    },
+    "name": "sheets_create_sheet"
+  },
+  {
+    "description": "Create a spreadsheet. Required: title. Returns spreadsheet_id. Then sheets_update_values / sheets_get_values. New tab in existing file → sheets_create_sheet.",
+    "inputSchema": {
+      "properties": {
+        "sheet_names": {
+          "description": "Optional tab names to create.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "title": {
+          "description": "Spreadsheet title.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "type": "object"
+    },
+    "name": "sheets_create_spreadsheet"
+  },
+  {
+    "description": "Delete conditional formatting rule by rule_index on spreadsheet_id. Destructive — confirm when unclear. Not for add — use sheets_create_conditional_formatting.",
+    "inputSchema": {
+      "properties": {
+        "rule_index": {
+          "description": "Index of the rule to delete (0-based)",
+          "type": "number"
+        },
+        "sheet_name": {
+          "description": "Name of the sheet",
+          "type": "string"
+        },
+        "spreadsheet_id": {
+          "description": "The ID of the spreadsheet",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address",
+          "type": "string"
+        }
+      },
+      "required": [
+        "spreadsheet_id",
+        "rule_index"
+      ],
+      "type": "object"
+    },
+    "name": "sheets_delete_conditional_formatting"
+  },
+  {
+    "description": "Apply colors/number formats to spreadsheet_id + range_name (#RRGGBB, NUMBER/CURRENCY/DATE, etc.). Use for styling cells. Not for values — use sheets_update_values.",
+    "inputSchema": {
+      "properties": {
+        "background_color": {
+          "description": "Hex background color (e.g., #FFEECC)",
+          "type": "string"
+        },
+        "number_format_pattern": {
+          "description": "Custom pattern for the number format",
+          "type": "string"
+        },
+        "number_format_type": {
+          "description": "Sheets number format type (e.g., DATE)",
+          "type": "string"
+        },
+        "range_name": {
+          "description": "A1-style range",
+          "type": "string"
+        },
+        "spreadsheet_id": {
+          "description": "The ID of the spreadsheet",
+          "type": "string"
+        },
+        "text_color": {
+          "description": "Hex text color (e.g., #000000)",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address",
+          "type": "string"
+        }
+      },
+      "required": [
+        "spreadsheet_id",
+        "range_name"
+      ],
+      "type": "object"
+    },
+    "name": "sheets_format_range"
+  },
+  {
+    "description": "Spreadsheet title, locale, and sheet tabs for spreadsheet_id or share URL. Use before read/modify when you need tab names. Not for cell values — use sheets_get_values.",
+    "inputSchema": {
+      "properties": {
+        "spreadsheet_id": {
+          "description": "Spreadsheet id or Sheets/Drive share URL",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address",
+          "type": "string"
+        }
+      },
+      "required": [
+        "spreadsheet_id"
+      ],
+      "type": "object"
+    },
+    "name": "sheets_get_spreadsheet_info"
+  },
+  {
+    "description": "Read a whole range in one call (many rows) from spreadsheet_id. Default A1:Z1000. Do not read one row per call. Several ranges: ranges=[\"Sheet1!A:D\",\"Sheet2!A:C\"]. Write → sheets_update_values.",
+    "inputSchema": {
+      "properties": {
+        "range_name": {
+          "description": "A1 range covering every row you need. Default: A1:Z1000. Not one row.",
+          "type": "string"
+        },
+        "ranges": {
+          "description": "Several A1 ranges in this same call. Omit to use range_name.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "spreadsheet_id": {
+          "description": "Spreadsheet id or Sheets/Drive share URL.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "spreadsheet_id"
+      ],
+      "type": "object"
+    },
+    "name": "sheets_get_values"
+  },
+  {
+    "description": "List comments on a spreadsheet. Required spreadsheet_id. Not file body — use sheets read tools.",
+    "inputSchema": {
+      "properties": {
+        "spreadsheet_id": {
+          "description": "spreadsheet id id or share URL.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "spreadsheet_id"
+      ],
+      "type": "object"
+    },
+    "name": "sheets_list_comments"
+  },
+  {
+    "description": "List/filter spreadsheets (name, spreadsheet_id, modified time). Optional query filters by title. Paste a share URL to resolve one sheet. Use before sheets_get_values. Not for other Drive files — use drive_search_files.",
+    "inputSchema": {
+      "properties": {
+        "max_results": {
+          "description": "Maximum number of spreadsheets to return (default 25)",
+          "type": "number"
+        },
+        "query": {
+          "description": "Optional title text or share/edit URL. Omit to list recent spreadsheets.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "name": "sheets_list_spreadsheets"
+  },
+  {
+    "description": "Resolve (close) comment_id on a spreadsheet. Required spreadsheet_id + comment_id. Destructive — confirm when unclear.",
+    "inputSchema": {
+      "properties": {
+        "comment_id": {
+          "description": "Comment id from sheets_list_comments.",
+          "type": "string"
+        },
+        "spreadsheet_id": {
+          "description": "spreadsheet id id or share URL.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "spreadsheet_id",
+        "comment_id"
+      ],
+      "type": "object"
+    },
+    "name": "sheets_resolve_comment"
+  },
+  {
+    "description": "Update conditional formatting by rule_index on spreadsheet_id. Optional new range/condition/colors. Not for new rules — use sheets_create_conditional_formatting.",
+    "inputSchema": {
+      "properties": {
+        "background_color": {
+          "description": "Hex background color",
+          "type": "string"
+        },
+        "condition_type": {
+          "description": "Sheets condition type",
+          "type": "string"
+        },
+        "condition_values": {
+          "description": "Values for the condition",
+          "type": "string"
+        },
+        "gradient_points": {
+          "description": "Gradient points as JSON array",
+          "type": "string"
+        },
+        "range_name": {
+          "description": "A1-style range",
+          "type": "string"
+        },
+        "rule_index": {
+          "description": "Index of the rule to update (0-based)",
+          "type": "number"
+        },
+        "sheet_name": {
+          "description": "Sheet name when range_name is omitted",
+          "type": "string"
+        },
+        "spreadsheet_id": {
+          "description": "The ID of the spreadsheet",
+          "type": "string"
+        },
+        "text_color": {
+          "description": "Hex text color",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address",
+          "type": "string"
+        }
+      },
+      "required": [
+        "spreadsheet_id",
+        "rule_index"
+      ],
+      "type": "object"
+    },
+    "name": "sheets_update_conditional_formatting"
+  },
+  {
+    "description": "Write many rows in one call: spreadsheet_id + range_name + values (2D array of every row). Do not call once per row. Several ranges: updates=[{range_name, values}]. Clear: clear_values=true. Read → sheets_get_values.",
+    "inputSchema": {
+      "properties": {
+        "clear_values": {
+          "description": "If true, clear range_name instead of writing.",
+          "type": "boolean"
+        },
+        "range_name": {
+          "description": "A1 range covering every row (e.g. Sheet1!A1). Required unless updates is set.",
+          "type": "string"
+        },
+        "spreadsheet_id": {
+          "description": "Spreadsheet id or Sheets/Drive share URL.",
+          "type": "string"
+        },
+        "updates": {
+          "description": "Several ranges in this same call: [{range_name, values}]. Prefer this over one call per row or range.",
+          "items": {
+            "properties": {
+              "range_name": {
+                "description": "A1 range to write.",
+                "type": "string"
+              },
+              "values": {
+                "description": "2D cell values for this range.",
+                "items": {
+                  "type": "array"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "range_name",
+              "values"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        },
+        "values": {
+          "description": "2D cell values for range_name. One entry per row, e.g. [[\"a\",\"b\"],[\"1\",\"2\"]]. Include every row in this array.",
+          "items": {
+            "type": "array"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "spreadsheet_id"
+      ],
+      "type": "object"
+    },
+    "name": "sheets_update_values"
+  },
+  {
+    "description": "Apply Slides batch updates on presentation_id (add slides, text, shapes). Prefer slides_get_presentation first.",
+    "inputSchema": {
+      "properties": {
+        "presentation_id": {
+          "description": "The ID of the presentation to update.",
+          "type": "string"
+        },
+        "requests": {
+          "description": "List of update requests to apply.",
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "presentation_id",
+        "requests"
+      ],
+      "type": "object"
+    },
+    "name": "slides_batch_update"
+  },
+  {
+    "description": "Add a comment on a presentation. Required presentation_id + comment_content. Reply → slides_create_reply.",
+    "inputSchema": {
+      "properties": {
+        "comment_content": {
+          "description": "Comment text.",
+          "type": "string"
+        },
+        "presentation_id": {
+          "description": "presentation id id or share URL.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "presentation_id",
+        "comment_content"
+      ],
+      "type": "object"
+    },
+    "name": "slides_create_comment"
+  },
+  {
+    "description": "Create a Slides deck. Optional title. Returns presentation_id. Then slides_batch_update / slides_get_presentation.",
+    "inputSchema": {
+      "properties": {
+        "title": {
+          "description": "Presentation title. Default: Untitled Presentation.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "name": "slides_create_presentation"
+  },
+  {
+    "description": "Reply to comment_id on a presentation. Required presentation_id, comment_id, reply_content. Ids from slides_list_comments.",
+    "inputSchema": {
+      "properties": {
+        "comment_id": {
+          "description": "Comment id from slides_list_comments.",
+          "type": "string"
+        },
+        "presentation_id": {
+          "description": "presentation id id or share URL.",
+          "type": "string"
+        },
+        "reply_content": {
+          "description": "Reply text.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "presentation_id",
+        "comment_id",
+        "reply_content"
+      ],
+      "type": "object"
+    },
+    "name": "slides_create_reply"
+  },
+  {
+    "description": "Get one slide/page (elements) by presentation_id + page_object_id. Not thumbnail — use slides_get_page_thumbnail.",
+    "inputSchema": {
+      "properties": {
+        "page_object_id": {
+          "description": "The object ID of the page/slide to retrieve.",
+          "type": "string"
+        },
+        "presentation_id": {
+          "description": "The ID of the presentation.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "presentation_id",
+        "page_object_id"
+      ],
+      "type": "object"
+    },
+    "name": "slides_get_page"
+  },
+  {
+    "description": "Thumbnail image URL for presentation_id + page_id. Use when user needs a slide preview. Not full slide JSON — use slides_get_page.",
+    "inputSchema": {
+      "properties": {
+        "page_object_id": {
+          "description": "The object ID of the page/slide.",
+          "type": "string"
+        },
+        "presentation_id": {
+          "description": "The ID of the presentation.",
+          "type": "string"
+        },
+        "thumbnail_size": {
+          "description": "Size of thumbnail (\"LARGE\", \"MEDIUM\", \"SMALL\"). Defaults to \"MEDIUM\".",
+          "enum": [
+            "LARGE",
+            "MEDIUM",
+            "SMALL"
+          ],
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "presentation_id",
+        "page_object_id"
+      ],
+      "type": "object"
+    },
+    "name": "slides_get_page_thumbnail"
+  },
+  {
+    "description": "Get deck metadata + slide/page ids for presentation_id. Then slides_get_page or slides_batch_update. Not thumbnail — use slides_get_page_thumbnail.",
+    "inputSchema": {
+      "properties": {
+        "presentation_id": {
+          "description": "Presentation id from slides_create_presentation or a prior result.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "presentation_id"
+      ],
+      "type": "object"
+    },
+    "name": "slides_get_presentation"
+  },
+  {
+    "description": "List comments on a presentation. Required presentation_id. Not file body — use slides read tools.",
+    "inputSchema": {
+      "properties": {
+        "presentation_id": {
+          "description": "presentation id id or share URL.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "presentation_id"
+      ],
+      "type": "object"
+    },
+    "name": "slides_list_comments"
+  },
+  {
+    "description": "Resolve (close) comment_id on a presentation. Required presentation_id + comment_id. Destructive — confirm when unclear.",
+    "inputSchema": {
+      "properties": {
+        "comment_id": {
+          "description": "Comment id from slides_list_comments.",
+          "type": "string"
+        },
+        "presentation_id": {
+          "description": "presentation id id or share URL.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "presentation_id",
+        "comment_id"
+      ],
+      "type": "object"
+    },
+    "name": "slides_resolve_comment"
+  },
+  {
+    "description": "Add a to-do (returns task_id). Use for 'remind me to…', new task. Prefer task_list_id=\"@default\". Not for edits — use tasks_update_task.",
+    "inputSchema": {
+      "properties": {
+        "due": {
+          "description": "Optional due date RFC3339 (e.g. 2026-07-31T00:00:00Z).",
+          "type": "string"
+        },
+        "notes": {
+          "description": "Optional notes.",
+          "type": "string"
+        },
+        "task_list_id": {
+          "description": "Task list id. Use \"@default\" for the account default list.",
+          "type": "string"
+        },
+        "title": {
+          "description": "Task title.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "task_list_id",
+        "title"
+      ],
+      "type": "object"
+    },
+    "name": "tasks_create_task"
+  },
+  {
+    "description": "Create a new Google Tasks list. Use for 'make a list called…'. Returns tasklist_id for tasks_create_task / tasks_list_tasks.",
+    "inputSchema": {
+      "properties": {
+        "title": {
+          "description": "The title of the new task list.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "type": "object"
+    },
+    "name": "tasks_create_tasklist"
+  },
+  {
+    "description": "Clear/hide all completed tasks in a tasklist_id. Required tasklist_id. Confirm when unclear — removes completed items from the active view.",
+    "inputSchema": {
+      "properties": {
+        "task_list_id": {
+          "description": "The ID of the task list to clear completed tasks from.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "task_list_id"
+      ],
+      "type": "object"
+    },
+    "name": "tasks_delete_completed"
+  },
+  {
+    "description": "Delete one task by task_list_id + task_id. Destructive — confirm when unclear. Prefer mark completed via tasks_update_task when unsure.",
+    "inputSchema": {
+      "properties": {
+        "task_id": {
+          "description": "Task id from tasks_list_tasks.",
+          "type": "string"
+        },
+        "task_list_id": {
+          "description": "Task list id. Use \"@default\" for the account default list.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "task_list_id",
+        "task_id"
+      ],
+      "type": "object"
+    },
+    "name": "tasks_delete_task"
+  },
+  {
+    "description": "Delete a task list and ALL its tasks. Required tasklist_id. Destructive — confirm when unclear. Not for single tasks — use tasks_delete_task.",
+    "inputSchema": {
+      "properties": {
+        "task_list_id": {
+          "description": "The ID of the task list to delete.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "task_list_id"
+      ],
+      "type": "object"
+    },
+    "name": "tasks_delete_tasklist"
+  },
+  {
+    "description": "Get one task (title, due, notes, status). Use before update/delete. Prefer tasks_list_tasks first for task_id. Required: task_list_id + task_id.",
+    "inputSchema": {
+      "properties": {
+        "task_id": {
+          "description": "Task id from tasks_list_tasks.",
+          "type": "string"
+        },
+        "task_list_id": {
+          "description": "Task list id. Use \"@default\" for the account default list.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "task_list_id",
+        "task_id"
+      ],
+      "type": "object"
+    },
+    "name": "tasks_get_task"
+  },
+  {
+    "description": "Get one task list by tasklist_id (title, etag). Use after tasks_list_tasklists. Not for individual tasks — use tasks_get_task / tasks_list_tasks.",
+    "inputSchema": {
+      "properties": {
+        "task_list_id": {
+          "description": "The ID of the task list to retrieve.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "task_list_id"
+      ],
+      "type": "object"
+    },
+    "name": "tasks_get_tasklist"
+  },
+  {
+    "description": "List Google Tasks lists (tasklist_id + title). Use for 'what lists do I have' before tasks_list_tasks. Not for tasks inside a list — use tasks_list_tasks.",
+    "inputSchema": {
+      "properties": {
+        "max_results": {
+          "description": "Maximum number of task lists to return (default: 1000, max: 1000).",
+          "type": "number"
+        },
+        "page_token": {
+          "description": "Token for pagination.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "name": "tasks_list_tasklists"
+  },
+  {
+    "description": "List tasks in a list (title, due, status, task_id). Use for 'what's on my to-do'. Prefer task_list_id=\"@default\". Not for list names — use tasks_list_tasklists (complete tier).",
+    "inputSchema": {
+      "properties": {
+        "max_results": {
+          "description": "Max tasks. Default: 20.",
+          "type": "number"
+        },
+        "task_list_id": {
+          "description": "Task list id. Use \"@default\" for the account default list.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "task_list_id"
+      ],
+      "type": "object"
+    },
+    "name": "tasks_list_tasks"
+  },
+  {
+    "description": "Update a task (title, notes, due, status). Required task_list_id + task_id from tasks_list_tasks. Mark done: status=\"completed\". Not for new tasks — use tasks_create_task.",
+    "inputSchema": {
+      "properties": {
+        "due": {
+          "description": "New due date RFC3339.",
+          "type": "string"
+        },
+        "notes": {
+          "description": "New notes.",
+          "type": "string"
+        },
+        "status": {
+          "description": "needsAction or completed.",
+          "type": "string"
+        },
+        "task_id": {
+          "description": "Task id from tasks_list_tasks.",
+          "type": "string"
+        },
+        "task_list_id": {
+          "description": "Task list id. Use \"@default\" for the account default list.",
+          "type": "string"
+        },
+        "title": {
+          "description": "New title.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "User Google email (or set USER_GOOGLE_EMAIL).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "task_list_id",
+        "task_id"
+      ],
+      "type": "object"
+    },
+    "name": "tasks_update_task"
+  },
+  {
+    "description": "Reorder a task or move it to another tasklist_id / parent task. Required tasklist_id + task_id. Use after tasks_list_tasks when reorganizing.",
+    "inputSchema": {
+      "properties": {
+        "destination_task_list": {
+          "description": "Destination task list ID (for moving between lists).",
+          "type": "string"
+        },
+        "parent": {
+          "description": "New parent task ID (for making it a subtask).",
+          "type": "string"
+        },
+        "previous": {
+          "description": "Previous sibling task ID (for positioning).",
+          "type": "string"
+        },
+        "task_id": {
+          "description": "The ID of the task to move.",
+          "type": "string"
+        },
+        "task_list_id": {
+          "description": "The ID of the current task list containing the task.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "task_list_id",
+        "task_id"
+      ],
+      "type": "object"
+    },
+    "name": "tasks_update_task_position"
+  },
+  {
+    "description": "Rename or update a task list. Required tasklist_id from tasks_list_tasklists. Not for tasks — use tasks_update_task.",
+    "inputSchema": {
+      "properties": {
+        "task_list_id": {
+          "description": "The ID of the task list to update.",
+          "type": "string"
+        },
+        "title": {
+          "description": "The new title for the task list.",
+          "type": "string"
+        },
+        "user_google_email": {
+          "description": "The user's Google email address. Required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "task_list_id",
+        "title"
+      ],
+      "type": "object"
+    },
+    "name": "tasks_update_tasklist"
+  }
+]

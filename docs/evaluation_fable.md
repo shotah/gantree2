@@ -123,7 +123,7 @@ of it on purpose.
 | Security / authorization | **Thin** | Allowlist + manifest-is-grant. No per-tool approval; ask-first is prompt text. The door in front of settings and chat is [access.md](access.md); it does not approve tool calls. |
 | Ops surface | **Strong for one agent** | No inbound port, distroless, `status` frame, `/auth` in chat. The board is settings, in this repo, and it does not sit in a turn. |
 | Multi-model / multi-agent | **Absent by design** | No router, no fallback, no subagents inside the unit. One container = one brain; the fleet is the board. |
-| Behavioral regression | **Strong, paid** | Twenty-seven scenario fixtures replayed against the shipped seed on the live model, two on real MCP catalogs built from `harness/mcp/<name>/`; shape asserted (tools, args, call counts, `[wait]`, `[silent]`, rows, jobs, prices from tools, ledger evidence, cron `when` against a frozen clock), every run must pass. Fixtures can seed a ledger and aged memory rows and refer to their ids. Release gate and on demand, not per push. One model per reading. |
+| Behavioral regression | **Strong, paid** | Thirty scenario fixtures replayed against the shipped seed on the live model, two on real catalogs from the in-process `brain/plugins` (flights, rentals, google — google limited by `brain/eval/fixtures/mcp.toml`); shape asserted (tools, args, call counts, `[wait]`, `[silent]`, rows, jobs, prices from tools, ledger evidence, cron `when` against a frozen clock), every run must pass. Fixtures can seed a ledger and aged memory rows and refer to their ids. Release gate and on demand, not per push. One model per reading. |
 | Token accounting | **Okay** | chars/4 estimates plus native `usage` when sent. `/tokens` catches fat schemas, not billing. |
 
 ---
@@ -249,17 +249,17 @@ number is seeded to catch that); a Wednesday planner schedules the cue
 for the task whose words say `Wed 11am` and nothing for the one that
 says Friday; a nine-day-old task gets a line and not an offer to drop it.
 
-Where a fixture names a server that has a sibling module, the tool defs
-are **real**. `tools_from` builds that server from `harness/mcp/<name>/`
-(or uses the binary already in `/opt/mcp` inside the image, or a prebuild
-in `EVAL_MCP_BIN`) and takes `tools/list` — names, descriptions, schemas —
-as the catalog. Nothing is checked in and nothing is called; a placeholder
-env is enough for binaries that refuse to start without a key present. No
-release download. The fixtures name `rentals`, `flights`, and `google`.
+Where a fixture names a server that has an in-process plugin, the tool
+defs are **real**. `tools_from` asks `brain/plugins` for that server's
+catalog — names, descriptions, schemas — filtered by
+`brain/eval/fixtures/mcp.toml` when the server has an allowlist. Nothing
+is checked in and nothing is called; a placeholder env is enough for a
+plugin that refuses to list tools without a key present. The fixtures
+name `rentals`, `flights`, and `google`.
 [eval_setup.md](eval_setup.md#real-catalogs-tools_from).
 A renamed or dropped tool fails the fixture before any model call. A
-fixture that proves the model can drive the harness author's idea of a
-tool proves nothing about the binary; these prove the binary.
+fixture that proves the model can drive a hand-written schema proves
+nothing about the plugin; these prove the plugin.
 
 The round count is a note, not a gate. Each fixture carries a
 `round_budget` — the rounds its rule needs — and a run over it is printed
@@ -287,7 +287,7 @@ went to two rounds and one tool call each. The tasks write-up that
 recorded that pass is not carried.
 
 Its limits. One model is one reading — the gate is on whatever is in
-`harness/.env`, and a Gemma-class local model would need its own pass and
+`.dev.vars` (`LLM_MODEL`), and a Gemma-class local model would need its own pass and
 probably its own tolerances. The client has no temperature knob, so
 variance is the provider's default — which is also what production gets.
 Canned results are the same for every call to a tool, so two searches for
@@ -348,7 +348,7 @@ without a tool, that is the first thing to check. That row is not in
 
 ### 3. The behavior gate is one model and paid
 
-The eval reads one model — whatever `harness/.env` names — and a release gate
+The eval reads one model — whatever `.dev.vars` names in `LLM_MODEL` — and a release gate
 that costs money will not run on every push. Both are the price of a
 contract on behavior rather than bytes, and both are accepted; but a
 seed change proven on Flash is unproven on a local Gemma until someone

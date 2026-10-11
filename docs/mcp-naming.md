@@ -1,10 +1,14 @@
 # MCP tool naming
 
-Canonical contract for every MCP plugin baked into the harness image —
-the ones under `harness/mcp/<name>/` and any you add via
-`harness/mcp.lock`. The harness prefixes `{server}__{tool}`; this page
-is what goes on the right of the `__`. Plugins do not get a local
-dialect.
+Canonical contract for every plugin. On `runtime: native` the modules
+live under `brain/plugins/<name>/` and `brain/tools/names.ts` prefixes
+`{plugin}__{tool}`. The Go copies under `harness/mcp/<name>/` are the
+frozen container image. This page is what goes on the right of the
+`__`. Plugins do not get a local dialect.
+
+Tools take a set and return a list. The rule is
+`.cursor/rules/brain-plugins-plural.mdc`. A tool that is one thing
+sets `single` and says why.
 
 **Why it matters:** small models and the harness's closest-match repair
 pick tools by **name tokens + description**. Synonyms and double
@@ -21,9 +25,9 @@ the eval that fails a fixture when a plugin renames a tool
 
 | Layer | Who owns it | Example |
 | --- | --- | --- |
-| MCP **server id** | `harness/mcp.lock` `name`, mirrored in each agent's `config.mcp` | `strava`, `google`, `garmin` |
-| MCP **tool name** | Binary registration | `activities_list`, `calendar_list_events` |
-| **Host-facing name** | Harness joins with `__` | `strava__activities_list` |
+| Plugin id | directory name under `brain/plugins/` (and `harness/mcp.lock` `name` on the container) | `strava`, `google`, `garmin` |
+| Tool name | what the plugin registers | `activities_list`, `calendar_list_events` |
+| **Host-facing name** | `{plugin}__{tool}` | `strava__activities_list` |
 
 ```text
 {server_id}__{service}_{verb}_{object}[_{qualifier}]

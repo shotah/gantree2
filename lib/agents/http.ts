@@ -3,6 +3,7 @@
  * for inventory and the Agent DO for the room. Snapshot URLs carry no cookie.
  */
 import { containerAct, containerInfo, UNKNOWN_CONTAINER } from "@/lib/agents/container";
+import { oauthRedirectPlugin } from "@/lib/agents/oauth";
 import {
   normalizeSlug,
   type AgentCreateBody,
@@ -367,6 +368,132 @@ export async function patchAgentConfig(req: Request, env: AgentsHttpEnv, slugRaw
   return callAgent(env, slug, "https://agent/config", {
     method: "PATCH",
     headers: { "X-Chat-Op": "config", "content-type": "application/json" },
+    body,
+  });
+}
+
+export async function getAgentSelf(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
+  const who = authorize(req);
+  if (isResponse(who)) {
+    return who;
+  }
+  const slug = slugOr400(slugRaw);
+  if (slug instanceof Response) {
+    return slug;
+  }
+  const denied = requireRun(who, slug);
+  if (denied) {
+    return denied;
+  }
+  return callAgent(env, slug, "https://agent/self", { headers: { "X-Chat-Op": "self_get" } });
+}
+
+export async function putAgentSelf(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
+  const who = authorize(req);
+  if (isResponse(who)) {
+    return who;
+  }
+  const slug = slugOr400(slugRaw);
+  if (slug instanceof Response) {
+    return slug;
+  }
+  const denied = requireRun(who, slug);
+  if (denied) {
+    return denied;
+  }
+  const body = await req.text();
+  return callAgent(env, slug, "https://agent/self", {
+    method: "PUT",
+    headers: { "X-Chat-Op": "self_put", "content-type": "application/json" },
+    body,
+  });
+}
+
+export async function getAgentPersona(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
+  const who = authorize(req);
+  if (isResponse(who)) {
+    return who;
+  }
+  const slug = slugOr400(slugRaw);
+  if (slug instanceof Response) {
+    return slug;
+  }
+  const denied = requireRun(who, slug);
+  if (denied) {
+    return denied;
+  }
+  return callAgent(env, slug, "https://agent/persona", { headers: { "X-Chat-Op": "persona_get" } });
+}
+
+export async function putAgentPersona(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
+  const who = authorize(req);
+  if (isResponse(who)) {
+    return who;
+  }
+  const slug = slugOr400(slugRaw);
+  if (slug instanceof Response) {
+    return slug;
+  }
+  const denied = requireRun(who, slug);
+  if (denied) {
+    return denied;
+  }
+  const body = await req.text();
+  return callAgent(env, slug, "https://agent/persona", {
+    method: "PUT",
+    headers: { "X-Chat-Op": "persona_put", "content-type": "application/json" },
+    body,
+  });
+}
+
+export async function startAgentAuth(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
+  const who = authorize(req);
+  if (isResponse(who)) {
+    return who;
+  }
+  const slug = slugOr400(slugRaw);
+  if (slug instanceof Response) {
+    return slug;
+  }
+  const denied = requireRun(who, slug);
+  if (denied) {
+    return denied;
+  }
+  const body = await readJson(req);
+  const plugin = typeof body?.plugin === "string" ? body.plugin.trim() : "";
+  if (!oauthRedirectPlugin(plugin)) {
+    return json({ error: "bad_plugin" }, 400);
+  }
+  let origin: string;
+  try {
+    origin = new URL(req.url).origin;
+  } catch {
+    origin = "";
+  }
+  return callAgent(env, slug, "https://agent/auth/start", {
+    method: "POST",
+    headers: { "X-Chat-Op": "auth_start", "content-type": "application/json" },
+    body: JSON.stringify({ plugin, origin, slug }),
+  });
+}
+
+export async function deleteAgentPersona(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
+  const who = authorize(req);
+  if (isResponse(who)) {
+    return who;
+  }
+  const slug = slugOr400(slugRaw);
+  if (slug instanceof Response) {
+    return slug;
+  }
+  const denied = requireRun(who, slug);
+  if (denied) {
+    return denied;
+  }
+  const body = await req.text();
+  return callAgent(env, slug, "https://agent/persona", {
+    method: "DELETE",
+    headers: { "X-Chat-Op": "persona_delete", "content-type": "application/json" },
     body,
   });
 }

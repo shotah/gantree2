@@ -1,10 +1,46 @@
 # Auth from chat (remote OAuth, no inbound ports)
 
-The harness has no inbound port, so it cannot finish the usual laptop
-OAuth dance (`gantry auth google` → localhost callback → copy tokens).
-Chat `/auth` does that hop. The Agent DO starts the container and the
-harness dials out; nothing listens. Pictures:
+Nothing listens for a callback on your LAN. A native agent finishes
+OAuth on the Worker. A container agent still has no inbound port; chat
+`/auth` does that hop, and the harness dials out. Pictures:
 [architecture.md](architecture.md).
+
+---
+
+## Worker catch (native)
+
+`GET /api/auth/catch?state&code` is public (`lib/door/gate.ts`).
+`state` is an `oauth-catch` JWE (`sealOAuthCatch` in `lib/door/session.ts`,
+30 minutes) holding `{ slug, plugin }`. The Worker posts `{ plugin, code,
+redirectUri }` to that agent's DO (`X-Chat-Op: auth`), and the brain
+calls `authFinish`. `redirectUri` is this Worker's own
+`/api/auth/catch` (origin plus that path). Success is plain text:
+`Connected <plugin>. Go back to chat.`
+
+Misses: `login not configured` (503, no `SESSION_SECRET`), `bad state`
+(400), `missing code` (400), `could not connect` (502). A container
+agent's DO answers 409 `native runtime`, which this route surfaces as
+502.
+
+Register that URI on the provider, exactly, no trailing slash unless
+the origin's URL has one:
+
+```text
+https://<worker-origin>/api/auth/catch
+```
+
+The plugin name is the module name: `google`, `strava`, `google-health`,
+`garmin`. Not `ghealth`.
+
+Chat `/auth <plugin>` on a native agent still prints an authorize URL
+and can exchange a pasted code (`/auth <plugin> <code>`). That command
+requires `OAUTH_REDIRECT_URI` or it refuses to start. The `state` it
+puts on the URL is `auth-<ms>`, not the catch JWE. Point
+`OAUTH_REDIRECT_URI` at `/api/auth/catch` when the provider should land
+on the Worker. Garmin stays an MFA paste (`/auth garmin`, then
+`/auth garmin <code>`); it does not use this redirect.
+
+The static page below is the container path.
 
 ---
 
@@ -17,10 +53,12 @@ harness dials out; nothing listens. Pictures:
 
 ---
 
-## Catch page (PKCE redirect)
+## Catch page (PKCE redirect) — legacy container
 
-Authorize URLs redirect to a static catch page. That page only displays
-`?code=` with a copy button. No server logic, no tokens.
+A container agent's authorize URL redirects to a static catch page.
+That page only displays `?code=` with a copy button. No server logic,
+no tokens. A native agent uses [Worker catch](#worker-catch-native)
+instead of this page.
 
 The page is `site/oauth-catch/index.html` in this repo, published by
 `pages.yml` to the docs site. Why it is static and what it never does:

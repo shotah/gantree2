@@ -1,4 +1,11 @@
 import { DurableObject } from "cloudflare:workers";
+import type { Brain } from "@/brain/core/brain";
+import type { Emit, Inbound } from "@/brain/core/wire";
+import { dropRoomBrain, openRoomBrain } from "@/brain/room";
+import { filePersona, openPersonaStore } from "@/brain/room/persona";
+import { openSelfStore } from "@/brain/room/self";
+import { MAX_CHARS, type PersonaStore } from "@/brain/persona";
+import { maxChars } from "@/brain/selfnote/stamp";
 import type { AgentEnv } from "@/lib/chat/env";
 import { directoryApply, directoryRemember } from "@/lib/chat/directory";
 import { blobResponse } from "@/lib/chat/blob";
@@ -99,6 +106,7 @@ import { readVapid } from "@/lib/chat/push/vapid";
 import { BEARER_STORE_KEY } from "@/lib/chat/bearer";
 import {
   applyConfigPatch,
+  canonicalEnv,
   CONFIG_STARTED_KEY,
   CONFIG_STORE_KEY,
   configFrame,
@@ -106,7 +114,9 @@ import {
   parseConfig,
   startedEnvFor,
 } from "@/lib/agents/config";
+import type { AgentConfig } from "@/lib/agents/types";
 import { houseEnv, houseKeys } from "@/lib/agents/house";
+import { oauthCatchRedirect, oauthRedirectPlugin } from "@/lib/agents/oauth";
 import { archiveLatest, emptySnapshotUrls, mintSnapshotKey, signedSnapshotUrls, SNAPSHOT_KEY_STORE_KEY, SNAPSHOT_TTL_MS, snapshotKeyOk } from "@/lib/agents/snapshot";
 import {
   applyHarnessFrame,
@@ -120,6 +130,7 @@ import {
   STATUS_STORE_KEY,
 } from "@/lib/agents/status";
 import type { SampleInput } from "@/lib/door/settingsStore";
+import { sealOAuthCatch, sessionKey } from "@/lib/door/session";
 
 const RATE_KEY = "rate";
 
@@ -133,6 +144,8 @@ type BlobSpec = {
   /** DELETE is allowed only when there is a "cleared" answer (the face has no empty state). */
   cleared?: string;
 };
+
+const PUBLIC_ORIGIN_KEY = "public.origin";
 
 const FACE_BLOB: BlobSpec = {
   key: AVATAR_STORE_KEY,
@@ -159,6 +172,12 @@ export class Agent extends DurableObject<AgentEnv> {
    * `HELD_DRAFT_TTL_MS` with no words and no `typing`.
    */
   private readonly drafts = new HeldDrafts();
+  /** Native brain for this isolate. Dropped when env or persona changes. */
+  private brain: Brain | null = null;
+  /** Serialises brain `emit` frames onto the crane path. */
+  private craneChain: Promise<void> = Promise.resolve();
+  /** Last public origin this DO saw (phone upgrade or auth start). `PUBLIC_ORIGIN` still wins. */
+  private publicOrigin: string | null = null;
 
   constructor(ctx: DurableObjectState, env: AgentEnv) {
     super(ctx, env);
@@ -166,6 +185,7 @@ export class Agent extends DurableObject<AgentEnv> {
   }
 
   async fetch(request: Request): Promise<Response> {
+    await this.noteRequestOrigin(request);
     if (request.headers.get("X-Chat-Op") === "avatar") {
       return this.blobHttp(request, FACE_BLOB);
     }
@@ -192,6 +212,19 @@ export class Agent extends DurableObject<AgentEnv> {
     }
     if (request.headers.get("X-Chat-Op") === "log") {
       return this.logHttp(request);
+    }
+    if (request.headers.get("X-Chat-Op") === "auth") {
+      return this.authHttp(request);
+    }
+    if (request.headers.get("X-Chat-Op") === "auth_start") {
+      return this.authStartHttp(request);
+    }
+    if (request.headers.get("X-Chat-Op") === "self_get" || request.headers.get("X-Chat-Op") === "self_put") {
+      return this.selfHttp(request);
+    }
+    const personaOp = request.headers.get("X-Chat-Op");
+    if (personaOp === "persona_get" || personaOp === "persona_put" || personaOp === "persona_delete") {
+      return this.personaHttp(request);
     }
     if (request.headers.get("Upgrade") !== "websocket") {
       return new Response("expected websocket", { status: 426 });
@@ -231,6 +264,37 @@ export class Agent extends DurableObject<AgentEnv> {
 
   async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
     const meta = this.meta(ws);
+    if (meta.role === "crane") {
+      const body = typeof message === "string" ? message : new TextDecoder().decode(message);
+      await this.handleCraneFrame(body, meta, ws);
+      return;
+    }
+    await this.dispatchSocket(message, meta, ws);
+  }
+
+  async alarm(): Promise<void> {
+    const brain = await this.nativeBrain();
+    if (!brain) {
+      return;
+    }
+    let next: number | null = null;
+    await this.withEmit(async (emit) => {
+      next = await brain.alarm(emit);
+    });
+    if (next) {
+      await this.ctx.storage.setAlarm(next);
+    }
+  }
+
+  /**
+   * One crane socket message, or one frame the native brain emitted.
+   * `status` / `perf` / `log` fold; chat frames take the crane branch of the room.
+   */
+  private async handleCraneFrame(body: string, meta: SocketMeta, ws?: WebSocket): Promise<void> {
+    await this.dispatchSocket(body, meta, ws ?? null);
+  }
+
+  private async dispatchSocket(message: string | ArrayBuffer, meta: SocketMeta, ws: WebSocket | null) {
     if (meta.role === "crane" && harnessKind(message)) {
       await this.foldHarness(message);
       return;
@@ -248,19 +312,19 @@ export class Agent extends DurableObject<AgentEnv> {
       enforce: this.enforce(),
       now,
     })) {
-      ws.close(4401, "unauthorized");
+      ws?.close(4401, "unauthorized");
       return;
     }
     const parsed = parseFrame(message, { role: meta.role });
     if (!parsed.ok) {
-      ws.send(encodeError(parsed.error, parsed.id));
+      ws?.send(encodeError(parsed.error, parsed.id));
       return;
     }
     const out: WireFrame = stripClientOrder(parsed.frame);
     if (meta.role === "phone") {
       const kind = resolvePhoneKind(out);
       if (!kind) {
-        ws.send(encodeError("bad frame", out.id));
+        ws?.send(encodeError("bad frame", out.id));
         return;
       }
       out.kind = kind;
@@ -276,7 +340,7 @@ export class Agent extends DurableObject<AgentEnv> {
       out.kind = "reply";
     }
     if (meta.role === "crane" && emptyReply(out)) {
-      ws.send(encodeError("bad frame", out.id));
+      ws?.send(encodeError("bad frame", out.id));
       return;
     }
     // Ephemeral, unstored, a few dozen bytes; the crane's 30/min bucket is for turns.
@@ -286,7 +350,7 @@ export class Agent extends DurableObject<AgentEnv> {
     if (!skipRate) {
       const limits = await this.take(meta.rateId, parsed.bytes);
       if (!limits) {
-        ws.send(encodeError("rate", out.id));
+        ws?.send(encodeError("rate", out.id));
         return;
       }
     }
@@ -298,7 +362,7 @@ export class Agent extends DurableObject<AgentEnv> {
       || phoneMustNotPublishTyping(meta.role, out.kind)
       || phoneMustNotPublishDraft(meta.role, out.kind)
     ) {
-      ws.send(encodeError("bad frame", out.id));
+      ws?.send(encodeError("bad frame", out.id));
       return;
     }
     if (agentPublishedAllow(meta.role, out.kind)) {
@@ -369,7 +433,7 @@ export class Agent extends DurableObject<AgentEnv> {
       // "Seen" rides on the phone's own ack; copy it to the human's other
       // mouths so they drop their cards (docs/frontends.md → Seen).
       const seen = seenAckFor(meta.role, out, meta.userId);
-      if (seen && meta.userId) {
+      if (seen && meta.userId && ws) {
         fanOut(exceptSender(this.peers(subTag(meta.userId)), ws), encodeFrame(seen));
       }
       if (bareAck(out)) {
@@ -389,28 +453,34 @@ export class Agent extends DurableObject<AgentEnv> {
       // queue, no Web Push. Stored per human by message id so hydrate paints it.
       const reaction = reactionFor(meta.role, out);
       if (!reaction) {
-        ws.send(encodeError("bad frame", out.id));
+        ws?.send(encodeError("bad frame", out.id));
         return;
       }
       const body = encodeFrame(encodeReaction(reaction));
       if (reaction.userId) {
         await this.storeReaction(reaction);
-        fanOut(exceptSender(this.peers(subTag(reaction.userId)), ws), body);
+        const mouths = this.peers(subTag(reaction.userId));
+        fanOut(ws ? exceptSender(mouths, ws) : mouths, body);
       }
       if (meta.role === "phone") {
         // Crane down: keep it like an inbound. Keyed by the bubble, so a
         // second reaction on the same bubble replaces the first — latest wins.
-        const sent = fanOut(this.peers(roleTag("crane")), body);
-        if (queueForAgent(sent.length)) {
-          await this.putQueued({
-            id: reaction.id,
-            to: "crane",
-            body,
-            at: now,
-            userId: reaction.userId || undefined,
-            kind: "react",
-            bytes: utf8Bytes(body),
-          });
+        // Native: the brain sees it; nothing is queued for a crane.
+        if (await this.isNative()) {
+          await this.handToBrain(out);
+        } else {
+          const sent = fanOut(this.peers(roleTag("crane")), body);
+          if (queueForAgent(sent.length)) {
+            await this.putQueued({
+              id: reaction.id,
+              to: "crane",
+              body,
+              at: now,
+              userId: reaction.userId || undefined,
+              kind: "react",
+              bytes: utf8Bytes(body),
+            });
+          }
         }
       }
       return;
@@ -454,28 +524,35 @@ export class Agent extends DurableObject<AgentEnv> {
       return;
     }
     if (dest === "crane") {
-      const sent = fanOut(peers, body);
-      if (queueForAgent(sent.length)) {
-        await this.putQueued({
-          id: out.id,
-          to: "crane",
-          body,
-          at: now,
-          seq: out.seq,
-          userId: out.user_id,
-          kind: out.kind,
-          bytes: utf8Bytes(body),
-        });
+      const nativeTurn = meta.role === "phone" && out.kind === "inbound" && (await this.isNative());
+      if (!nativeTurn) {
+        const sent = fanOut(peers, body);
+        if (queueForAgent(sent.length)) {
+          await this.putQueued({
+            id: out.id,
+            to: "crane",
+            body,
+            at: now,
+            seq: out.seq,
+            userId: out.user_id,
+            kind: out.kind,
+            bytes: utf8Bytes(body),
+          });
+        }
       }
       if (persistInboundForPhone(meta.role, out.kind)) {
         await this.rememberPhone(phoneRow());
       }
       const sibling = siblingPhoneTag(meta.role, out.kind, meta.userId);
       if (sibling) {
-        fanOut(exceptSender(this.peers(sibling), ws), body);
+        const mouths = this.peers(sibling);
+        fanOut(ws ? exceptSender(mouths, ws) : mouths, body);
       }
       if (meta.role === "phone" && out.kind === "inbound") {
-        ws.send(encodeFrame({ kind: "ack", id: out.id }));
+        ws?.send(encodeFrame({ kind: "ack", id: out.id }));
+      }
+      if (nativeTurn) {
+        await this.handToBrain(out);
       }
       return;
     }
@@ -1037,7 +1114,14 @@ export class Agent extends DurableObject<AgentEnv> {
         return Response.json({ error: applied.error }, { status: 400 });
       }
       if (applied.changed) {
+        if (applied.config.runtime === "native" && applied.config.persona !== loaded.config.persona) {
+          const refused = await this.writePersonaFile(filePersona, applied.config.persona);
+          if (refused) {
+            return refused;
+          }
+        }
         await this.ctx.storage.put(CONFIG_STORE_KEY, applied.config);
+        await this.retargetBrain(loaded.config, applied.config);
       }
       return Response.json(configView(applied.config, loaded.startedEnv, house));
     }
@@ -1146,6 +1230,9 @@ export class Agent extends DurableObject<AgentEnv> {
       if (parseSocketTags(this.ctx.getTags(ws)).role !== "crane") {
         return;
       }
+      if (await this.isNative()) {
+        return;
+      }
       const others = exceptSender(this.peers(roleTag("crane")), ws).filter(isSocketOpen);
       if (others.length) {
         return;
@@ -1202,6 +1289,404 @@ export class Agent extends DurableObject<AgentEnv> {
     const wait = (this.ctx as { waitUntil?: (p: Promise<unknown>) => void }).waitUntil;
     if (typeof wait === "function") {
       wait.call(this.ctx, tracked);
+    }
+  }
+
+  private async isNative(): Promise<boolean> {
+    const loaded = await this.loadConfig();
+    return loaded.config.runtime === "native";
+  }
+
+  /** First use connects the status row and publishes the brain's catalog. */
+  private async nativeBrain(): Promise<Brain | null> {
+    const loaded = await this.loadConfig();
+    if (loaded.config.runtime !== "native") {
+      return null;
+    }
+    const slug = parseStoredSlug(await this.ctx.storage.get<string>(SLUG_STORE_KEY)) ?? "";
+    await this.loadSeenOrigin();
+    const brain = await openRoomBrain(this.ctx, this.env, {
+      slug,
+      foldLog: (frame) => {
+        this.enqueueCrane(JSON.stringify(frame));
+      },
+      auth: {
+        redirectUri: () => oauthCatchRedirect(this.env, this.publicOrigin),
+        sealState: (plugin) => this.sealForSlash(plugin),
+      },
+    });
+    const fresh = brain !== this.brain;
+    this.brain = brain;
+    if (fresh) {
+      await this.noteHarnessOpen();
+      await this.withEmit((emit) => brain.announce(emit));
+      await this.armAlarm(brain.nextAlarm());
+    }
+    return brain;
+  }
+
+  private forgetBrain(): void {
+    dropRoomBrain(this.ctx);
+    this.brain = null;
+  }
+
+  private async retargetBrain(prev: AgentConfig, next: AgentConfig): Promise<void> {
+    const envChanged = canonicalEnv(prev.env) !== canonicalEnv(next.env);
+    const personaChanged = prev.persona !== next.persona;
+    const runtimeChanged = prev.runtime !== next.runtime;
+    if (next.runtime !== "native") {
+      if (runtimeChanged) {
+        this.forgetBrain();
+        await this.ctx.storage.deleteAlarm();
+      }
+      return;
+    }
+    if (envChanged || personaChanged || runtimeChanged) {
+      this.forgetBrain();
+      await this.nativeBrain();
+    }
+  }
+
+  private async handToBrain(frame: WireFrame): Promise<void> {
+    if (frame.kind !== "inbound" && frame.kind !== "react") {
+      return;
+    }
+    const brain = await this.nativeBrain();
+    if (!brain) {
+      return;
+    }
+    const inbound: Inbound = { ...frame, kind: frame.kind, user_id: frame.user_id ?? "" };
+    await this.withEmit((emit) => brain.handleInbound(inbound, emit));
+    await this.armAlarm(brain.nextAlarm());
+  }
+
+  private enqueueCrane(body: string): void {
+    const meta: SocketMeta = { role: "crane", rateId: "native" };
+    this.craneChain = this.craneChain
+      .then(() => undefined, () => undefined)
+      .then(() => this.handleCraneFrame(body, meta));
+  }
+
+  private async withEmit(run: (emit: Emit) => Promise<void>): Promise<void> {
+    const emit: Emit = (frame) => {
+      this.enqueueCrane(JSON.stringify(frame));
+    };
+    await run(emit);
+    await this.craneChain;
+  }
+
+  private async armAlarm(at: number | null): Promise<void> {
+    if (at) {
+      await this.ctx.storage.setAlarm(at);
+    }
+  }
+
+  private async personaHttp(request: Request): Promise<Response> {
+    if (!(await this.isNative())) {
+      return Response.json({ error: "container runtime" }, { status: 409 });
+    }
+    const op = request.headers.get("X-Chat-Op");
+    if (op === "persona_get" && request.method !== "GET") {
+      return new Response("method", { status: 405 });
+    }
+    if (op === "persona_put" && request.method !== "PUT") {
+      return new Response("method", { status: 405 });
+    }
+    if (op === "persona_delete" && request.method !== "DELETE") {
+      return new Response("method", { status: 405 });
+    }
+    const store = await openPersonaStore(this.ctx, {
+      foldLog: (frame) => {
+        this.enqueueCrane(JSON.stringify(frame));
+      },
+    });
+    if (op === "persona_get") {
+      return Response.json({ files: store.list(), maxChars: MAX_CHARS });
+    }
+    let raw: unknown;
+    try {
+      raw = await request.json();
+    } catch {
+      return Response.json({ error: "bad_persona" }, { status: 400 });
+    }
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      return Response.json({ error: "bad_persona" }, { status: 400 });
+    }
+    const body = raw as { name?: unknown; text?: unknown };
+    const name = typeof body.name === "string" ? body.name : "";
+    if (op === "persona_delete") {
+      const refused = await this.writePersonaFile(name, null, store);
+      if (refused) {
+        return refused;
+      }
+      await this.notePersonaConfig(name, "");
+      await this.reloadNative();
+      return Response.json({ files: store.list(), maxChars: MAX_CHARS });
+    }
+    if (typeof body.text !== "string") {
+      return Response.json({ error: "bad_persona" }, { status: 400 });
+    }
+    const refused = await this.writePersonaFile(name, body.text, store);
+    if (refused) {
+      return refused;
+    }
+    await this.notePersonaConfig(name, body.text);
+    await this.reloadNative();
+    return Response.json({ files: store.list(), maxChars: MAX_CHARS });
+  }
+
+  /**
+   * Write or delete one persona file. `text === null` deletes.
+   * Pass `store` when the caller already opened it (so import runs once).
+   */
+  private async writePersonaFile(name: string, text: string | null, store?: PersonaStore): Promise<Response | null> {
+    try {
+      const files = store ?? await openPersonaStore(this.ctx, {
+        foldLog: (frame) => {
+          this.enqueueCrane(JSON.stringify(frame));
+        },
+      });
+      if (text === null) {
+        files.remove(name);
+      } else {
+        files.write(name, text);
+      }
+      await this.craneChain;
+      return null;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      const code = message.includes("bytes") ? "too_long" : "bad_persona";
+      return Response.json({ error: code }, { status: 400 });
+    }
+  }
+
+  /** PERSONA.md is also the config string old clients still PATCH and read. */
+  private async notePersonaConfig(name: string, text: string): Promise<void> {
+    if (name !== filePersona) {
+      return;
+    }
+    const loaded = await this.loadConfig();
+    if (loaded.config.persona === text) {
+      return;
+    }
+    await this.ctx.storage.put(CONFIG_STORE_KEY, { ...loaded.config, persona: text, updatedAt: Date.now() });
+  }
+
+  private async reloadNative(): Promise<void> {
+    this.forgetBrain();
+    await this.nativeBrain();
+  }
+
+  private async selfHttp(request: Request): Promise<Response> {
+    if (!(await this.isNative())) {
+      return Response.json({ error: "container runtime" }, { status: 409 });
+    }
+    const op = request.headers.get("X-Chat-Op");
+    if (op === "self_get" && request.method !== "GET") {
+      return new Response("method", { status: 405 });
+    }
+    if (op === "self_put" && request.method !== "PUT") {
+      return new Response("method", { status: 405 });
+    }
+    const store = await openSelfStore(this.ctx, {
+      foldLog: (frame) => {
+        this.enqueueCrane(JSON.stringify(frame));
+      },
+    });
+    if (op === "self_get") {
+      return Response.json({ text: store.read(), maxChars });
+    }
+    let raw: unknown;
+    try {
+      raw = await request.json();
+    } catch {
+      return Response.json({ error: "bad_self" }, { status: 400 });
+    }
+    const text = raw && typeof raw === "object" && !Array.isArray(raw)
+      ? (raw as { text?: unknown }).text
+      : undefined;
+    if (typeof text !== "string") {
+      return Response.json({ error: "bad_self" }, { status: 400 });
+    }
+    try {
+      store.write(text);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      if (message.includes("empty")) {
+        return Response.json({ error: "empty" }, { status: 400 });
+      }
+      return Response.json({ error: "bad_self" }, { status: 400 });
+    }
+    await this.craneChain;
+    return Response.json({ text: store.read(), maxChars });
+  }
+
+  private async authHttp(request: Request): Promise<Response> {
+    if (request.method !== "POST") {
+      return new Response("method", { status: 405 });
+    }
+    let raw: unknown;
+    try {
+      raw = await request.json();
+    } catch {
+      return Response.json({ error: "bad_auth" }, { status: 400 });
+    }
+    if (!raw || typeof raw !== "object") {
+      return Response.json({ error: "bad_auth" }, { status: 400 });
+    }
+    const body = raw as { plugin?: unknown; code?: unknown; redirectUri?: unknown; userId?: unknown };
+    const plugin = typeof body.plugin === "string" ? body.plugin.trim() : "";
+    const code = typeof body.code === "string" ? body.code.trim() : "";
+    const redirectUri = typeof body.redirectUri === "string" ? body.redirectUri.trim() : "";
+    const userId = typeof body.userId === "string" ? body.userId.trim() : "";
+    if (!plugin || !code || !redirectUri) {
+      return Response.json({ error: "bad_auth" }, { status: 400 });
+    }
+    const brain = await this.nativeBrain();
+    if (!brain) {
+      return Response.json({ error: "native runtime" }, { status: 409 });
+    }
+    try {
+      await brain.authFinish(plugin, redirectUri, code);
+    } catch {
+      return Response.json({ error: "auth_failed" }, { status: 502 });
+    }
+    if (userId && userId.length <= 128) {
+      this.enqueueCrane(JSON.stringify({
+        kind: "reply",
+        user_id: userId,
+        text: `${plugin} connected`,
+      }));
+      await this.craneChain;
+    }
+    return Response.json({ ok: true });
+  }
+
+  private async authStartHttp(request: Request): Promise<Response> {
+    if (request.method !== "POST") {
+      return new Response("method", { status: 405 });
+    }
+    let raw: unknown;
+    try {
+      raw = await request.json();
+    } catch {
+      return Response.json({ error: "bad_auth" }, { status: 400 });
+    }
+    if (!raw || typeof raw !== "object") {
+      return Response.json({ error: "bad_auth" }, { status: 400 });
+    }
+    const body = raw as { plugin?: unknown; origin?: unknown; slug?: unknown };
+    const plugin = typeof body.plugin === "string" ? body.plugin.trim() : "";
+    if (!oauthRedirectPlugin(plugin)) {
+      return Response.json({ error: "bad_plugin" }, { status: 400 });
+    }
+    const slug = await this.slugForAuth(typeof body.slug === "string" ? body.slug : "");
+    if (!slug) {
+      return Response.json({ error: "no_slug" }, { status: 400 });
+    }
+    if (typeof body.origin === "string") {
+      await this.noteOrigin(body.origin);
+    }
+    const redirectUri = oauthCatchRedirect(this.env, this.publicOrigin);
+    if (!redirectUri) {
+      return Response.json({ error: "no_origin" }, { status: 503 });
+    }
+    const brain = await this.nativeBrain();
+    if (!brain) {
+      return Response.json({ error: "container runtime" }, { status: 409 });
+    }
+    let state: string;
+    try {
+      state = await this.sealPlugin(slug, plugin);
+    } catch {
+      return Response.json({ error: "login not configured" }, { status: 503 });
+    }
+    try {
+      const started = await brain.authStart(plugin, redirectUri, state);
+      if (!started?.url) {
+        return Response.json({ error: "no_login" }, { status: 404 });
+      }
+      return Response.json({ url: started.url });
+    } catch {
+      return Response.json({ error: "auth_failed" }, { status: 502 });
+    }
+  }
+
+  private async slugForAuth(requested: string): Promise<string | null> {
+    const asked = parseStoredSlug(requested);
+    const stored = parseStoredSlug(await this.ctx.storage.get<string>(SLUG_STORE_KEY));
+    if (asked && stored && asked !== stored) {
+      return null;
+    }
+    const slug = asked ?? stored;
+    if (!slug) {
+      return null;
+    }
+    if (!stored) {
+      await this.ctx.storage.put(SLUG_STORE_KEY, slug);
+    }
+    return slug;
+  }
+
+  private async sealForSlash(plugin: string): Promise<string> {
+    const slug = parseStoredSlug(await this.ctx.storage.get<string>(SLUG_STORE_KEY)) ?? "";
+    return this.sealPlugin(slug, plugin);
+  }
+
+  private async sealPlugin(slug: string, plugin: string): Promise<string> {
+    if (!parseStoredSlug(slug)) {
+      throw new Error("no slug");
+    }
+    const secret = this.env.SESSION_SECRET ?? "";
+    if (secret.length < 32) {
+      throw new Error("login not configured");
+    }
+    return sealOAuthCatch(await sessionKey(secret), { slug, plugin });
+  }
+
+  private async noteRequestOrigin(request: Request): Promise<void> {
+    try {
+      await this.noteOrigin(new URL(request.url).origin);
+    } catch {
+      // synthetic DO urls are not a public origin
+    }
+  }
+
+  private async noteOrigin(raw: string): Promise<void> {
+    let url: URL;
+    try {
+      url = new URL(raw);
+    } catch {
+      return;
+    }
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return;
+    }
+    if (url.hostname === "agent" || url.hostname === "harness") {
+      return;
+    }
+    if (this.publicOrigin === url.origin) {
+      return;
+    }
+    this.publicOrigin = url.origin;
+    await this.ctx.storage.put(PUBLIC_ORIGIN_KEY, url.origin);
+  }
+
+  private async loadSeenOrigin(): Promise<void> {
+    if (this.publicOrigin) {
+      return;
+    }
+    const stored = await this.ctx.storage.get<string>(PUBLIC_ORIGIN_KEY);
+    if (typeof stored !== "string" || !stored) {
+      return;
+    }
+    try {
+      const url = new URL(stored);
+      if (url.protocol === "http:" || url.protocol === "https:") {
+        this.publicOrigin = url.origin;
+      }
+    } catch {
+      // ignore a bad stored origin
     }
   }
 }

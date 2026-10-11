@@ -129,6 +129,48 @@ describe("container http", () => {
     });
   });
 
+  it("refuses start, stop, and recreate when the agent runtime is native", async () => {
+    const ops: string[] = [];
+    const env = {
+      HARNESS: {
+        idFromName: (name: string) => ({ name }) as DurableObjectId,
+        get: () => ({
+          fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+            const req = input instanceof Request ? input : new Request(input, init);
+            ops.push(req.headers.get("X-Harness-Op") ?? "");
+            return Response.json(STOPPED);
+          },
+        }),
+      },
+      AGENT: {
+        idFromName: (name: string) => ({ name }) as DurableObjectId,
+        get: () => ({
+          fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+            const req = input instanceof Request ? input : new Request(input, init);
+            if (req.headers.get("X-Chat-Op") === "config") {
+              return Response.json({ runtime: "native" });
+            }
+            return Response.json({ bearer: "tok" });
+          },
+        }),
+      },
+    } as unknown as AgentsEnv;
+    for (const action of ["start", "stop", "recreate"] as const) {
+      const res = await postContainer(
+        new Request("https://gantree.example/api/agents/kit/container", {
+          method: "POST",
+          headers: headers("admin"),
+          body: JSON.stringify({ action }),
+        }),
+        env,
+        "kit",
+      );
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ state: "failed", lastError: "native runtime", image: null });
+    }
+    expect(ops).toEqual([]);
+  });
+
   it("reports unknown when the binding is missing", async () => {
     const res = await getContainer(
       new Request("https://gantree.example/api/agents/kit/container", { headers: headers("admin") }),
