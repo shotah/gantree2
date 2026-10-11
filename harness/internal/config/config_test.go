@@ -131,7 +131,7 @@ func TestLoad_TelegramRequiresTokenAndAllowlist(t *testing.T) {
 		t.Errorf("TelegramAllowedUsers = %v, want [123 456]", cfg.TelegramAllowedUsers)
 	}
 
-	t.Setenv("PENDANT_MAILBOX_URL", "wss://x.workers.dev/ws/kit")
+	t.Setenv("CHAT_MAILBOX_URL", "wss://x.workers.dev/ws/kit")
 	t.Setenv("PENDANT_BEARER", "tok")
 	t.Setenv("PENDANT_ALLOWED_USERS", "1182")
 	cfg, err = config.Load()
@@ -239,7 +239,7 @@ func TestLoad_PendantRequiresURLBearerAllowlist(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "CHAT_MAILBOX_URL") {
 		t.Fatalf("%v", err)
 	}
-	t.Setenv("PENDANT_MAILBOX_URL", "wss://x.workers.dev/ws/kit")
+	t.Setenv("CHAT_MAILBOX_URL", "wss://x.workers.dev/ws/kit")
 	_, err = config.Load()
 	if err == nil || !strings.Contains(err.Error(), "CHAT_BEARER") {
 		t.Fatalf("%v", err)

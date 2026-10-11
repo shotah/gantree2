@@ -367,7 +367,7 @@ one logo, two surfaces.
 | Settings → Pendant fold (CF token, account id, Worker name) | Same Worker. Nothing to push to. |
 | `CRANE_BEARERS` Worker secret, Cloudflare Secrets HTTP API client | Bearer lives on the Agent DO. Rotate = storage write + socket close. |
 | `GOOGLE_CLIENT_ID/SECRET`, `SESSION_SECRET` as *pushed* secrets | Deploy-time vars/secrets on the one project (table above). |
-| `PENDANT_MAILBOX_URL` paste | It is `wss://<this origin>/ws/<slug>`. The Agent DO knows its own origin. |
+| `CHAT_MAILBOX_URL` paste | It is `wss://<this origin>/ws/<slug>`. The Agent DO knows its own origin. |
 | gantry-pendant CI, `secrets:push`, `npm run secret` | One CI. |
 | `tools-fetch`, GitHub PAT in Settings, `/data/bin` prune | MCP bins are in the image. Catalog is `mcp.lock`. |
 | `docker.sock`, dockerode, compose, `docker stats`, `docker logs` | Container binding + harness frames (below). |

@@ -83,5 +83,5 @@
 # download_tag = "latest"
 # download_url = "https://github.com/shotah/pendant-mcp/releases/download/{tag}/pendant-mcp_{version}_{os}_{arch}.tar.gz"
 # # CHAT_MAILBOX_URL + CHAT_BEARER already in process env when CHANNEL=chat.
-# # PENDANT_MAILBOX_URL + PENDANT_BEARER are deprecated aliases.
+# # CHAT_MAILBOX_URL + PENDANT_BEARER are deprecated aliases.
 # # IMAGE_OUTPUT_DIR must be set for the picture pair (avatar_update / backdrop_update).

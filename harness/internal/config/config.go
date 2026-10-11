@@ -508,9 +508,9 @@ func clearDeprecatedEnvWarns() {
 // applyChatAliases fills empty CHAT_* fields from the deprecated PENDANT_* names.
 func applyChatAliases(c *Config) {
 	if strings.TrimSpace(c.PendantMailboxURL) == "" {
-		if v := strings.TrimSpace(os.Getenv("PENDANT_MAILBOX_URL")); v != "" {
+		if v := strings.TrimSpace(os.Getenv("CHAT_MAILBOX_URL")); v != "" {
 			c.PendantMailboxURL = v
-			warnDeprecatedEnv("PENDANT_MAILBOX_URL", "CHAT_MAILBOX_URL")
+			warnDeprecatedEnv("CHAT_MAILBOX_URL", "CHAT_MAILBOX_URL")
 		}
 	}
 	if strings.TrimSpace(c.PendantBearer) == "" {

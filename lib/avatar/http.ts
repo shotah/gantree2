@@ -21,7 +21,7 @@ export function conditionalHeaders(req: Request): Record<string, string> {
 }
 
 /**
- * Harness `.env` `PENDANT_MAILBOX_URL` (`wss://…/ws/kit`) → Worker face POST.
+ * Harness `.env` `CHAT_MAILBOX_URL` (`wss://…/ws/kit`) → Worker face POST.
  * Same job as Telegram `setMyProfilePhoto`, different mouth.
  */
 export function mailboxToAvatarUrl(raw: string): string | null {

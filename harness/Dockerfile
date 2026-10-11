@@ -29,6 +29,12 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     -o /out/gantry \
     ./cmd/gantry
 
+# The runtime stage has no shell, so the writable dirs the harness needs
+# (PERSONA_DIR=/persona, DATA_DIR=/data) are made here and copied over
+# with the nonroot uid. Without this the first boot dies on
+# `snapshot: mkdir: mkdir /persona: permission denied`.
+RUN mkdir -p /out/persona /out/data
+
 # Every module under mcp/*/ (its own go.mod). Missing or empty mcp/ still
 # produces an empty /opt/mcp. One binary per plugin at /opt/mcp/<id>/<id>.
 # Catalog shapes land beside that binary when the module implements
@@ -62,6 +68,10 @@ LABEL org.opencontainers.image.revision="${COMMIT}"
 
 COPY --from=mcp /opt/mcp /opt/mcp
 COPY --from=build /out/gantry /usr/local/bin/gantry
+# nonroot is uid/gid 65532 in distroless. Both trees are written at boot:
+# the snapshot restore lays SELF.md/PERSONA.md and gantry.db under them.
+COPY --from=build --chown=65532:65532 /out/persona /persona
+COPY --from=build --chown=65532:65532 /out/data /data
 
 USER nonroot
 WORKDIR /data

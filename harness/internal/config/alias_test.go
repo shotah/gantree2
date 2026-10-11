@@ -71,7 +71,7 @@ func TestChatEnvAliases(t *testing.T) {
 	t.Setenv("CHAT_MAILBOX_URL", "wss://chat.example/ws/kit")
 	t.Setenv("CHAT_BEARER", "chat-tok")
 	t.Setenv("CHAT_ALLOWED_USERS", "1182:ada@example.com, 1183")
-	t.Setenv("PENDANT_MAILBOX_URL", "wss://old.example/ws/nope")
+	t.Setenv("CHAT_MAILBOX_URL", "wss://old.example/ws/nope")
 	t.Setenv("PENDANT_BEARER", "old-tok")
 	t.Setenv("PENDANT_ALLOWED_USERS", "999")
 
@@ -113,7 +113,7 @@ func TestChatEnvAliases(t *testing.T) {
 	if len(cfg.PendantAllowedUsers) != 1 || cfg.PendantAllowedUsers[0] != "999" {
 		t.Fatalf("users = %#v", cfg.PendantAllowedUsers)
 	}
-	if strings.Contains(buf.String(), "PENDANT_MAILBOX_URL") {
+	if strings.Contains(buf.String(), "CHAT_MAILBOX_URL") {
 		t.Fatalf("mailbox came from CHAT_*: %s", buf.String())
 	}
 	for _, name := range []string{"CHAT_BEARER", "CHAT_ALLOWED_USERS", "PENDANT_BEARER", "PENDANT_ALLOWED_USERS"} {
@@ -135,7 +135,7 @@ func TestChatEnvAliases(t *testing.T) {
 	if cfg.Channel != ChannelPendant || cfg.PendantMailboxURL != "wss://old.example/ws/nope" {
 		t.Fatalf("full alias: %+v", cfg)
 	}
-	if !strings.Contains(buf.String(), "deprecated, use CHAT_MAILBOX_URL") || !strings.Contains(buf.String(), "env=PENDANT_MAILBOX_URL") {
+	if !strings.Contains(buf.String(), "deprecated, use CHAT_MAILBOX_URL") || !strings.Contains(buf.String(), "env=CHAT_MAILBOX_URL") {
 		t.Fatalf("mailbox warn: %s", buf.String())
 	}
 	if strings.Contains(buf.String(), "CHAT_BEARER") || strings.Contains(buf.String(), "CHAT_ALLOWED_USERS") {
@@ -150,7 +150,7 @@ func TestChatEnvAliases(t *testing.T) {
 		t.Fatalf("second load warned again: %s", buf.String())
 	}
 
-	t.Setenv("PENDANT_MAILBOX_URL", "")
+	t.Setenv("CHAT_MAILBOX_URL", "")
 	t.Setenv("PENDANT_BEARER", "")
 	t.Setenv("PENDANT_ALLOWED_USERS", "")
 	t.Setenv("CHAT_MAILBOX_URL", "")

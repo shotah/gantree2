@@ -41,6 +41,25 @@ jobs:
       - name: Smoke
         run: docker run --rm --entrypoint /usr/local/bin/gantry gantree-harness version
 
+      # Boot it the way the Harness DO does (SNAPSHOT, chat channel, no
+      # keys) against a dead room. It must get past the filesystem as
+      # nonroot — "gantry starting", a dial error — and stop on the
+      # designed "no LLM keys" exit, never on a permission error. The
+      # first production boot died on `mkdir /persona: permission denied`
+      # while this step only ran `version`.
+      - name: Smoke (boot as the DO starts it)
+        run: |
+          set +e
+          out=$(docker run --rm \
+            -e CHANNEL=pendant -e CHAT_MAILBOX_URL=ws://127.0.0.1:9/ws/smoke \
+            -e CHAT_BEARER=smoke -e SNAPSHOT=true -e SNAPSHOT_INTERVAL=5m \
+            gantree-harness run 2>&1)
+          set -e
+          echo "$out"
+          case "$out" in *"permission denied"*) echo "::error::image is not writable as nonroot"; exit 1;; esac
+          case "$out" in *"gantry starting"*) ;; *) echo "::error::harness never reached its logger"; exit 1;; esac
+          case "$out" in *"no LLM keys after the config frame"*) ;; *) echo "::error::did not reach the LLM-keys gate"; exit 1;; esac
+
       - name: Push to GHCR
         if: github.event_name == 'push'
         env:

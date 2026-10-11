@@ -135,12 +135,12 @@ describe("harnessProcessEnv", () => {
   it("dials wss for https and ws for http, with the slug in the path", () => {
     expect(harnessProcessEnv("https://gantree.example/ignored", "kit", "tok")).toEqual({
       CHANNEL: "pendant",
-      PENDANT_MAILBOX_URL: "wss://gantree.example/ws/kit",
+      CHAT_MAILBOX_URL: "wss://gantree.example/ws/kit",
       PENDANT_BEARER: "tok",
       SNAPSHOT: "true",
       SNAPSHOT_INTERVAL: "5m",
     });
-    expect(harnessProcessEnv("http://127.0.0.1:3000", "ada", "t").PENDANT_MAILBOX_URL).toBe("ws://127.0.0.1:3000/ws/ada");
+    expect(harnessProcessEnv("http://127.0.0.1:3000", "ada", "t").CHAT_MAILBOX_URL).toBe("ws://127.0.0.1:3000/ws/ada");
   });
 });
 
@@ -183,7 +183,7 @@ describe("Harness", () => {
       enableInternet: true,
       env: {
         CHANNEL: "pendant",
-        PENDANT_MAILBOX_URL: "wss://gantree.example/ws/kit",
+        CHAT_MAILBOX_URL: "wss://gantree.example/ws/kit",
         PENDANT_BEARER: "tok",
         SNAPSHOT: "true",
         SNAPSHOT_INTERVAL: "5m",
@@ -204,7 +204,7 @@ describe("Harness", () => {
     expect(again.state).toBe("running");
     expect(container.destroyed).toBe(1);
     expect(container.started).toHaveLength(2);
-    expect(container.started[1]?.env?.PENDANT_MAILBOX_URL).toBe("ws://127.0.0.1:3000/ws/kit");
+    expect(container.started[1]?.env?.CHAT_MAILBOX_URL).toBe("ws://127.0.0.1:3000/ws/kit");
     expect(container.started[1]?.env?.PENDANT_BEARER).toBe("next");
   });
 

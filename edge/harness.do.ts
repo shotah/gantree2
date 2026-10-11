@@ -35,7 +35,7 @@ export function harnessProcessEnv(origin: string, slug: string, bearer: string):
   url.hash = "";
   return {
     CHANNEL: "pendant",
-    PENDANT_MAILBOX_URL: url.toString(),
+    CHAT_MAILBOX_URL: url.toString(),
     PENDANT_BEARER: bearer,
     SNAPSHOT: "true",
     SNAPSHOT_INTERVAL: "5m",

@@ -233,7 +233,7 @@ persona) arrives on the socket in a `config` frame.
 | Var | Value |
 | --- | --- |
 | `CHANNEL` | `pendant` |
-| `PENDANT_MAILBOX_URL` | `wss://<origin>/ws/<slug>` — the harness adds `?role=crane` |
+| `CHAT_MAILBOX_URL` | `wss://<origin>/ws/<slug>` — the harness adds `?role=crane` |
 | `PENDANT_BEARER` | room bearer from the Agent DO |
 | `SNAPSHOT` | `true` |
 | `SNAPSHOT_INTERVAL` | `5m` |

@@ -74,6 +74,6 @@ chat channel:
   CHANNEL=chat   (CHANNEL=pendant is a deprecated alias)
   CHAT_MAILBOX_URL, CHAT_BEARER, CHAT_ALLOWED_USERS
   CHAT_ALLOWED_USERS is optional when SNAPSHOT=true (the DO owns admission)
-  PENDANT_MAILBOX_URL, PENDANT_BEARER, PENDANT_ALLOWED_USERS are deprecated aliases
+  CHAT_MAILBOX_URL, PENDANT_BEARER, PENDANT_ALLOWED_USERS are deprecated aliases
 `)
 }

@@ -52,7 +52,7 @@ export CHAT_BEARER="…"
 export IMAGE_OUTPUT_DIR="/var/lib/gantry/images"  # required for the picture pair
 ```
 
-`PENDANT_MAILBOX_URL` and `PENDANT_BEARER` are deprecated aliases, used only when the `CHAT_*` name is unset.
+`CHAT_MAILBOX_URL` and `PENDANT_BEARER` are deprecated aliases, used only when the `CHAT_*` name is unset.
 
 Optional:
 
@@ -91,7 +91,7 @@ command = "chat"
 download_tag = "latest"
 download_url = "https://github.com/shotah/pendant-mcp/releases/download/{tag}/pendant-mcp_{version}_{os}_{arch}.tar.gz"
 # CHAT_MAILBOX_URL + CHAT_BEARER already live in the gantry process env
-# PENDANT_MAILBOX_URL + PENDANT_BEARER are deprecated aliases
+# CHAT_MAILBOX_URL + PENDANT_BEARER are deprecated aliases
 # IMAGE_OUTPUT_DIR must be set for avatar_update / backdrop_update
 ```
 
