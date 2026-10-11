@@ -538,18 +538,20 @@ export class Agent extends DurableObject<AgentEnv> {
     fanOut(peers, body);
   }
 
-  webSocketClose(ws: WebSocket) {
+  webSocketClose(ws: WebSocket): Promise<void> {
     // Hibernation keeps tags; nothing to log (bodies stay off the wire logs).
     this.forgetDraftsIfCraneGone(ws);
+    return Promise.resolve();
   }
 
-  webSocketError(ws: WebSocket) {
+  webSocketError(ws: WebSocket): Promise<void> {
     try {
       ws.close(1011, "error");
     } catch {
       // already closing
     }
     this.forgetDraftsIfCraneGone(ws);
+    return Promise.resolve();
   }
 
   /**

@@ -198,17 +198,23 @@ describe("Agent fan-out", () => {
     expect(live.kinds()).toEqual(["draft", "reply"]);
   });
 
-  it("queues for the crane when every crane socket is stale, not just when none is listed", async () => {
+  it("hands a phone inbound to the brain when every crane socket is stale", async () => {
+    roomMock.brain.handleInbound.mockClear();
     const { state, crane, phone, say } = room();
     crane.close();
     const ada = phone("1182");
 
     await say(ada, { id: "m1", text: "are you there" });
 
-    const forCrane = state.storage.queued().filter((q) => q.to === "crane");
-    expect(forCrane).toHaveLength(1);
-    expect(forCrane[0]?.body).toContain("are you there");
+    expect(state.storage.queued().filter((q) => q.to === "crane")).toEqual([]);
     expect(ada.kinds()).toEqual(["ack"]);
+    expect(roomMock.brain.handleInbound).toHaveBeenCalledTimes(1);
+    expect(roomMock.brain.handleInbound.mock.calls[0]?.[0]).toMatchObject({
+      kind: "inbound",
+      id: "m1",
+      text: "are you there",
+      user_id: "1182",
+    });
   });
 
   it("announces a room notice past a stale socket", async () => {
@@ -693,6 +699,7 @@ describe("Agent tasks board", () => {
   });
 
   it("refuses a list from a phone; the checkbox is an ordinary /todo done turn", async () => {
+    roomMock.brain.handleInbound.mockClear();
     const { crane, phone, say } = room();
     const ada = phone("1182");
     await say(ada, { kind: "todo", todo: list });
@@ -700,7 +707,14 @@ describe("Agent tasks board", () => {
     expect(crane.sent).toEqual([]);
 
     await say(ada, { id: "m1", text: "/todo done 412" });
-    expect(crane.frames().at(-1)).toMatchObject({ kind: "inbound", text: "/todo done 412", user_id: "1182" });
+    expect(crane.sent).toEqual([]);
+    expect(ada.frames().at(-1)).toMatchObject({ kind: "ack", id: "m1" });
+    expect(roomMock.brain.handleInbound).toHaveBeenCalledTimes(1);
+    expect(roomMock.brain.handleInbound.mock.calls[0]?.[0]).toMatchObject({
+      kind: "inbound",
+      text: "/todo done 412",
+      user_id: "1182",
+    });
   });
 });
 
@@ -733,7 +747,8 @@ describe("Agent reactions", () => {
     });
   });
 
-  it("hands the human's reaction to the crane and their other mouths, not back to the sender", async () => {
+  it("hands the human's reaction to their other mouths and the brain, not back to the sender", async () => {
+    roomMock.brain.handleInbound.mockClear();
     const { state, crane, phone, say } = room();
     const pwa = phone("1182");
     const cab = phone("1182");
@@ -744,18 +759,26 @@ describe("Agent reactions", () => {
 
     await say(pwa, { kind: "react", id: "r1", text: "❤️" });
 
-    expect(crane.frames()).toEqual([{ kind: "react", id: "r1", text: "❤️", user_id: "1182" }]);
+    expect(crane.frames()).toEqual([]);
     expect(cab.frames()).toEqual([{ kind: "react", id: "r1", text: "❤️", user_id: "1182" }]);
     expect(pwa.sent).toEqual([]);
     expect(state.storage.rows.get("r:1182")).toEqual({ r1: "❤️" });
+    expect(roomMock.brain.handleInbound).toHaveBeenCalledTimes(1);
+    expect(roomMock.brain.handleInbound.mock.calls[0]?.[0]).toMatchObject({
+      kind: "react",
+      id: "r1",
+      text: "❤️",
+      user_id: "1182",
+    });
 
     await say(pwa, { kind: "react", id: "r1", text: "" });
-    expect(crane.frames().at(-1)).toEqual({ kind: "react", id: "r1", text: "", user_id: "1182" });
     expect(cab.frames().at(-1)).toEqual({ kind: "react", id: "r1", text: "", user_id: "1182" });
     expect(state.storage.rows.has("r:1182")).toBe(false);
+    expect(roomMock.brain.handleInbound).toHaveBeenCalledTimes(2);
   });
 
-  it("queues the human's reaction when no crane socket is up; latest on a bubble wins; the crane drains it on connect", async () => {
+  it("keeps the latest reaction when no crane socket is up and does not queue it", async () => {
+    roomMock.brain.handleInbound.mockClear();
     const { state, box, crane, phone, say } = room();
     const pwa = phone("1182");
     await say(crane, { kind: "reply", id: "r1", user_id: "1182", text: "Rain at 6." });
@@ -767,16 +790,15 @@ describe("Agent reactions", () => {
     await say(pwa, { kind: "react", id: "r1", text: "❤️" });
     await say(pwa, { kind: "react", id: "r2", text: "🔥" });
 
-    const forCrane = state.storage.queued().filter((q) => q.to === "crane");
-    expect(forCrane.map((q) => [q.id, q.kind])).toEqual([["r1", "react"], ["r2", "react"]]);
+    expect(state.storage.queued().filter((q) => q.to === "crane")).toEqual([]);
     expect(pwa.sent).toEqual([]); // no ack for a react, no error either
     expect(state.storage.rows.get("r:1182")).toEqual({ r1: "❤️", r2: "🔥" });
+    expect(roomMock.brain.handleInbound).toHaveBeenCalledTimes(3);
 
     const back = new FakeSocket();
     state.acceptWebSocket(back, socketTags({ role: "crane", rateId: "bearer:kit" }));
     await (box as unknown as Flushable).flush(back, "crane");
-    const reacts = back.frames().filter((f) => f.kind === "react");
-    expect(reacts.map((f) => [f.id, f.text, f.user_id])).toEqual([["r1", "❤️", "1182"], ["r2", "🔥", "1182"]]);
+    expect(back.frames().filter((f) => f.kind === "react")).toEqual([]);
     expect(state.storage.queued().filter((q) => q.to === "crane")).toEqual([]);
   });
 
@@ -995,7 +1017,7 @@ describe("Agent harness ops", () => {
     expect(first.env?.LLM_API_KEY).toBe("sekrit");
     expect(first.env?.SNAPSHOT_KEY).toBeUndefined();
     expect(first.restore).toBeUndefined();
-    expect(fresh.sent[1]).toContain("ping");
+    expect(fresh.sent).toHaveLength(1);
     expect(ada.sent.join("")).not.toContain("sekrit");
     expect(ada.sent.join("")).not.toContain("\"kind\":\"config\"");
 
@@ -1217,6 +1239,7 @@ describe("Agent native runtime", () => {
       emit({ kind: "reply", user_id: "1182", id: "r1", text: "Looks like rain." });
     });
     roomMock.brain.nextAlarm.mockReturnValue(4_200_000_000_000);
+    roomMock.brain.announce.mockClear();
 
     const native = room();
     await native.state.storage.put("slug", "kit");

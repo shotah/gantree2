@@ -11,6 +11,9 @@ coverage
 .dev.vars.*
 !.dev.vars.example
 
+# Local REPL database (npm run agent)
+.agent/
+
 # Nested checkouts (keep the folder)
 repos/*
 !repos/.gitkeep

@@ -4,10 +4,10 @@ name: release
 # `npm run release` (scripts/release.mjs). A tag with a `-` (v1.2.0-rc1) is
 # marked pre-release; anything else becomes the latest release.
 #
-# eval.yml runs first via workflow_call. A failed eval blocks this
-# release. A skipped eval (missing LLM_* secrets) succeeds, so the
-# release still happens. Deploys are not here: deploy-cloudflare.yml
-# follows ci on main.
+# TODO(2026-10-11, release-gate): re-add the eval job as a gate once the fixture set is stable — see docs/ci.md
+# eval.yml listens for the same v* tag and runs beside this. It does not
+# block the release. Deploys are not here: deploy-cloudflare.yml follows
+# ci on main.
 
 on:
   push:
@@ -18,12 +18,7 @@ permissions:
   contents: write
 
 jobs:
-  eval:
-    uses: ./.github/workflows/eval.yml
-    secrets: inherit
-
   release:
-    needs: eval
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

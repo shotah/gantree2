@@ -22,6 +22,7 @@
     "test:coverage": "vitest run --coverage",
     "badge": "node scripts/badge.mjs vitest coverage/coverage-summary.json badges/coverage.svg",
     "eval": "node scripts/eval.mjs",
+    "agent": "node --experimental-transform-types --disable-warning=ExperimentalWarning scripts/agent.ts",
     "icons": "node scripts/icons.ts",
     "seed": "node scripts/seed.ts",
     "shot": "node scripts/shot.mjs",

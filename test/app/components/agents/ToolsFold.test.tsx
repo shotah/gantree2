@@ -83,7 +83,7 @@ describe("ToolsFold", () => {
     render(<Harness client={client} tools={[MAPS, CAST]} start={config({ envKeys: [] })} />);
     fireEvent.click(screen.getByRole("button", { name: "Tools" }));
     expect(screen.getByText("Home")).toBeTruthy();
-    expect(screen.getByText("Sign in from chat before this publishes.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Connect cast" })).toBeTruthy();
     expect(screen.queryByRole("form", { name: "Keys for maps" })).toBeNull();
     const box = inputOf(screen.getByRole("checkbox", { name: "maps" }));
     fireEvent.click(box);

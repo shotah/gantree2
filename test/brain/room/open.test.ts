@@ -221,7 +221,8 @@ describe("openRoomBrain", () => {
     rows.set(CONFIG_STORE_KEY, { env: {}, mcp: "", persona: "", updatedAt: 1 });
     const ctx = ctxFor(rows);
     const opts = { foldLog: () => undefined };
-    await openRoomBrain(ctx as unknown as DurableObjectState, {}, opts);
+    const house = { LLM_API_KEY: "house-key" };
+    await openRoomBrain(ctx as unknown as DurableObjectState, house, opts);
     expect(await depsOf().plugins.find((plugin) => plugin.name === "math")?.ready({} as never)).toBe("disabled");
 
     rows.set(CONFIG_STORE_KEY, {
@@ -230,12 +231,12 @@ describe("openRoomBrain", () => {
       persona: "",
       updatedAt: 2,
     });
-    await openRoomBrain(ctx as unknown as DurableObjectState, {}, opts);
+    await openRoomBrain(ctx as unknown as DurableObjectState, house, opts);
     expect(vi.mocked(createBrain)).toHaveBeenCalledTimes(2);
     expect(await depsOf().plugins.find((plugin) => plugin.name === "math")?.ready({} as never)).toBeNull();
 
     rows.set(CONFIG_STORE_KEY, { env: {}, mcp: "", persona: "", updatedAt: 3 });
-    await openRoomBrain(ctx as unknown as DurableObjectState, {}, opts);
+    await openRoomBrain(ctx as unknown as DurableObjectState, house, opts);
     expect(vi.mocked(createBrain)).toHaveBeenCalledTimes(3);
     expect(await depsOf().plugins.find((plugin) => plugin.name === "math")?.ready({} as never)).toBe("disabled");
   });

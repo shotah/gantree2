@@ -50,6 +50,7 @@ describe("SecretsFold", () => {
       return json(200, config({ envKeys, recreate: true }));
     });
     render(<Harness client={client} />);
+    fireEvent.click(screen.getByRole("button", { name: "Keys" }));
     expect(screen.getByText("LLM_API_KEY")).toBeTruthy();
 
     fireEvent.change(screen.getByLabelText("Key"), { target: { value: "1NO" } });
@@ -75,6 +76,7 @@ describe("SecretsFold", () => {
 
   it("hides the form when the session cannot change keys", () => {
     render(<SecretsFold slug="kit" config={config({ envKeys: [] })} canMutate={false} client={vi.fn()} onConfig={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Keys" }));
     expect(screen.getByText("No keys yet.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Add key" })).toBeNull();
   });

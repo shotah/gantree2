@@ -2,6 +2,12 @@ name: deploy-cloudflare
 
 # Deploy the Worker to Cloudflare after ci passes on main.
 #
+# workflow_run starts job `gate` every time ci finishes on main. Any
+# conclusion other than success fails the run with
+# `::error::ci failed on main (<run url>); not deploying`.
+# workflow_dispatch passes the gate without reading that conclusion
+# and deploys by hand.
+#
 # Repository → Settings → Secrets and variables → Actions:
 #   Variables: GOOGLE_CLIENT_ID, GANTREE_ADMINS, GANTREE_ALLOW
 #   Secrets:   GOOGLE_CLIENT_SECRET, SESSION_SECRET, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
@@ -24,8 +30,25 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ci must be green
+        env:
+          EVENT: ${{ github.event_name }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          if [ "$EVENT" != "workflow_run" ]; then
+            exit 0
+          fi
+          if [ "$CONCLUSION" != "success" ]; then
+            echo "::error::ci failed on main (${RUN_URL}); not deploying"
+            exit 1
+          fi
+
   deploy:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    needs: gate
     runs-on: ubuntu-latest
     environment: cloudflare
     steps:
