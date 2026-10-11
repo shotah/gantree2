@@ -93,6 +93,14 @@ via `source_path`. Chat photos still go on the room reply; face and backdrop
 are rows on the Agent DO (`avatar`, `backdrop`, ≤2 MB each), not bubbles. The `chat` plugin
 lands with [todo.md](todo.md) §6.
 
+The plugin POSTs `/api/chat/{avatar,backdrop,theme}?slug=` with
+`Authorization: Bearer CHAT_BEARER` — the same room bearer the socket dials
+with. The door lets a bearer header through on those three paths only
+(`isAgentRoomRequest`), and `admitRoom` checks it against `AGENT_BEARERS` or
+the Agent DO row; a cookie there is gated as usual. Set `IMAGE_MODEL` to an
+image model (default `gemini-3.1-flash-image`) — the crane `LLM_MODEL` is a
+chat model and is never used for pictures.
+
 The room announces `face` / `backdrop` / `theme` changes on the harness
 socket too. The channel caches them (`Room()`), and when `chat` is in
 the catalog the agent stamps `[room] theme ember (set 3h ago) · wallpaper

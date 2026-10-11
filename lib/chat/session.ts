@@ -21,7 +21,8 @@ export type ChatSession = {
   exp?: number;
 };
 
-function bearerToken(authorization: string | null | undefined): string | undefined {
+/** The token after `Authorization: Bearer`, or `undefined`. Header only — never a query string. */
+export function bearerToken(authorization: string | null | undefined): string | undefined {
   const header = authorization?.trim() ?? "";
   const prefix = "bearer ";
   if (header.length < prefix.length || header.slice(0, prefix.length).toLowerCase() !== prefix) {

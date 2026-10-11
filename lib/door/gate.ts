@@ -1,3 +1,4 @@
+import { bearerToken } from "@/lib/chat/session";
 import { parseEntry } from "./allowlist";
 import { isLoopback, openSession, readCookie, SESSION_COOKIE, sessionKey } from "./session";
 import { hasAdmins, type Resolved, resolveUser, type UserStore, type UsersEnv } from "./users";
@@ -38,6 +39,19 @@ export function isPublicPath(pathname: string): boolean {
   return PUBLIC_PREFIX.some((p) => pathname.startsWith(p));
 }
 
+/**
+ * Agent face / wallpaper / mood (`chat__avatar_update` and friends). The
+ * harness presents the room bearer, never a cookie — the same token it dials
+ * `/ws/<slug>` with. Only these three paths, and only when a bearer header is
+ * on the request; `admitRoom` (`lib/avatar/http`) then checks that token
+ * against `AGENT_BEARERS` or the Agent DO row. A cookie here is gated as usual.
+ */
+const ROOM_PATH = /^\/api\/chat\/(?:avatar|backdrop|theme)$/;
+
+export function isAgentRoomRequest(req: Request): boolean {
+  return ROOM_PATH.test(new URL(req.url).pathname) && Boolean(bearerToken(req.headers.get("Authorization")));
+}
+
 export function isApiPath(pathname: string): boolean {
   return pathname.startsWith("/api/") || pathname.startsWith("/ws/");
 }
@@ -65,7 +79,7 @@ export function devIdentity(env: GateEnv, url: URL): { sub: string; email: strin
 
 export async function gate(req: Request, env: GateEnv, store: UserStore, now = Date.now()): Promise<Decision> {
   const url = new URL(req.url);
-  if (isPublicPath(url.pathname)) {
+  if (isPublicPath(url.pathname) || isAgentRoomRequest(req)) {
     return { kind: "public" };
   }
   if (!hasAdmins(env)) {

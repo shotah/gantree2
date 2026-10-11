@@ -46,7 +46,7 @@ Optional:
 
 | Key | Notes |
 | --- | --- |
-| `IMAGE_MODEL` | Default `gemini-3.1-flash-image` (Nano Banana 2). Else `LLM_MODEL`. |
+| `IMAGE_MODEL` | Default `gemini-3.1-flash-image` (Nano Banana 2). Must be an image model; the crane `LLM_MODEL` is never used here. |
 | `IMAGE_PROVIDER` | Default `gemini`. Other values teach-in until implemented. |
 | `IMAGE_OUTPUT_DIR` | Write PNG/JPEG to disk; summary includes `path`. |
 | `GOOGLE_GENAI_USE_VERTEXAI` | Truthy → Vertex. Needs `GOOGLE_CLOUD_PROJECT`. |

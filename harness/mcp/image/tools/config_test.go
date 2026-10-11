@@ -42,6 +42,18 @@ func TestLoadConfigFromEnv(t *testing.T) {
 			},
 		},
 		{
+			name: "crane chat model is never the image model",
+			env: map[string]string{
+				EnvLLMAPIKey: "llm-key",
+				EnvLLMModel:  "gemini-3.8-flash",
+			},
+			want: serverConfig{
+				Provider: ProviderGemini,
+				Model:    DefaultModel,
+				APIKey:   "llm-key",
+			},
+		},
+		{
 			name: "vertex",
 			env: map[string]string{
 				EnvGoogleGenAIUseVertexAI: "true",

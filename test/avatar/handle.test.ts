@@ -80,6 +80,60 @@ describe("handleAvatar", () => {
     expect(res.status).toBe(403);
   });
 
+  it("admits the harness with the bearer stored on the room, header only", async () => {
+    const ops: string[] = [];
+    const env = room((req) => {
+      const op = req.headers.get("X-Chat-Op") ?? "";
+      ops.push(op);
+      if (op === "bearer") {
+        return Response.json({ bearer: "from-do" });
+      }
+      if (op === "allow") {
+        return Response.json({ users: [] });
+      }
+      return new Response(new Uint8Array([0xff, 0xd8, 0xff]), { headers: { "Content-Type": "image/jpeg", "X-Chat-Rev": "5" } });
+    });
+    const ok = await handleAvatar(new Request("https://chat.test/api/chat/avatar?slug=kit", {
+      headers: { Authorization: "Bearer from-do" },
+    }), env, store);
+    expect(ok.status).toBe(200);
+    expect(ok.headers.get("X-Chat-Rev")).toBe("5");
+    expect(ops).not.toContain("allow");
+
+    const wrong = await handleAvatar(new Request("https://chat.test/api/chat/avatar?slug=kit", {
+      headers: { Authorization: "Bearer nope" },
+    }), env, store);
+    expect(wrong.status).toBe(401);
+    expect(await wrong.json()).toEqual({ error: "unauthorized" });
+
+    const query = await handleAvatar(new Request("https://chat.test/api/chat/avatar?slug=kit&bearer=from-do"), env, store);
+    expect(query.status).toBe(401);
+  });
+
+  it("admits the harness from the AGENT_BEARERS map without waking the bearer row", async () => {
+    const ops: string[] = [];
+    const base = room((req) => {
+      ops.push(req.headers.get("X-Chat-Op") ?? "");
+      return Response.json({ rev: 9 });
+    });
+    const env = { ...base, AGENT_BEARERS: "kit:crane-tok,ada:other" } as RoomEnv;
+    const bytes = new Uint8Array(64);
+    bytes[0] = 0xff;
+    bytes[1] = 0xd8;
+    bytes[2] = 0xff;
+    const res = await handleAvatar(new Request("https://chat.test/api/chat/avatar?slug=kit", {
+      method: "POST",
+      headers: { Authorization: "Bearer crane-tok", "Content-Type": "image/jpeg" },
+      body: bytes,
+    }), env, store);
+    expect(res.status).toBe(200);
+    expect(ops).toEqual(["avatar"]);
+    const other = await handleAvatar(new Request("https://chat.test/api/chat/avatar?slug=ada", {
+      headers: { Authorization: "Bearer crane-tok" },
+    }), env, store);
+    expect(other.status).toBe(401);
+  });
+
   it("puts a JPEG on the room", async () => {
     let method = "";
     const env = room((req) => {

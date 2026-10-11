@@ -44,6 +44,32 @@ describe("handleTheme", () => {
     expect(await res.json()).toEqual({ theme: "boom" });
   });
 
+  it("lets the harness list and set the mood with the room bearer", async () => {
+    const methods: string[] = [];
+    const env = room((req) => {
+      if (req.headers.get("X-Chat-Op") === "bearer") {
+        return Response.json({ bearer: "crane-tok" });
+      }
+      methods.push(req.method);
+      return Response.json({ theme: "boom", themes: [{ id: "boom" }] });
+    });
+    const list = await handleTheme(new Request("https://chat.test/api/chat/theme?slug=kit", {
+      headers: { Authorization: "Bearer crane-tok" },
+    }), env, memoryStore());
+    expect(list.status).toBe(200);
+    const set = await handleTheme(new Request("https://chat.test/api/chat/theme?slug=kit", {
+      method: "POST",
+      headers: { Authorization: "Bearer crane-tok", "Content-Type": "application/json" },
+      body: JSON.stringify({ theme: "boom" }),
+    }), env, memoryStore());
+    expect(set.status).toBe(200);
+    expect(methods).toEqual(["GET", "PUT"]);
+    const bad = await handleTheme(new Request("https://chat.test/api/chat/theme?slug=kit", {
+      headers: { Authorization: "Bearer stale" },
+    }), env, memoryStore());
+    expect(bad.status).toBe(401);
+  });
+
   it("rejects an unknown palette", async () => {
     const env = room((req) => {
       if (req.headers.get("X-Chat-Op") === "allow") {

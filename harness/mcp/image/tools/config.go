@@ -15,10 +15,13 @@ const (
 	EnvImageOutputDir  = "IMAGE_OUTPUT_DIR"
 	EnvPendantImageDir = "PENDANT_IMAGE_DIR"
 
-	// EnvLLMAPIKey / EnvLLMModel are the crane mouth. Used when image-specific
-	// vars are blank. Already crane fields — not re-asked as required.
+	// EnvLLMAPIKey is the crane mouth key, used when IMAGE_API_KEY is blank.
+	// Already a crane field — not re-asked as required.
 	EnvLLMAPIKey = "LLM_API_KEY" //nolint:gosec // G101: env var name, not a credential
-	EnvLLMModel  = "LLM_MODEL"
+	// EnvLLMModel is the crane's chat model. It is never an image model, so it
+	// is deliberately NOT a fallback for IMAGE_MODEL: a text model answers a
+	// prompt with prose and rejects ImageConfig ("Aspect ratio is not enabled").
+	EnvLLMModel = "LLM_MODEL"
 
 	EnvGoogleCloudProject     = "GOOGLE_CLOUD_PROJECT"
 	EnvGoogleCloudLocation    = "GOOGLE_CLOUD_LOCATION"
@@ -106,9 +109,6 @@ func resolveProvider(getenv func(string) string) string {
 
 func resolveModel(getenv func(string) string) string {
 	if model := strings.TrimSpace(getenv(EnvImageModel)); model != "" {
-		return model
-	}
-	if model := strings.TrimSpace(getenv(EnvLLMModel)); model != "" {
 		return model
 	}
 	return DefaultModel

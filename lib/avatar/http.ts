@@ -1,11 +1,13 @@
 import { me, type DoorEnv } from "@/lib/door/http";
 import type { UserStore } from "@/lib/door/users";
 import { fetchRoomUsers } from "@/lib/chat/allow";
+import { bearerForSlug, bearerMatches, fetchRoomBearer, parseBearers } from "@/lib/chat/bearer";
 import { blobEtag, blobResponse, etagMatches } from "@/lib/chat/blob";
 import { headerSaysTooLarge } from "@/lib/chat/caps";
-import { configError, forbidden } from "@/lib/chat/deny";
+import { configError, forbidden, unauthorized } from "@/lib/chat/deny";
 import { agentStub, type AgentBinding } from "@/lib/chat/location";
 import { roomAllows } from "@/lib/chat/room";
+import { bearerToken } from "@/lib/chat/session";
 import { parseSlug } from "@/lib/chat/slug";
 import { fromStub } from "@/lib/chat/slugRoute";
 import { acceptJpeg, AVATAR_MAX_BYTES } from "./jpeg";
@@ -109,7 +111,11 @@ export type ChatUser = {
   agents: string[];
 };
 
-export type RoomEnv = DoorEnv & AgentBinding & { ALLOWED_SUBS?: string };
+export type RoomEnv = DoorEnv & AgentBinding & {
+  ALLOWED_SUBS?: string;
+  /** `kit:token,ada:token` — env map of room bearers. The DO row wins when this slug is absent. */
+  AGENT_BEARERS?: string;
+};
 
 type RoomStub = NonNullable<ReturnType<typeof agentStub>>;
 
@@ -143,7 +149,31 @@ export async function readChatUser(
 }
 
 /**
- * Signed-in caller who is on this room's list. No `AGENT` binding yet → 503.
+ * The harness on its own room. `Authorization: Bearer` is the room bearer
+ * (`AGENT_BEARERS` map, else the Agent DO row) — the same token the socket
+ * dials with. Header only; a bearer that does not match is 401, never a
+ * fall-through to the cookie door.
+ */
+async function admitAgent(
+  env: RoomEnv,
+  slug: string,
+  presented: string,
+): Promise<{ user: ChatUser; stub: RoomStub } | { response: Response }> {
+  const stub = agentStub(env, slug);
+  if (!stub) {
+    return { response: configError() };
+  }
+  const ok = bearerForSlug(parseBearers(env.AGENT_BEARERS), slug, presented)
+    || bearerMatches(await fetchRoomBearer(stub), presented);
+  if (!ok) {
+    return { response: unauthorized() };
+  }
+  return { user: { sub: `agent:${slug}`, email: null, role: "agent", agents: [slug] }, stub };
+}
+
+/**
+ * Signed-in caller who is on this room's list, or the harness with the room
+ * bearer. No `AGENT` binding yet → 503.
  * TODO: `me()` does not take a slug; the room list on the Agent DO is the second check.
  */
 export async function admitRoom(
@@ -152,6 +182,10 @@ export async function admitRoom(
   store: UserStore,
   slug: string,
 ): Promise<{ user: ChatUser; stub: RoomStub } | { response: Response }> {
+  const presented = bearerToken(req.headers.get("Authorization"));
+  if (presented) {
+    return admitAgent(env, slug, presented);
+  }
   const who = await readChatUser(req, env, store);
   if ("response" in who) {
     return who;

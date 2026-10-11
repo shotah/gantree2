@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -117,10 +118,8 @@ func containsArg(tools []lockedTool, name, arg string) bool {
 		if tool.name != name {
 			continue
 		}
-		for _, got := range tool.args {
-			if got == arg {
-				return true
-			}
+		if slices.Contains(tool.args, arg) {
+			return true
 		}
 	}
 	return false
@@ -142,14 +141,7 @@ func toolNameViolations(id, name string) []string {
 	if len(parts) < 2 {
 		return reasons
 	}
-	hasVerb := false
-	for _, part := range parts[1:] {
-		if verbOK(part) {
-			hasVerb = true
-			break
-		}
-	}
-	if !hasVerb {
+	if !slices.ContainsFunc(parts[1:], verbOK) {
 		reasons = append(reasons, "no stable verb after the service (list|get|search|create|update|delete|format)")
 	}
 	if stableVerb(parts[0]) && !verbOK(parts[1]) {

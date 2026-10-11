@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { gate, isPublicPath, principalFromHeaders, principalHeaders, safeNext } from "@/lib/door/gate";
+import { gate, isAgentRoomRequest, isPublicPath, principalFromHeaders, principalHeaders, safeNext } from "@/lib/door/gate";
 import { sealSession, SESSION_COOKIE, sessionKey } from "@/lib/door/session";
 import { memoryStore } from "@/lib/door/users";
 
@@ -44,6 +44,23 @@ describe("gate", () => {
   it("public passes without a cookie", async () => {
     expect(await gate(new Request("https://g.test/login"), env, memoryStore())).toEqual({ kind: "public" });
     expect(await gate(new Request("https://g.test/api/agents/kit/snapshot/gantry_db?exp=1&sig=ab"), env, memoryStore())).toEqual({ kind: "public" });
+  });
+
+  it("harness bearer on a room route is the route's to check; a cookie or another path is gated", async () => {
+    const bearer = { headers: { Authorization: "Bearer crane-tok" } };
+    for (const kind of ["avatar", "backdrop", "theme"]) {
+      const req = new Request(`https://g.test/api/chat/${kind}?slug=kit`, bearer);
+      expect(isAgentRoomRequest(req)).toBe(true);
+      expect(await gate(req, env, memoryStore())).toEqual({ kind: "public" });
+    }
+    const noHeader = new Request("https://g.test/api/chat/theme?slug=kit");
+    expect(isAgentRoomRequest(noHeader)).toBe(false);
+    expect(await gate(noHeader, env, memoryStore())).toMatchObject({ kind: "unauthorized", status: 401 });
+    const push = new Request("https://g.test/api/chat/push?slug=kit", bearer);
+    expect(isAgentRoomRequest(push)).toBe(false);
+    expect(await gate(push, env, memoryStore())).toMatchObject({ kind: "unauthorized", status: 401 });
+    expect(isAgentRoomRequest(new Request("https://g.test/api/chat/theme/x?slug=kit", bearer))).toBe(false);
+    expect(isAgentRoomRequest(new Request("https://g.test/api/chat/theme?slug=kit", { headers: { Authorization: "Basic abc" } }))).toBe(false);
   });
 
   it("no admins is 503 on every gated route, even for a stranger", async () => {
