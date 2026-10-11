@@ -164,10 +164,10 @@ describe("Harness", () => {
     expect(storage.rows.has("container-info")).toBe(false);
   });
 
-  it("reports stopped until start, and probes port 8080 with a 2h sleep", async () => {
+  it("reports stopped until start, and probes port 8080 with a 15m sleep", async () => {
     const { harness } = await boot();
     expect(harness.defaultPort).toBe(HARNESS_PORT);
-    expect(harness.sleepAfter).toBe("2h");
+    expect(harness.sleepAfter).toBe("15m");
     const info = await read(await harness.fetch(op("info")));
     expect(info).toEqual({ state: "stopped", since: null, lastError: null, image: null });
   });

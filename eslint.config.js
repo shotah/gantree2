@@ -13,6 +13,8 @@ export default tseslint.config(
       ".vinext/**",
       ".wrangler/**",
       "worker-configuration.d.ts",
+      // Nested checkouts (.gitignore `repos/*`). Sibling apps drop build JS here.
+      "repos/**",
     ],
   },
   eslint.configs.recommended,

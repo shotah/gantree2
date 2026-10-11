@@ -20,7 +20,7 @@ export type Decision
     | { kind: "login"; next: string }
     | { kind: "unauthorized"; status: 401 | 503; reason: string };
 
-const PUBLIC_EXACT = new Set(["/login", "/api/auth/google", "/api/auth/callback/google", "/manifest.webmanifest", "/sw.js", "/icon.svg", "/favicon.ico", "/robots.txt"]);
+const PUBLIC_EXACT = new Set(["/login", "/api/auth/google", "/api/auth/callback/google", "/api/auth/config", "/api/auth/nonce", "/api/auth/token", "/manifest.webmanifest", "/sw.js", "/icon.svg", "/favicon.ico", "/robots.txt"]);
 const PUBLIC_PREFIX = ["/_vinext/", "/.well-known/", "/_next/", "/assets/"];
 
 /**
@@ -79,6 +79,8 @@ export function devIdentity(env: GateEnv, url: URL): { sub: string; email: strin
 
 export async function gate(req: Request, env: GateEnv, store: UserStore, now = Date.now()): Promise<Decision> {
   const url = new URL(req.url);
+  // A bearer on /api/chat/{avatar,backdrop,theme} is the harness room token,
+  // not a session JWE. isAgentRoomRequest stays ahead of the session read.
   if (isPublicPath(url.pathname) || isAgentRoomRequest(req)) {
     return { kind: "public" };
   }
@@ -87,14 +89,23 @@ export async function gate(req: Request, env: GateEnv, store: UserStore, now = D
   }
 
   let identity = devIdentity(env, url);
-  if (!identity) {
-    const token = readCookie(req, SESSION_COOKIE);
-    if (token && env.SESSION_SECRET) {
-      try {
-        identity = await openSession(await sessionKey(env.SESSION_SECRET), token, now);
-      } catch {
-        identity = null;
+  if (!identity && env.SESSION_SECRET) {
+    try {
+      const key = await sessionKey(env.SESSION_SECRET);
+      const cookie = readCookie(req, SESSION_COOKIE);
+      // Cookie wins when it opens. Otherwise the bearer, the same session JWE
+      // phones store. Same fall-through as `readChatSession`.
+      if (cookie) {
+        identity = await openSession(key, cookie, now);
       }
+      if (!identity) {
+        const bearer = bearerToken(req.headers.get("Authorization"));
+        if (bearer) {
+          identity = await openSession(key, bearer, now);
+        }
+      }
+    } catch {
+      identity = null;
     }
   }
   if (!identity) {
@@ -103,7 +114,7 @@ export async function gate(req: Request, env: GateEnv, store: UserStore, now = D
       : { kind: "login", next: safeNext(url.pathname + url.search) };
   }
 
-  // A cookie only proves who. Whether is the list, every time.
+  // A session only proves who. Whether is the list, every time.
   const user = await resolveUser(env, store, { sub: identity.sub, email: identity.email, emailVerified: true });
   if (!user) {
     return { kind: "unauthorized", status: 401, reason: "unauthorized" };

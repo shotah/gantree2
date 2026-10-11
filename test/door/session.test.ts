@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   clearCookieHeader,
   cookieHeader,
+  NONCE_TTL_S,
   OAUTH_TTL_S,
+  openNonce,
   openOAuth,
   openSession,
   readCookie,
+  sealNonce,
   sealOAuth,
   sealSession,
   SESSION_TTL_S,
@@ -43,6 +46,29 @@ describe("session cookie", () => {
     expect(await openSession(key, oauth, now)).toBeNull();
     expect(await openOAuth(key, oauth, now)).toEqual({ state: "s", nonce: "n", verifier: "v", next: "/agents/kit" });
     expect(await openOAuth(key, oauth, now + OAUTH_TTL_S * 1000 + 1000)).toBeNull();
+  });
+});
+
+describe("nonce", () => {
+  it("is a compact JWE under 255 characters, opens with the key, and expires at 10 minutes", async () => {
+    const key = await sessionKey(SECRET);
+    const now = Date.UTC(2026, 9, 10);
+    const token = await sealNonce(key, now);
+    expect(token.length).toBeGreaterThan(0);
+    expect(token.length).toBeLessThan(255);
+    const claims = await openNonce(key, token, now);
+    if (!claims) {
+      throw new Error("nonce did not open");
+    }
+    expect(claims.n.length).toBeGreaterThan(0);
+    expect(await openNonce(key, token, now + 1000)).toEqual(claims);
+    expect(await openNonce(key, token, now + NONCE_TTL_S * 1000 + 1000)).toBeNull();
+    expect(await openNonce(key, "garbage", now)).toBeNull();
+    expect(await openSession(key, token, now)).toBeNull();
+    const other = await sessionKey("another-secret-that-is-long-enough-xx");
+    expect(await openNonce(other, token, now)).toBeNull();
+    const session = await sealSession(key, { sub: "118212345678901234567", email: null }, now);
+    expect(await openNonce(key, session, now)).toBeNull();
   });
 });
 

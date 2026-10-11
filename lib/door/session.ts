@@ -1,4 +1,5 @@
 import { EncryptJWT, jwtDecrypt } from "jose";
+import { randomToken } from "./google";
 
 /**
  * Cookies. Both are JWE (dir + A256GCM) under a key derived from
@@ -83,6 +84,26 @@ export async function openOAuth(key: Uint8Array, token: string, now = Date.now()
     return null;
   }
   return { state, nonce, verifier, next: typeof next === "string" ? next : "/" };
+}
+
+/** Native sign-in. Google echoes the compact JWE; it has to stay under 255 characters. */
+export const NONCE_TTL_S = 10 * 60;
+
+export type NonceClaims = {
+  n: string;
+};
+
+export async function sealNonce(key: Uint8Array, now = Date.now()): Promise<string> {
+  return seal(key, "nonce", { n: randomToken(16) }, NONCE_TTL_S, now);
+}
+
+/** Null when the nonce is not ours, expired, or tampered. */
+export async function openNonce(key: Uint8Array, token: string, now = Date.now()): Promise<NonceClaims | null> {
+  const p = await open(key, "nonce", token, now);
+  if (!p || typeof p.n !== "string" || !p.n) {
+    return null;
+  }
+  return { n: p.n };
 }
 
 export function readCookie(req: Request, name: string): string | null {

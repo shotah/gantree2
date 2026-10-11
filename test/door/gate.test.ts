@@ -18,6 +18,9 @@ describe("public paths", () => {
     expect(isPublicPath("/login")).toBe(true);
     expect(isPublicPath("/api/auth/google")).toBe(true);
     expect(isPublicPath("/api/auth/callback/google")).toBe(true);
+    expect(isPublicPath("/api/auth/config")).toBe(true);
+    expect(isPublicPath("/api/auth/nonce")).toBe(true);
+    expect(isPublicPath("/api/auth/token")).toBe(true);
     expect(isPublicPath("/.well-known/celld/health")).toBe(true);
     expect(isPublicPath("/_vinext/x")).toBe(true);
     expect(isPublicPath("/manifest.webmanifest")).toBe(true);
@@ -72,6 +75,30 @@ describe("gate", () => {
     expect(await gate(new Request("https://g.test/agents/kit?tab=log"), env, memoryStore())).toEqual({ kind: "login", next: "/agents/kit?tab=log" });
     expect(await gate(new Request("https://g.test/api/auth/me"), env, memoryStore())).toMatchObject({ kind: "unauthorized", status: 401 });
     expect(await gate(new Request("https://g.test/ws/kit"), env, memoryStore())).toMatchObject({ kind: "unauthorized", status: 401 });
+  });
+
+  it("bearer session passes on api and pages; a cookie that opens wins; a bad bearer alone is 401", async () => {
+    const key = await sessionKey(SECRET);
+    const ada = await sealSession(key, { sub: ADA_SUB, email: "ada@example.com" });
+    const bob = await sealSession(key, { sub: "2", email: "bob@example.com" });
+    const api = new Request("https://g.test/api/auth/me", { headers: { Authorization: `Bearer ${ada}` } });
+    expect(await gate(api, env, memoryStore())).toMatchObject({ kind: "pass", who: { sub: ADA_SUB, email: "ada@example.com", role: "admin" } });
+    const page = new Request("https://g.test/agents/kit", { headers: { Authorization: `Bearer ${ada}` } });
+    expect(await gate(page, env, memoryStore())).toMatchObject({ kind: "pass", who: { sub: ADA_SUB, role: "admin" } });
+    const cookieWins = new Request("https://g.test/api/auth/me", {
+      headers: { cookie: `${SESSION_COOKIE}=${ada}`, Authorization: "Bearer garbage" },
+    });
+    expect(await gate(cookieWins, env, memoryStore())).toMatchObject({ kind: "pass", who: { sub: ADA_SUB, role: "admin" } });
+    const cookieOverBob = new Request("https://g.test/", {
+      headers: { cookie: `${SESSION_COOKIE}=${ada}`, Authorization: `Bearer ${bob}` },
+    });
+    expect(await gate(cookieOverBob, env, memoryStore())).toMatchObject({ kind: "pass", who: { sub: ADA_SUB, role: "admin" } });
+    const staleCookie = new Request("https://g.test/api/agents", {
+      headers: { cookie: `${SESSION_COOKIE}=garbage`, Authorization: `Bearer ${bob}` },
+    });
+    expect(await gate(staleCookie, env, memoryStore())).toMatchObject({ kind: "pass", who: { sub: "2", role: "member" } });
+    const bad = new Request("https://g.test/api/auth/me", { headers: { Authorization: "Bearer garbage" } });
+    expect(await gate(bad, env, memoryStore())).toMatchObject({ kind: "unauthorized", status: 401 });
   });
 
   it("cookie + on the list passes with role; cookie + off the list is 401", async () => {

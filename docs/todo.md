@@ -67,6 +67,14 @@ pricing, in the Hosted section.
 
 ## Next — ship quality
 
+- [ ] **medium** Agent runtime, step A of [runtime.md](runtime.md):
+      container lease 15 min renewed by harness frames (`alive`),
+      wake on phone `inbound` (debounced, `waking` status), wake on
+      cron via `next_wake` frame → Agent DO alarm. Today the container
+      idles two hours on a timer and nothing ever starts it (§5).
+      Steps 2–3 (shared tool container, Workers-native brain) are
+      decided but not scheduled — same page.
+
 - [ ] **medium** Two eval fixtures flaked one run of three on the
       full live set (`react_to_thanks` reached for `cron_schedule`;
       `chat_todo_add` for `memory_recall`). Not catalog drift — model

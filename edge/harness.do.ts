@@ -72,7 +72,13 @@ function logLifecycle(level: "info" | "error", event: string, fields: Record<str
 
 export class Harness extends Container<AgentEnv> {
   defaultPort = HARNESS_PORT;
-  sleepAfter = "2h";
+  /**
+   * Idle stop. The library's clock is reset only by requests into this DO,
+   * not by the harness's own socket work, so this is "minutes since the
+   * last Worker op", not "minutes since the last turn". Wake-on-message
+   * and the lease that renews it are docs/runtime.md step A.
+   */
+  sleepAfter = "15m";
 
   async fetch(request: Request): Promise<Response> {
     try {
