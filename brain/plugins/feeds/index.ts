@@ -180,13 +180,49 @@ export function htmlFeedLinks(body: string, base: string): Candidate[] {
   return out;
 }
 
+function isAttrSpace(ch: string): boolean {
+  return ch !== "" && /\s/u.test(ch);
+}
+
 function parseAttrs(raw: string): Record<string, string> {
   const out: Record<string, string> = {};
-  const re = /([^\s=/]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
-  for (const match of raw.matchAll(re)) {
-    const key = (match[1] ?? "").toLowerCase();
-    const val = match[2] ?? match[3] ?? match[4] ?? "";
-    if (key) out[key] = val;
+  let i = 0;
+  while (i < raw.length) {
+    while (i < raw.length && (isAttrSpace(raw[i] ?? "") || raw[i] === "=" || raw[i] === "/")) i += 1;
+    if (i >= raw.length) break;
+    const keyStart = i;
+    while (i < raw.length && !isAttrSpace(raw[i] ?? "") && raw[i] !== "=" && raw[i] !== "/") i += 1;
+    const key = raw.slice(keyStart, i).toLowerCase();
+    const afterKey = i;
+    while (i < raw.length && isAttrSpace(raw[i] ?? "")) i += 1;
+    if (raw[i] !== "=") {
+      if (key) out[key] = "";
+      i = afterKey;
+      continue;
+    }
+    i += 1;
+    while (i < raw.length && isAttrSpace(raw[i] ?? "")) i += 1;
+    const quote = raw[i] ?? "";
+    if (quote === "\"" || quote === "'") {
+      i += 1;
+      const valStart = i;
+      while (i < raw.length && raw[i] !== quote) i += 1;
+      if (key) out[key] = raw.slice(valStart, i);
+      if (i < raw.length) i += 1;
+      continue;
+    }
+    const valStart = i;
+    while (i < raw.length) {
+      const c = raw[i] ?? "";
+      if (isAttrSpace(c) || c === "\"" || c === "'" || c === "=" || c === "<" || c === ">" || c === "`") break;
+      i += 1;
+    }
+    if (i === valStart) {
+      if (key) out[key] = "";
+      i = afterKey;
+      continue;
+    }
+    if (key) out[key] = raw.slice(valStart, i);
   }
   return out;
 }

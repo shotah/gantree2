@@ -315,7 +315,7 @@ function readKwValue(source: string, index: number): { value: unknown; next: num
   if (/^[+-]?\d+$/.test(token)) {
     return { value: Number(token), next: i };
   }
-  if (/^[+-]?(?:\d+\.\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(token) || /^[+-]?\d+[eE][+-]?\d+$/.test(token)) {
+  if (/^[+-]?(?:(?:\d+\.\d+|\d+\.|\.\d+)[eE][+-]?\d+|\d+\.\d+|\d+\.|\.\d+)$/.test(token) || /^[+-]?\d+[eE][+-]?\d+$/.test(token)) {
     const n = Number(token);
     if (Number.isFinite(n)) {
       return { value: n, next: i };

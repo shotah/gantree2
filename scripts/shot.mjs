@@ -206,9 +206,13 @@ async function shoot(base, names) {
           throw new Error(`member cookie missing (${MEMBER_COOKIE_NAME}); run npm run seed first`);
         }
         await cdp.send("Network.clearBrowserCookies");
+        const value = readFileSync(file, "utf8").trim();
+        if (!/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(value)) {
+          throw new Error("member cookie is not a compact JWE");
+        }
         await cdp.send("Network.setCookie", {
           name: SESSION_COOKIE,
-          value: readFileSync(file, "utf8").trim(),
+          value,
           url: base,
           httpOnly: true,
           sameSite: "Lax",

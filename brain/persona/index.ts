@@ -169,7 +169,7 @@ export function syncKernel(parts: readonly PersonaPart[]): { parts: PersonaPart[
   return { parts: out, removed: [...removed] };
 }
 
-const tzField = /\**timezone\**\s*:\s*(?:\*+\s*)?([A-Za-z0-9_+/-]+)/i;
+const tzField = /timezone\*{0,3}\s*:[*\s]*([A-Za-z0-9_+/-]+)/i;
 
 function ianaOk(name: string): boolean {
   try {

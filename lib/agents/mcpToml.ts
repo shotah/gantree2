@@ -384,7 +384,7 @@ function readName(body: string): string | null {
 }
 
 function isServerHeader(line: string): boolean {
-  return /^[ \t]*\[\[server\]\][ \t]*(?:#.*)?$/.test(line);
+  return /^[ \t]*\[\[server\]\][ \t]*#.*$|^[ \t]*\[\[server\]\][ \t]*$/.test(line);
 }
 
 function textLines(body: string): TextLine[] {

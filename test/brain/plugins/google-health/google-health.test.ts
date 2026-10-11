@@ -96,6 +96,12 @@ function textOf(result: ToolResult): string {
 const authed = { accessToken: "test-token" };
 const creds = { GOOGLE_HEALTH_CLIENT_ID: "cid", GOOGLE_HEALTH_CLIENT_SECRET: "sec" };
 
+function snakeTool(name: string): boolean {
+  const parts = name.split("_");
+  const head = parts[0] ?? "";
+  return parts.length >= 2 && /^[a-z]+$/.test(head) && parts.slice(1).every((part) => /^[a-z0-9]+$/.test(part));
+}
+
 describe("google-health plugin", () => {
   it("publishes the Go tool list and auth gates", async () => {
     const ctx = pluginCtx(creds, routeFetch(() => jsonResponse({})), authed);
@@ -104,7 +110,7 @@ describe("google-health plugin", () => {
     expect(tools.map((tool) => tool.name)).toEqual([...TOOL_NAMES]);
     for (const name of tools.map((tool) => tool.name)) {
       expect(name.startsWith("ghealth_") || name.startsWith("health_") || name.startsWith("google_")).toBe(false);
-      expect(/^[a-z]+(_[a-z0-9]+)+$/.test(name)).toBe(true);
+      expect(snakeTool(name)).toBe(true);
     }
     expect(tools[0]?.description.startsWith("Get Google Health sleep sessions")).toBe(true);
     expect(tools[0]?.inputSchema.required).toBeUndefined();

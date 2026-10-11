@@ -13,7 +13,6 @@ import { describe, expect, it } from "vitest";
 const ROOT = resolve(import.meta.dirname, "../..");
 const SERVER_ONLY = /^(node|cloudflare):/;
 const EXTENSIONS = [".ts", ".tsx", "/index.ts", "/index.tsx"];
-const IMPORT_RE = /^\s*(?:import|export)\s+(?!type\s)[\s\S]*?\sfrom\s+["']([^"']+)["']/gm;
 const SIDE_EFFECT_RE = /^\s*import\s+["']([^"']+)["']/gm;
 
 function walk(dir: string, out: string[] = []): string[] {
@@ -32,16 +31,94 @@ function isClientFile(file: string): boolean {
   return /^\s*["']use client["']/.test(readFileSync(file, "utf8"));
 }
 
+function isWord(ch: string | undefined): boolean {
+  if (!ch) return false;
+  return (ch >= "A" && ch <= "Z") || (ch >= "a" && ch <= "z") || (ch >= "0" && ch <= "9") || ch === "_" || ch === "$";
+}
+
+function nextStatement(src: string, from: number): number {
+  let i = from;
+  if (i > 0 && src[i - 1] !== "\n") {
+    const nl = src.indexOf("\n", i);
+    if (nl < 0) return -1;
+    i = nl + 1;
+  }
+  while (i < src.length) {
+    let j = i;
+    while (src[j] === " " || src[j] === "\t") j += 1;
+    if ((src.startsWith("import", j) && !isWord(src[j + 6])) || (src.startsWith("export", j) && !isWord(src[j + 6]))) {
+      return j;
+    }
+    const nl = src.indexOf("\n", i);
+    if (nl < 0) return -1;
+    i = nl + 1;
+  }
+  return -1;
+}
+
+function specifierAfter(src: string, kwEnd: number): string | null {
+  if (src[kwEnd] === "(") return null;
+  let i = kwEnd;
+  let depth = 0;
+  while (i < src.length) {
+    const c = src[i] ?? "";
+    if (c === "{") {
+      depth += 1;
+    } else if (c === "}") {
+      depth = Math.max(0, depth - 1);
+    } else if (c === ";" && depth === 0) {
+      return null;
+    } else if (c === "\n" && depth === 0) {
+      let j = i + 1;
+      while (src[j] === " " || src[j] === "\t") j += 1;
+      const word = src.slice(j, j + 9);
+      if (/^(?:import|export|const|let|var|function|class|type|interface)\b/.test(word)) return null;
+    } else if (depth === 0 && isModuleFrom(src, i)) {
+      return readQuoted(src, i + 4);
+    }
+    i += 1;
+  }
+  return null;
+}
+
+function isModuleFrom(src: string, i: number): boolean {
+  if (!src.startsWith("from", i) || isWord(src[i - 1])) return false;
+  let j = i + 4;
+  if (src[j] !== " " && src[j] !== "\t" && src[j] !== "\n" && src[j] !== "\r") return false;
+  while (src[j] === " " || src[j] === "\t" || src[j] === "\n" || src[j] === "\r") j += 1;
+  return src[j] === "\"" || src[j] === "'";
+}
+
+function readQuoted(src: string, i: number): string | null {
+  while (src[i] === " " || src[i] === "\t" || src[i] === "\n" || src[i] === "\r") i += 1;
+  const q = src[i];
+  if (q !== "\"" && q !== "'") return null;
+  const end = src.indexOf(q, i + 1);
+  if (end < 0) return null;
+  return src.slice(i + 1, end);
+}
+
 function specifiers(file: string): string[] {
   const src = readFileSync(file, "utf8");
   const out: string[] = [];
-  for (const re of [IMPORT_RE, SIDE_EFFECT_RE]) {
-    for (const m of src.matchAll(re)) {
-      const spec = m[1];
-      if (spec) {
-        out.push(spec);
-      }
+  let cursor = 0;
+  while (cursor < src.length) {
+    const at = nextStatement(src, cursor);
+    if (at < 0) break;
+    const keyword = src.startsWith("import", at) ? "import" : "export";
+    const after = at + keyword.length;
+    const lineEnd = src.indexOf("\n", after);
+    const rest = src.slice(after, lineEnd === -1 ? src.length : lineEnd).trimStart();
+    const reexport = rest.startsWith("{") || rest.startsWith("*");
+    const valueImport = keyword === "import" || reexport;
+    if (valueImport && !rest.startsWith("type ") && !rest.startsWith("type{")) {
+      const spec = specifierAfter(src, after);
+      if (spec) out.push(spec);
     }
+    cursor = after + 1;
+  }
+  for (const m of src.matchAll(SIDE_EFFECT_RE)) {
+    if (m[1]) out.push(m[1]);
   }
   return out;
 }

@@ -116,6 +116,8 @@ export default tseslint.config(
     // CodeQL javascript-security-extended families that a plugin can say.
     // Host checks, identity replaces, and unanchored URL regexes have no
     // plugin rule; those are pinned by tests. See docs/codeql.md.
+    // regexp/no-super-linear-move is not on: it flags every `+` quantifier
+    // and has no fix, which is not the polynomial-redos query.
     plugins: { regexp, security },
     rules: {
       "no-eval": "error",

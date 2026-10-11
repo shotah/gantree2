@@ -20,7 +20,7 @@ export type Identity = {
 };
 
 const SUB_RE = /^\d{10,32}$/;
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/;
 
 export function isSub(value: string): boolean {
   return SUB_RE.test(value);

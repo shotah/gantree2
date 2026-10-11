@@ -5,7 +5,7 @@ export const SLUG_STORE_KEY = "slug";
 export const ALLOW_USERS_MAX = 64;
 
 const SUB_RE = /^\d{10,32}$/;
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/;
 const EMAIL_MAX = 254;
 
 export type RoomUser = { sub?: string; email?: string };

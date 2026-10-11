@@ -44,5 +44,15 @@ export function applyFont(id: FontId): void {
   window.dispatchEvent(new Event("gantree-font"));
 }
 
+function jsonForScript(value: unknown): string {
+  return JSON.stringify(value).replace(/[<>/\u2028\u2029]/g, (ch) => {
+    if (ch === "<") return "\\u003C";
+    if (ch === ">") return "\\u003E";
+    if (ch === "/") return "\\u002F";
+    if (ch === "\u2028") return "\\u2028";
+    return "\\u2029";
+  });
+}
+
 export const FONT_BOOT
-  = `(function(){try{var t=localStorage.getItem(${JSON.stringify(FONT_KEY)});var a=${JSON.stringify(FONT_IDS)};if(a.indexOf(t)!==-1)document.documentElement.setAttribute("data-font",t)}catch(e){}})();`;
+  = `(function(){try{var t=localStorage.getItem(${jsonForScript(FONT_KEY)});var a=${jsonForScript(FONT_IDS)};if(a.indexOf(t)!==-1)document.documentElement.setAttribute("data-font",t)}catch(e){}})();`;

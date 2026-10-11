@@ -20,9 +20,9 @@ export const kindSearch = "search";
 export const kindView = "view";
 export const kindUnknown = "unknown";
 
-const atCoordsRe = /@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/;
-const dataCoordsRe = /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/;
-const latLngPairRe = /(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/;
+const atCoordsRe = /@(-?\d+\.\d+|-?\d+),(-?\d+\.\d+|-?\d+)/;
+const dataCoordsRe = /!3d(-?\d+\.\d+|-?\d+)!4d(-?\d+\.\d+|-?\d+)/;
+const latLngPairRe = /(-?\d+\.\d+|-?\d+)\s*,\s*(-?\d+\.\d+|-?\d+)/;
 
 export type LinkFields = {
   url: string;
@@ -145,7 +145,7 @@ export function parseLatLng(value: string): { lat: number; lng: number } | null 
 }
 
 function parseFloatPair(a: string, b: string): { lat: number; lng: number } | null {
-  if (!/^-?\d+(?:\.\d+)?$/.test(a.trim()) || !/^-?\d+(?:\.\d+)?$/.test(b.trim())) {
+  if (!/^(?:-?\d+\.\d+|-?\d+)$/.test(a.trim()) || !/^(?:-?\d+\.\d+|-?\d+)$/.test(b.trim())) {
     return null;
   }
   const lat = Number(a);

@@ -393,7 +393,7 @@ export function parseDepartureTime(value: string, nowMs: number): { param: strin
       return { param: String(unix), at: unix * 1000 };
     }
   }
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(trimmed)) {
+  if (!/^(?:\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+|\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:Z|[+-]\d{2}:\d{2})$/.test(trimmed)) {
     throw new Error(`departure_time must be RFC3339, unix seconds, or "now". ${nextRouteEta}`);
   }
   const at = Date.parse(trimmed);

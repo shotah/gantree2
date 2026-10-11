@@ -2,29 +2,29 @@
 
 `.github/workflows/codeql.yml` runs `javascript-typescript` with the
 `security-extended` suite (the default security queries plus the
-lower-severity ones). The list below is that suite on query pack
-`codeql/javascript-queries` 2.4.7, CLI 2.27.2, which is the CLI the
-main-branch run used. The code-scanning API is not readable from this
-checkout (the GitHub session here is pull-only and has no
-`security_events` scope), so these are the results of a local rerun,
-not the alert numbers on GitHub.
+lower-severity ones). Query pack `codeql/javascript-queries` 2.4.7,
+CLI 2.27.2, which is the CLI the main-branch run used. The
+code-scanning API is not readable from this checkout (the GitHub
+session here is pull-only and has no `security_events` scope), so the
+counts are a local rerun, not the alert numbers on GitHub.
 
-Fifteen results, six rules.
+The first local run reported fifteen alerts. The rerun after the
+fixes in this tree reports none.
 
-| Rule | Count | Level | Security severity |
-| --- | --- | --- | --- |
-| `js/bad-code-sanitization` | 6 | error | 6.1 |
-| `js/incomplete-url-substring-sanitization` | 4 | warning | 7.8 |
-| `js/file-access-to-http` | 2 | warning | 6.5 |
-| `js/incomplete-multi-character-sanitization` | 1 | warning | 7.8 |
-| `js/identity-replacement` | 1 | warning | 5.0 |
-| `js/regex/missing-regexp-anchor` | 1 | warning | 7.8 |
+| Rule | First run | Now | Level | Security severity |
+| --- | --- | --- | --- | --- |
+| `js/bad-code-sanitization` | 6 | 0 | error | 6.1 |
+| `js/incomplete-url-substring-sanitization` | 4 | 0 | warning | 7.8 |
+| `js/file-access-to-http` | 2 | 0 | warning | 6.5 |
+| `js/incomplete-multi-character-sanitization` | 1 | 0 | warning | 7.8 |
+| `js/identity-replacement` | 1 | 0 | warning | 5.0 |
+| `js/regex/missing-regexp-anchor` | 1 | 0 | warning | 7.8 |
 
-`eslint-plugin-no-unsanitized` is not installed. Nothing in this run
-is a DOM sink (`js/xss` and the other HTML-sink queries were quiet).
-`@microsoft/eslint-plugin-sdl` is not installed. None of its rules
-(`no-inner-html`, `no-document-write`, `no-insecure-url`, …) is the
-finding above.
+`eslint-plugin-no-unsanitized` is not installed. Nothing in the first
+run was a DOM sink (`js/xss` and the other HTML-sink queries were
+quiet). `@microsoft/eslint-plugin-sdl` is not installed. None of its
+rules (`no-inner-html`, `no-document-write`, `no-insecure-url`, …)
+matched a finding.
 
 ## What ESLint enforces
 
@@ -36,14 +36,15 @@ dependencies. These rules are errors:
 | `no-eval` | `js/bad-code-sanitization` (CWE-94). `eval` of a string. |
 | `no-new-func` | Same family. `new Function` builds code from a string. |
 | `security/detect-eval-with-expression` | Same family. `eval` of a non-literal. |
-| `security/detect-unsafe-regex` | ReDoS sibling of the regex queries in this suite (`js/redos`, `js/polynomial-redos`). None of those fired on this run. |
+| `security/detect-unsafe-regex` | ReDoS sibling of the regex queries in this suite (`js/redos`, `js/polynomial-redos`). None of those fired. `safe-regex` rejects a quantifier nested inside a quantifier. |
 | `regexp/no-super-linear-backtracking` | Same sibling. Exponential and polynomial backtracking. |
-| `regexp/no-super-linear-move` | Same sibling. Quantifiers that move in quadratic time. |
 
-The six findings themselves are not those shapes. `JSON.stringify`
-inside a boot script, a host check with `includes`, a no-op
-`replace`, and an unanchored `github.com` pattern have no rule in
-these plugins. Those are tests, or they are deferred below.
+`regexp/no-super-linear-move` is the quadratic sibling (a `+` that can be
+pushed along by a rejecting suffix). It is not enabled. It reports
+`\n+`, `\d+`, and `0+` throughout the tree and has no fix, which is
+not what `js/polynomial-redos` matches.
+
+`npm run lint` is clean with the rules above.
 
 ## Tests, where a plugin cannot say it
 
@@ -73,119 +74,83 @@ path in a query string. The pages test now requires the start of the
 string or `http(s)://` in front of the host. Test:
 `test/scripts/pages.test.ts`.
 
-## Deferred
+## Fixes that no plugin rule covers
 
-Another checkout owns these paths. Do not edit them from here. Each
-fix below was checked against the query: the bad form still alerts,
-the replacement does not.
+`js/bad-code-sanitization`. `app/lib/font.ts` (`FONT_BOOT`) and
+`app/lib/theme.ts` (`THEME_BOOT`) build a `<script>` from
+`JSON.stringify`. That does not escape `<`, `>`, `/`, U+2028, or
+U+2029. Each file has a `jsonForScript` that escapes those five to
+`\u003C`, `\u003E`, `\u002F`, `\u2028`, and `\u2029`, and every
+`JSON.stringify` inside the boot template goes through it. The keys
+and theme ids in the tree have none of those characters, so the
+script text does not change.
 
-### `js/bad-code-sanitization`
+`js/incomplete-multi-character-sanitization`. `scripts/pages.mjs`
+`plainHeading` repeats `replace(/<[^>]*>/g, "")` until the string
+stops changing, then the heading slug is built from that. One pass
+can leave `<script` behind (`<scr<script>ipt>`). `githubSlug` and
+`escapeAttr` are unchanged. `let prev` is uninitialized because
+assigning `""` first is a useless assignment.
 
-`app/lib/font.ts:48` (`FONT_BOOT`, two `JSON.stringify` calls) and
-`app/lib/theme.ts:82` (`THEME_BOOT`, four). `JSON.stringify` does not
-escape `<`, `>`, `/`, U+2028, or U+2029, so a value can break out of
-the `<script>` the boot string is dropped into. The keys and theme
-ids in the tree today have none of those characters, so escaping them
-does not change the script text.
+`js/file-access-to-http`. Both tools are local. The query follows
+`readFileSync` bytes into `fetch` or the CDP WebSocket. The guard has
+to be an inline `/pattern/.test(value)` that throws, in the same
+function as the send. A helper that returns the checked string does
+not clear it, and neither does `/^[^\u0000-\u001F]*$/`.
 
-Add this next to each boot string and use it for every
-`JSON.stringify` inside that template:
-
-```ts
-function jsonForScript(value: unknown): string {
-  return JSON.stringify(value).replace(/[<>/\u2028\u2029]/g, (ch) => {
-    if (ch === "<") return "\\u003C";
-    if (ch === ">") return "\\u003E";
-    if (ch === "/") return "\\u002F";
-    if (ch === "\u2028") return "\\u2028";
-    return "\\u2029";
-  });
-}
-```
-
-`FONT_BOOT` wraps `FONT_KEY` and `FONT_IDS`. `THEME_BOOT` wraps
-`themeIdList()`, `FOLLOW_THEME_PREF_KEY`, `ROOM_THEME_KEY`, and
-`THEME_KEY`.
-
-### `js/incomplete-multi-character-sanitization`
-
-`scripts/pages.mjs:114`, in the heading renderer:
+`scripts/shot.mjs`, in `shoot`. The member cookie is read and sent as
+`Network.setCookie` `value`. `sealSession` writes a compact JWE (five
+base64url segments, dots, no padding). Before `cdp.send`:
 
 ```js
-const plain = html.replace(/<[^>]+>/g, "");
-```
-
-One pass of a multi-character pattern can leave `<script` in the
-slug text (`<scr<script>ipt>` style input). Repeat until the string
-stops changing. A one-shot replace stays flagged; this loop does not:
-
-```js
-function plainHeading(html) {
-  let prev = "";
-  let cur = html;
-  do {
-    prev = cur;
-    cur = cur.replace(/<[^>]*>/g, "");
-  } while (cur !== prev);
-  return cur;
-}
-```
-
-Call `plainHeading(html)` instead of the one-shot replace. `githubSlug`
-and `escapeAttr` stay as they are.
-
-### `js/file-access-to-http`
-
-Both are local tools. The query still follows the bytes from
-`readFileSync` into `fetch` / the CDP WebSocket. A check in a helper
-that *returns* the string does not clear it. An inline
-`/pattern/.test(value)` that throws, in the same function as the
-send, does, when the pattern is a restricted class (a `[\s\S]` or
-negated control-character class does not).
-
-`scripts/shot.mjs:90` (the read is at line 211). The member session
-cookie is `readFileSync(memberCookieFile(), "utf8").trim()` and sent
-as `Network.setCookie` `value` through `Cdp.send` → `ws.send`. The
-socket is the local Chrome debugging port. `sealSession` writes a
-compact JWE (base64url segments, dots, no padding). In `shoot`, after
-the read and before `cdp.send`:
-
-```js
-const value = readFileSync(file, "utf8").trim();
-if (!/^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+){2,}$/.test(value)) {
+if (!/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(value)) {
   throw new Error("member cookie is not a compact JWE");
 }
-await cdp.send("Network.setCookie", {
-  name: SESSION_COOKIE,
-  value,
-  url: base,
-  httpOnly: true,
-  sameSite: "Lax",
-});
 ```
 
-Keep the test in `shoot`. Moving it to a function in `scripts/shots.ts`
-leaves the alert.
+`{2,}` around a `+` is a nested quantifier, so
+`security/detect-unsafe-regex` rejects it. Five segments is the
+compact form jose writes, and each `+` sits next to a literal dot.
 
-`scripts/seed.ts:438`, in `call`. `readFileSync` of `.dev.vars` /
-`.dev.vars.shot` (line 650, `readIf`) becomes the dev email, then the
-persona, then `JSON.stringify(req.body)` on the `fetch` to the local
-seed base. Every seed body is a JSON object, and `JSON.stringify`
-emits no raw control characters, including the unicode in
-`PERSONA_TEMPLATE`. In `call`, bind the payload and test it there:
+`scripts/seed.ts`, in `call`. The dev vars become the persona, then
+`JSON.stringify(req.body)` on the `fetch`. The test has to dominate
+that send. A check that later joins the no-body path does not: the
+value `fetch` receives is still the file-derived string. The body
+branch tests, then sends:
 
 ```ts
-const payload = req.body === undefined ? undefined : JSON.stringify(req.body);
-if (typeof payload === "string" && !/^[\u0020-\uFFFF]*$/.test(payload)) {
+const payload = JSON.stringify(req.body);
+if (!/^[\u0020-\uFFFF]*$/.test(payload)) {
   throw new Error("seed body is not JSON text");
 }
-const res = await fetch(new URL(req.path, base), {
+res = await fetch(new URL(req.path, base), {
   method: req.method,
   headers,
   body: payload,
 });
 ```
 
-Do not rewrite that test as `/^[^\u0000-\u001F]*$/`. That form still
-alerts. A GET with no body leaves `payload` undefined and skips the
-test.
+A GET builds the request with no body and does not run the test.
+Do not rewrite the test as `/^[^\u0000-\u001F]*$/`. That form still
+alerts.
+
+## Deferred
+
+None.
+
+## ReDoS patterns the new rules rejected
+
+These were not CodeQL alerts. They failed `security/detect-unsafe-regex`
+or `regexp/no-super-linear-backtracking`.
+
+- `app/lib/spend.ts` `parseSpendRate` strips commas, trims, drops one
+  leading `$`, then matches `/^(\d+\.\d+|\d+)/`. A `$` inside the
+  whitespace quantifiers either nests or lets two `\s*` split the
+  same spaces.
+- `brain/eval/expect.ts` `PRICE_RE` is `/\$\s?(\d[\d,]*\.\d+|\d[\d,]*)/g`.
+- `brain/eval/fixture.ts` `RFC3339` splits the optional fraction into
+  its own alternative so `\d+` is not inside `?`.
+- `lib/agents/mcpToml.ts` `isServerHeader` is two alternatives, one
+  with a `#` comment and one without, instead of `(?:#.*)?`.
+- `scripts/pages.mjs` `titleFromMarkdown` reads `/^#([^\n]*)$/m`, then
+  requires the rest to start with whitespace.

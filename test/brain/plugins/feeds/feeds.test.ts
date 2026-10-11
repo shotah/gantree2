@@ -328,6 +328,12 @@ describe("feeds resolve", () => {
 <link rel="alternate" type="text/html" href="/amp">
 <link rel="alternate" type="application/rss+xml" href="javascript:alert(1)">
 </head></html>`, "https://example.com")).toEqual([]);
+    expect(htmlFeedLinks(`<link rel='alternate' type='application/rss+xml' href='https://example.com/feed.xml' title='News'>`, "https://example.com")).toEqual([
+      { url: "https://example.com/feed.xml", title: "News", kind: "rss", source: "link" },
+    ]);
+    expect(htmlFeedLinks(`<link rel=alternate type=application/rss+xml href=https://example.com/rss.xml>`, "https://example.com")).toEqual([
+      { url: "https://example.com/rss.xml", title: "", kind: "rss", source: "link" },
+    ]);
     expect(nwsCandidate("hello")).toBeUndefined();
     expect(youtubeChannelCandidate("https://example.com")).toBeUndefined();
     expect(youtubeFromHTML("nope")).toBeUndefined();

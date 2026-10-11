@@ -56,8 +56,10 @@ export function githubSlug(text) {
 }
 
 export function titleFromMarkdown(md) {
-  const m = String(md).match(/^#\s+(.+)$/m);
-  return m ? m[1].trim() : "gantree";
+  const m = String(md).match(/^#([^\n]*)$/m);
+  if (!m?.[1] || !/^\s/.test(m[1])) return "gantree";
+  const title = m[1].trim();
+  return title === "" ? "gantree" : title;
 }
 
 function splitHash(href) {
@@ -104,6 +106,16 @@ function escapeAttr(value) {
     .replaceAll(">", "&gt;");
 }
 
+function plainHeading(html) {
+  let cur = html;
+  let prev;
+  do {
+    prev = cur;
+    cur = cur.replace(/<[^>]*>/g, "");
+  } while (cur !== prev);
+  return cur;
+}
+
 export function markdownToHtml(md) {
   const marked = new Marked();
   marked.use({
@@ -111,7 +123,7 @@ export function markdownToHtml(md) {
     renderer: {
       heading({ tokens, depth }) {
         const html = this.parser.parseInline(tokens);
-        const plain = html.replace(/<[^>]+>/g, "");
+        const plain = plainHeading(html);
         return `<h${depth} id="${escapeAttr(githubSlug(plain))}">${html}</h${depth}>\n`;
       },
       link({ href, title, tokens }) {

@@ -54,7 +54,13 @@ export function evaluate(expression: string): number {
 export function formatFloat(f: number): string {
   if (f === Math.trunc(f) && Math.abs(f) < 1e15) return String(Math.trunc(f));
   const precise = f.toPrecision(15);
-  if (/e/i.test(precise)) return precise.replace(/\.0+e/i, "e").replace(/(\.\d*?)0+e/i, "$1e");
+  const expAt = precise.search(/e/i);
+  if (expAt >= 0) {
+    let mantissa = precise.slice(0, expAt);
+    const exp = precise.slice(expAt);
+    if (mantissa.includes(".")) mantissa = mantissa.replace(/0+$/, "").replace(/\.$/, "");
+    return mantissa + exp;
+  }
   return precise.includes(".") ? precise.replace(/0+$/, "").replace(/\.$/, "") : precise;
 }
 
@@ -146,7 +152,7 @@ function tokenize(input: string): Tok[] {
       continue;
     }
     if ((c >= "0" && c <= "9") || (c === "." && (input[i + 1] ?? "") >= "0" && (input[i + 1] ?? "") <= "9")) {
-      const m = /^(?:\d+\.\d+|\d+|\.\d+)(?:[eE][+-]?\d+)?/.exec(input.slice(i));
+      const m = /^(?:(?:\d+\.\d+|\d+|\.\d+)[eE][+-]?\d+|\d+\.\d+|\d+|\.\d+)/.exec(input.slice(i));
       if (!m) throw new Error("bad number");
       out.push({ kind: "num", value: Number(m[0]) });
       i += m[0].length;

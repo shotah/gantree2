@@ -8,7 +8,7 @@ import { alertClass, Fold, inputClass, labelClass, primaryClass, quietClass } fr
 
 export function cleanEmail(raw: string): string | null {
   const email = raw.trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!/^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/.test(email)) {
     return null;
   }
   return email;

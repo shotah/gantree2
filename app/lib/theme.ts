@@ -78,8 +78,18 @@ export function cachedRoomTheme(): ThemeId | null {
   return themeFromQuery(localStorage.getItem(ROOM_THEME_KEY));
 }
 
+function jsonForScript(value: unknown): string {
+  return JSON.stringify(value).replace(/[<>/\u2028\u2029]/g, (ch) => {
+    if (ch === "<") return "\\u003C";
+    if (ch === ">") return "\\u003E";
+    if (ch === "/") return "\\u002F";
+    if (ch === "\u2028") return "\\u2028";
+    return "\\u2029";
+  });
+}
+
 export const THEME_BOOT
-  = `(function(){try{var a=${JSON.stringify(themeIdList())};var follow=localStorage.getItem(${JSON.stringify(FOLLOW_THEME_PREF_KEY)})!=="off";var room=localStorage.getItem(${JSON.stringify(ROOM_THEME_KEY)});var mine=localStorage.getItem(${JSON.stringify(THEME_KEY)});var t=follow&&a.indexOf(room)!==-1?room:mine;if(a.indexOf(t)!==-1)document.documentElement.setAttribute("data-theme",t)}catch(e){}})();`;
+  = `(function(){try{var a=${jsonForScript(themeIdList())};var follow=localStorage.getItem(${jsonForScript(FOLLOW_THEME_PREF_KEY)})!=="off";var room=localStorage.getItem(${jsonForScript(ROOM_THEME_KEY)});var mine=localStorage.getItem(${jsonForScript(THEME_KEY)});var t=follow&&a.indexOf(room)!==-1?room:mine;if(a.indexOf(t)!==-1)document.documentElement.setAttribute("data-theme",t)}catch(e){}})();`;
 
 function tokenCss(tokens: (typeof THEMES)[number]["tokens"]): string {
   const parts = [`color-scheme:${tokens.scheme}`];

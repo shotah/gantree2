@@ -156,7 +156,7 @@ export function loadEvalFixture(path: string): EvalFixture {
   return fx;
 }
 
-const RFC3339 = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+const RFC3339 = /^(?:\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+|\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:Z|[+-]\d{2}:\d{2})$/;
 
 /** Go `time.RFC3339`. Returns epoch ms, or null when the text is not that form. */
 export function parseRfc3339(text: string): number | null {

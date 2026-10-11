@@ -72,7 +72,7 @@ export function emptyOutcome(text = ""): EvalOutcome {
 
 const KINDS_ANY = ["preference", "fact", "insight"];
 
-const PRICE_RE = /\$\s?(\d[\d,]*(?:\.\d+)?)/g;
+const PRICE_RE = /\$\s?(\d[\d,]*\.\d+|\d[\d,]*)/g;
 
 const TOKEN_RE = /[a-z0-9]{4,}/g;
 

@@ -429,14 +429,24 @@ function errorCode(body: unknown): string {
 
 async function call(base: string, req: SeedCall): Promise<HttpResult> {
   const headers = new Headers();
-  if (req.body !== undefined) {
+  let res: Response;
+  if (req.body === undefined) {
+    res = await fetch(new URL(req.path, base), {
+      method: req.method,
+      headers,
+    });
+  } else {
     headers.set("content-type", "application/json");
+    const payload = JSON.stringify(req.body);
+    if (!/^[\u0020-\uFFFF]*$/.test(payload)) {
+      throw new Error("seed body is not JSON text");
+    }
+    res = await fetch(new URL(req.path, base), {
+      method: req.method,
+      headers,
+      body: payload,
+    });
   }
-  const res = await fetch(new URL(req.path, base), {
-    method: req.method,
-    headers,
-    body: req.body === undefined ? undefined : JSON.stringify(req.body),
-  });
   const text = await res.text();
   let body: unknown = null;
   if (text) {

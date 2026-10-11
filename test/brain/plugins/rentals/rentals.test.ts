@@ -116,6 +116,12 @@ const rentalListings = [
   },
 ];
 
+function snakeTool(name: string): boolean {
+  const parts = name.split("_");
+  const head = parts[0] ?? "";
+  return parts.length >= 2 && /^[a-z]+$/.test(head) && parts.slice(1).every((part) => /^[a-z0-9]+$/.test(part));
+}
+
 describe("rentals plugin", () => {
   it("publishes the Go tool list", () => {
     const ctx = pluginCtx({ RENTCAST_API_KEY: "k" });
@@ -124,7 +130,7 @@ describe("rentals plugin", () => {
     expect(tools.map((tool) => tool.name)).toEqual([...TOOL_NAMES]);
     for (const name of tools.map((tool) => tool.name)) {
       expect(name.startsWith("rentals_")).toBe(false);
-      expect(/^[a-z]+(_[a-z0-9]+)+$/.test(name)).toBe(true);
+      expect(snakeTool(name)).toBe(true);
     }
     const search = tools[0];
     expect(search?.description.startsWith("Search US long-term FOR-RENT")).toBe(true);

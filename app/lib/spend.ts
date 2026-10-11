@@ -82,7 +82,9 @@ export function fmtTokens(n: number): string {
 
 /** Leading number, optional `$`. Trailing words ("/ 1M") are ignored. */
 export function parseSpendRate(raw: string): number | null {
-  const match = /^\s*\$?\s*(\d+(?:\.\d+)?)/.exec(raw.replace(/,/g, ""));
+  let text = raw.replace(/,/g, "").trim();
+  if (text.startsWith("$")) text = text.slice(1).trim();
+  const match = /^(\d+\.\d+|\d+)/.exec(text);
   if (!match) {
     return null;
   }
