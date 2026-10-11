@@ -48,6 +48,7 @@ const status = {
   skipped: [],
   lastTurn: 1,
   lastSnapshot: null,
+  lastError: null,
   perf: { turns: 0, prompt: 0, completion: 0, errors: 0 },
 };
 

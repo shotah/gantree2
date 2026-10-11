@@ -78,6 +78,67 @@ func TestLogBridge_PerfAndRateCap(t *testing.T) {
 	}
 }
 
+func TestLogBridge_ErrorLaneAndAttrs(t *testing.T) {
+	bridge := NewLogBridge(slog.NewJSONHandler(io.Discard, nil), time.Hour)
+	logger := slog.New(bridge)
+	logger.Info("gantry starting", "version", "dev")
+	logger.Info("squeezed out")
+	logger.Error("snapshot restore failed", "err", "mkdir /etc/gantry: permission denied", "n", 2)
+	logger.Error("second error squeezed")
+
+	var got []LogFrame
+	bridge.SetSend(func(raw []byte) {
+		lf, err := DecodeLog(raw)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got = append(got, lf)
+	})
+	if len(got) != 2 {
+		t.Fatalf("frames %d: %+v", len(got), got)
+	}
+	if got[0].Message != "gantry starting version=dev" || got[0].Level != "info" {
+		t.Fatalf("info %+v", got[0])
+	}
+	want := `snapshot restore failed err="mkdir /etc/gantry: permission denied" n=2`
+	if got[1].Message != want || got[1].Level != "error" {
+		t.Fatalf("error %+v", got[1])
+	}
+}
+
+type flushSock struct {
+	frames [][]byte
+	closed bool
+}
+
+func (s *flushSock) ReadMessage() (int, []byte, error) { return 0, nil, io.EOF }
+func (s *flushSock) WriteMessage(_ int, data []byte) error {
+	s.frames = append(s.frames, append([]byte(nil), data...))
+	return nil
+}
+func (s *flushSock) Close() error { s.closed = true; return nil }
+
+func TestLogBridge_FlushWritesQueueThenDetaches(t *testing.T) {
+	bridge := NewLogBridge(slog.NewJSONHandler(io.Discard, nil), time.Hour)
+	logger := slog.New(bridge)
+	logger.Error("boot died", "err", "x")
+	sock := &flushSock{}
+	bridge.Flush(sock)
+	if len(sock.frames) != 1 || !strings.Contains(string(sock.frames[0]), `boot died err=x`) {
+		t.Fatalf("frames %q", sock.frames)
+	}
+	if sock.closed {
+		t.Fatal("flush must not close; the caller owns the socket")
+	}
+	logger.Error("after flush")
+	if len(sock.frames) != 1 {
+		t.Fatalf("sender still attached: %q", sock.frames)
+	}
+	bridge.Flush(nil)
+	var nilBridge *LogBridge
+	nilBridge.Flush(sock)
+}
+
 func TestLogBridge_WithAttrsSharesSend(t *testing.T) {
 	bridge := NewLogBridge(slog.NewJSONHandler(io.Discard, nil), time.Hour)
 	child := bridge.WithAttrs([]slog.Attr{slog.String("k", "v")})

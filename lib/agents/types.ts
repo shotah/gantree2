@@ -75,6 +75,12 @@ export type AgentStatus = {
   lastTurn: number | null;
   /** From the last `snapshot` frame. */
   lastSnapshot: { stamp: string; bytes: number; at: number } | null;
+  /**
+   * The harness's last error-level `log` line since it connected. A boot
+   * that dies before the room is up flushes its log on the handshake socket,
+   * so this is the "why" behind the container's `exit 1`.
+   */
+  lastError: { message: string; at: string } | null;
   /** Rolling since the harness connected. */
   perf: { turns: number; prompt: number; completion: number; errors: number };
 };

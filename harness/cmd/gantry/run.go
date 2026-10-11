@@ -81,18 +81,22 @@ func run() int {
 	var mouth channel.Channel
 	if cfg.Snapshot {
 		boot, err = prepareSnapshot(cfg, logger)
-		if err != nil {
-			logger.Error("snapshot restore failed", "err", err)
-			return 1
-		}
 		defer func() {
 			if boot != nil && boot.sock != nil && mouth == nil {
+				// Boot died before the channel adopted the socket. Push the
+				// queued boot log, the fatal line included, so the app shows
+				// why and not only the exit code.
+				bridge.Flush(boot.sock)
 				_ = boot.sock.Close()
 			}
 			if boot != nil {
 				emitSnapshot(logger, boot.snap, mouth)
 			}
 		}()
+		if err != nil {
+			logger.Error("snapshot restore failed", "err", err)
+			return 1
+		}
 		// The config frame has had its chance to lay the house LLM_* keys
 		// under the container env; now they are required.
 		if err := cfg.RequireLLM(); err != nil {

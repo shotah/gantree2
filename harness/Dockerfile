@@ -30,10 +30,11 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     ./cmd/gantry
 
 # The runtime stage has no shell, so the writable dirs the harness needs
-# (PERSONA_DIR=/persona, DATA_DIR=/data) are made here and copied over
-# with the nonroot uid. Without this the first boot dies on
-# `snapshot: mkdir: mkdir /persona: permission denied`.
-RUN mkdir -p /out/persona /out/data
+# (PERSONA_DIR=/persona, DATA_DIR=/data, and /etc/gantry, the parent of
+# MCP_MANIFEST=/etc/gantry/mcp.toml that the config frame writes) are made
+# here and copied over with the nonroot uid. Without this the first boot
+# dies on `snapshot: mkdir: mkdir /etc/gantry: permission denied`.
+RUN mkdir -p /out/persona /out/data /out/etc/gantry
 
 # Every module under mcp/*/ (its own go.mod). Missing or empty mcp/ still
 # produces an empty /opt/mcp. One binary per plugin at /opt/mcp/<id>/<id>.
@@ -68,10 +69,12 @@ LABEL org.opencontainers.image.revision="${COMMIT}"
 
 COPY --from=mcp /opt/mcp /opt/mcp
 COPY --from=build /out/gantry /usr/local/bin/gantry
-# nonroot is uid/gid 65532 in distroless. Both trees are written at boot:
-# the snapshot restore lays SELF.md/PERSONA.md and gantry.db under them.
+# nonroot is uid/gid 65532 in distroless. All three trees are written at
+# boot: the config frame lays PERSONA.md and mcp.toml, the snapshot restore
+# lays SELF.md and gantry.db.
 COPY --from=build --chown=65532:65532 /out/persona /persona
 COPY --from=build --chown=65532:65532 /out/data /data
+COPY --from=build --chown=65532:65532 /out/etc/gantry /etc/gantry
 
 USER nonroot
 WORKDIR /data

@@ -12,6 +12,8 @@ export const LOG_CAP = 500;
 export const LOG_PAGE = 200;
 
 const HARNESS_KINDS = new Set(["status", "perf", "log", "snapshot"]);
+/** slog prints `ERROR`; `foldLog` lowercases. The others are what a plugin's own logger might say. */
+const ERROR_LEVELS = new Set(["error", "fatal", "panic"]);
 const LIST_MAX = 128;
 const MESSAGE_RUNES = 2000;
 
@@ -33,6 +35,7 @@ export function emptyStatus(): AgentStatus {
     skipped: [],
     lastTurn: null,
     lastSnapshot: null,
+    lastError: null,
     perf: { turns: 0, prompt: 0, completion: 0, errors: 0 },
   };
 }
@@ -61,6 +64,14 @@ function isSnapshotMeta(value: unknown): value is { stamp: string; bytes: number
     && Number.isFinite(row.at);
 }
 
+function isLastError(value: unknown): value is { message: string; at: string } {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const row = value as { message?: unknown; at?: unknown };
+  return typeof row.message === "string" && typeof row.at === "string";
+}
+
 export function isAgentStatus(value: unknown): value is AgentStatus {
   if (!value || typeof value !== "object") {
     return false;
@@ -77,6 +88,8 @@ export function isAgentStatus(value: unknown): value is AgentStatus {
     && Array.isArray(row.skipped)
     && (row.lastTurn === null || typeof row.lastTurn === "number")
     && (row.lastSnapshot === null || isSnapshotMeta(row.lastSnapshot))
+    // Stored rows from before the field have no key at all.
+    && (row.lastError == null || isLastError(row.lastError))
     && typeof counts.turns === "number"
     && typeof counts.prompt === "number"
     && typeof counts.completion === "number"
@@ -94,6 +107,7 @@ export function parseStatus(raw: unknown): AgentStatus {
     skipped: raw.skipped.filter(isSkipped).map((row) => ({ name: row.name, reason: row.reason })),
     lastTurn: raw.lastTurn,
     lastSnapshot: isSnapshotMeta(raw.lastSnapshot) ? { ...raw.lastSnapshot } : null,
+    lastError: isLastError(raw.lastError) ? { message: raw.lastError.message, at: raw.lastError.at } : null,
     perf: {
       turns: raw.perf.turns,
       prompt: raw.perf.prompt,
@@ -138,7 +152,7 @@ export function parseLog(raw: unknown): LogRing {
   return { seq, lines: kept.slice(-LOG_CAP) };
 }
 
-/** Reset rolling perf the first time the harness connects. A second socket does not. */
+/** Reset rolling perf and the last error the first time the harness connects. A second socket does not. */
 export function noteConnected(status: AgentStatus, now: number): AgentStatus {
   if (status.harness === "connected") {
     return status;
@@ -147,6 +161,7 @@ export function noteConnected(status: AgentStatus, now: number): AgentStatus {
     ...status,
     harness: "connected",
     since: now,
+    lastError: null,
     perf: { turns: 0, prompt: 0, completion: 0, errors: 0 },
   };
 }
@@ -364,7 +379,12 @@ export function applyHarnessFrame(
     return foldPerf(state.status, state.log, raw, now, slug);
   }
   if (kind === "log") {
-    return { ...base, log: foldLog(state.log, raw, now) };
+    const log = foldLog(state.log, raw, now);
+    const line = log === state.log ? undefined : log.lines[log.lines.length - 1];
+    const status = line && ERROR_LEVELS.has(line.level)
+      ? { ...state.status, lastError: { message: line.message, at: line.at } }
+      : state.status;
+    return { ...base, status, log };
   }
   if (kind === "snapshot") {
     return foldSnapshot(state.status, state.log, raw, now);

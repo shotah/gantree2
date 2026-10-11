@@ -134,6 +134,72 @@ func TestPrepareSnapshot_RestoresFromConfigFrame(t *testing.T) {
 	}
 }
 
+func TestPrepareSnapshot_ConfigFrameErrorKeepsSocket(t *testing.T) {
+	up := websocket.Upgrader{}
+	gotLog := make(chan string, 4)
+	wsSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := up.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		defer func() { _ = c.Close() }()
+		_ = c.WriteMessage(websocket.TextMessage, []byte(`{"kind":"config","mcp":"[[server]]\nname = \"math\"\n"}`))
+		for {
+			_, raw, err := c.ReadMessage()
+			if err != nil {
+				return
+			}
+			gotLog <- string(raw)
+		}
+	}))
+	defer wsSrv.Close()
+
+	root := t.TempDir()
+	// A file where the manifest's parent directory should be: mkdir fails.
+	if err := os.WriteFile(filepath.Join(root, "etc"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := &config.Config{
+		Channel:           config.ChannelPendant,
+		DataDir:           root,
+		PersonaDir:        root,
+		MCPManifest:       filepath.Join(root, "etc", "gantry", "mcp.toml"),
+		PendantMailboxURL: "ws" + strings.TrimPrefix(wsSrv.URL, "http") + "/ws/kit",
+		PendantBearer:     "tok",
+		Snapshot:          true,
+	}
+	bridge := chat.NewLogBridge(slog.NewTextHandler(io.Discard, nil), time.Second)
+	logger := slog.New(bridge)
+	boot, err := prepareSnapshot(cfg, logger)
+	if err == nil {
+		t.Fatal("expected mkdir failure")
+	}
+	if !strings.Contains(err.Error(), "config frame: mcp (MCP_MANIFEST="+cfg.MCPManifest+")") {
+		t.Fatalf("err %v", err)
+	}
+	if boot == nil || boot.sock == nil {
+		t.Fatalf("socket dropped: %+v", boot)
+	}
+	if boot.snap != nil {
+		t.Fatal("snap set after a failed boot; a publish would clobber the snapshot")
+	}
+	logger.Error("snapshot restore failed", "err", err)
+	bridge.Flush(boot.sock)
+	_ = boot.sock.Close()
+	select {
+	case raw := <-gotLog:
+		lf, derr := chat.DecodeLog([]byte(raw))
+		if derr != nil {
+			t.Fatal(derr)
+		}
+		if lf.Level != "error" || !strings.Contains(lf.Message, "permission denied") && !strings.Contains(lf.Message, "not a directory") {
+			t.Fatalf("frame %+v", lf)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("DO never received the boot log")
+	}
+}
+
 func TestPrepareSnapshot_StdioUsesEnvURLs(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = io.WriteString(w, "only-db")

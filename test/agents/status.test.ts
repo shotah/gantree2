@@ -59,6 +59,29 @@ describe("harness frames", () => {
     expect(applyHarnessFrame(state, { kind: "reply" }, now, "kit").status).toBe(state.status);
   });
 
+  it("keeps the last error-level log line on status until the next connect", () => {
+    const state = { status: noteConnected(emptyStatus(), now), log: emptyLog() };
+    const info = applyHarnessFrame(state, { kind: "log", level: "INFO", message: "gantry starting" }, now, "kit");
+    expect(info.status.lastError).toBeNull();
+    const died = applyHarnessFrame(
+      pick(info),
+      { kind: "log", level: "ERROR", message: "snapshot restore failed err=\"permission denied\"", at: "2026-10-11T00:46:23Z" },
+      now,
+      "kit",
+    );
+    expect(died.status.lastError).toEqual({ message: "snapshot restore failed err=\"permission denied\"", at: "2026-10-11T00:46:23Z" });
+    const later = applyHarnessFrame(pick(died), { kind: "log", level: "warn", message: "retrying" }, now, "kit");
+    expect(later.status.lastError).toEqual(died.status.lastError);
+    expect(applyHarnessFrame(pick(died), { kind: "log", level: "error", message: "" }, now, "kit").status.lastError).toEqual(died.status.lastError);
+    const down = noteDisconnected(later.status, now + 1);
+    expect(down.lastError).toEqual(died.status.lastError);
+    expect(noteConnected(down, now + 2).lastError).toBeNull();
+    expect(parseStatus({ ...down, lastError: { message: 1 } })).toEqual(emptyStatus());
+    expect(parseStatus(down).lastError).toEqual(died.status.lastError);
+    const { lastError: _dropped, ...legacy } = down;
+    expect(parseStatus(legacy).lastError).toBeNull();
+  });
+
   it("keeps a bounded ring and pages with an after cursor", () => {
     let log = emptyLog();
     for (let i = 0; i < LOG_CAP + 1; i++) {

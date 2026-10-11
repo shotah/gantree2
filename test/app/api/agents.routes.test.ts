@@ -77,6 +77,7 @@ describe("agent routes", () => {
                 skipped: [],
                 lastTurn: null,
                 lastSnapshot: null,
+                lastError: null,
                 perf: { turns: 0, prompt: 0, completion: 0, errors: 0 },
               });
             }

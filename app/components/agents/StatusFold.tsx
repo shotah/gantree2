@@ -56,6 +56,14 @@ export function StatusFold({
         Container <span className="text-fg">{state}</span>
         {container?.lastError ? <span className="ml-2 text-xs text-danger">{container.lastError}</span> : null}
       </p>
+      {status?.lastError
+        ? (
+            <p aria-label="Harness last error" className="mt-1 break-words font-mono text-xs text-danger">
+              <time dateTime={status.lastError.at} className="mr-2 text-dim">{status.lastError.at}</time>
+              {status.lastError.message}
+            </p>
+          )
+        : null}
       {status
         ? (
             <p className="mt-2 text-xs text-muted">

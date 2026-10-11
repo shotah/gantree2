@@ -50,6 +50,7 @@ export const STATUS: AgentStatus = {
   skipped: [],
   lastTurn: 1_700_000_000_000,
   lastSnapshot: null,
+  lastError: null,
   perf: { turns: 2, prompt: 10, completion: 4, errors: 0 },
 };
 

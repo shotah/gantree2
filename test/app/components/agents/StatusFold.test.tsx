@@ -40,6 +40,27 @@ describe("StatusFold", () => {
     await vi.waitFor(() => expect(client).toHaveBeenCalledTimes(3));
   });
 
+  it("shows the harness's last error line under the container state", () => {
+    const { rerender } = render(
+      <StatusFold
+        slug="kit"
+        status={{ ...STATUS, harness: "disconnected", lastError: { message: "snapshot restore failed err=\"permission denied\"", at: "2026-10-11T00:46:23Z" } }}
+        container={{ ...CONTAINER, state: "failed", lastError: "exit 1" }}
+        canMutate={false}
+        client={vi.fn()}
+        onContainer={vi.fn()}
+      />,
+    );
+    const why = screen.getByLabelText("Harness last error");
+    expect(why.textContent).toContain("2026-10-11T00:46:23Z");
+    expect(why.textContent).toContain("snapshot restore failed err=\"permission denied\"");
+    expect(screen.getByText("exit 1")).toBeTruthy();
+    rerender(
+      <StatusFold slug="kit" status={STATUS} container={CONTAINER} canMutate={false} client={vi.fn()} onContainer={vi.fn()} />,
+    );
+    expect(screen.queryByLabelText("Harness last error")).toBeNull();
+  });
+
   it("shows an empty harness and hides controls when looking only", () => {
     render(
       <StatusFold

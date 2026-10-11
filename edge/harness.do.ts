@@ -56,6 +56,20 @@ function json(body: ContainerInfo): Response {
   return Response.json(body, { headers: { "cache-control": "no-store" } });
 }
 
+/**
+ * One Workers Logs event per container lifecycle step. An object (not a
+ * string) so the dashboard and `wrangler tail` index `event` / `slug` /
+ * `exitCode` as fields beside the harness's own slog lines.
+ */
+function logLifecycle(level: "info" | "error", event: string, fields: Record<string, unknown>): void {
+  const line = { src: "harness.do", event, ...fields };
+  if (level === "error") {
+    console.error(line);
+    return;
+  }
+  console.log(line);
+}
+
 export class Harness extends Container<AgentEnv> {
   defaultPort = HARNESS_PORT;
   sleepAfter = "2h";
@@ -69,6 +83,7 @@ export class Harness extends Container<AgentEnv> {
   }
 
   override async onStart(): Promise<void> {
+    logLifecycle("info", "container started", { slug: this.ctx.id.name });
     const prev = await this.ctx.storage.get<ContainerInfo>(INFO_KEY);
     await this.ctx.storage.put(INFO_KEY, {
       state: "running",
@@ -81,6 +96,11 @@ export class Harness extends Container<AgentEnv> {
   override async onStop(params: StopParams): Promise<void> {
     const prev = await this.ctx.storage.get<ContainerInfo>(INFO_KEY);
     const crashed = params.exitCode !== 0;
+    logLifecycle(crashed ? "error" : "info", "container stopped", {
+      slug: this.ctx.id.name,
+      exitCode: params.exitCode,
+      reason: params.reason,
+    });
     await this.ctx.storage.put(INFO_KEY, {
       state: crashed ? "failed" : "stopped",
       since: Date.now(),
@@ -219,6 +239,7 @@ export class Harness extends Container<AgentEnv> {
       lastError: errorText(error).slice(0, 500),
       image: HARNESS_IMAGE,
     };
+    logLifecycle("error", "harness failed", { slug: this.ctx.id.name, err: info.lastError });
     try {
       const prev = await this.ctx.storage.get<ContainerInfo>(INFO_KEY);
       if (prev && isInfo(prev) && prev.image) {

@@ -235,9 +235,35 @@ describe("Harness", () => {
     expect(await read(res)).toMatchObject({ state: "failed", lastError: "disk" });
   });
 
-  it("records a non-zero exit as failed", async () => {
-    const { harness } = await boot();
-    await harness.onStop({ exitCode: 1, reason: "exit" });
-    expect(await read(await harness.fetch(op("info")))).toMatchObject({ state: "failed", lastError: "exit 1" });
+  it("records a non-zero exit as failed and logs the exit code", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const { harness } = await boot();
+      await harness.onStop({ exitCode: 1, reason: "exit" });
+      expect(await read(await harness.fetch(op("info")))).toMatchObject({ state: "failed", lastError: "exit 1" });
+      expect(error).toHaveBeenCalledWith({
+        src: "harness.do",
+        event: "container stopped",
+        slug: "kit",
+        exitCode: 1,
+        reason: "exit",
+      });
+    } finally {
+      error.mockRestore();
+    }
+  });
+
+  it("logs a clean exit as info, not error", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    try {
+      const { harness } = await boot();
+      await harness.onStop({ exitCode: 0, reason: "runtime_signal" });
+      expect(error).not.toHaveBeenCalled();
+      expect(log).toHaveBeenCalledWith(expect.objectContaining({ event: "container stopped", exitCode: 0 }));
+    } finally {
+      error.mockRestore();
+      log.mockRestore();
+    }
   });
 });

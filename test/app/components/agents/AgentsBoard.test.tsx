@@ -40,6 +40,11 @@ describe("nagsFor", () => {
     expect(nagsFor(card({
       container: { ...CONTAINER, state: "failed", lastError: "boom" },
     }))).toEqual(["Container failed: boom"]);
+    // The harness's own last error says why; the supervisor's `exit 1` does not.
+    expect(nagsFor(card({
+      status: { ...STATUS, lastError: { message: "snapshot restore failed err=\"mkdir /etc/gantry: permission denied\"", at: "t" } },
+      container: { ...CONTAINER, state: "failed", lastError: "exit 1" },
+    }))).toEqual(["Container failed: snapshot restore failed err=\"mkdir /etc/gantry: permission denied\""]);
   });
 });
 

@@ -31,7 +31,8 @@ export function nagsFor(agent: AgentCard): string[] {
     nags.push(`${skipped} tools skipped`);
   }
   if (agent.container?.state === "failed") {
-    nags.push(agent.container.lastError ? `Container failed: ${agent.container.lastError}` : "Container failed");
+    const why = agent.status?.lastError?.message ?? agent.container.lastError;
+    nags.push(why ? `Container failed: ${why}` : "Container failed");
   }
   return nags;
 }

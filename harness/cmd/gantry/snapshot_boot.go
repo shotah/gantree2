@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"path/filepath"
 	"time"
@@ -22,6 +23,10 @@ type doBoot struct {
 // prepareSnapshot reads a config frame (chat channel only), writes persona and
 // mcp.toml, and downloads gantry.db, SELF.md, and the token archive before
 // those stores open.
+//
+// On error the returned boot has snap nil and keeps the handshake socket
+// open, so run can push the boot log to the DO before it exits. The
+// caller owns that Close.
 func prepareSnapshot(cfg *config.Config, logger *slog.Logger) (*doBoot, error) {
 	if cfg == nil {
 		return nil, nil
@@ -41,9 +46,7 @@ func prepareSnapshot(cfg *config.Config, logger *slog.Logger) (*doBoot, error) {
 		} else {
 			boot.sock = sock
 			if err := applyConfigFrame(cfg, frame); err != nil {
-				_ = sock.Close()
-				boot.sock = nil
-				return nil, err
+				return boot, err
 			}
 			if frame.Restore.DB != "" {
 				get.DB = frame.Restore.DB
@@ -77,11 +80,9 @@ func prepareSnapshot(cfg *config.Config, logger *slog.Logger) (*doBoot, error) {
 	defer cancel()
 	res, err := boot.snap.Restore(rctx)
 	if err != nil {
-		if boot.sock != nil {
-			_ = boot.sock.Close()
-			boot.sock = nil
-		}
-		return nil, err
+		// A half-restored brain must not be published over the good one.
+		boot.snap = nil
+		return boot, err
 	}
 	if res.Files > 0 {
 		logger.Info("snapshot restored", "files", res.Files)
@@ -106,9 +107,12 @@ func applyConfigFrame(cfg *config.Config, frame chat.ConfigFrame) error {
 		*cfg = *next
 	}
 	if err := snapshot.Place(filepath.Join(cfg.PersonaDir, "PERSONA.md"), frame.Persona); err != nil {
-		return err
+		return fmt.Errorf("config frame: persona (PERSONA_DIR=%s): %w", cfg.PersonaDir, err)
 	}
-	return snapshot.Place(cfg.MCPManifest, frame.MCP)
+	if err := snapshot.Place(cfg.MCPManifest, frame.MCP); err != nil {
+		return fmt.Errorf("config frame: mcp (MCP_MANIFEST=%s): %w", cfg.MCPManifest, err)
+	}
+	return nil
 }
 
 func statusFrame(host *mcp.Host) chat.StatusFrame {

@@ -11,6 +11,10 @@ coverage
 .dev.vars.*
 !.dev.vars.example
 
+# Nested checkouts (keep the folder)
+repos/*
+!repos/.gitkeep
+
 # Vinext / Vite / Wrangler
 .next
 next-env.d.ts
