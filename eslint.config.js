@@ -1,5 +1,7 @@
 import eslint from "@eslint/js";
 import stylistic from "@stylistic/eslint-plugin";
+import regexp from "eslint-plugin-regexp";
+import security from "eslint-plugin-security";
 import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 
@@ -108,6 +110,20 @@ export default tseslint.config(
       "no-empty": ["error", { allowEmptyCatch: true }],
       "no-useless-assignment": "error",
       "no-control-regex": "error",
+    },
+  },
+  {
+    // CodeQL javascript-security-extended families that a plugin can say.
+    // Host checks, identity replaces, and unanchored URL regexes have no
+    // plugin rule; those are pinned by tests. See docs/codeql.md.
+    plugins: { regexp, security },
+    rules: {
+      "no-eval": "error",
+      "no-new-func": "error",
+      "security/detect-eval-with-expression": "error",
+      "security/detect-unsafe-regex": "error",
+      "regexp/no-super-linear-backtracking": "error",
+      "regexp/no-super-linear-move": "error",
     },
   },
 );

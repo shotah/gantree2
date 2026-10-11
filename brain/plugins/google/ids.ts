@@ -52,9 +52,18 @@ function idFromGoogleQuery(input: string): string {
   return after;
 }
 
+const GOOGLE_RESOURCE_HOSTS = new Set(["docs.google.com", "drive.google.com", "forms.gle"]);
+
 export function looksLikeGoogleURL(input: string): boolean {
-  const lower = input.trim().replace(/^[<>"']+|[<>"']+$/gu, "").toLowerCase();
-  return lower.includes("docs.google.com/") || lower.includes("drive.google.com/") || lower.includes("forms.gle/");
+  const trimmed = input.trim().replace(/^[<>"']+|[<>"']+$/gu, "");
+  if (trimmed === "") {
+    return false;
+  }
+  try {
+    return GOOGLE_RESOURCE_HOSTS.has(new URL(ensureURLScheme(trimmed)).hostname);
+  } catch {
+    return false;
+  }
 }
 
 function looksLikeAnyURL(input: string): boolean {

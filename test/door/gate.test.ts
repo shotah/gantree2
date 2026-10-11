@@ -19,6 +19,7 @@ describe("public paths", () => {
     expect(isPublicPath("/api/auth/google")).toBe(true);
     expect(isPublicPath("/api/auth/callback/google")).toBe(true);
     expect(isPublicPath("/api/auth/catch")).toBe(true);
+    expect(isPublicPath("/api/health")).toBe(true);
     expect(isPublicPath("/api/auth/config")).toBe(true);
     expect(isPublicPath("/api/auth/nonce")).toBe(true);
     expect(isPublicPath("/api/auth/token")).toBe(true);
@@ -43,6 +44,7 @@ describe("public paths", () => {
 describe("gate", () => {
   it("public passes without a cookie", async () => {
     expect(await gate(new Request("https://g.test/login"), env, memoryStore())).toEqual({ kind: "public" });
+    expect(await gate(new Request("https://g.test/api/health"), env, memoryStore())).toEqual({ kind: "public" });
     expect(await gate(new Request("https://g.test/api/agents/kit/snapshot/gantry_db?exp=1&sig=ab"), env, memoryStore())).toMatchObject({ kind: "unauthorized" });
   });
 

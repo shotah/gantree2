@@ -58,6 +58,8 @@ describe("math evaluate", () => {
   it("formats integers and decimals the way Go strconv does", () => {
     expect(formatFloat(4)).toBe("4");
     expect(formatFloat(2.5)).toBe("2.5");
+    expect(formatFloat(1e21)).toBe("1e+21");
+    expect(formatFloat(1.23e21)).toBe("1.23e+21");
   });
 });
 

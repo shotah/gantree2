@@ -100,7 +100,7 @@ describe("drive", () => {
       if (hit.method === "POST" && hit.url.pathname.includes("/permissions")) {
         return jsonResponse({ id: "p1", type: "user", role: "reader", emailAddress: "a@b.co" });
       }
-      if (hit.method === "POST" && hit.url.hostname.startsWith("www.googleapis.com") && hit.url.pathname.includes("/upload/")) {
+      if (hit.method === "POST" && hit.url.hostname === "www.googleapis.com" && hit.url.pathname.includes("/upload/")) {
         return jsonResponse({ id: "new1", name: hit.body.includes("notes.md") ? "notes" : "notes.txt", webViewLink: "https://drive/new1" });
       }
       if (hit.url.searchParams.get("fields")?.includes("permissions")) {

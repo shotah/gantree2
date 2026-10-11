@@ -88,6 +88,10 @@ describe("feeds fetch", () => {
     const json = await fetchFeed(staticGet(jsonFeed, "application/feed+json"), "https://example.com/feed.json", 10);
     expect(json.title).toBe("Example JSON");
     expect(json.items[0]?.id).toBe("jf-1");
+    const versionOnly = `{"version":"https://jsonfeed.org/version/1.1","title":"Only version","items":[]}`;
+    expect(parseFeedDocument(versionOnly, "application/feed+json").title).toBe("Only version");
+    const spoof = `{"version":"https://evil.example/?x=jsonfeed.org","title":"Spoof"}`;
+    expect(() => parseFeedDocument(spoof, "application/feed+json")).toThrow(/invalid json feed/);
   });
 
   it("refuses HTML, plain text, and a bad scheme", async () => {

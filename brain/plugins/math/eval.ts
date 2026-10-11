@@ -54,7 +54,7 @@ export function evaluate(expression: string): number {
 export function formatFloat(f: number): string {
   if (f === Math.trunc(f) && Math.abs(f) < 1e15) return String(Math.trunc(f));
   const precise = f.toPrecision(15);
-  if (/e/i.test(precise)) return precise.replace(/e\+/, "e+").replace(/\.0+e/i, "e").replace(/(\.\d*?)0+e/i, "$1e");
+  if (/e/i.test(precise)) return precise.replace(/\.0+e/i, "e").replace(/(\.\d*?)0+e/i, "$1e");
   return precise.includes(".") ? precise.replace(/0+$/, "").replace(/\.$/, "") : precise;
 }
 

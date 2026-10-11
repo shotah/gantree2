@@ -17,6 +17,11 @@ describe("extractGoogleResourceID", () => {
     { name: "no scheme docs host", input: "docs.google.com/document/d/NOSCHEME/edit", want: "NOSCHEME" },
     { name: "url without id", input: "https://example.com/some/page", want: "" },
     { name: "empty", input: "", want: "" },
+    { name: "host is a suffix of another host", input: "https://notdocs.google.com/document/d/EVIL/edit", want: "" },
+    { name: "docs host buried in the path", input: "https://evil.example/docs.google.com/document/d/EVIL/edit", want: "" },
+    { name: "docs host as a label of another host", input: "https://docs.google.com.evil.example/document/d/EVIL/edit", want: "" },
+    { name: "docs host in the userinfo", input: "https://docs.google.com@evil.example/document/d/EVIL/edit", want: "" },
+    { name: "forms short host suffix", input: "https://notforms.gle/abc", want: "" },
   ];
 
   it.each(cases)("$name", ({ input, want }) => {

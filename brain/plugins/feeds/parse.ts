@@ -100,6 +100,15 @@ export function parseFeedTitle(body: string): string | undefined {
   }
 }
 
+/** JSON Feed `version` is a URL, `https://jsonfeed.org/version/1` or `1.1`. */
+function isJsonFeedVersion(version: string): boolean {
+  try {
+    return new URL(version).hostname === "jsonfeed.org";
+  } catch {
+    return false;
+  }
+}
+
 function parseJSONFeed(text: string): FeedDoc | undefined {
   let value: unknown;
   try {
@@ -109,7 +118,7 @@ function parseJSONFeed(text: string): FeedDoc | undefined {
   }
   if (!isRecord(value)) return undefined;
   const version = typeof value.version === "string" ? value.version : "";
-  if (!version.includes("jsonfeed.org") && !Array.isArray(value.items)) return undefined;
+  if (!isJsonFeedVersion(version) && !Array.isArray(value.items)) return undefined;
   const items = Array.isArray(value.items) ? value.items : [];
   const out: FeedItem[] = [];
   for (const raw of items) {

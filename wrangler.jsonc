@@ -21,8 +21,12 @@
       { "name": "AGENT", "class_name": "Agent" }
     ]
   },
+  // Append-only. v2 added the Harness class for the container runtime;
+  // v3 deletes it (and its objects). Never rewrite an applied tag.
   "migrations": [
-    { "tag": "v1", "new_sqlite_classes": ["Settings", "Agent"] }
+    { "tag": "v1", "new_sqlite_classes": ["Settings", "Agent"] },
+    { "tag": "v2", "new_sqlite_classes": ["Harness"] },
+    { "tag": "v3", "deleted_classes": ["Harness"] }
   ],
   "kv_namespaces": [
     { "binding": "DIRECTORY", "id": "TODO" }

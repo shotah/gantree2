@@ -5,7 +5,20 @@ import { describe, expect, it } from "vitest";
 import { buildPages, DOC_PAGES, githubSlug, markdownToHtml, parsePagesArgs, rewriteHref, titleFromMarkdown } from "../../scripts/pages.mjs";
 
 const ROOT = resolve(import.meta.dirname, "../..");
-const RETIRED = /github\.com\/shotah\/(ai-gantry|gantry-pendant|gantry-cab|gantry-helm|gantree)\b/;
+// Host is anchored at the start of the string or at `http(s)://`, so
+// `notgithub.com` and `?q=github.com/...` do not count as a link.
+const RETIRED = /(?:^|https?:\/\/)github\.com\/shotah\/(?:ai-gantry|gantry-pendant|gantry-cab|gantry-helm|gantree)\b/;
+
+describe("retired repo links", () => {
+  it("matches github.com/shotah and not a lookalike host", () => {
+    expect(RETIRED.test("https://github.com/shotah/gantree")).toBe(true);
+    expect(RETIRED.test("see https://github.com/shotah/gantry-cab/blob/main/x")).toBe(true);
+    expect(RETIRED.test("https://notgithub.com/shotah/gantree")).toBe(false);
+    expect(RETIRED.test("https://github.com.evil.test/shotah/gantree")).toBe(false);
+    expect(RETIRED.test("https://evil.example/?q=github.com/shotah/gantree")).toBe(false);
+    expect(RETIRED.test("https://github.com/shotah/gantree2")).toBe(false);
+  });
+});
 
 describe("pages helpers", () => {
   it("args", () => {
