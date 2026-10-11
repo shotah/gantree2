@@ -217,7 +217,7 @@ defense; the allowlist makes a correct password useless anyway.</p>
 <td>A slug typo creates an empty room, not a shared one</td>
 </tr>
 <tr>
-<td>Phones authenticate with the <strong>session cookie</strong>; the harness with a <strong>bearer</strong> the DO minted</td>
+<td>Phones authenticate with the <strong>session JWE</strong> (the PWA&#39;s cookie; the native apps carry the same token on <code>Authorization</code>, minted by <code>POST /api/auth/token</code> — <a href="access.html#phones-native-sign-in">access.md</a>); the harness with a <strong>bearer</strong> the DO minted</td>
 <td>Two credentials, two audiences; a phone cannot impersonate the agent</td>
 <td>Bearer lives in the container env for the life of the box</td>
 </tr>

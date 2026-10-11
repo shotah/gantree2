@@ -105,8 +105,9 @@ access on the next request, not at cookie expiry.</li>
 </ul>
 <hr>
 <h2 id="shared-contract">Shared contract</h2>
-<p>Every piece of this repo — and cab, helm, and any agent still on the
-original stack — codes to this section. Change it here first.</p>
+<p>Every piece of this repo — and gantree-android, gantree-ios, and any
+agent still on the original stack — codes to this section. Change it
+here first.</p>
 <h3 id="allowlist-entry-grammar">Allowlist entry grammar</h3>
 <p>Comma or whitespace separated. Three forms. Same grammar for
 <code>GANTREE_ADMINS</code>, <code>GANTREE_ALLOW</code>, Settings DO rows, and every
@@ -240,12 +241,12 @@ is in the cookie: no role, no agents, no name. Code: <code>lib/door/session.ts</
 <td><code>503</code></td>
 </tr>
 <tr>
-<td>no / bad / expired cookie</td>
+<td>no / bad / expired cookie, and no bearer that opens</td>
 <td><code>302 /login?next=&lt;path&gt;</code></td>
 <td><code>401 {&quot;error&quot;:&quot;unauthorized&quot;}</code></td>
 </tr>
 <tr>
-<td>cookie, not on any list</td>
+<td>cookie or bearer, not on any list</td>
 <td><code>401</code></td>
 <td><code>401</code></td>
 </tr>
@@ -256,18 +257,106 @@ is in the cookie: no role, no agents, no name. Code: <code>lib/door/session.ts</
 </tr>
 </tbody></table>
 <p>Public: <code>/login</code>, <code>/api/auth/google</code>, <code>/api/auth/callback/google</code>,
+<code>/api/auth/config</code>, <code>/api/auth/nonce</code>, <code>/api/auth/token</code>,
 <code>/manifest.webmanifest</code>, <code>/sw.js</code>, <code>/icon.svg</code>, <code>/favicon.ico</code>,
 <code>/robots.txt</code>, <code>/_vinext/*</code>, <code>/_next/*</code>, <code>/assets/*</code>, <code>/.well-known/*</code>.
-Code: <code>lib/door/gate.ts</code>, <code>lib/door/http.ts</code>, <code>middleware.ts</code>.</p>
+Code: <code>lib/door/gate.ts</code>, <code>lib/door/http.ts</code>, <code>middleware.ts</code>. A cookie
+that opens wins; otherwise the same JWE on <code>Authorization: Bearer</code>.
+A bearer on <code>/api/chat/{avatar,backdrop,theme}</code> is the harness room
+token (<code>isAgentRoomRequest</code>) and is public before that read.</p>
 <h3 id="apiauthme"><code>/api/auth/me</code></h3>
 <pre><code class="language-json">{ &quot;sub&quot;: &quot;118212345678901234567&quot;, &quot;email&quot;: &quot;ada@example.com&quot;,
   &quot;role&quot;: &quot;member&quot;, &quot;agents&quot;: [&quot;kit&quot;] }</code></pre>
 <p><code>agents</code> for a member is the slugs whose room list has them (KV
 directory <code>sub:&lt;sub&gt;</code> / <code>email:&lt;email&gt;</code> → slugs, written by each Agent
 DO when it stores an <code>allow</code> frame). For an operator it is their
-assignment. For an admin it is every slug. Cab and helm read this
-today as <code>cranes</code>; the alias stays until Phase 4. The only identity a
-stranger sees is their own.</p>
+assignment. For an admin it is every slug. gantree-android and
+gantree-ios read <code>agents</code> and fall back to <code>cranes</code>; the alias is
+still written until the cutover. The only identity a stranger sees
+is their own.</p>
+<h3 id="phones-native-sign-in">Phones (native sign-in)</h3>
+<p>gantree-android (<code>com.gantree.cab</code>) and gantree-ios (<code>com.gantree.helm</code>)
+call config → nonce → Google with that nonce → token → <code>/api/auth/me</code>
+→ <code>/ws/&lt;slug&gt;?role=phone</code> with the bearer. On 403 they store nothing
+and show the sub; on socket close 4401 they drop the JWE, and on 4403
+they keep it. These three routes are public and do not read or set a
+cookie. Code: <code>lib/door/native.ts</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Status</th>
+<th>Body</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GET /api/auth/config</code></td>
+<td>200</td>
+<td><code>{ mode, google, voice, version, dev }</code></td>
+</tr>
+<tr>
+<td><code>GET /api/auth/nonce</code></td>
+<td>200</td>
+<td><code>{ nonce }</code></td>
+</tr>
+<tr>
+<td><code>GET /api/auth/nonce</code></td>
+<td>503</td>
+<td><code>{&quot;error&quot;:&quot;not_configured&quot;}</code></td>
+</tr>
+<tr>
+<td><code>POST /api/auth/token</code></td>
+<td>400</td>
+<td><code>{&quot;error&quot;:&quot;bad_request&quot;}</code></td>
+</tr>
+<tr>
+<td><code>POST /api/auth/token</code></td>
+<td>503</td>
+<td><code>{&quot;error&quot;:&quot;not_configured&quot;}</code></td>
+</tr>
+<tr>
+<td><code>POST /api/auth/token</code></td>
+<td>401</td>
+<td><code>{&quot;error&quot;:&quot;nonce&quot;}</code></td>
+</tr>
+<tr>
+<td><code>POST /api/auth/token</code></td>
+<td>401</td>
+<td><code>{&quot;error&quot;:&quot;token&quot;}</code></td>
+</tr>
+<tr>
+<td><code>POST /api/auth/token</code></td>
+<td>403</td>
+<td><code>{&quot;error&quot;:&quot;not_allowed&quot;, sub, email}</code></td>
+</tr>
+<tr>
+<td><code>POST /api/auth/token</code></td>
+<td>200</td>
+<td><code>{ token, sub, email, exp }</code></td>
+</tr>
+</tbody></table>
+<p><code>mode</code> is <code>&quot;google&quot;</code> when <code>GOOGLE_CLIENT_ID</code> and <code>SESSION_SECRET</code> are
+both set, otherwise <code>&quot;spike&quot;</code>. <code>voice</code> is true only when
+<code>GOOGLE_TTS_API_KEY</code> is set and <code>VOICE</code> is not <code>off</code>. <code>version</code> is
+<code>package.json</code> via <code>app/lib/release.ts</code>. <code>dev</code> is loopback.</p>
+<p>The nonce is server-issued and stateless: a compact JWE sealed with
+the session key, audience <code>nonce</code>, 10-minute TTL, no KV or DO row, and
+a replay inside that TTL is accepted. Nonce <code>503</code> means
+<code>SESSION_SECRET</code> is missing.</p>
+<p>The token is the <code>gantree_session</code> JWE (7-day TTL) on
+<code>Authorization: Bearer</code>, and <code>exp</code> is epoch seconds. <code>401</code> <code>nonce</code>
+means the posted nonce is not ours or is expired. <code>401</code> <code>token</code> means
+the ID token failed signature, issuer, <code>aud</code>, <code>exp</code>, or its nonce
+claim ≠ the posted nonce. <code>aud</code> must be <code>GOOGLE_CLIENT_ID</code>, the web
+client id the apps pass as <code>serverClientId</code> / <code>GIDServerClientID</code>.
+Token <code>503</code> means <code>GOOGLE_CLIENT_ID</code> or <code>SESSION_SECRET</code> is missing.</p>
+<p>A stranger gets 403 <code>not_allowed</code> with only their own <code>sub</code> and
+<code>email</code>, and no session.</p>
+<p>The gate takes the bearer wherever it takes the cookie. A cookie that
+opens wins; a cookie that does not falls through to the bearer.
+<code>isAgentRoomRequest</code> still runs first: a bearer on
+<code>/api/chat/{avatar,backdrop,theme}</code> is the harness room token, not a
+session.</p>
 <h3 id="room-admission-wsltsluggt">Room admission (<code>/ws/&lt;slug&gt;</code>)</h3>
 <table>
 <thead>
@@ -283,7 +372,7 @@ stranger sees is their own.</p>
 <td><code>unauthorized</code></td>
 </tr>
 <tr>
-<td>phone: <code>gantree_session</code> opens, person is on the app list</td>
+<td>phone: session opens (cookie, else the same JWE on <code>Authorization</code>) and the person is on the app list</td>
 <td>handshake, every frame</td>
 <td><code>4401</code></td>
 </tr>
@@ -452,6 +541,11 @@ list as the agent&#39;s own policy.</p>
 <td>Google outage blocks new logins</td>
 <td>Sessions are 7 days; the originals&#39; passphrase door is the escape hatch until Phase 4, after which an admin&#39;s live session is.</td>
 </tr>
+<tr>
+<td>Stateless nonce</td>
+<td>Replay of a (nonce, id_token) pair within 10 minutes</td>
+<td>The ID token is the proof of identity and is itself short-lived; the session minted is identical; no state to exhaust.</td>
+</tr>
 </tbody></table>
 <p>What does <strong>not</strong> move: no inbound port on the harness, no Cloudflare
 API token in settings, no MCP OAuth token doubling as a login, no role
@@ -489,7 +583,8 @@ in the cookie.</p>
 <h2 id="fit-gates">Fit gates</h2>
 <p>Fail one and the task is later, or wrong.</p>
 <ol>
-<li><strong>One sign-in.</strong> Google, PKCE, <code>jose</code>. Nothing else issues a session.</li>
+<li><strong>One sign-in.</strong> Google, verified with <code>jose</code>. The browser is PKCE;
+the phones post an ID token. Nothing else issues a session.</li>
 <li><strong>One app list, one room list per agent.</strong> Env floor ∪ Settings DO
 rows; <code>PENDANT_ALLOWED_USERS</code> on the Agent DO. No fourth copy.</li>
 <li><strong><code>sub</code> is the key, verified email is an alias.</strong></li>

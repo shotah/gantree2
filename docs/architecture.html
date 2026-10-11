@@ -167,21 +167,27 @@ gate, DO storage, socket fan-out. There is no hot loop in it to move.</p>
 request + env + store in, decision out. <code>lib/door/http.ts</code> turns the
 decision into a <code>Response</code>; <code>middleware.ts</code> is one line.</p>
 <pre class="mermaid">flowchart TD
-  R([request]) --&gt; PUB{public path?&lt;br/&gt;/login /api/auth/google&lt;br/&gt;/api/auth/callback/google&lt;br/&gt;assets · manifest · sw.js&lt;br/&gt;/_vinext /.well-known}
+  R([request]) --&gt; PUB{public path?&lt;br/&gt;/login /api/auth/google&lt;br/&gt;/api/auth/callback/google&lt;br/&gt;/api/auth/config · nonce · token&lt;br/&gt;assets · manifest · sw.js&lt;br/&gt;/_vinext /.well-known}
   PUB -- yes --&gt; PASS([pass through])
   PUB -- no --&gt; ADM{GANTREE_ADMINS&lt;br/&gt;parses to ≥1 entry?}
   ADM -- no --&gt; E503([503 no admins])
   ADM -- yes --&gt; DEV{GANTREE_DEV_USER set&lt;br/&gt;and host is loopback?}
   DEV -- yes --&gt; ID[identity = dev user]
   DEV -- no --&gt; CK{gantree_session&lt;br/&gt;cookie opens?}
-  CK -- no --&gt; API{&quot;/api/* or /ws/*?&quot;}
+  CK -- yes --&gt; ID
+  CK -- no --&gt; BR{Bearer session JWE&lt;br/&gt;opens?}
+  BR -- yes --&gt; ID
+  BR -- no --&gt; API{&quot;/api/* or /ws/*?&quot;}
   API -- yes --&gt; E401a([401 JSON])
   API -- no --&gt; LOGIN([302 /login?next=path])
-  CK -- yes --&gt; ID
   ID --&gt; RES[&quot;resolveUser(env floor ∪ Settings DO rows)&lt;br/&gt;highest role wins · operator agents unioned&quot;]
-  RES -- not on any list --&gt; E401b([401 — a stale cookie is not a key])
+  RES -- not on any list --&gt; E401b([401 — a stale session is not a key])
   RES -- admin / operator / member --&gt; HDR[&quot;x-gantree-sub · email · role · agents&quot;]
   HDR --&gt; PASS</pre>
+<p>A cookie that opens wins; otherwise <code>Authorization: Bearer</code> is the
+same session JWE. A bearer on <code>/api/chat/{avatar,backdrop,theme}</code> is
+the harness room token (<code>isAgentRoomRequest</code>) and is let through
+before either of those reads.</p>
 <p>Role, every request, never from the cookie:</p>
 <table>
 <thead>
@@ -243,9 +249,35 @@ decision into a <code>Response</code>; <code>middleware.ts</code> is one line.</
 bounces to <code>/login?error=</code> and never sets a session. The only identity
 a stranger ever sees is their own.</p>
 <h2 id="4-chat-phone-to-harness-through-the-agent-do">4. Chat — phone to harness through the Agent DO</h2>
-<p>The Agent DO is the room. A phone joins with a cookie plus that agent&#39;s
-own list; the harness joins with a bearer. Neither side knows the
-other&#39;s address.</p>
+<p>The Agent DO is the room. A phone joins with the session — the cookie,
+or the same JWE on <code>Authorization</code> — plus that agent&#39;s own list; the
+harness joins with the room bearer. Neither side knows the other&#39;s
+address.</p>
+<p>Native sign-in (<a href="access.html#phones-native-sign-in">access.md</a>):</p>
+<pre class="mermaid">sequenceDiagram
+  autonumber
+  actor P as Phone&lt;br/&gt;gantree-android / gantree-ios
+  participant W as Worker&lt;br/&gt;lib/door/native.ts
+  participant G as Google
+  participant A as Agent DO
+
+  P-&gt;&gt;W: GET /api/auth/config
+  W--&gt;&gt;P: {mode, google, voice, version, dev}
+  P-&gt;&gt;W: GET /api/auth/nonce
+  Note over W: compact JWE, audience nonce&lt;br/&gt;10 min, stateless
+  W--&gt;&gt;P: {nonce}
+  P-&gt;&gt;G: native sign-in (nonce)
+  G--&gt;&gt;P: id_token
+  P-&gt;&gt;W: POST /api/auth/token {id_token, nonce}
+  alt on a list
+    W--&gt;&gt;P: 200 {token, sub, email, exp}
+    P-&gt;&gt;W: GET /api/auth/me&lt;br/&gt;Authorization: Bearer token
+    W--&gt;&gt;P: {sub, email, role, agents, cranes}
+    P-&gt;&gt;A: wss /ws/kit?role=phone&lt;br/&gt;Authorization: Bearer token
+  else not on any list
+    W--&gt;&gt;P: 403 {error: not_allowed, sub, email}&lt;br/&gt;no session
+  end</pre>
+<p>The PWA sends the cookie:</p>
 <pre class="mermaid">sequenceDiagram
   autonumber
   actor M as Member (PWA)
