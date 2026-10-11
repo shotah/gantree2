@@ -39,19 +39,18 @@
   </header>
   <main id="content" class="wrap">
     <article class="prose"><h1 id="mcp-tool-naming">MCP tool naming</h1>
-<p>Canonical contract for every plugin. On <code>runtime: native</code> the modules
-live under <code>brain/plugins/&lt;name&gt;/</code> and <code>brain/tools/names.ts</code> prefixes
-<code>{plugin}__{tool}</code>. The Go copies under <code>harness/mcp/&lt;name&gt;/</code> are the
-frozen container image. This page is what goes on the right of the
+<p>Canonical contract for every plugin. Modules live under
+<code>brain/plugins/&lt;name&gt;/</code> and <code>brain/tools/names.ts</code> prefixes
+<code>{plugin}__{tool}</code>. This page is what goes on the right of the
 <code>__</code>. Plugins do not get a local dialect.</p>
 <p>Tools take a set and return a list. The rule is
 <code>.cursor/rules/brain-plugins-plural.mdc</code>. A tool that is one thing
 sets <code>single</code> and says why.</p>
-<p><strong>Why it matters:</strong> small models and the harness&#39;s closest-match repair
+<p><strong>Why it matters:</strong> small models and the host&#39;s closest-match repair
 pick tools by <strong>name tokens + description</strong>. Synonyms and double
 prefixes break matching, and a broken match is a serial round the Go
 loop could have batched.</p>
-<p>Related: how a plugin gets into the image (<a href="custom-mcp.html">custom-mcp.md</a>);
+<p>Related: how a plugin is added (<a href="custom-mcp.html">custom-mcp.md</a>);
 the eval that fails a fixture when a plugin renames a tool
 (<a href="eval_setup.html#real-catalogs-tools_from">eval_setup.md</a>).</p>
 <hr>
@@ -66,7 +65,7 @@ the eval that fails a fixture when a plugin renames a tool
 </thead>
 <tbody><tr>
 <td>Plugin id</td>
-<td>directory name under <code>brain/plugins/</code> (and <code>harness/mcp.lock</code> <code>name</code> on the container)</td>
+<td>directory name under <code>brain/plugins/</code></td>
 <td><code>strava</code>, <code>google</code>, <code>garmin</code></td>
 </tr>
 <tr>
@@ -88,8 +87,8 @@ the eval that fails a fixture when a plugin renames a tool
 Service first (resource / domain), then verb, then object. Same
 family as google-mcp (<code>calendar_list_events</code>, <code>gmail_search_messages</code>).</p>
 </li>
-<li><p><strong>Never put the server id in the tool name</strong>
-The harness already prefixes.</p>
+<li><p><strong>Never put the plugin id in the tool name</strong>
+The host already prefixes.</p>
 <ul>
 <li>Bad: <code>garmin_sleep_get</code> → <code>garmin__garmin_sleep_get</code></li>
 <li>Bad: <code>strava_get_activities</code> → <code>strava__strava_get_activities</code></li>
@@ -98,9 +97,8 @@ The harness already prefixes.</p>
 </li>
 <li><p><strong>No dual aliases</strong>
 One name set per release. A breaking rename is a semver bump on the
-plugin, a <code>mcp.lock</code> bump, and the eval fixtures updated <strong>in the
-same PR</strong> — <code>harness.yml</code> runs the fixture well-formedness check and
-<code>eval.yml</code> fails the catalog drift before any model call.</p>
+plugin, and the eval fixtures updated <strong>in the same PR</strong>.
+<code>npm run eval</code> fails catalog drift before any model call.</p>
 </li>
 <li><p><strong>Stable verb set</strong> (prefer these; don&#39;t invent synonyms)</p>
 <table>
@@ -171,7 +169,7 @@ same PR</strong> — <code>harness.yml</code> runs the fixture well-formedness c
 <tr>
 <td>Web search</td>
 <td><code>web_</code></td>
-<td>harness builtin <code>web_search</code> (not a plugin)</td>
+<td>builtin <code>web_search</code> (not a plugin)</td>
 </tr>
 <tr>
 <td>Flight offers / dates / airports / returns / booking / quota</td>
@@ -231,15 +229,14 @@ No <code>calendar_*</code> on fitness plugins for Google Calendar asks. No
 (or excluded from the core tier).</p>
 </li>
 <li><p><strong>Lean catalogs</strong>
-Prefer <code>--tool-tier core</code> / presets / <code>exclude</code> so the published set
-stays small. Fat schemas starve local models even when names are
-perfect. Google ships about a hundred tools; the eval&#39;s manifest
-allowlists two.</p>
+Prefer <code>GARMIN_TOOL_TIER</code> and <code>GOOGLE_TOOL_PRESET</code> so the published
+set stays small. Fat schemas starve local models even when names are
+perfect.</p>
 </li>
 <li><p><strong>Tests lock names</strong>
 Every plugin asserts each registered tool matches <code>^[a-z]+_[a-z]+</code>
-and does <strong>not</strong> start with the server id string. That test runs
-under <code>harness.yml</code> and its coverage rolls into the harness badge.</p>
+and does <strong>not</strong> start with the plugin id string. That test lives
+under <code>test/brain/plugins/</code>.</p>
 </li>
 </ol>
 <hr>
@@ -249,7 +246,7 @@ under <code>harness.yml</code> and its coverage rolls into the harness badge.</p
 <tr>
 <th>Server id</th>
 <th>Example tools</th>
-<th>Harness calls</th>
+<th>Host-facing name</th>
 </tr>
 </thead>
 <tbody><tr>
@@ -313,8 +310,8 @@ under <code>harness.yml</code> and its coverage rolls into the harness badge.</p
 <td><code>chat__avatar_update</code></td>
 </tr>
 </tbody></table>
-<p>Hyphenated server ids are fine; tool suffixes stay underscores. The
-harness aliases underscored prefixes (<code>google_health__…</code> →
+<p>Hyphenated plugin ids are fine; tool suffixes stay underscores. The
+host aliases underscored prefixes (<code>google_health__…</code> →
 <code>google-health__…</code>) on call — <strong>suffixes are never rewritten</strong>. Web
 search is the unprefixed builtin <code>web_search</code>.</p>
 <hr>

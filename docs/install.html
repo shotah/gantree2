@@ -39,11 +39,8 @@
   </header>
   <main id="content" class="wrap">
     <article class="prose"><h1 id="install-local-cloudflare-or-home">Install — local, Cloudflare, or home</h1>
-<p>Same Worker, same <code>wrangler.jsonc</code>, three places it runs. A native
-agent opens <strong>zero</strong> inbound ports: the brain is the Agent Durable
-Object. A container agent still dials the Worker. Set <strong>Runtime</strong> to
-<code>native</code> on the dashboard. The default, and any row from before the
-flag, is <code>container</code>.</p>
+<p>Same Worker, same <code>wrangler.jsonc</code>, three places it runs. The brain is
+the Agent Durable Object. It opens no inbound ports.</p>
 <table>
 <thead>
 <tr>
@@ -62,13 +59,13 @@ flag, is <code>container</code>.</p>
 <tr>
 <td>Cloudflare</td>
 <td><code>wrangler deploy</code> (CI)</td>
-<td>Workers · DO · KV · R2 · Containers</td>
+<td>Workers · DO · KV</td>
 <td><code>https://gantree2.bldhosting.com</code> (custom domain in <code>wrangler.jsonc</code>; a fork edits <code>routes</code> or drops it for <code>workers.dev</code>)</td>
 </tr>
 <tr>
 <td>Home (Mini / NUC / VM)</td>
 <td><code>npm run deploy:home</code> (<code>celld deploy</code>)</td>
-<td>celld&#39;s SQLite + an S3-compatible bucket you own</td>
+<td>celld</td>
 <td>Tailscale HTTPS or a Cloudflare Tunnel</td>
 </tr>
 </tbody></table>
@@ -138,11 +135,8 @@ until you add it on <code>/users</code>.</p>
 in <code>.dev.vars</code> fakes a session on loopback only. The sub is 10–32 digits.
 It still has to be in <code>GANTREE_ADMINS</code> or <code>GANTREE_ALLOW</code>. Details:
 <a href="access.html#dev-without-google">access.md</a>.</p>
-<p><code>npm run dev</code> is Vite on <code>127.0.0.1:3000</code>. It serves the Durable Objects,
-including a native brain. Containers need Docker, which local dev does
-not assume: <code>wrangler.jsonc</code> sets <code>dev.enable_containers</code> to false, and
-a container agent&#39;s page shows the container as unknown instead of
-failing. Screenshots in this repo were taken against <code>npm run dev</code>.
+<p><code>npm run dev</code> is Vite on <code>127.0.0.1:3000</code>. It serves the Durable Objects
+and the brain. Screenshots in this repo were taken against <code>npm run dev</code>.
 <code>npm run build &amp;&amp; npm run start</code> is the built Worker under Miniflare
 (<code>dist/server/wrangler.json</code>); use it when you want the production
 bundle, not to get Durable Objects.</p>
@@ -154,51 +148,16 @@ when the same name is set on both. Plugin keys (<code>GOOGLE_MAPS_API_KEY</code>
 <code>STRAVA_CLIENT_ID</code> / <code>STRAVA_CLIENT_SECRET</code>, <code>GARMIN_EMAIL</code> /
 <code>GARMIN_PASSWORD</code>, <code>X_BEARER_TOKEN</code>, <code>FEEDS_USER_AGENT</code>, and the rest
 each plugin&#39;s <code>ready()</code> checks) live on the agent. <code>GARMIN_TOOL_TIER</code>
-and <code>GOOGLE_TOOL_PRESET</code> narrow those catalogs. <code>OAUTH_REDIRECT_URI</code>
-is what chat <code>/auth</code> prints; for the Worker catch, register
-<code>https://&lt;origin&gt;/api/auth/catch</code> (<a href="auth.html">auth.md</a>). <code>CRON_TZ</code>,
-<code>DAILY_PLANNER_AT</code>, <code>MEMORY_CONSOLIDATE_MINUTES</code>, <code>DYNAMIC_TOOLS</code>, and
-<code>MCP_ENABLE_FORCE</code> are brain knobs, not container knobs.</p>
-<p><code>CHANNEL</code>, <code>CHAT_MAILBOX_URL</code>, <code>PENDANT_BEARER</code>, <code>SNAPSHOT</code>, and
-<code>SNAPSHOT_INTERVAL</code> are the container start env. A native agent does
-not read them.</p>
-<h3 id="chat-with-a-container-agent-locally">Chat with a container agent locally</h3>
-<p>Legacy. No image and no deploy: the Go binary on your machine dials
-the Worker from <code>npm run dev</code>, the same way the container would. A
-native agent skips this section: flip the runtime radio and open
-<code>/chat/&lt;slug&gt;</code>.</p>
-<pre><code class="language-bash"># .dev.vars, in addition to the above:
-#   GANTREE_DEV_USER=118212345678901234567:you@example.com   # the runner signs in through the dev door
-#   LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
-#   LLM_API_KEY=...
-#   LLM_MODEL=gemini-3.8-flash
-npm run dev                      # terminal 1
-# create an agent at http://127.0.0.1:3000/agents/new — the keys step is
-# optional now: blank fields use the house LLM_* from .dev.vars
-npm run agent -- kit             # terminal 2 (builds harness/bin/gantry on first run; needs Go)
-# open http://127.0.0.1:3000/chat/kit</code></pre>
-<p><code>npm run agent</code> reads <code>.dev.vars</code>, fetches the room bearer
-(<code>GET /api/agents/:slug/bearer</code>, admin on loopback dev only), adds the
-dev user to the room if missing, and supervises <code>gantry run</code> with
-<code>CHANNEL=chat SNAPSHOT=true</code> pointed at <code>ws://127.0.0.1:3000/ws/&lt;slug&gt;</code>.
-The Agent DO then sends the config frame exactly as in production:
-persona, MCP manifest, secrets, and presigned snapshot URLs. Memory,
-self-notes, cron, aims, and the snapshot restore/publish loop are the
-real ones; state lives in <code>local/run/&lt;slug&gt;/</code> (git-ignored) and the
-snapshot in the local R2 bucket, so stopping and restarting the runner
-restores the brain and, encrypted, the tool logins
-(<a href="#oauth-tokens-in-the-snapshot">below</a>). With no slug it runs every agent on the board;
-<code>--build</code> forces a rebuild; <code>--base=</code> points at another origin.</p>
-<p>House keys: <code>LLM_BASE_URL</code>, <code>LLM_API_KEY</code>, <code>LLM_MODEL</code>, and
-<code>BRAVE_SEARCH_API_KEY</code> in the Worker env are laid under every agent&#39;s
-own secrets in the config frame — an agent that sets its own wins. The
-browser only ever sees the key names (<code>GET /api/tools</code> → <code>house</code>). This
-is the same in production: set them with <code>wrangler secret put</code> and new
-agents need no keys of their own.</p>
-<p>MCP plugins are found on <code>PATH</code>; <code>harness/bin</code> is prepended, so drop
-binaries there (the catalog in <a href="mcp.html">mcp.md</a>). Missing plugins are
-skipped as <code>no_binary</code>, not fatal. The container flavour of the same loop is <code>celld</code> below: it runs
-the real harness image with Docker or Podman and the same <code>.dev.vars</code>.</p>
+and <code>GOOGLE_TOOL_PRESET</code> narrow those catalogs. Register the catch
+URIs in <a href="auth.html">auth.md</a>. <code>CRON_TZ</code>, <code>DAILY_PLANNER_AT</code>,
+<code>MEMORY_CONSOLIDATE_MINUTES</code>, <code>DYNAMIC_TOOLS</code>, <code>MCP_ENABLE_FORCE</code>, and
+<code>PUBLIC_ORIGIN</code> are brain knobs. <code>PUBLIC_ORIGIN</code> is the catch host,
+with no path.</p>
+<p>Open <code>http://127.0.0.1:3000/chat/&lt;slug&gt;</code> after you create the agent.
+Blank keys on a new agent use the house <code>LLM_*</code> from <code>.dev.vars</code>. The
+browser only ever sees the key names (<code>GET /api/tools</code> → <code>house</code>).
+In production, set them with <code>wrangler secret put</code> and new agents need
+no keys of their own.</p>
 <pre><code class="language-bash">npm run seed -- --vars   # writes .dev.vars.shot from .dev.vars (placeholder identity)
 npm run dev:shot         # the same dev server, reading .dev.vars.shot
 npm run seed             # fills Kit and Ada through the HTTP API
@@ -237,7 +196,7 @@ if a workflow grows a new <code>vars.X</code> or <code>secrets.X</code>, it is a
 <td>Secret</td>
 <td><code>CLOUDFLARE_API_TOKEN</code></td>
 <td><code>deploy-cloudflare</code></td>
-<td>Custom API token, account permissions: Workers Scripts Edit · Workers KV Storage Edit · Workers R2 Storage Edit · <strong>Containers Edit</strong> (legacy binding; this tree still deploys it) · Account Settings Read. The &quot;Edit Cloudflare Workers&quot; template lacks Containers; without it <code>wrangler deploy</code> ends in <code>A request to … /containers/me failed</code> after the image has built</td>
+<td>Custom API token, account permissions: Workers Scripts Edit · Workers KV Storage Edit · Account Settings Read</td>
 <td>yes</td>
 </tr>
 <tr>
@@ -339,8 +298,7 @@ if a workflow grows a new <code>vars.X</code> or <code>secrets.X</code>, it is a
 <td>no</td>
 </tr>
 </tbody></table>
-<p><code>GITHUB_TOKEN</code> is automatic (<code>ci</code>, <code>harness</code>, <code>harness-image</code>, <code>pages</code>,
-<code>release</code>). The <code>deploy-cloudflare</code> job fails fast if any of the four
+<p><code>GITHUB_TOKEN</code> is automatic (<code>ci</code>, <code>pages</code>, <code>release</code>). The <code>deploy-cloudflare</code> job fails fast if any of the four
 auth values (<code>GOOGLE_CLIENT_ID</code>, <code>GOOGLE_CLIENT_SECRET</code>,
 <code>SESSION_SECRET</code>, <code>GANTREE_ADMINS</code>) is empty.</p>
 <p><strong>Not in GitHub.</strong> The house keys that let a new agent run with no
@@ -358,100 +316,23 @@ tools&#39; provider consoles (<a href="auth.html">auth.md</a>).</p>
 <h2 id="cloudflare">Cloudflare</h2>
 <p>CI does it, with the GitHub settings <a href="#github-settings--the-whole-list">above</a>.
 Push to <code>main</code>. <code>ci.yml</code> runs tests, lint, typecheck, build.
-<code>deploy-cloudflare.yml</code> then creates the <code>gantree2-directory</code> KV namespace and
-the <code>gantree2-store</code> R2 bucket if they are missing (the <code>TODO</code> id in
-<code>wrangler.jsonc</code> is patched for that run only), runs
-<code>wrangler deploy --var …</code> and <code>wrangler secret bulk</code>. It fails fast if
-any of the four auth values is empty. Add the Worker origin to the
-Google client&#39;s redirect list.</p>
+<code>deploy-cloudflare.yml</code> then creates the <code>gantree2-directory</code> KV namespace
+if it is missing (the <code>TODO</code> id in <code>wrangler.jsonc</code> is patched for that
+run only), runs <code>wrangler deploy --var …</code> and <code>wrangler secret bulk</code>.
+It fails fast if any of the four auth values is empty. Add the Worker
+origin to the Google client&#39;s redirect list, and the catch URIs in
+<a href="auth.html">auth.md</a> to the tools client.</p>
 <p>By hand from a laptop (same token in your shell), once:</p>
 <pre><code class="language-bash">npx wrangler kv namespace create gantree2-directory   # paste the id over &quot;TODO&quot; in wrangler.jsonc
-npx wrangler r2 bucket create gantree2-store
 npm run deploy
 npx wrangler secret bulk &lt; secrets.json   # {&quot;GOOGLE_CLIENT_SECRET&quot;:&quot;…&quot;,&quot;SESSION_SECRET&quot;:&quot;…&quot;}</code></pre>
-<p>A native agent adds no container line item. The manifest still declares
-the Harness container, so <code>wrangler deploy</code> of this tree still talks to
-the Containers API until that binding is removed. Starting a container
-needs Workers Paid — see <a href="#containers-legacy">below</a>. The Worker,
-Durable Objects, KV, and R2 are the pieces
-<a href="monetize.html">monetize.md</a> already prices on the free tier.</p>
-<hr>
-<h2 id="containers-legacy">Containers (legacy)</h2>
-<p>One harness container per agent still on <code>runtime: container</code>. The
-Cloudflare account needs Containers
-enabled (Workers Paid) and the API token needs <strong>Containers Edit</strong>. Both
-failures look the same from <code>wrangler deploy</code> — &quot;A request to
-<code>/accounts/…/containers/me</code> failed&quot; with no body. <code>npx wrangler containers list</code> with the same token prints the real reason (for a Free account:
-&quot;Deploying containers requires the Workers Paid plan&quot;); the deploy
-workflow runs that probe before building the image.
-<code>wrangler deploy</code> builds <code>harness/Dockerfile</code>
-(context is the <code>harness/</code> directory, which is where that file&#39;s
-<code>COPY</code> expects to run) and ships the image with the Worker.
-<code>wrangler.jsonc</code> names the application <code>gantree2-harness</code>, class
-<code>Harness</code>, five instances, plus a <code>v2</code> migration for the <code>Harness</code>
-Durable Object.</p>
-<p>The process env is the dial-back. Everything else (LLM keys, <code>mcp.toml</code>,
-persona) arrives on the socket in a <code>config</code> frame.</p>
-<table>
-<thead>
-<tr>
-<th>Var</th>
-<th>Value</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>CHANNEL</code></td>
-<td><code>pendant</code></td>
-</tr>
-<tr>
-<td><code>CHAT_MAILBOX_URL</code></td>
-<td><code>wss://&lt;origin&gt;/ws/&lt;slug&gt;</code> — the harness adds <code>?role=crane</code></td>
-</tr>
-<tr>
-<td><code>PENDANT_BEARER</code></td>
-<td>room bearer from the Agent DO</td>
-</tr>
-<tr>
-<td><code>SNAPSHOT</code></td>
-<td><code>true</code></td>
-</tr>
-<tr>
-<td><code>SNAPSHOT_INTERVAL</code></td>
-<td><code>5m</code></td>
-</tr>
-</tbody></table>
-<p>Set <code>PUBLIC_ORIGIN</code> to <code>https://&lt;worker-origin&gt;</code> (no path) when the host
-the harness should dial is not the browser&#39;s. Leave it unset locally and
-start uses the request origin.</p>
-<p>The image does not <code>EXPOSE</code> a port. The supervisor still sets
-<code>defaultPort</code> 8080 so the Container class has a probe port; <code>gantry</code>
-dials out and does not listen.</p>
-<p>Local <code>wrangler dev</code> without Docker has no container binding. <code>GET /api/agents/:slug/container</code> then returns <code>state: &quot;unknown&quot;</code>.</p>
-<p>The <code>gantry</code> binary in this tree also refuses to stay up without
-<code>PENDANT_ALLOWED_USERS</code>. The start body does not carry that list — the
-room lives on the Agent DO — so a real container exits until the harness
-takes the room from the <code>config</code> frame.</p>
-<h3 id="oauth-tokens-in-the-snapshot">OAuth tokens in the snapshot</h3>
-<p>Refresh tokens for Google Workspace, Strava, Google Health, and Garmin
-live under <code>DATA_DIR</code> and join the agent snapshot whenever <code>SNAPSHOT=true</code>.
-That is the same on Cloudflare, on celld, and for <code>npm run agent</code>: the
-config frame is the only prerequisite. The harness tars an allowlist of
-those files, encrypts the tar with AES-256-GCM (a random 12-byte nonce
-prefixed to the ciphertext), and PUTs the ciphertext as <code>tokens_tar</code>.
-The Agent DO mints the 32-byte key once, stores it next to the room
-bearer, and sends it on the config frame as <code>SNAPSHOT_KEY</code>. The Worker
-stores the object and never sees plaintext. If none of the token files
-exist, that PUT is skipped; a 404 on GET is a no-op. A missing key skips
-the archive and is logged once — plaintext is never uploaded. On celld,
-<code>/data</code> is also a volume, so the snapshot is a second copy.</p>
+<p>The Worker, Durable Objects, and KV are the pieces
+<a href="monetize.html">monetize.md</a> prices.</p>
 <hr>
 <h2 id="home-celld">Home (celld)</h2>
 <p><a href="https://github.com/denoland/celld">celld</a> runs the Workers platform on
 your own box from the same <code>wrangler.jsonc</code>: Workers, Durable Objects,
-KV, R2, Cron, static assets, and — experimentally — Containers. Install
-per its README; it needs Docker or Podman for the harness container
-and an S3-compatible bucket (MinIO on the same box is fine) for
-durable state. <code>celld dev</code> needs neither.</p>
+KV, and static assets. Install per its README.</p>
 <pre><code class="language-bash"># on the Mini
 cat &gt; /etc/gantree/vars.env &lt;&lt;'EOF'
 GOOGLE_CLIENT_ID=…
@@ -476,30 +357,12 @@ deploys to Cloudflare deploys here, or tells you exactly why not.</p>
 <p>Home deploy is <strong>not</strong> a GitHub Action. GitHub cannot reach the Mini
 and should not.</p>
 <hr>
-<h2 id="harness-image-legacy">Harness image (legacy)</h2>
-<p>One image, <code>harness/Dockerfile</code>: the Go harness plus every MCP server in
-<code>harness/mcp.lock</code> baked into <code>/opt/mcp/&lt;id&gt;/&lt;id&gt;</code>. Neither deploy
-target pulls it from a registry — <code>wrangler deploy</code> builds it into the
-account&#39;s container registry and celld builds it on the box — so
-<strong>Recreate</strong> picks up whatever was last deployed. <code>harness-image.yml</code>
-builds and smokes (<code>gantry version</code>) the same file on every
-<code>harness/**</code> change and publishes the prebuilt copy for anyone who
-wants <code>docker run</code> without the build: <code>main</code> →
-<code>ghcr.io/shotah/gantree-harness:&lt;sha&gt;</code>, a release tag →
-<code>:vX.Y.Z</code> and <code>:latest</code>.</p>
-<p>Build it yourself with any Docker-API engine: <code>cd harness &amp;&amp; docker build -t gantree-harness:local .</code> (~70 s warm). Rootless podman is
-enough — <code>systemctl --user enable --now podman.socket</code> and
-<code>DOCKER_HOST=unix:///run/user/$UID/podman/podman.sock</code> make the
-<code>docker</code> CLI talk to it; no daemon, no root. Smoke:
-<code>docker run --rm gantree-harness:local version</code>.</p>
-<hr>
 <h2 id="release">Release</h2>
 <pre><code class="language-bash">npm test
 npm run release:dry          # show next tag
 npm run release              # patch bump, tag v*, push
 npm run release -- --bump=minor</code></pre>
-<p>Requires a clean tree. Tags trigger <code>release.yml</code> (GitHub release) and
-<code>harness-image.yml</code> (tagged image).</p>
+<p>Requires a clean tree. Tags trigger <code>release.yml</code> (GitHub release).</p>
 </article>
   </main>
   <footer class="foot">

@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Custom MCP servers — gantree</title>
-  <meta name="description" content="Custom MCP servers">
+  <title>Custom plugins — gantree</title>
+  <meta name="description" content="Custom plugins">
   <link rel="canonical" href="https://github.bldhosting.com/docs/custom-mcp.html">
   <meta name="theme-color" content="#0e1316">
-  <meta property="og:title" content="Custom MCP servers — gantree">
-  <meta property="og:description" content="Custom MCP servers">
+  <meta property="og:title" content="Custom plugins — gantree">
+  <meta property="og:description" content="Custom plugins">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://github.bldhosting.com/docs/custom-mcp.html">
   <meta property="og:image" content="https://github.bldhosting.com/assets/banner.png">
@@ -38,121 +38,28 @@
     </nav>
   </header>
   <main id="content" class="wrap">
-    <article class="prose"><h1 id="custom-mcp-servers">Custom MCP servers</h1>
-<p>On <code>runtime: native</code> a plugin is a module under <code>brain/plugins/&lt;name&gt;/</code>
-that exports a <code>Plugin</code>: <code>name</code>, <code>ready</code>, <code>tools</code>, and <code>call</code> on each
-tool. It is compiled into the Worker. There is no process to spawn and
-no image to rebuild. Tool names follow <a href="mcp-naming.html">mcp-naming.md</a>,
-and the host prefixes <code>{plugin}__{tool}</code>. Plural inputs and list
-outputs are <code>.cursor/rules/brain-plugins-plural.mdc</code>. <code>ready()</code> returns
-<code>no_key</code>, <code>no_oauth</code>, <code>disabled</code>, or <code>error</code> when the plugin cannot
-serve; otherwise <code>null</code>. The native registry loads every module in
-<code>brain/plugins/index.ts</code> and does not read <code>config.mcp</code>.</p>
-<p>There is still no <code>/mcp/add?url=</code> route and no download at agent start.</p>
-<p>The rest of this page is the container image: a row in <code>harness/mcp.lock</code>
-and a rebuild. That is <code>runtime: container</code>, kept until cutover.</p>
-<hr>
-<h2 id="a-build-one-clone-an-existing-mcp">A. Build one — clone an existing MCP</h2>
-<p>Do not start from a blank Go module. Fork or copy a sibling that already
-speaks stdio, ships a static binary, and prints <strong>shape</strong>. Those siblings
-live under <code>harness/mcp/&lt;name&gt;/</code> in this repo once Phase 2 lands; until
-then they are their own GitHub repos.</p>
-<table>
-<thead>
-<tr>
-<th>You need</th>
-<th>Clone this</th>
-<th>Why</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>No secrets</td>
-<td><code>mcp-go-math</code></td>
-<td>Smallest: evaluate + convert, empty <code>env_keys</code></td>
-</tr>
-<tr>
-<td>One API key</td>
-<td><code>google-maps-mcp</code></td>
-<td><code>host-manifest</code> + <code>GOOGLE_MAPS_API_KEY</code></td>
-</tr>
-<tr>
-<td>Image gen</td>
-<td><code>image-generation-mcp</code></td>
-<td><code>IMAGE_API_KEY</code> or the agent&#39;s <code>LLM_API_KEY</code>; grant prefix <code>image</code></td>
-</tr>
-<tr>
-<td>Chat face / mood</td>
-<td><code>pendant-mcp</code></td>
-<td>Face, wallpaper, mood → the room theme. Prefix <code>pendant</code> (wire name)</td>
-</tr>
-<tr>
-<td>OAuth hop</td>
-<td><code>go-strava-mcp</code></td>
-<td><code>auth_args</code> + PKCE paste (<code>url</code> / <code>exchange</code>)</td>
-</tr>
-</tbody></table>
-<p>Keep:</p>
-<ul>
-<li><code>CGO_ENABLED=0</code> static binary, stdio MCP only</li>
-<li>Root <code>package main</code> so <code>go run . host-manifest</code> works</li>
-<li>Tool names <code>{service}_{verb}_{object}</code> with <strong>no</strong> server id in the
-tool name</li>
-<li>A <code>go.mod</code> at the plugin root. <code>harness.yml</code> runs its tests and rolls
-its coverage into the <strong>harness coverage</strong> badge; an untested plugin
-lowers the number for everyone.</li>
-</ul>
-<p>Do not reuse <code>maps</code>, <code>math</code>, <code>image</code>, or <code>pendant</code>.</p>
-<h3 id="host-manifest-required"><code>host-manifest</code> (required)</h3>
-<p>The binary must exit 0 and print one JSON object on stdout:</p>
-<pre><code class="language-bash">CGO_ENABLED=0 go run . host-manifest</code></pre>
-<pre><code class="language-json">{
-  &quot;name&quot;: &quot;rentals&quot;,
-  &quot;command&quot;: &quot;rentals-search-mcp&quot;,
-  &quot;env_keys&quot;: [&quot;RENTCAST_API_KEY&quot;],
-  &quot;blurb&quot;: &quot;US listings. One RentCast key.&quot;
-}</code></pre>
-<p>Optional fields: <code>args</code>, <code>auth_args</code>, <code>auth_flow</code> (<code>pkce</code> | <code>device</code> |
-<code>mfa</code>), <code>home_only</code>. First arg <code>host-manifest</code> must not start the stdio
-server.</p>
-<p>If the tool needs a browser hop, implement the auth argv the harness
-already speaks and set <code>auth_args</code> (e.g. <code>[&quot;auth&quot;]</code>). Static keys stay
-in the agent&#39;s <code>config.env</code> — never <code>/auth rentals &lt;apikey&gt;</code> in chat.</p>
-<hr>
-<h2 id="b-bake-it-in-legacy-container">B. Bake it in (legacy container)</h2>
-<p>Add a row to <code>harness/mcp.lock</code>:</p>
-<pre><code class="language-toml">[[server]]
-name = &quot;rentals&quot;
-command = &quot;rentals-search-mcp&quot;
-path = &quot;mcp/rentals&quot;            # in-repo plugin: built from source in the image
-# or, for a server that lives elsewhere:
-# repo = &quot;github.com/you/rentals-search-mcp&quot;
-# tag  = &quot;v0.3.1&quot;</code></pre>
-<p><code>harness/Dockerfile</code> builds (or fetches) every row into <code>/opt/mcp/&lt;id&gt;/&lt;id&gt;</code>
-at <strong>image build</strong> — one binary, not a second copy on <code>PATH</code> — and runs
-<code>host-manifest</code> for each so the shape sits beside it. Inside the image a
-bare <code>command</code> resolves to that path. Distroless stays distroless. Push to
-<code>main</code>; <code>harness-image.yml</code> publishes the new tag.</p>
-<p>Then on <code>/agents/&lt;slug&gt;</code>:</p>
-<ol>
-<li><strong>pull + recreate</strong> to the new image tag.</li>
-<li>Tools grid now shows <strong>rentals</strong>. Toggle it — settings writes the
-<code>[[server]]</code> into <code>config.mcp</code> and the needed keys appear in the
-Secrets fold (from <code>env_keys</code>).</li>
-<li>Put the key in. Env change <strong>recreates</strong>. The agent&#39;s <code>status</code> frame
-on reconnect lists <code>rentals</code> as published, or says why not
-(<code>no_key</code> / <code>no_oauth</code>).</li>
-</ol>
-<p>No GitHub rate limits at agent start, no <code>/data/bin</code>, no prune step:
-the image is the install.</p>
-<hr>
-<h2 id="c-one-agent-only-no-catalog-row">C. One agent only, no catalog row</h2>
-<p>You can hand-write a <code>[[server]]</code> in one agent&#39;s <code>config.mcp</code> for a
-binary already in the image. It will not appear as a checkbox for
-other agents until it has a <code>mcp.lock</code> row — but a <code>mcp.lock</code> row is
-the only way into the image, so in practice every server is in the
-catalog. The distinction that remains is <code>home_only</code>: servers that
-need mDNS or the LAN (<code>life-cast</code>) are hidden on Cloudflare and shown
-under celld.</p>
+    <article class="prose"><h1 id="custom-plugins">Custom plugins</h1>
+<p>A plugin is a module under <code>brain/plugins/&lt;name&gt;/</code> that exports a
+<code>Plugin</code>: <code>name</code>, <code>ready</code>, <code>tools</code>, and <code>call</code> on each tool. It is
+compiled into the Worker. Add it to <code>allPlugins</code> in
+<code>brain/plugins/index.ts</code>. There is no process to spawn, no image to
+rebuild, and no <code>/mcp/add?url=</code> route.</p>
+<p>Tool names follow <a href="mcp-naming.html">mcp-naming.md</a>. The host prefixes
+<code>{plugin}__{tool}</code> (<code>brain/tools/names.ts</code>). Plural inputs and list
+outputs are <code>.cursor/rules/brain-plugins-plural.mdc</code>. A tool that is
+inherently one thing sets <code>single</code> on its <code>ToolDef</code> and says why.</p>
+<p><code>ready()</code> returns <code>null</code> when the plugin can serve, or a skip:
+<code>no_key</code>, <code>no_oauth</code>, <code>disabled</code>, <code>error</code>. That list is the <code>status</code>
+frame. <code>GARMIN_TOOL_TIER</code> and <code>GOOGLE_TOOL_PRESET</code> narrow those two
+catalogs before publish.</p>
+<p>Grants from the Tools fold reach the registry directly. A plugin left
+off the grant list is not in the catalog. <code>ready()</code> still skips a
+granted plugin that has no key or no token.</p>
+<p>Copy a sibling under <code>brain/plugins/</code> rather than starting from an
+empty module. <code>chat</code> is the room. <code>math</code> is the smallest plugin with
+no secret. <code>maps</code> is one API key. <code>google</code> is the OAuth shape
+(<a href="auth.html">auth.md</a>).</p>
+<p>Tests live under <code>test/brain/plugins/</code> and mirror the module.</p>
 </article>
   </main>
   <footer class="foot">

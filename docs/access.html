@@ -96,18 +96,15 @@ check at request time.</strong></p>
 <li>The app list (env floor ∪ Settings DO rows) says whether you may be
 here at all, and with what role.</li>
 <li>The agent&#39;s room list says whether that agent will talk to you. It
-lives in the agent&#39;s <code>config.env</code> on the Agent DO as
-<code>PENDANT_ALLOWED_USERS</code>, is handed to the harness at start, and the
-harness publishes it back on dial as an <code>allow</code> frame. Settings edits
-it; nothing else does.</li>
+lives on the Agent DO. Settings edits it. The brain publishes it as
+an <code>allow</code> frame. Nothing else does.</li>
 <li>A cookie only proves who. Removing a person from a list ends their
 access on the next request, not at cookie expiry.</li>
 </ul>
 <hr>
 <h2 id="shared-contract">Shared contract</h2>
-<p>Every piece of this repo — and gantree-android, gantree-ios, and any
-agent still on the original stack — codes to this section. Change it
-here first.</p>
+<p>Every piece of this repo — and gantree-android and gantree-ios —
+codes to this section. Change it here first.</p>
 <h3 id="allowlist-entry-grammar">Allowlist entry grammar</h3>
 <p>Comma or whitespace separated. Three forms. Same grammar for
 <code>GANTREE_ADMINS</code>, <code>GANTREE_ALLOW</code>, Settings DO rows, and every
@@ -133,8 +130,7 @@ agent&#39;s <code>PENDANT_ALLOWED_USERS</code>.</p>
 </tr>
 </tbody></table>
 <p>Normalize: trim, drop empties, dedupe by <code>sub</code> then by email. Junk is a
-dropped entry with a warning in settings and a config error at harness
-boot. Code: <code>lib/door/allowlist.ts</code>.</p>
+dropped entry with a warning in settings. Code: <code>lib/door/allowlist.ts</code>.</p>
 <h3 id="matching">Matching</h3>
 <table>
 <thead>
@@ -262,8 +258,10 @@ is in the cookie: no role, no agents, no name. Code: <code>lib/door/session.ts</
 <code>/robots.txt</code>, <code>/_vinext/*</code>, <code>/_next/*</code>, <code>/assets/*</code>, <code>/.well-known/*</code>.
 Code: <code>lib/door/gate.ts</code>, <code>lib/door/http.ts</code>, <code>middleware.ts</code>. A cookie
 that opens wins; otherwise the same JWE on <code>Authorization: Bearer</code>.
-A bearer on <code>/api/chat/{avatar,backdrop,theme}</code> is the harness room
-token (<code>isAgentRoomRequest</code>) and is public before that read.</p>
+A bearer on <code>/api/chat/{avatar,backdrop,theme}</code> is the room token
+(<code>isAgentRoomRequest</code>) and is let through before that read.
+<code>/api/auth/catch</code> is on the public list so a missing cookie is a
+plain-text 401. The handler still requires the session cookie.</p>
 <h3 id="apiauthme"><code>/api/auth/me</code></h3>
 <pre><code class="language-json">{ &quot;sub&quot;: &quot;118212345678901234567&quot;, &quot;email&quot;: &quot;ada@example.com&quot;,
   &quot;role&quot;: &quot;member&quot;, &quot;agents&quot;: [&quot;kit&quot;] }</code></pre>
@@ -272,7 +270,7 @@ directory <code>sub:&lt;sub&gt;</code> / <code>email:&lt;email&gt;</code> → sl
 DO when it stores an <code>allow</code> frame). For an operator it is their
 assignment. For an admin it is every slug. gantree-android and
 gantree-ios read <code>agents</code> and fall back to <code>cranes</code>; the alias is
-still written until the cutover. The only identity a stranger sees
+still written until the Phase 4 wire-name drop. The only identity a stranger sees
 is their own.</p>
 <h3 id="phones-native-sign-in">Phones (native sign-in)</h3>
 <p>gantree-android (<code>com.gantree.cab</code>) and gantree-ios (<code>com.gantree.helm</code>)
@@ -355,7 +353,7 @@ Token <code>503</code> means <code>GOOGLE_CLIENT_ID</code> or <code>SESSION_SECR
 <p>The gate takes the bearer wherever it takes the cookie. A cookie that
 opens wins; a cookie that does not falls through to the bearer.
 <code>isAgentRoomRequest</code> still runs first: a bearer on
-<code>/api/chat/{avatar,backdrop,theme}</code> is the harness room token, not a
+<code>/api/chat/{avatar,backdrop,theme}</code> is the room token, not a
 session.</p>
 <h3 id="room-admission-wsltsluggt">Room admission (<code>/ws/&lt;slug&gt;</code>)</h3>
 <table>
@@ -367,11 +365,6 @@ session.</p>
 </tr>
 </thead>
 <tbody><tr>
-<td>harness: bearer bound to this slug</td>
-<td>handshake</td>
-<td><code>unauthorized</code></td>
-</tr>
-<tr>
 <td>phone: session opens (cookie, else the same JWE on <code>Authorization</code>) and the person is on the app list</td>
 <td>handshake, every frame</td>
 <td><code>4401</code></td>
@@ -387,8 +380,7 @@ session.</p>
 Admins are <strong>not</strong> exempt from the room list: operating Kit and
 talking to Kit are different grants.</p>
 <h3 id="frames-brain-room">Frames (brain ↔ room)</h3>
-<p>A native brain emits these inside the DO. A container harness sends them
-on the crane socket. The DO fans the phone-facing kinds either way.</p>
+<p>The brain emits these inside the DO. The DO fans the phone-facing kinds.</p>
 <p>Brain → room, right after <code>cmds</code>, and again when the allow list changes:</p>
 <pre><code class="language-json">{ &quot;kind&quot;: &quot;allow&quot;, &quot;users&quot;: [
   { &quot;sub&quot;: &quot;118212345678901234567&quot;, &quot;email&quot;: &quot;ada@example.com&quot; },
@@ -399,8 +391,8 @@ on the crane socket. The DO fans the phone-facing kinds either way.</p>
   &quot;email&quot;: &quot;ada@example.com&quot;, &quot;text&quot;: &quot;…&quot; }</code></pre>
 <p>The DO admits the socket when <code>user_id</code> <strong>or</strong> a verified <code>email</code> is on
 the room list, then stamps <code>user_id</code> before the brain sees the frame.
-A native brain keeps one session id, <code>gantry</code>. The container wire name
-<code>pendant:&lt;slug&gt;:&lt;sub&gt;</code> is the alias until Phase 4.</p>
+The brain keeps one session id, <code>gantry</code>. <code>pendant:&lt;slug&gt;:&lt;sub&gt;</code> is the
+alias until Phase 4.</p>
 <hr>
 <h2 id="seeding-where-the-first-people-come-from">Seeding — where the first people come from</h2>
 <table>
@@ -453,10 +445,10 @@ signs in; <code>/agents/kit</code> opens; <code>/agents/ada</code> is <code>401<
 <ol>
 <li><code>/agents/kit</code> → Users fold → tick Bob, or type an email for someone
 who is not on the app list yet (settings adds them as <code>member</code> on
-the same save). Settings writes <code>PENDANT_ALLOWED_USERS</code> in Kit&#39;s
-<code>config.env</code>. Env change <strong>recreates</strong> the container.</li>
-<li>Kit boots, reads the list, dials, publishes <code>allow</code>. The DO stores
-it and indexes the email in KV.</li>
+the same save). Settings writes the room list. An env change drops
+the memoised brain and opens a new one.</li>
+<li>The brain publishes <code>allow</code>. The DO stores it and indexes the email
+in KV.</li>
 <li>Ada opens <code>/chat/kit</code> on her phone. <code>/api/auth/me</code> says
 <code>agents: [&quot;kit&quot;]</code>. First frame carries <code>user_id</code> + <code>email</code>; Kit
 matches the email and answers.</li>
@@ -466,13 +458,10 @@ to Ada&#39;s email and offers to store it. Accept; the row becomes
 </ol>
 <h3 id="yank">Yank</h3>
 <ol>
-<li>Untick on Kit&#39;s Users fold. Recreate. Kit&#39;s dial publishes the
-shorter <code>allow</code>; the DO closes Ada&#39;s socket <code>4403</code>.</li>
+<li>Untick on Kit&#39;s Users fold. The shorter <code>allow</code> closes Ada&#39;s socket
+<code>4403</code>.</li>
 <li>Remove from <code>/users</code> (or the env). Her next request anywhere is
 <code>401</code>; her cookie is worthless even though it has not expired.</li>
-<li>Emergency (Kit down, cannot recreate now): Rotate bearer on
-<code>/agents/kit</code>. The room refuses the old harness; the phone has no
-one to talk to. Recreate when you can.</li>
 <li>Stolen phone: OS lock, Google → sign out other sessions, then 2.</li>
 </ol>
 <h3 id="email-change">Email change</h3>
@@ -492,7 +481,7 @@ when <code>accounts.google.com</code> did not. gantree2 drops that on purpose.</
 </thead>
 <tbody><tr>
 <td>Google down</td>
-<td>Existing 7-day sessions keep working; new sign-ins wait. Status of a stopped agent is still readable with a live cookie.</td>
+<td>Existing 7-day sessions keep working; new sign-ins wait.</td>
 </tr>
 <tr>
 <td>Redirect URI at home</td>
@@ -521,9 +510,9 @@ list as the agent&#39;s own policy.</p>
 </tr>
 </thead>
 <tbody><tr>
-<td>Harness names its own room&#39;s humans</td>
-<td>Bearer holder can admit anyone to <strong>that</strong> room</td>
-<td>The bearer already impersonates the harness and reads the queue. Kit&#39;s bearer still cannot touch Ada&#39;s slug.</td>
+<td>The brain publishes <code>allow</code></td>
+<td>The room list is that agent&#39;s policy</td>
+<td>Kit&#39;s list cannot touch Ada&#39;s slug.</td>
 </tr>
 <tr>
 <td>Session for any verified Google account</td>
@@ -536,9 +525,9 @@ list as the agent&#39;s own policy.</p>
 <td>Google verifies <code>email</code> on its own accounts. Exact, lowercased, <code>email_verified</code> required. Workspace <code>hd</code> is a later knob.</td>
 </tr>
 <tr>
-<td>Room list remembered while the agent is down</td>
-<td>Yank waits for a recreate</td>
-<td>Removing the person from <code>/users</code> is instant for everything else. Bearer rotation is the instant room kill.</td>
+<td>Room list remembered</td>
+<td>Yank is the next <code>allow</code></td>
+<td>Removing the person from <code>/users</code> is instant for everything else.</td>
 </tr>
 <tr>
 <td>One IdP</td>
@@ -551,9 +540,8 @@ list as the agent&#39;s own policy.</p>
 <td>The ID token is the proof of identity and is itself short-lived; the session minted is identical; no state to exhaust.</td>
 </tr>
 </tbody></table>
-<p>What does <strong>not</strong> move: no inbound port on the harness, no Cloudflare
-API token in settings, no MCP OAuth token doubling as a login, no role
-in the cookie.</p>
+<p>What stays: no inbound port, no Cloudflare API token in settings, no
+MCP OAuth token doubling as a login, no role in the cookie.</p>
 <hr>
 <h2 id="not-this">Not this</h2>
 <table>
@@ -573,7 +561,7 @@ in the cookie.</p>
 </tr>
 <tr>
 <td>Cloudflare Access in front of the Worker</td>
-<td>403s WebSocket upgrades; the harness is not a browser; a second identity system.</td>
+<td>403s WebSocket upgrades; a second identity system.</td>
 </tr>
 <tr>
 <td>Pairing codes in chat</td>
@@ -590,15 +578,15 @@ in the cookie.</p>
 <li><strong>One sign-in.</strong> Google, verified with <code>jose</code>. The browser is PKCE;
 the phones post an ID token. Nothing else issues a session.</li>
 <li><strong>One app list, one room list per agent.</strong> Env floor ∪ Settings DO
-rows; <code>PENDANT_ALLOWED_USERS</code> on the Agent DO. No fourth copy.</li>
+rows; the room list on the Agent DO. No fourth copy.</li>
 <li><strong><code>sub</code> is the key, verified email is an alias.</strong></li>
 <li><strong>Role every request, never from the cookie.</strong></li>
 <li><strong>Fail closed.</strong> No admins → <code>503</code>. Empty room list → nobody talks.</li>
 <li><strong>No enumeration.</strong> Same miss for everyone; you only ever see your
 own id.</li>
 <li><strong>Isolation.</strong> Adding a person to Kit does not touch Ada.</li>
-<li><strong>Pull and dial, never punch.</strong> <code>allow</code> rides the socket the harness
-already opened.</li>
+<li><strong><code>allow</code> is a frame on the room.</strong> Settings writes the list; the
+brain publishes it.</li>
 </ol>
 </article>
   </main>
