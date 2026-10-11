@@ -92,6 +92,9 @@ export async function finishGoogle(
   }
   const token = await exchangeCode({ env, origin: url.origin, code, verifier: oauth.verifier, fetchFn: deps.fetchFn });
   if (!token.ok) {
+    // Status only, never the body: "token endpoint 401" is Google refusing
+    // the client secret; "google client not configured" is a missing var.
+    console.warn("door: google token exchange failed:", token.error);
     return bounce("exchange", oauth.next);
   }
   const verified = await verifyIdToken({ idToken: token.idToken, clientId: env.GOOGLE_CLIENT_ID, nonce: oauth.nonce, key: deps.key, now: deps.now });

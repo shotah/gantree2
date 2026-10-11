@@ -12,6 +12,11 @@
     "not_found_handling": "none",
     "binding": "ASSETS"
   },
+  // Workers Logs. Without this the harness container's stdout/stderr
+  // (its slog lines: config, LLM errors, plugin boots) is captured
+  // nowhere; with it they show in the dashboard Logs tab and `wrangler
+  // tail`. Free tier: 200k events/day, 3-day retention.
+  "observability": { "enabled": true },
   // Local `vite dev` has no Docker. Containers stay on for deploy;
   // the dashboard treats a missing runtime as unknown.
   "dev": { "enable_containers": false },
