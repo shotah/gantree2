@@ -67,12 +67,12 @@ Setup by place: <a href="install.html">install.md</a>. Open walks: <a href="todo
 <td>a Google account on the list <strong>and</strong> on that agent&#39;s room list</td>
 </tr>
 </tbody></table>
-<p>Bob can operate Kit and never message her. Ada can message Kit from
-her phone and never see settings. Both sign in at the same <code>/login</code>.
+<p>Bob can operate Ada and never message her. Sam can message Ada from
+a phone and never see settings. Both sign in at the same <code>/login</code>.
 There is no second door and no passphrase.</p>
 <p><img src="../assets/docs/login.png" alt="Sign-in page with Continue with Google"></p>
 <p><img src="../assets/docs/users.png" alt="Users page with an admin row and a member row"></p>
-<p><img src="../assets/docs/chat.png" alt="Phone screen listing Ada and Kit"></p>
+<p><img src="../assets/docs/chat.png" alt="Phone screen listing Ada and Sam"></p>
 <pre><code class="language-text">            Google sign-in  →  gantree_session {sub, email}
                                      │
                      gate, every request (never from the cookie)
@@ -83,9 +83,9 @@ There is no second door and no passphrase.</p>
          └───────────────────────────┼────────────────────────────┘
                                      │  role
          /users /settings  admin ────┤
-         /agents/&lt;slug&gt;    admin, or operator with &lt;slug&gt; in agents[]
-         /chat/&lt;slug&gt;      any role  ──┐
-                                       └─ and on Agent:&lt;slug&gt; room list
+         /agents/&lt;id&gt;      admin, or operator with &lt;id&gt; in agents[]
+         /chat/&lt;id&gt;        any role  ──┐
+                                       └─ and on that agent's room list
                                           (wire name PENDANT_ALLOWED_USERS)</code></pre>
 <hr>
 <h2 id="the-principle">The principle</h2>
@@ -172,7 +172,7 @@ frames are always <code>sub</code>.</p>
 <tr>
 <td><code>operator</code></td>
 <td>Settings row with <code>agents[]</code></td>
-<td><code>/agents/&lt;slug&gt;</code> for listed slugs; chat where the room list allows</td>
+<td><code>/agents/&lt;agent id&gt;</code> for listed ids; chat where the room list allows</td>
 </tr>
 <tr>
 <td><code>member</code></td>
@@ -264,18 +264,18 @@ A bearer on <code>/api/chat/{avatar,backdrop,theme}</code> is the room token
 plain-text 401. The handler still requires the session cookie.</p>
 <h3 id="apiauthme"><code>/api/auth/me</code></h3>
 <pre><code class="language-json">{ &quot;sub&quot;: &quot;118212345678901234567&quot;, &quot;email&quot;: &quot;ada@example.com&quot;,
-  &quot;role&quot;: &quot;member&quot;, &quot;agents&quot;: [&quot;kit&quot;] }</code></pre>
-<p><code>agents</code> for a member is the slugs whose room list has them (KV
-directory <code>sub:&lt;sub&gt;</code> / <code>email:&lt;email&gt;</code> → slugs, written by each Agent
+  &quot;role&quot;: &quot;member&quot;, &quot;agents&quot;: [&quot;ada&quot;] }</code></pre>
+<p><code>agents</code> for a member is the agent ids whose room list has them (KV
+directory <code>sub:&lt;sub&gt;</code> / <code>email:&lt;email&gt;</code> → agent ids, written by each Agent
 DO when it stores an <code>allow</code> frame). For an operator it is their
-assignment. For an admin it is every slug. gantree-android and
+assignment. For an admin it is every agent id. gantree-android and
 gantree-ios read <code>agents</code> and fall back to <code>cranes</code>; the alias is
 still written until the Phase 4 wire-name drop. The only identity a stranger sees
 is their own.</p>
 <h3 id="phones-native-sign-in">Phones (native sign-in)</h3>
 <p>gantree-android (<code>com.gantree.cab</code>) and gantree-ios (<code>com.gantree.helm</code>)
 call config → nonce → Google with that nonce → token → <code>/api/auth/me</code>
-→ <code>/ws/&lt;slug&gt;?role=phone</code> with the bearer. On 403 they store nothing
+→ <code>/ws/&lt;agent id&gt;?role=phone</code> with the bearer. On 403 they store nothing
 and show the sub; on socket close 4401 they drop the JWE, and on 4403
 they keep it. These three routes are public and do not read or set a
 cookie. Code: <code>lib/door/native.ts</code>.</p>
@@ -355,7 +355,7 @@ opens wins; a cookie that does not falls through to the bearer.
 <code>isAgentRoomRequest</code> still runs first: a bearer on
 <code>/api/chat/{avatar,backdrop,theme}</code> is the room token, not a
 session.</p>
-<h3 id="room-admission-wsltsluggt">Room admission (<code>/ws/&lt;slug&gt;</code>)</h3>
+<h3 id="room-admission-wsltagent-idgt">Room admission (<code>/ws/&lt;agent id&gt;</code>)</h3>
 <table>
 <thead>
 <tr>
@@ -375,10 +375,10 @@ session.</p>
 <td><code>4403</code></td>
 </tr>
 </tbody></table>
-<p>Room list = last <code>allow</code> frame stored on that slug&#39;s Agent DO. New
+<p>Room list = last <code>allow</code> frame stored on that agent&#39;s Durable Object. New
 <code>allow</code> → re-check every phone socket; close the ones no longer on it.
-Admins are <strong>not</strong> exempt from the room list: operating Kit and
-talking to Kit are different grants.</p>
+Admins are <strong>not</strong> exempt from the room list: operating Ada and
+talking to Ada are different grants.</p>
 <h3 id="frames-brain-room">Frames (brain ↔ room)</h3>
 <p>The brain emits these inside the DO. The DO fans the phone-facing kinds.</p>
 <p>Brain → room, right after <code>cmds</code>, and again when the allow list changes:</p>
@@ -391,8 +391,8 @@ talking to Kit are different grants.</p>
   &quot;email&quot;: &quot;ada@example.com&quot;, &quot;text&quot;: &quot;…&quot; }</code></pre>
 <p>The DO admits the socket when <code>user_id</code> <strong>or</strong> a verified <code>email</code> is on
 the room list, then stamps <code>user_id</code> before the brain sees the frame.
-The brain keeps one session id, <code>gantry</code>. <code>pendant:&lt;slug&gt;:&lt;sub&gt;</code> is the
-alias until Phase 4.</p>
+The brain keeps one session id, <code>agent</code>, a row label in that agent&#39;s
+database. <code>pendant:&lt;agent id&gt;:&lt;sub&gt;</code> is the alias until Phase 4.</p>
 <hr>
 <h2 id="seeding-where-the-first-people-come-from">Seeding — where the first people come from</h2>
 <table>
@@ -438,27 +438,27 @@ and your email in <code>GANTREE_ADMINS</code> where that place reads them.</li>
 <li>Deploy. Open <code>/</code>. Sign in. You are admin.</li>
 </ol>
 <h3 id="add-an-operator">Add an operator</h3>
-<p><code>/users</code> → add <code>bob@example.com</code>, role <code>operator</code>, agents <code>kit</code>. Bob
-signs in; <code>/agents/kit</code> opens; <code>/agents/ada</code> is <code>401</code>; <code>/users</code> is
+<p><code>/users</code> → add <code>bob@example.com</code>, role <code>operator</code>, agents <code>ada</code>. Bob
+signs in; <code>/agents/ada</code> opens; <code>/agents/sam</code> is <code>401</code>; <code>/users</code> is
 <code>401</code>. No redeploy.</p>
-<h3 id="add-a-human-to-kit">Add a human to Kit</h3>
+<h3 id="add-a-human-to-ada">Add a human to Ada</h3>
 <ol>
-<li><code>/agents/kit</code> → Users fold → tick Bob, or type an email for someone
+<li><code>/agents/ada</code> → Users fold → tick Bob, or type an email for someone
 who is not on the app list yet (settings adds them as <code>member</code> on
 the same save). Settings writes the room list. An env change drops
 the memoised brain and opens a new one.</li>
 <li>The brain publishes <code>allow</code>. The DO stores it and indexes the email
 in KV.</li>
-<li>Ada opens <code>/chat/kit</code> on her phone. <code>/api/auth/me</code> says
-<code>agents: [&quot;kit&quot;]</code>. First frame carries <code>user_id</code> + <code>email</code>; Kit
+<li>Sam opens <code>/chat/ada</code> on a phone. <code>/api/auth/me</code> says
+<code>agents: [&quot;ada&quot;]</code>. First frame carries <code>user_id</code> + <code>email</code>; Ada
 matches the email and answers.</li>
-<li>Kit&#39;s <code>perf</code> frame carries <code>user_id</code>. Spend shows a raw <code>1182…</code> next
-to Ada&#39;s email and offers to store it. Accept; the row becomes
+<li>Ada&#39;s <code>perf</code> frame carries <code>user_id</code>. Spend shows a raw <code>1182…</code> next
+to Sam&#39;s email and offers to store it. Accept; the row becomes
 <code>sub:email</code>.</li>
 </ol>
 <h3 id="yank">Yank</h3>
 <ol>
-<li>Untick on Kit&#39;s Users fold. The shorter <code>allow</code> closes Ada&#39;s socket
+<li>Untick on Ada&#39;s Users fold. The shorter <code>allow</code> closes Sam&#39;s socket
 <code>4403</code>.</li>
 <li>Remove from <code>/users</code> (or the env). Her next request anywhere is
 <code>401</code>; her cookie is worthless even though it has not expired.</li>
@@ -512,7 +512,7 @@ list as the agent&#39;s own policy.</p>
 <tbody><tr>
 <td>The brain publishes <code>allow</code></td>
 <td>The room list is that agent&#39;s policy</td>
-<td>Kit&#39;s list cannot touch Ada&#39;s slug.</td>
+<td>Ada&#39;s list cannot touch Sam&#39;s agent id.</td>
 </tr>
 <tr>
 <td>Session for any verified Google account</td>
@@ -569,7 +569,7 @@ MCP OAuth token doubling as a login, no role in the cookie.</p>
 </tr>
 <tr>
 <td>Admins bypass the room list</td>
-<td>Operating and talking are different grants. Kit&#39;s humans are Kit&#39;s list.</td>
+<td>Operating and talking are different grants. Ada&#39;s humans are Ada&#39;s list.</td>
 </tr>
 </tbody></table>
 <h2 id="fit-gates">Fit gates</h2>
@@ -584,7 +584,7 @@ rows; the room list on the Agent DO. No fourth copy.</li>
 <li><strong>Fail closed.</strong> No admins → <code>503</code>. Empty room list → nobody talks.</li>
 <li><strong>No enumeration.</strong> Same miss for everyone; you only ever see your
 own id.</li>
-<li><strong>Isolation.</strong> Adding a person to Kit does not touch Ada.</li>
+<li><strong>Isolation.</strong> Adding a person to Ada does not touch Sam.</li>
 <li><strong><code>allow</code> is a frame on the room.</strong> Settings writes the list; the
 brain publishes it.</li>
 </ol>

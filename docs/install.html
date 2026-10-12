@@ -255,7 +255,7 @@ with no path.</p>
 <td>no — <code>core</code> (default), <code>extended</code>, or <code>complete</code></td>
 </tr>
 </tbody></table>
-<p>Open <code>http://127.0.0.1:3000/chat/&lt;slug&gt;</code> after you create the agent.
+<p>Open <code>http://127.0.0.1:3000/chat/&lt;agent id&gt;</code> after you create the agent.
 Blank keys on a new agent use the house <code>LLM_*</code> from <code>.dev.vars</code>. The
 browser only ever sees the key names (<code>GET /api/tools</code> → <code>house</code>).
 In production, set them with <code>wrangler secret put</code> and new agents need
