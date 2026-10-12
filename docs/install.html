@@ -145,7 +145,10 @@ bundle, not to get Durable Objects.</p>
 run <code>npm run agent</code>. It starts Vite (Worker, Durable Objects, native brain)
 unless something healthy is already on port 3000, ensures a local agent
 (default slug <code>kit</code>), and restarts the Agent Durable Object so
-<code>nativeBrain</code> opens with those house keys. Chat at
+<code>nativeBrain</code> opens with those house keys and, when agent config leaves them
+blank, fills <code>CHAT_MAILBOX_URL</code> (<code>ws(s)://&lt;origin&gt;/ws/&lt;slug&gt;</code>) and
+<code>CHAT_BEARER</code> (the room bearer) so <code>chat__avatar_update</code> can set the face;
+<code>PUBLIC_ORIGIN</code> is that origin when it is set. Chat at
 <code>http://127.0.0.1:3000/chat/kit</code> (or <code>--slug ada</code>). Set
 <code>GANTREE_DEV_USER</code> and list that identity in <code>GANTREE_ADMINS</code> so loopback
 API calls can create the agent without a browser session. The script
