@@ -115,7 +115,7 @@ describe("openRoomBrain", () => {
     const deps = depsOf();
     expect(deps.slug).toBe("kit");
     expect(deps.clock.zone).toBe("America/Denver");
-    expect(deps.fetch).toBe(globalThis.fetch);
+    expect(deps.fetch.name).toBe("bound fetch");
     expect(deps.persona).toEqual([{ name: "PERSONA.md", text: "- **Timezone:** America/Denver\n" }]);
     expect(deps.env.LLM_MODEL).toBe("mine");
     expect(deps.env.LLM_API_KEY).toBe("mine-key");

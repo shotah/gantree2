@@ -6,6 +6,7 @@
 import { createBrain } from "@/brain/agent";
 import type { Brain } from "@/brain/core/brain";
 import { systemClock } from "@/brain/core/clock";
+import { bindWorkerFetch } from "@/brain/core/fetch";
 import { consoleSink, makeLogger, type LogSink } from "@/brain/core/log";
 import type { ProviderConfig } from "@/brain/core/provider";
 import { doSql } from "@/brain/core/sql";
@@ -66,14 +67,15 @@ export async function openRoomBrain(ctx: DurableObjectState, env: HouseEnv, opts
   if (opts.auth) {
     bindRoomAuth(sql, opts.auth);
   }
+  const fetch = bindWorkerFetch();
   const brain = createBrain({
     sql,
     clock,
     log: makeLogger(roomSink(opts.foldLog), () => clock.now(), slug ? { slug } : {}),
-    provider: openaiProvider(providerConfig(map), globalThis.fetch),
+    provider: openaiProvider(providerConfig(map), fetch),
     plugins: grantedPlugins(allPlugins, config.mcp),
     tokens: new AesTokenStore(sql, tokenKey, clock),
-    fetch: globalThis.fetch,
+    fetch,
     env: map,
     persona: parts,
     slug,

@@ -7,6 +7,7 @@
  * `user_id` as empty, so a push with no `user_id` is for every mouth the
  * room has seen on an inbound.
  */
+import { bindWorkerFetch } from "@/brain/core/fetch";
 import { assemblePersona, filePersona, resolveTimezone, syncKernel, type PersonaPart } from "@/brain/persona";
 import { openAims, type AimStore } from "@/brain/aims/store";
 import type { AimMemory } from "@/brain/aims/memory";
@@ -144,7 +145,7 @@ export function createBrain(deps: BrainDeps): Brain {
     sql: deps.sql,
     clock: deps.clock,
     log,
-    fetch: deps.fetch,
+    fetch: bindWorkerFetch(deps.fetch),
     tokens: deps.tokens,
   };
   const web = new WebSearch({ env, fetch: deps.fetch });

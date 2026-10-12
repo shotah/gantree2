@@ -1,6 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 import type { Brain } from "@/brain/core/brain";
 import type { Emit, Inbound } from "@/brain/core/wire";
+import { bindWorkerFetch } from "@/brain/core/fetch";
 import { dropRoomBrain, openRoomBrain } from "@/brain/room";
 import { filePersona, openPersonaStore } from "@/brain/room/persona";
 import { openSelfStore } from "@/brain/room/self";
@@ -990,7 +991,7 @@ export class Agent extends DurableObject<AgentEnv> {
           vapid,
           subscription,
           payload,
-          fetch: globalThis.fetch,
+          fetch: bindWorkerFetch(),
         }),
       });
       for (const row of gone) {
@@ -1017,7 +1018,7 @@ export class Agent extends DurableObject<AgentEnv> {
           vapid,
           subscription,
           payload,
-          fetch: globalThis.fetch,
+          fetch: bindWorkerFetch(),
         }),
       });
       for (const row of gone) {
