@@ -7,7 +7,7 @@ this page, do not invent a hook for it.
 Pictures: [architecture.md](architecture.md). Who may edit:
 [access.md](access.md).
 
-The brain emits `status`, `perf`, and `log`. The DO folds them
+The harness emits `status`, `perf`, and `log`. The DO folds them
 (`lib/agents/status.ts`). `status` is `published` and `skipped`
 (`name`, `reason`).
 
@@ -15,7 +15,7 @@ The brain emits `status`, `perf`, and `log`. The DO folds them
 
 ## What settings may write
 
-The Agent DO is the disk. The brain reads that DO.
+The Agent DO is the disk. The harness reads that DO.
 [architecture.md](architecture.md).
 
 | What | Where | Who |
@@ -23,7 +23,7 @@ The Agent DO is the disk. The brain reads that DO.
 | `PERSONA.md` | `persona_file` | admin / operator, persona fold. First open copies `config.persona` once if the table is empty and the text is non-blank |
 | `SELF.md` | `selfnote` | the agent, and the operator on the self fold |
 | Grants | the registry | admin / operator, Tools fold. A plugin left off the list is not in the catalog |
-| `config.env` | DO config | admin / operator. A change drops the memoised brain and opens a new one |
+| `config.env` | DO config | admin / operator. A change drops the memoised harness and opens a new one |
 | OAuth tokens | `oauth_token`, AES-256-GCM | the plugin, via `authFinish`. Key is `snapshot.key` |
 
 Routes: `GET` / `PUT` / `DELETE /api/agents/:slug/persona` and
@@ -147,7 +147,7 @@ tail, not a second contract.
 
 ## Not this contract
 
-- The brain has no listen port, `/metrics`, or scrape endpoint. The
+- The harness has no listen port, `/metrics`, or scrape endpoint. The
   Worker HTTP API is a different surface ([openapi.yaml](openapi.yaml)).
-- No slug inside the brain
+- No slug inside the harness
 - No settings write path on model rounds or tool fan-out

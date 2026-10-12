@@ -57,7 +57,7 @@ HTML login redirect. The handler still requires the `gantree_session`
 cookie. The caller is an admin, or a member of that agent's room.
 `state` is the same JWE. The Worker posts `{ plugin, code,
 redirectUri, userId }` to that agent's DO (`X-Chat-Op: auth`). The
-brain runs `authFinish` and the DO enqueues
+harness runs `authFinish` and the DO enqueues
 `{ kind: reply, text: "<plugin> connected" }`.
 
 Success body: `Connected <plugin>. Go back to chat.`

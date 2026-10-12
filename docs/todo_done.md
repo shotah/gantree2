@@ -75,11 +75,12 @@ Nothing here is a plan; the plan is [proposal.md](proposal.md).
       Monochrome variant (`currentColor`) for favicons and the Paper
       theme. Wordmark `gantree` lowercase beside it on the banner only.
 - [x] **D — Greenfield: no legacy container (2026-10-11).** The
-      native brain is the only runtime. There is no cutover, no
-      freeze, and no archive. `harness/`, the Harness DO, the
-      Containers bindings, the harness workflows, the R2 snapshot
-      set, the crane socket, and the `runtime` flag are gone.
-      Nothing was deployed, so there is no `gantry.db` to import.
+      native harness is the only runtime. There is no cutover, no
+      freeze, and no archive. The container tree, the Harness
+      Durable Object class, the Containers bindings, the harness
+      workflows, the R2 snapshot set, the crane socket, and the
+      `runtime` flag are gone. Nothing was deployed, so there is
+      no `gantry.db` to import.
 
 ## 1. Run it locally
 
@@ -547,33 +548,33 @@ shipping-yard art is gone, not restyled.
       flow, run/deploy table, the eleven tools, reliability, docs,
       layout, lineage.
 
-## 10. Workers-native brain
+## 10. Workers-native harness
 
-Decision and the package map: [brain.md](brain.md). Landed
+Decision and the package map: [harness.md](harness.md). Landed
 2026-10-11. What is still open is in [todo.md](todo.md).
 
-- [x] **`brain/core` (2026-10-11).** The contract: `sql`, `clock`,
+- [x] **`harness/core` (2026-10-11).** The contract: `sql`, `clock`,
       `log`, `provider`, `tools`, `wire`, `brain`. `index.ts`
       re-exports them. Tests pass a `node:sqlite` database into
       `nodeSql`. The package does not import `node:sqlite`.
-- [x] **`brain/provider` (2026-10-11).** OpenAI-compatible chat
+- [x] **`harness/provider` (2026-10-11).** OpenAI-compatible chat
       completions on the `openai` package at major 7 (`^7.32.0`),
       against `LLM_BASE_URL`, `LLM_API_KEY`, and `LLM_MODEL`.
 - [x] **Session, here, self-note, persona, slash (2026-10-11).**
-      `brain/session`, `brain/here`, `brain/selfnote`,
-      `brain/persona`, `brain/slash`. Slash is the command catalog
+      `harness/session`, `harness/here`, `harness/selfnote`,
+      `harness/persona`, `harness/slash`. Slash is the command catalog
       the `cmds` frame publishes.
-- [x] **`brain/memory` (2026-10-11).** SQLite plus FTS5
+- [x] **`harness/memory` (2026-10-11).** SQLite plus FTS5
       (`memory_fts`, external content). Recall orders by FTS5 rank
       and recency.
-- [x] **`brain/aims` (2026-10-11).** Board, store, tools, rubric.
-- [x] **`brain/cron` and `brain/examples` (2026-10-11).** Schedule
+- [x] **`harness/aims` (2026-10-11).** Board, store, tools, rubric.
+- [x] **`harness/cron` and `harness/examples` (2026-10-11).** Schedule
       tables, due calculation, daily planner, examples seeds.
       `nextDue` / `fireDue` are the alarm shape. The loop that runs
-      the job is `brain/agent`.
-- [x] **`brain/watch` and `brain/websearch` (2026-10-11).** Watch
+      the job is `harness/agent`.
+- [x] **`harness/watch` and `harness/websearch` (2026-10-11).** Watch
       rows and the `web_search` builtin.
-- [x] **`brain/tools` (2026-10-11).** Registry, manifest comparison,
+- [x] **`harness/tools` (2026-10-11).** Registry, manifest comparison,
       `EnableStore` (`mcp_enable`; brief idle 6h, short 27h;
       unprefixed builtins do not idle-drop), and `AesTokenStore`
       (AES-256-GCM in SQLite; the key is the Agent DO's
@@ -586,14 +587,14 @@ Decision and the package map: [brain.md](brain.md). Landed
       publishes that same extended set. No stdio and no MCP
       transport.
 - [x] **Plugins are plural (2026-10-11).** Rule
-      `.cursor/rules/brain-plugins-plural.mdc`. Checker
-      `test/brain/plugins/plural.test.ts` walks every folder under
-      `brain/plugins`, plus `web_search`.
-- [x] **`brain/agent` (2026-10-11).** `createBrain`. One turn
+      `.cursor/rules/harness-plugins-plural.mdc`. Checker
+      `test/harness/plugins/plural.test.ts` walks every folder under
+      `harness/plugins`, plus `web_search`.
+- [x] **`harness/agent` (2026-10-11).** `createBrain`. One turn
       refreshes tools, calls the provider, and runs a tool batch
       with `Promise.all`. `/help`, reactions, `/cancel`, and bound
       collapse of old tool results (`collapseOldToolResults`).
-- [x] **`brain/room` (2026-10-11).** The Agent DO adapter. Config
+- [x] **`harness/room` (2026-10-11).** The Agent DO adapter. Config
       `runtime: "container" | "native"` and dashboard Runtime radios
       landed with it. Both were removed later the same day. A native
       agent has no second process. Phones still see the same frames.
@@ -608,14 +609,14 @@ Decision and the package map: [brain.md](brain.md). Landed
       the SQL row. The config-string branch was removed later the
       same day.
 - [x] **Vitest (2026-10-11).** Include is `test/**/*.test.ts` and
-      `test/**/*.test.tsx`, so `test/brain` is in `npm test` and
+      `test/**/*.test.tsx`, so `test/harness` is in `npm test` and
       `npm run test:coverage`. The 11:00 run was green: 274 files,
       1949 tests. This note did not re-run the suite. A count of
       `test/**/*.test.ts(x)` while the note was written was already
       past 274.
-- [x] **Live eval on Vitest (2026-10-11).** `brain/eval` holds the
+- [x] **Live eval on Vitest (2026-10-11).** `harness/eval` holds the
       30 fixtures and `fixtures/mcp.toml`. The runner's unit tests
-      are 27 (`test/brain/eval`, the live file aside).
+      are 27 (`test/harness/eval`, the live file aside).
       `vitest.eval.config.ts`, `scripts/eval.mjs`, and `npm run
       eval` load `.dev.vars` and run that config.
       `.github/workflows/eval.yml` is Node: the same `runs` and
@@ -631,19 +632,20 @@ Decision and the package map: [brain.md](brain.md). Landed
       17.8k prompt / 142 completion tokens per turn, 4 over the
       round budget.
 - [x] **Container path deleted, phases 1 and 2 (2026-10-11).**
-      No `harness/` directory, no `harness.yml` or
-      `harness-image.yml`, no `scripts/coverage-harness.sh`. No
-      Harness class (`wrangler.jsonc` migration v3 is
-      `deleted_classes: ["Harness"]`; `worker/` does not export
-      one). Migrations stay append-only: v1 new sqlite Settings and
-      Agent, v2 new sqlite Harness, v3 `deleted_classes` Harness.
+      No `harness.yml` or `harness-image.yml`, no
+      `scripts/coverage-harness.sh`. The runtime directory is
+      `harness/`. The Durable Object class named Harness was added
+      in migration v2 and deleted in v3 (`deleted_classes:
+      ["Harness"]`); `worker/` does not export one, and it must not
+      come back. Migrations stay append-only: v1 new sqlite Settings
+      and Agent, v2 new sqlite Harness, v3 `deleted_classes` Harness.
       Do not rewrite them. No `container`, `containerHttp`,
       `snapshot`, or `lock` module under `lib/agents`, and no
       container or snapshot route. No `runtime` field on the agent
       types. No R2 `STORE` binding and no `containers` block.
       Bindings are Settings, Agent (SQLite), and KV `DIRECTORY`.
 - [x] **Catalog and grants (2026-10-11).** `toolCatalog()` in
-      `lib/agents/catalog.ts` reads `brain/plugins`.
+      `lib/agents/catalog.ts` reads `harness/plugins`.
       `grantedPlugins` keeps an ungranted plugin on the list so
       status can say `skipped: disabled`.
 - [x] **Integrated OAuth (2026-10-11).** `/auth <plugin>` seals
@@ -666,20 +668,20 @@ Decision and the package map: [brain.md](brain.md). Landed
       `.agent/`). The owner live-verified it. This note did not
       re-run that session.
 - [x] **Eval follow-up, 30 of 30 (2026-10-11).** The react frame
-      carries the reply id (`brain/agent/frames.ts`).
+      carries the reply id (`harness/agent/frames.ts`).
       `planner_weight_on_pace` pins `now` at
       `2026-10-07T08:00:00-07:00` and expects `191.4` on the
       weigh-in. The reported follow-up run was 30 of 30. This note
       did not re-run it.
-- [x] **Docs, native only (2026-10-11).** README has no harness
-      path. The 19 living docs are access, architecture, auth,
+- [x] **Docs, native only (2026-10-11).** README names the runtime
+      directory `harness/`. The 19 living docs are access, architecture, auth,
       channels, ci, contract, cron, custom-mcp, eval_setup,
       install, mcp, mcp-naming, monetize, persona,
       persona_doc_goals, planner-siblings, reactions, security,
       and troubleshooting. Architecture and cron describe the DO
-      brain. `eval_setup.md` still names
+      harness. `eval_setup.md` still names
       `harness/examples/persona/PERSONA.example.md` in one
-      sentence. The morning records (`proposal.md`, `brain.md`,
+      sentence. The morning records (`proposal.md`, `harness.md`,
       `runtime.md`, `evaluation_fable.md`) still tell the
       container story.
 - [x] **GitHub hygiene (2026-10-11).** `CODEOWNERS`, pull-request
@@ -689,7 +691,7 @@ Decision and the package map: [brain.md](brain.md). Landed
       `dependency-review`, `labeler`, `stale`, and
       `.github/release.yml` changelog categories. Root
       `CONTRIBUTING.md` and `SECURITY.md` describe the Worker and
-      the brain.
+      the harness.
 - [x] **CI (2026-10-11).** Scorecard is pinned to
       `ossf/scorecard-action` v2.4.4. `release.yml` no longer calls
       `eval.yml` (a TODO names the day the gate comes back). A `v*`
@@ -709,7 +711,7 @@ Decision and the package map: [brain.md](brain.md). Landed
       `GET https://gantree2.bldhosting.com/api/health` returned
       `{"ok":true,"version":"0.2.18"}`.
 - [x] **GitHub labels (2026-10-11).** The seven labels exist:
-      `brain`, `plugins`, `edge`, `app`, `docs`, `ci`, `tests`.
+      `harness`, `plugins`, `edge`, `app`, `docs`, `ci`, `tests`.
       The TypeScript 7 pull request is closed. A `main` ruleset
       was created and then deleted on purpose: one developer.
       [ci.md](ci.md) says add one when a second committer arrives.
@@ -758,3 +760,11 @@ The bug list that had piled up on the open page in
 - [x] **medium** Assigned agents only in chat (2026-10-12). A
       person cannot talk to an agent id they are not assigned to. A
       typed agent id in chat is a choice of assigned agents only.
+- [x] **hard** Rename `brain/` to `harness/` (2026-10-12). The
+      runtime directory and its wording are `harness/`. The Durable
+      Object class named Harness stays deleted (migration v2 added
+      it, v3 deleted it). Module files named `brain.ts` stay.
+- [x] **easy** Every Agent Durable Object is `idFromName(slug)`
+      (2026-10-12). `agentStub` is the only Agent lookup. The name
+      is the inventory slug, never the display name. No
+      `newUniqueId`.

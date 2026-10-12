@@ -6,7 +6,7 @@ clock is [cron.md](cron.md). What settings may write is
 [contract.md](contract.md).
 
 Neither surface gets a new socket, frame kind, or `status` field.
-`announce` emits `cmds` when the brain opens. Work is menus and any
+`announce` emits `cmds` when the harness opens. Work is menus and any
 string that still names spark.
 
 ---
@@ -15,8 +15,8 @@ string that still names spark.
 
 The room receives the menu as a `cmds` frame. The catalog includes
 `planner` (`args: true`, hint `daily planning session (on|off|HH:MM)`)
-and does not have `spark` or `engagement`. The brain publishes it
-from `brain/slash`.
+and does not have `spark` or `engagement`. The harness publishes it
+from `harness/slash`.
 
 Chat pushes are still `{ kind: "push", text }`. A planning session that
 speaks starts with `[cron] Daily planner`. A `[silent]` session sends
@@ -66,7 +66,7 @@ Settings does not open that database.
 | `cron_job.kind` | `examples` / `examples_ping` are unchanged. |
 | `session_pref.planner_at` | `''` inherit `DAILY_PLANNER_AT`, `0` off, or `HH:MM` override. |
 
-The brain does not read `spark_qty`. A board that filters on `spark` or
+The harness does not read `spark_qty`. A board that filters on `spark` or
 `spark_ping` will not show the daily session. Label `daily_planner` as
 the planning session.
 

@@ -12,18 +12,22 @@ describe("location hint", () => {
   });
 
   it("passes the hint only when it is a known region", () => {
+    const idFromName = vi.fn((name: string) => ({ name }) as unknown as DurableObjectId);
     const get = vi.fn(() => ({ fetch: vi.fn() }));
     const env = {
       AGENT: {
-        idFromName: (name: string) => ({ name }) as unknown as DurableObjectId,
+        idFromName,
         get,
       } as unknown as DurableObjectNamespace,
       LOCATION_HINT: "wnam",
     };
     agentStub(env, "kit");
+    expect(idFromName).toHaveBeenCalledWith("kit");
     expect(get).toHaveBeenCalledWith({ name: "kit" }, { locationHint: "wnam" });
+    idFromName.mockClear();
     get.mockClear();
     agentStub({ ...env, LOCATION_HINT: "nope" }, "kit");
+    expect(idFromName).toHaveBeenCalledWith("kit");
     expect(get).toHaveBeenCalledWith({ name: "kit" });
     expect(agentStub({ AGENT: undefined }, "kit")).toBeNull();
   });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allPlugins } from "@/brain/plugins";
+import { allPlugins } from "@/harness/plugins";
 import { toolCatalog } from "@/lib/agents/catalog";
 
 describe("toolCatalog", () => {

@@ -3,7 +3,7 @@ import { defineConfig } from "vitest/config";
 
 /**
  * Live behavioral eval. `npm test` uses vitest.config.ts and skips
- * test/brain/eval/live.test.ts. `npm run eval` uses this file, which
+ * test/harness/eval/live.test.ts. `npm run eval` uses this file, which
  * runs the runner unit tests and then the live fixtures.
  */
 export default defineConfig({
@@ -13,7 +13,7 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["test/brain/eval/**/*.test.ts"],
+    include: ["test/harness/eval/**/*.test.ts"],
     fileParallelism: false,
     sequence: { concurrent: false },
     disableConsoleIntercept: true,

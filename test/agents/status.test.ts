@@ -66,7 +66,7 @@ describe("harness frames", () => {
     expect(applyHarnessFrame(state, { kind: "reply" }, now, "kit").status).toBe(state.status);
   });
 
-  it("keeps the last error-level log line on status until the next brain open", () => {
+  it("keeps the last error-level log line on status until the next harness open", () => {
     const state = { status: noteBrainOpen(emptyStatus(), now), log: emptyLog() };
     const info = applyHarnessFrame(state, { kind: "log", level: "INFO", message: "gantry starting" }, now, "kit");
     expect(info.status.lastError).toBeNull();
@@ -102,7 +102,7 @@ describe("harness frames", () => {
     expect(pageLog(log, 9_999).next).toBe(9_999);
   });
 
-  it("stamps a brain open and parses a stored row", () => {
+  it("stamps a harness open and parses a stored row", () => {
     const opened = noteBrainOpen({ ...emptyStatus(), perf: { turns: 3, prompt: 1, completion: 1, errors: 0 }, lastError: { message: "x", at: "t" } }, now);
     expect(opened).toMatchObject({ since: now, lastError: null, perf: { turns: 3 } });
     expect(noteBrainOpen(opened, now + 5).perf.turns).toBe(3);
@@ -143,7 +143,7 @@ describe("harness frames", () => {
     expect(parseLog({ seq: -1, lines: [] })).toEqual(emptyLog());
   });
 
-  it("names a booted brain running and an empty row not started", () => {
+  it("names a booted harness running and an empty row not started", () => {
     expect(statusLabel("ready")).toBe("running");
     expect(statusLabel("needs_keys")).toBe("running");
     expect(statusLabel("error")).toBe("not started");

@@ -4,7 +4,7 @@
  * `KNOWN_KEYS`. Optional keys (`FEEDS_USER_AGENT`, `GARMIN_TOOL_TIER`,
  * `GOOGLE_TOOL_PRESET`) are not required.
  */
-import { allPlugins } from "@/brain/plugins";
+import { allPlugins } from "@/harness/plugins";
 import { needsOf } from "./keys";
 import { oauthRedirectPlugin } from "./oauth";
 import type { ToolEntry } from "./types";

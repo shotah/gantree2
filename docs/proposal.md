@@ -1,9 +1,9 @@
 # gantree — one repo, one door, one product
 
 > **Runtime, 2026-10-11.** Later the same day this plan was written, the
-> runtime decision changed. The brain is TypeScript inside the Agent
+> runtime decision changed. The harness is TypeScript inside the Agent
 > Durable Object, not a Go process in a container. Record:
-> [brain.md](brain.md). Pictures: [architecture.md](architecture.md).
+> [harness.md](harness.md). Pictures: [architecture.md](architecture.md).
 > The pages below are the morning's plan and are not rewritten.
 
 > **gantree** — the tree. Harness at the root, agents on the branches,

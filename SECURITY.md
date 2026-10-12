@@ -17,7 +17,7 @@ otherwise.
 ## Scope
 
 This repository is the Worker (`app/`, `lib/`, `edge/`, `worker/`), the
-brain (`brain/`), the site (`site/`), and the workflows (`.github/`).
+harness (`harness/`), the site (`site/`), and the workflows (`.github/`).
 The native apps live in `gantree2-apps` and have their own policy.
 
 ## Supported

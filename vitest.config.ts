@@ -15,7 +15,7 @@ export default defineConfig({
   test: {
     include: ["test/**/*.test.ts", "test/**/*.test.tsx"],
     // The live model run is `npm run eval` (vitest.eval.config.ts).
-    exclude: ["**/node_modules/**", "**/.git/**", "test/brain/eval/live.test.ts"],
+    exclude: ["**/node_modules/**", "**/.git/**", "test/harness/eval/live.test.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text", "json-summary"],

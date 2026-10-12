@@ -10,7 +10,7 @@ How this repo ships. `GITHUB_TOKEN` is the token Actions creates for a run.
 | `codeql` | push `main`, PR into `main`, Mon 05:20 UTC | `Analyze (javascript-typescript)` | none | green |
 | `scorecard` | branch protection, Mon 06:20 UTC, push `main` | OpenSSF score and SARIF | `id-token`, `security-events` | fixed in this tree |
 | `dependency-review` | `pull_request` | a new known-vulnerable dependency | none | green |
-| `labeler` | `pull_request_target` | labels from `.github/labeler.yml` | labels `brain`, `plugins`, `edge`, `app`, `docs`, `ci`, `tests` | labels exist |
+| `labeler` | `pull_request_target` | labels from `.github/labeler.yml` | labels `harness`, `plugins`, `edge`, `app`, `docs`, `ci`, `tests` | labels exist |
 | `pages` | push `main` when `site/`, `docs/`, `assets/`, or the page scripts change; `workflow_dispatch` | site on `gh-pages` | optional `PAGES_CUSTOM_DOMAIN`, `GOOGLE_SITE_VERIFICATION` | green |
 | `eval` | `v*` tag; `workflow_dispatch` and `workflow_call` | live eval beside `release`. Missing `LLM_*` prints a notice and the job succeeds | `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` | runs on the tag |
 | `release` | `v*` tag | GitHub Release | `GITHUB_TOKEN` | does not wait on eval |
@@ -28,7 +28,7 @@ A tag eval uses `EVAL_N=1` (one pass). A hand run defaults to 3. `ci` and `pages
 
 ## Owner clicks
 
-Done: labels `brain`, `plugins`, `edge`, `app`, `docs`, `ci`, `tests`. Dependabot security updates are on. CodeQL default setup is `not-configured` (this repo's `codeql.yml` is the scan). Private vulnerability reporting is on. Pages publishes from `gh-pages`.
+Done: labels `harness`, `plugins`, `edge`, `app`, `docs`, `ci`, `tests`. Dependabot security updates are on. CodeQL default setup is `not-configured` (this repo's `codeql.yml` is the scan). Private vulnerability reporting is on. Pages publishes from `gh-pages`.
 
 No remaining click.
 

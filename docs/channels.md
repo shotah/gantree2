@@ -1,6 +1,6 @@
 # Channels
 
-The mouth this product runs is **chat**. The brain is the Agent
+The mouth this product runs is **chat**. The harness is the Agent
 Durable Object, and the phone joins that room. Cab and helm are native
 apps on that same room, not a second channel. Android Auto is one
 surface of cab. Their backlog is not in this repo

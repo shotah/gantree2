@@ -2,13 +2,13 @@
 
 > Why it exists: the persona seed is a behavior contract, and a rule
 > that holds two runs in three is a rule the seed is not carrying.
-> Fixtures: `brain/eval/fixtures/` (same JSON the Go harness used).
+> Fixtures: `harness/eval/fixtures/` (same JSON the Go harness used).
 
 Three values, one file locally and repository secrets in CI. The eval
 replays each fixture against a live model with the shipped persona seed.
 Tool results stay canned. Where a fixture sets `tools_from`, the runner
-reads that plugin's in-process catalog (`brain/plugins`) filtered by
-`brain/eval/fixtures/mcp.toml`; it does not call the tool.
+reads that plugin's in-process catalog (`harness/plugins`) filtered by
+`harness/eval/fixtures/mcp.toml`; it does not call the tool.
 
 | Value | Local | GitHub |
 | --- | --- | --- |
@@ -41,7 +41,7 @@ already set in the environment wins, so CI secrets are left alone.
    ```
 
    That loads `.dev.vars` and runs Vitest with `vitest.eval.config.ts`
-   (`test/brain/eval/**`). The live test is `TestEval_Live`'s successor.
+   (`test/harness/eval/**`). The live test is `TestEval_Live`'s successor.
    A turn is slow on a Flash-class model; thirty fixtures × 3 runs can
    take the better part of an hour. The Vitest timeout is 120 minutes.
 
@@ -230,7 +230,7 @@ plans less; that is the trade this product does not make.
 
 ## 5. Adding a fixture
 
-Copy the nearest file under `brain/eval/fixtures/` and edit. The JSON
+Copy the nearest file under `harness/eval/fixtures/` and edit. The JSON
 shape is the Go fixture format; field names stay snake_case.
 
 | Field | What |
@@ -253,8 +253,8 @@ shape is the Go fixture format; field names stay snake_case.
 A hand-written `params` block is the eval's guess at a plugin's
 interface, and the guess drifts. `tools_from: ["rentals"]` publishes the
 server's real catalog instead: the runner reads
-`brain/eval/fixtures/mcp.toml` and asks the in-process plugin
-(`brain/plugins/flights`, `rentals`, `google`) for names, descriptions,
+`harness/eval/fixtures/mcp.toml` and asks the in-process plugin
+(`harness/plugins/flights`, `rentals`, `google`) for names, descriptions,
 and input schemas. Google is filtered to the `tools` allowlist in that
 file (`calendar_list_events`, `calendar_create_events`). Nothing is
 called: results stay canned, so a placeholder key never reaches a vendor.

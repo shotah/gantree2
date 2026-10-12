@@ -1,12 +1,12 @@
 import { DurableObject } from "cloudflare:workers";
-import type { Brain } from "@/brain/core/brain";
-import type { Emit, Inbound } from "@/brain/core/wire";
-import { bindWorkerFetch } from "@/brain/core/fetch";
-import { dropRoomBrain, openRoomBrain } from "@/brain/room";
-import { filePersona, openPersonaStore } from "@/brain/room/persona";
-import { openSelfStore } from "@/brain/room/self";
-import { MAX_CHARS, type PersonaStore } from "@/brain/persona";
-import { maxChars } from "@/brain/selfnote/stamp";
+import type { Brain } from "@/harness/core/brain";
+import type { Emit, Inbound } from "@/harness/core/wire";
+import { bindWorkerFetch } from "@/harness/core/fetch";
+import { dropRoomBrain, openRoomBrain } from "@/harness/room";
+import { filePersona, openPersonaStore } from "@/harness/room/persona";
+import { openSelfStore } from "@/harness/room/self";
+import { MAX_CHARS, type PersonaStore } from "@/harness/persona";
+import { maxChars } from "@/harness/selfnote/stamp";
 import type { AgentEnv } from "@/lib/chat/env";
 import { directoryApply, directoryRemember } from "@/lib/chat/directory";
 import { blobResponse } from "@/lib/chat/blob";
@@ -174,9 +174,9 @@ export class Agent extends DurableObject<AgentEnv> {
    * `HELD_DRAFT_TTL_MS` with no words and no `typing`.
    */
   private readonly drafts = new HeldDrafts();
-  /** Native brain for this isolate. Dropped when env or persona changes. */
-  private brain: Brain | null = null;
-  /** Serialises brain `emit` frames onto the crane path. */
+  /** Native harness for this isolate. Dropped when env or persona changes. */
+  private harness: Brain | null = null;
+  /** Serialises harness `emit` frames onto the crane path. */
   private craneChain: Promise<void> = Promise.resolve();
   /** Last public origin this DO saw (phone upgrade or auth start). `PUBLIC_ORIGIN` still wins. */
   private publicOrigin: string | null = null;
@@ -291,16 +291,16 @@ export class Agent extends DurableObject<AgentEnv> {
   }
 
   async alarm(): Promise<void> {
-    const brain = await this.nativeBrain();
+    const harness = await this.nativeBrain();
     let next: number | null = null;
     await this.withEmit(async (emit) => {
-      next = await brain.alarm(emit);
+      next = await harness.alarm(emit);
     });
     await this.armAlarm(next);
   }
 
   /**
-   * One crane socket message, or one frame the native brain emitted.
+   * One crane socket message, or one frame the native harness emitted.
    * `status` / `perf` / `log` fold; chat frames take the crane branch of the room.
    */
   private async handleCraneFrame(body: string, meta: SocketMeta, ws?: WebSocket): Promise<void> {
@@ -481,7 +481,7 @@ export class Agent extends DurableObject<AgentEnv> {
       }
       if (meta.role === "phone") {
         // Keyed by the bubble, so a second reaction on the same bubble
-        // replaces the first — latest wins. The brain sees it.
+        // replaces the first — latest wins. The harness sees it.
         await this.handToBrain(out);
       }
       return;
@@ -1239,7 +1239,7 @@ export class Agent extends DurableObject<AgentEnv> {
     }
   }
 
-  /** Open the in-process brain so status reflects the registry boot, not an empty row. */
+  /** Open the in-process harness so status reflects the registry boot, not an empty row. */
   private async ensureBrain(): Promise<void> {
     try {
       await this.nativeBrain();
@@ -1250,7 +1250,7 @@ export class Agent extends DurableObject<AgentEnv> {
 
   private async markBrainError(err: unknown): Promise<void> {
     const cur = await this.loadStatus();
-    const message = err instanceof Error && err.message ? err.message : "brain failed";
+    const message = err instanceof Error && err.message ? err.message : "harness failed";
     await this.ctx.storage.put(STATUS_STORE_KEY, {
       ...cur,
       state: "error",
@@ -1314,7 +1314,7 @@ export class Agent extends DurableObject<AgentEnv> {
     }
   }
 
-  /** First use connects the status row and publishes the brain's catalog. */
+  /** First use connects the status row and publishes the harness's catalog. */
   private async nativeBrain(): Promise<Brain> {
     const slug = parseStoredSlug(await this.ctx.storage.get<string>(SLUG_STORE_KEY)) ?? "";
     await this.loadSeenOrigin();
@@ -1336,7 +1336,7 @@ export class Agent extends DurableObject<AgentEnv> {
           serve: (req: Request) => this.serveOwnChat(req),
         }
       : undefined;
-    const brain = await openRoomBrain(this.ctx, this.env, {
+    const harness = await openRoomBrain(this.ctx, this.env, {
       slug,
       foldLog: (frame) => {
         this.enqueueCrane(JSON.stringify(frame));
@@ -1347,19 +1347,19 @@ export class Agent extends DurableObject<AgentEnv> {
       },
       ...(chat ? { chat } : {}),
     });
-    const fresh = brain !== this.brain;
-    this.brain = brain;
+    const fresh = harness !== this.harness;
+    this.harness = harness;
     if (fresh) {
       await this.stampBrainOpen();
-      await this.withEmit((emit) => brain.announce(emit));
-      await this.armAlarm(brain.nextAlarm());
+      await this.withEmit((emit) => harness.announce(emit));
+      await this.armAlarm(harness.nextAlarm());
     }
-    return brain;
+    return harness;
   }
 
   private forgetBrain(): void {
     dropRoomBrain(this.ctx);
-    this.brain = null;
+    this.harness = null;
   }
 
   private async retargetBrain(prev: AgentConfig, next: AgentConfig): Promise<void> {
@@ -1376,10 +1376,10 @@ export class Agent extends DurableObject<AgentEnv> {
     if (frame.kind !== "inbound" && frame.kind !== "react") {
       return;
     }
-    const brain = await this.nativeBrain();
+    const harness = await this.nativeBrain();
     const inbound: Inbound = { ...frame, kind: frame.kind, user_id: frame.user_id ?? "" };
-    await this.withEmit((emit) => brain.handleInbound(inbound, emit));
-    await this.armAlarm(brain.nextAlarm());
+    await this.withEmit((emit) => harness.handleInbound(inbound, emit));
+    await this.armAlarm(harness.nextAlarm());
   }
 
   private enqueueCrane(body: string): void {
@@ -1561,9 +1561,9 @@ export class Agent extends DurableObject<AgentEnv> {
     if (!plugin || !code || !redirectUri) {
       return Response.json({ error: "bad_auth" }, { status: 400 });
     }
-    const brain = await this.nativeBrain();
+    const harness = await this.nativeBrain();
     try {
-      await brain.authFinish(plugin, redirectUri, code);
+      await harness.authFinish(plugin, redirectUri, code);
     } catch (err) {
       return Response.json({ error: "auth_failed", message: authFailureMessage(err) }, { status: 502 });
     }
@@ -1607,7 +1607,7 @@ export class Agent extends DurableObject<AgentEnv> {
     if (!redirectUri) {
       return Response.json({ error: "no_origin" }, { status: 503 });
     }
-    const brain = await this.nativeBrain();
+    const harness = await this.nativeBrain();
     let state: string;
     try {
       state = await this.sealPlugin(slug, plugin);
@@ -1615,7 +1615,7 @@ export class Agent extends DurableObject<AgentEnv> {
       return Response.json({ error: "login not configured" }, { status: 503 });
     }
     try {
-      const started = await brain.authStart(plugin, redirectUri, state);
+      const started = await harness.authStart(plugin, redirectUri, state);
       if (!started?.url) {
         return Response.json({ error: "no_login" }, { status: 404 });
       }

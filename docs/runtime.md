@@ -2,8 +2,8 @@
 
 **Decided 2026-10-11.** The question was an agent that talks first,
 keeps its own clock, and is not billed while it waits. The answer is
-the TypeScript brain inside the Agent Durable Object. Record:
-[brain.md](brain.md). Pictures: [architecture.md](architecture.md) §5.
+the TypeScript harness inside the Agent Durable Object. Record:
+[harness.md](harness.md). Pictures: [architecture.md](architecture.md) §5.
 The clock: [cron.md](cron.md).
 
 The morning's lease, the Lambda comparison, and a process clock are
@@ -12,10 +12,10 @@ not the product. This page stays so that order is not reopened.
 ## Status
 
 Settings reads `GET /api/agents/<agent id>/status`. The Agent DO computes
-it from the brain running in that object.
+it from the harness running in that object.
 
 `state` is `ready`, `needs_keys`, `error`, or `starting`. `since` is
-the last time the brain opened, in epoch milliseconds. `version` is
+the last time the harness opened, in epoch milliseconds. `version` is
 `PACKAGE_VERSION` (`app/lib/release.ts`). `lastTurnAt` is the last
 finished turn. `plugins` is the registry boot list: each name is
 `ready` or `skipped`, and a skip carries `reason` (`no_key`,
@@ -23,7 +23,7 @@ finished turn. `plugins` is the registry boot list: each name is
 counters as before. `published`, `skipped`, and `lastTurn` stay on
 the JSON so a reader that already uses them keeps working.
 
-`POST /api/agents/<agent id>/restart` drops the memoised brain and opens
+`POST /api/agents/<agent id>/restart` drops the memoised harness and opens
 a new one, the same work a fresh isolate does on its first call. The
 gate is the other agent routes: an admin, or an operator who can run
 that agent id.

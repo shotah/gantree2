@@ -4,12 +4,13 @@ How tools are named for the model, how a prefix is turned on, and how
 the host recovers from a bad name.
 
 On this product the twelve plugins are in-process modules under
-`brain/plugins`. There is no stdio transport and no child process.
-`brain/tools` is the registry: `{plugin}__{tool}`, `mcp_enable`,
+`harness/plugins`. There is no stdio transport and no child process.
+`harness/tools` is the registry: `{plugin}__{tool}`, `mcp_enable`,
 truncation, and the skip list. Builtins (memory, cron, watch,
 `self_note`, `web_search`, aims) have no prefix and never idle-drop.
 The shapes stay MCP-shaped so the Tools grid and eval fixtures do not
-change. Pictures: [architecture.md](architecture.md).
+change. Pictures: [architecture.md](architecture.md). Pasteable live
+checks for a person in chat: [live-check.md](live-check.md).
 
 A plugin `ready()` returns `null` or a skip: `no_key`, `no_oauth`,
 `disabled`, `error`. That list is the `status` frame. `GARMIN_TOOL_TIER`
@@ -66,13 +67,13 @@ truncates tool results. The JSON summary stays, and chat puts
 `images: [{ url }]` on the room reply (same shape as inbound). Grant
 prefix `image`. Image bytes that another tool must read go to the Agent DO
 sqlite table `image_output` under the `IMAGE_OUTPUT_DIR` directory string
-(the native brain fills `/images` when that var is blank); chat
+(the native harness fills `/images` when that var is blank); chat
 `avatar_update` / `backdrop_update` take
 `source_path`.
 
 **Why the prefix?** OpenAI-safe characters, no collisions across plugins, and
 obvious provenance in logs and collapsed history markers. The prefix is
-the plugin name (`brain/tools/names.ts`).
+the plugin name (`harness/tools/names.ts`).
 
 `/tools` and `/status` show `schema_est_tokens`. A plugin that cannot
 serve is skipped (`no_key`, `no_oauth`, `disabled`, `error`) and the
@@ -80,7 +81,7 @@ agent continues. Calling a skipped prefix returns
 `tool error [<reason>]: … is skipped — do not invent <name>__* names`.
 The `status` frame: [contract.md](contract.md).
 
-Plugins are modules under `brain/plugins/<name>/`
+Plugins are modules under `harness/plugins/<name>/`
 ([custom-mcp.md](custom-mcp.md)). The `chat` plugin is the face,
 wallpaper, and mood. [mcp-naming.md](mcp-naming.md) still lists that
 row as `pendant` until Phase 4.
@@ -224,7 +225,7 @@ just a different guess.
   still need a retry with the suggested name (or a smaller published tool surface)
 - Wrong arguments (e.g. passing a time range as `event_id`) — MCP/API errors
 - Think-only turns with no tool call — agent nudge / stall path in
-  `brain/agent`
+  `harness/agent`
 - A model that neither calls nor prints anything callable — still a nudge, then
   the turn answers with whatever prose it has
 
@@ -304,7 +305,7 @@ plugin should set an interval the plan can afford (a 15-minute poll is
 
 ## Related
 
-- [architecture.md](architecture.md) — the brain
+- [architecture.md](architecture.md) — the harness
 - [custom-mcp.md](custom-mcp.md) — adding a plugin module
 - [persona.md](persona.md) — `PERSONA.md` is not the tool catalog
 - [cron.md](cron.md#event-watches) — poller + `feeds` / `twitter`

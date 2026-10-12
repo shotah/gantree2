@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MAX_CHARS } from "@/brain/persona";
-import { maxChars } from "@/brain/selfnote/stamp";
+import { MAX_CHARS } from "@/harness/persona";
+import { maxChars } from "@/harness/selfnote/stamp";
 import { CONFIG_STORE_KEY } from "@/lib/agents/config";
 import { STATUS_STORE_KEY } from "@/lib/agents/status";
 import { openOAuthCatch, sessionKey } from "@/lib/door/session";
@@ -14,7 +14,7 @@ import { PUSH_STORE_PREFIX } from "@/lib/chat/push/subscription";
 import { encodeBase64Url, generateVapidKeys } from "@/lib/chat/push/vapid";
 
 const roomMock = vi.hoisted(() => {
-  const brain = {
+  const harness = {
     handleInbound: vi.fn(async (_frame: object, _emit: (frame: object) => void) => undefined),
     alarm: vi.fn(async (_emit: (frame: object) => void) => null as number | null),
     nextAlarm: vi.fn(() => null as number | null),
@@ -23,13 +23,13 @@ const roomMock = vi.hoisted(() => {
     authFinish: vi.fn(async () => undefined),
   };
   return {
-    brain,
-    openRoomBrain: vi.fn(async () => brain),
+    harness,
+    openRoomBrain: vi.fn(async () => harness),
     dropRoomBrain: vi.fn(),
   };
 });
 
-vi.mock("@/brain/room", () => ({
+vi.mock("@/harness/room", () => ({
   openRoomBrain: roomMock.openRoomBrain,
   dropRoomBrain: roomMock.dropRoomBrain,
 }));
@@ -205,8 +205,8 @@ describe("Agent fan-out", () => {
     expect(live.kinds()).toEqual(["draft", "reply"]);
   });
 
-  it("hands a phone inbound to the brain when every crane socket is stale", async () => {
-    roomMock.brain.handleInbound.mockClear();
+  it("hands a phone inbound to the harness when every crane socket is stale", async () => {
+    roomMock.harness.handleInbound.mockClear();
     const { state, crane, phone, say } = room();
     crane.close();
     const ada = phone("1182");
@@ -215,8 +215,8 @@ describe("Agent fan-out", () => {
 
     expect(state.storage.queued().filter((q) => q.to === "crane")).toEqual([]);
     expect(ada.kinds()).toEqual(["ack"]);
-    expect(roomMock.brain.handleInbound).toHaveBeenCalledTimes(1);
-    expect(roomMock.brain.handleInbound.mock.calls[0]?.[0]).toMatchObject({
+    expect(roomMock.harness.handleInbound).toHaveBeenCalledTimes(1);
+    expect(roomMock.harness.handleInbound.mock.calls[0]?.[0]).toMatchObject({
       kind: "inbound",
       id: "m1",
       text: "are you there",
@@ -706,7 +706,7 @@ describe("Agent tasks board", () => {
   });
 
   it("refuses a list from a phone; the checkbox is an ordinary /todo done turn", async () => {
-    roomMock.brain.handleInbound.mockClear();
+    roomMock.harness.handleInbound.mockClear();
     const { crane, phone, say } = room();
     const ada = phone("1182");
     await say(ada, { kind: "todo", todo: list });
@@ -716,8 +716,8 @@ describe("Agent tasks board", () => {
     await say(ada, { id: "m1", text: "/todo done 412" });
     expect(crane.sent).toEqual([]);
     expect(ada.frames().at(-1)).toMatchObject({ kind: "ack", id: "m1" });
-    expect(roomMock.brain.handleInbound).toHaveBeenCalledTimes(1);
-    expect(roomMock.brain.handleInbound.mock.calls[0]?.[0]).toMatchObject({
+    expect(roomMock.harness.handleInbound).toHaveBeenCalledTimes(1);
+    expect(roomMock.harness.handleInbound.mock.calls[0]?.[0]).toMatchObject({
       kind: "inbound",
       text: "/todo done 412",
       user_id: "1182",
@@ -754,8 +754,8 @@ describe("Agent reactions", () => {
     });
   });
 
-  it("hands the human's reaction to their other mouths and the brain, not back to the sender", async () => {
-    roomMock.brain.handleInbound.mockClear();
+  it("hands the human's reaction to their other mouths and the harness, not back to the sender", async () => {
+    roomMock.harness.handleInbound.mockClear();
     const { state, crane, phone, say } = room();
     const pwa = phone("1182");
     const cab = phone("1182");
@@ -770,8 +770,8 @@ describe("Agent reactions", () => {
     expect(cab.frames()).toEqual([{ kind: "react", id: "r1", text: "❤️", user_id: "1182" }]);
     expect(pwa.sent).toEqual([]);
     expect(state.storage.rows.get("r:1182")).toEqual({ r1: "❤️" });
-    expect(roomMock.brain.handleInbound).toHaveBeenCalledTimes(1);
-    expect(roomMock.brain.handleInbound.mock.calls[0]?.[0]).toMatchObject({
+    expect(roomMock.harness.handleInbound).toHaveBeenCalledTimes(1);
+    expect(roomMock.harness.handleInbound.mock.calls[0]?.[0]).toMatchObject({
       kind: "react",
       id: "r1",
       text: "❤️",
@@ -781,11 +781,11 @@ describe("Agent reactions", () => {
     await say(pwa, { kind: "react", id: "r1", text: "" });
     expect(cab.frames().at(-1)).toEqual({ kind: "react", id: "r1", text: "", user_id: "1182" });
     expect(state.storage.rows.has("r:1182")).toBe(false);
-    expect(roomMock.brain.handleInbound).toHaveBeenCalledTimes(2);
+    expect(roomMock.harness.handleInbound).toHaveBeenCalledTimes(2);
   });
 
   it("keeps the latest reaction when no crane socket is up and does not queue it", async () => {
-    roomMock.brain.handleInbound.mockClear();
+    roomMock.harness.handleInbound.mockClear();
     const { state, box, crane, phone, say } = room();
     const pwa = phone("1182");
     await say(crane, { kind: "reply", id: "r1", user_id: "1182", text: "Rain at 6." });
@@ -800,7 +800,7 @@ describe("Agent reactions", () => {
     expect(state.storage.queued().filter((q) => q.to === "crane")).toEqual([]);
     expect(pwa.sent).toEqual([]); // no ack for a react, no error either
     expect(state.storage.rows.get("r:1182")).toEqual({ r1: "❤️", r2: "🔥" });
-    expect(roomMock.brain.handleInbound).toHaveBeenCalledTimes(3);
+    expect(roomMock.harness.handleInbound).toHaveBeenCalledTimes(3);
 
     const back = new FakeSocket();
     state.acceptWebSocket(back, socketTags({ role: "crane", rateId: "bearer:kit" }));
@@ -1132,7 +1132,7 @@ describe("Agent harness ops", () => {
     expect(body).not.toContain("house-key");
   });
 
-  it("does not reset perf when another crane socket opens, and a closed socket leaves the brain status", async () => {
+  it("does not reset perf when another crane socket opens, and a closed socket leaves the harness status", async () => {
     installPairs();
     const { state, box, crane } = room();
     crane.close();
@@ -1238,18 +1238,18 @@ function nativeConfig() {
 describe("Agent native runtime", () => {
   beforeEach(() => {
     roomMock.openRoomBrain.mockReset();
-    roomMock.openRoomBrain.mockImplementation(async () => roomMock.brain);
+    roomMock.openRoomBrain.mockImplementation(async () => roomMock.harness);
     roomMock.dropRoomBrain.mockReset();
-    roomMock.brain.handleInbound.mockReset();
-    roomMock.brain.alarm.mockReset();
-    roomMock.brain.alarm.mockResolvedValue(null);
-    roomMock.brain.nextAlarm.mockReset();
-    roomMock.brain.nextAlarm.mockReturnValue(null);
-    roomMock.brain.announce.mockReset();
-    roomMock.brain.announce.mockResolvedValue(undefined);
-    roomMock.brain.authStart.mockReset();
-    roomMock.brain.authFinish.mockReset();
-    roomMock.brain.authFinish.mockResolvedValue(undefined);
+    roomMock.harness.handleInbound.mockReset();
+    roomMock.harness.alarm.mockReset();
+    roomMock.harness.alarm.mockResolvedValue(null);
+    roomMock.harness.nextAlarm.mockReset();
+    roomMock.harness.nextAlarm.mockReturnValue(null);
+    roomMock.harness.announce.mockReset();
+    roomMock.harness.announce.mockResolvedValue(undefined);
+    roomMock.harness.authStart.mockReset();
+    roomMock.harness.authFinish.mockReset();
+    roomMock.harness.authFinish.mockResolvedValue(undefined);
   });
 
   it("fans a native inbound the way a crane reply does, and does not queue it for the crane", async () => {
@@ -1259,15 +1259,15 @@ describe("Agent native runtime", () => {
     await craneRoom.say(cranePhone, { id: "m1", text: "are you there" });
     await craneRoom.say(craneRoom.crane, { kind: "reply", user_id: "1182", id: "r1", text: "Looks like rain." });
 
-    roomMock.brain.announce.mockImplementation(async (emit) => {
+    roomMock.harness.announce.mockImplementation(async (emit) => {
       emit({ kind: "status", published: ["math"], skipped: [{ name: "strava", reason: "no_key" }] });
     });
-    roomMock.brain.handleInbound.mockImplementation(async (frame, emit) => {
+    roomMock.harness.handleInbound.mockImplementation(async (frame, emit) => {
       expect(frame).toMatchObject({ kind: "inbound", user_id: "1182", text: "are you there", id: "m1" });
       emit({ kind: "reply", user_id: "1182", id: "r1", text: "Looks like rain." });
     });
-    roomMock.brain.nextAlarm.mockReturnValue(4_200_000_000_000);
-    roomMock.brain.announce.mockClear();
+    roomMock.harness.nextAlarm.mockReturnValue(4_200_000_000_000);
+    roomMock.harness.announce.mockClear();
 
     const native = room();
     await native.state.storage.put("slug", "kit");
@@ -1312,12 +1312,12 @@ describe("Agent native runtime", () => {
       skipped: [{ name: "strava", reason: "no_key" }],
     });
     expect(native.state.storage.alarmAt).toBe(4_200_000_000_000);
-    expect(roomMock.brain.announce).toHaveBeenCalledTimes(1);
+    expect(roomMock.harness.announce).toHaveBeenCalledTimes(1);
   });
 
   it("floors a past nextAlarm when arming after inbound", async () => {
     const past = Date.now() - 60_000;
-    roomMock.brain.nextAlarm.mockReturnValue(past);
+    roomMock.harness.nextAlarm.mockReturnValue(past);
     const { state, phone, say } = room();
     await state.storage.put("slug", "kit");
     await state.storage.put(CONFIG_STORE_KEY, nativeConfig());
@@ -1326,8 +1326,8 @@ describe("Agent native runtime", () => {
     expect(state.storage.alarmAt).toBeGreaterThanOrEqual(Date.now());
   });
 
-  it("clears the storage alarm when brain.alarm() returns null", async () => {
-    roomMock.brain.alarm.mockResolvedValue(null);
+  it("clears the storage alarm when harness.alarm() returns null", async () => {
+    roomMock.harness.alarm.mockResolvedValue(null);
     const { state, box } = room();
     await state.storage.put("slug", "kit");
     await state.storage.put(CONFIG_STORE_KEY, nativeConfig());
@@ -1337,7 +1337,7 @@ describe("Agent native runtime", () => {
   });
 
   it("sets the next alarm from alarm()", async () => {
-    roomMock.brain.alarm.mockImplementation(async (emit) => {
+    roomMock.harness.alarm.mockImplementation(async (emit) => {
       emit({ kind: "push", user_id: "1182", id: "wake", text: "ping" });
       return 9_000_000_000_000;
     });
@@ -1356,8 +1356,8 @@ describe("Agent native runtime", () => {
     expect(body.since).toEqual(expect.any(Number));
   });
 
-  it("drops the brain on restart and opens a new one", async () => {
-    roomMock.brain.announce.mockImplementation(async (emit) => {
+  it("drops the harness on restart and opens a new one", async () => {
+    roomMock.harness.announce.mockImplementation(async (emit) => {
       emit({ kind: "status", published: ["math"], skipped: [{ name: "garmin", reason: "disabled" }] });
     });
     const { state, box } = room();
@@ -1407,10 +1407,10 @@ describe("Agent native runtime", () => {
     expect(await state.storage.get("chat.keep")).toBe("stay");
     expect(roomMock.dropRoomBrain).toHaveBeenCalledTimes(1);
     expect(roomMock.openRoomBrain).toHaveBeenCalledTimes(2);
-    expect(roomMock.brain.announce).toHaveBeenCalledTimes(2);
+    expect(roomMock.harness.announce).toHaveBeenCalledTimes(2);
   });
 
-  it("pauses by dropping the brain and alarm without wiping storage", async () => {
+  it("pauses by dropping the harness and alarm without wiping storage", async () => {
     const { state, box } = room();
     await state.storage.put("chat.keep", "stay");
     state.storage.alarmAt = Date.now() + 60_000;
@@ -1424,7 +1424,7 @@ describe("Agent native runtime", () => {
     expect(roomMock.dropRoomBrain).toHaveBeenCalled();
   });
 
-  it("destroys by wiping storage and not reopening the brain", async () => {
+  it("destroys by wiping storage and not reopening the harness", async () => {
     const { state, box } = room();
     await state.storage.put("chat.keep", "gone");
     state.storage.alarmAt = Date.now() + 60_000;
@@ -1441,7 +1441,7 @@ describe("Agent native runtime", () => {
     expect(roomMock.openRoomBrain.mock.calls.length).toBeGreaterThan(callsBefore);
   });
 
-  it("rebuilds the brain when grants, env, or persona change", async () => {
+  it("rebuilds the harness when grants, env, or persona change", async () => {
     const { state, box } = room();
     Object.assign(state.storage, { sql: sqlStorage() });
     const view = await box.fetch(new Request("https://agent/config", { headers: { "X-Chat-Op": "config" } }));
@@ -1454,7 +1454,7 @@ describe("Agent native runtime", () => {
     }));
     expect(await granted.json()).toMatchObject({ mcp: "[[server]]\nname = \"math\"\n" });
     expect(roomMock.dropRoomBrain).toHaveBeenCalledTimes(1);
-    expect(roomMock.brain.announce).toHaveBeenCalledTimes(1);
+    expect(roomMock.harness.announce).toHaveBeenCalledTimes(1);
 
     const revoked = await box.fetch(new Request("https://agent/config", {
       method: "PATCH",
@@ -1463,7 +1463,7 @@ describe("Agent native runtime", () => {
     }));
     expect(await revoked.json()).toMatchObject({ mcp: "" });
     expect(roomMock.dropRoomBrain).toHaveBeenCalledTimes(2);
-    expect(roomMock.brain.announce).toHaveBeenCalledTimes(2);
+    expect(roomMock.harness.announce).toHaveBeenCalledTimes(2);
 
     await box.fetch(new Request("https://agent/config", {
       method: "PATCH",
@@ -1472,10 +1472,10 @@ describe("Agent native runtime", () => {
     }));
     expect(roomMock.dropRoomBrain).toHaveBeenCalledTimes(3);
     expect(roomMock.openRoomBrain).toHaveBeenCalledTimes(3);
-    expect(roomMock.brain.announce).toHaveBeenCalledTimes(3);
+    expect(roomMock.harness.announce).toHaveBeenCalledTimes(3);
   });
 
-  it("finishes oauth on the brain", async () => {
+  it("finishes oauth on the harness", async () => {
     const { state, box, phone } = room();
     await state.storage.put(CONFIG_STORE_KEY, nativeConfig());
     const user = "118212345678901234567";
@@ -1492,7 +1492,7 @@ describe("Agent native runtime", () => {
       }),
     }));
     expect(ok.status).toBe(200);
-    expect(roomMock.brain.authFinish).toHaveBeenCalledWith("google", "https://g.test/api/auth/catch", "abc");
+    expect(roomMock.harness.authFinish).toHaveBeenCalledWith("google", "https://g.test/api/auth/catch", "abc");
     expect(mouth.frames().some((frame) => frame.kind === "reply" && frame.user_id === user && frame.text === "google connected")).toBe(true);
     expect(other.frames().some((frame) => frame.text === "google connected")).toBe(false);
   });
@@ -1506,7 +1506,7 @@ describe("Agent native runtime", () => {
       redirectUri: "https://g.test/api/auth/catch",
       userId: "118212345678901234567",
     };
-    roomMock.brain.authFinish.mockRejectedValueOnce(new Error("OAuth token exchange: invalid_client"));
+    roomMock.harness.authFinish.mockRejectedValueOnce(new Error("OAuth token exchange: invalid_client"));
     const shown = await box.fetch(new Request("https://agent/auth", {
       method: "POST",
       headers: { "X-Chat-Op": "auth", "content-type": "application/json" },
@@ -1515,7 +1515,7 @@ describe("Agent native runtime", () => {
     expect(shown.status).toBe(502);
     expect(await shown.json()).toEqual({ error: "auth_failed", message: "OAuth token exchange: invalid_client" });
 
-    roomMock.brain.authFinish.mockRejectedValueOnce(new Error("bad client_secret=sekrit"));
+    roomMock.harness.authFinish.mockRejectedValueOnce(new Error("bad client_secret=sekrit"));
     const hidden = await box.fetch(new Request("https://agent/auth", {
       method: "POST",
       headers: { "X-Chat-Op": "auth", "content-type": "application/json" },
@@ -1535,7 +1535,7 @@ describe("Agent native runtime", () => {
       body: JSON.stringify({ plugin: "garmin", origin: "http://127.0.0.1:3000", slug: "kit" }),
     }));
     expect(garmin.status).toBe(400);
-    expect(roomMock.brain.authStart).not.toHaveBeenCalled();
+    expect(roomMock.harness.authStart).not.toHaveBeenCalled();
 
     const missing = await box.fetch(new Request("https://agent/auth/start", {
       method: "POST",
@@ -1544,7 +1544,7 @@ describe("Agent native runtime", () => {
     }));
     expect(missing.status).toBe(404);
 
-    roomMock.brain.authStart.mockImplementation(async () => ({ url: "https://accounts.example/start" }));
+    roomMock.harness.authStart.mockImplementation(async () => ({ url: "https://accounts.example/start" }));
     const ok = await box.fetch(new Request("https://agent/auth/start", {
       method: "POST",
       headers: { "X-Chat-Op": "auth_start", "content-type": "application/json" },
@@ -1552,7 +1552,7 @@ describe("Agent native runtime", () => {
     }));
     expect(ok.status).toBe(200);
     expect(await ok.json()).toEqual({ url: "https://accounts.example/start" });
-    const args = roomMock.brain.authStart.mock.calls.at(-1);
+    const args = roomMock.harness.authStart.mock.calls.at(-1);
     expect(args?.[0]).toBe("strava");
     expect(args?.[1]).toBe("https://gantree2.bldhosting.com/api/auth/catch");
     const stateArg = args?.[2];
@@ -1563,15 +1563,15 @@ describe("Agent native runtime", () => {
     expect(await openOAuthCatch(await sessionKey(secret), stateArg)).toEqual({ slug: "kit", plugin: "strava" });
 
     const { box: dev } = room({ SESSION_SECRET: secret });
-    roomMock.brain.authStart.mockClear();
-    roomMock.brain.authStart.mockImplementation(async () => ({ url: "https://accounts.example/dev" }));
+    roomMock.harness.authStart.mockClear();
+    roomMock.harness.authStart.mockImplementation(async () => ({ url: "https://accounts.example/dev" }));
     const local = await dev.fetch(new Request("https://agent/auth/start", {
       method: "POST",
       headers: { "X-Chat-Op": "auth_start", "content-type": "application/json" },
       body: JSON.stringify({ plugin: "google", origin: "http://127.0.0.1:3000", slug: "kit" }),
     }));
     expect(local.status).toBe(200);
-    expect(roomMock.brain.authStart.mock.calls.at(-1)?.[1]).toBe("http://127.0.0.1:3000/api/auth/catch");
+    expect(roomMock.harness.authStart.mock.calls.at(-1)?.[1]).toBe("http://127.0.0.1:3000/api/auth/catch");
   });
 });
 
@@ -1738,7 +1738,7 @@ describe("Agent persona files", () => {
     expect(huge.status).toBe(400);
     expect(await huge.json()).toEqual({ error: "too_long" });
 
-    roomMock.brain.announce.mockClear();
+    roomMock.harness.announce.mockClear();
     const patched = await box.fetch(new Request("https://agent/config", {
       method: "PATCH",
       headers: { "X-Chat-Op": "config", "content-type": "application/json" },
@@ -1748,6 +1748,6 @@ describe("Agent persona files", () => {
     const after = await box.fetch(new Request("https://agent/persona", { headers: { "X-Chat-Op": "persona_get" } }));
     const files = await after.json<{ files: { name: string; text: string }[] }>();
     expect(files.files.find((file) => file.name === "PERSONA.md")?.text).toBe("from the old client");
-    expect(roomMock.brain.announce).toHaveBeenCalled();
+    expect(roomMock.harness.announce).toHaveBeenCalled();
   });
 });

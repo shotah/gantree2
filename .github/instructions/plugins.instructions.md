@@ -1,5 +1,5 @@
 ---
-applyTo: "brain/plugins/**"
+applyTo: "harness/plugins/**"
 ---
 
 # Plugin tools
@@ -24,10 +24,10 @@ description. One call must not blow the context.
 A tool that is inherently one thing (`account_get`, `*_create` of one
 record) sets `single` on the `ToolDef` to the reason. Anything else
 that is neither plural nor annotated fails
-`test/brain/plugins/plural.test.ts`.
+`test/harness/plugins/plural.test.ts`.
 
 Register the tool as `{service}_{verb}_{object}`. The host name is
-`{plugin}__{tool}`, prefixed in `brain/tools`. The registered name
+`{plugin}__{tool}`, prefixed in `harness/tools`. The registered name
 does not repeat the plugin id. Verbs prefer `list`, `get`, `search`,
 `create`, `update`, `delete`, `format`. See `docs/mcp-naming.md`.
 

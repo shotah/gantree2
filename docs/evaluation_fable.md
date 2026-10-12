@@ -92,7 +92,7 @@ context*, at running well on weak models, at keeping the tool catalog
 cheap, and — since the ledger — at *following through on a goal over
 months without re-asking* among the comparators read above; deliberately without breadth
 inside the unit (channels, UI, routers, subagents). Right choice for one
-person, one mouth, one brain, with a phone and a
+person, one mouth, one harness, with a phone and a
 car screen the agent can make its own — and, as a fleet of those units
 on the board, for many people, each with their own. Wrong choice for a
 shared gateway, for anyone who wants one process serving a crowd, or for
@@ -122,8 +122,8 @@ of it on purpose.
 | Model-controlled client | **Unique** | Face, wallpaper, and theme on chat / cab are the agent's to set (`chat` plugin, 7 tools). Picture handoff by `source_path`; theme from a closed catalog with mood lines; humans can unfollow. `[room]` on `[harness]` shows the current look with ages so the model — and the daily planner — redress it without being asked. |
 | Security / authorization | **Thin** | Allowlist + manifest-is-grant. No per-tool approval; ask-first is prompt text. The door in front of settings and chat is [access.md](access.md); it does not approve tool calls. |
 | Ops surface | **Strong for one agent** | No inbound port, distroless, `status` frame, `/auth` in chat. The board is settings, in this repo, and it does not sit in a turn. |
-| Multi-model / multi-agent | **Absent by design** | No router, no fallback, no subagents inside the unit. One container = one brain; the fleet is the board. |
-| Behavioral regression | **Strong, paid** | Thirty scenario fixtures replayed against the shipped seed on the live model, two on real catalogs from the in-process `brain/plugins` (flights, rentals, google — google limited by `brain/eval/fixtures/mcp.toml`); shape asserted (tools, args, call counts, `[wait]`, `[silent]`, rows, jobs, prices from tools, ledger evidence, cron `when` against a frozen clock), every run must pass. Fixtures can seed a ledger and aged memory rows and refer to their ids. Release gate and on demand, not per push. One model per reading. |
+| Multi-model / multi-agent | **Absent by design** | No router, no fallback, no subagents inside the unit. One container = one harness; the fleet is the board. |
+| Behavioral regression | **Strong, paid** | Thirty scenario fixtures replayed against the shipped seed on the live model, two on real catalogs from the in-process `harness/plugins` (flights, rentals, google — google limited by `harness/eval/fixtures/mcp.toml`); shape asserted (tools, args, call counts, `[wait]`, `[silent]`, rows, jobs, prices from tools, ledger evidence, cron `when` against a frozen clock), every run must pass. Fixtures can seed a ledger and aged memory rows and refer to their ids. Release gate and on demand, not per push. One model per reading. |
 | Token accounting | **Okay** | chars/4 estimates plus native `usage` when sent. `/tokens` catches fat schemas, not billing. |
 
 ---
@@ -250,9 +250,9 @@ for the task whose words say `Wed 11am` and nothing for the one that
 says Friday; a nine-day-old task gets a line and not an offer to drop it.
 
 Where a fixture names a server that has an in-process plugin, the tool
-defs are **real**. `tools_from` asks `brain/plugins` for that server's
+defs are **real**. `tools_from` asks `harness/plugins` for that server's
 catalog — names, descriptions, schemas — filtered by
-`brain/eval/fixtures/mcp.toml` when the server has an allowlist. Nothing
+`harness/eval/fixtures/mcp.toml` when the server has an allowlist. Nothing
 is checked in and nothing is called; a placeholder env is enough for a
 plugin that refuses to list tools without a key present. The fixtures
 name `rentals`, `flights`, and `google`.
@@ -464,9 +464,9 @@ this is built on. [channels.md](channels.md).
 
 OpenClaw routes per agent and fails over per route; Letta and Hermes
 carry a provider matrix. The harness is `LLM_BASE_URL` + `LLM_MODEL`: one
-socket, one brain per unit. The platform is not one process fanning out
-to many models; it is settings running a **fleet of agents, one brain
-per agent**, each with its own `config.env`, persona, and brain. Model variety
+socket, one harness per unit. The platform is not one process fanning out
+to many models; it is settings running a **fleet of agents, one harness
+per agent**, each with its own `config.env`, persona, and harness. Model variety
 lives across agents, where it belongs: one household on Gemini Flash, one
 on a local Gemma, one on xAI, each a separate container with a separate
 blast radius, and the board is where you see them side by side.

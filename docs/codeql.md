@@ -53,20 +53,20 @@ Host checks (`js/incomplete-url-substring-sanitization`). Parse with
 for `notdocs.google.com`, and `startsWith("www.googleapis.com")` is
 true for `www.googleapis.com.evil.test`.
 
-- `brain/plugins/google/ids.ts` — `looksLikeGoogleURL` allows only
+- `harness/plugins/google/ids.ts` — `looksLikeGoogleURL` allows only
   `docs.google.com`, `drive.google.com`, and `forms.gle`.
-- `brain/plugins/feeds/parse.ts` — a JSON Feed `version` counts only
+- `harness/plugins/feeds/parse.ts` — a JSON Feed `version` counts only
   when its host is `jsonfeed.org`. A document with an `items` array
   is still a feed, which is the old fallback.
-- `test/brain/plugins/google/workspace.test.ts` — the upload mock
+- `test/harness/plugins/google/workspace.test.ts` — the upload mock
   compares `hostname === "www.googleapis.com"`.
-- Tests: `test/brain/plugins/google/ids.test.ts`,
-  `test/brain/plugins/feeds/feeds.test.ts`.
+- Tests: `test/harness/plugins/google/ids.test.ts`,
+  `test/harness/plugins/feeds/feeds.test.ts`.
 
 Identity replace (`js/identity-replacement`). Replacing a match with
 the same text does nothing. `formatFloat` had `.replace(/e\+/, "e+")`
 in front of the exponent cleanup. That call is gone. `1e21` still
-formats as `1e+21`. Test: `test/brain/plugins/math/math.test.ts`.
+formats as `1e+21`. Test: `test/harness/plugins/math/math.test.ts`.
 
 Unanchored host (`js/regex/missing-regexp-anchor`). A pattern with
 `github.com` and no anchor matches `notgithub.com` and a copy of the
@@ -147,8 +147,8 @@ or `regexp/no-super-linear-backtracking`.
   leading `$`, then matches `/^(\d+\.\d+|\d+)/`. A `$` inside the
   whitespace quantifiers either nests or lets two `\s*` split the
   same spaces.
-- `brain/eval/expect.ts` `PRICE_RE` is `/\$\s?(\d[\d,]*\.\d+|\d[\d,]*)/g`.
-- `brain/eval/fixture.ts` `RFC3339` splits the optional fraction into
+- `harness/eval/expect.ts` `PRICE_RE` is `/\$\s?(\d[\d,]*\.\d+|\d[\d,]*)/g`.
+- `harness/eval/fixture.ts` `RFC3339` splits the optional fraction into
   its own alternative so `\d+` is not inside `?`.
 - `lib/agents/mcpToml.ts` `isServerHeader` is two alternatives, one
   with a `#` comment and one without, instead of `(?:#.*)?`.

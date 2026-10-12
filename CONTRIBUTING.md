@@ -28,7 +28,7 @@ npm run build
 
 The pre-commit hook runs `npm test`, `npm run lint`, and `npm run typecheck` in parallel via Lefthook.
 
-`npm run eval` when the change touches `brain/agent` or `brain/plugins`.
+`npm run eval` when the change touches `harness/agent` or `harness/plugins`.
 That run needs `LLM_*`. See [docs/eval_setup.md](docs/eval_setup.md).
 
 CI on a pull request runs the coverage gate, lint, typecheck, and the

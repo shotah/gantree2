@@ -4,7 +4,7 @@ What can go wrong, what we chose, and what we did not. One page, so a
 reviewer can disagree with a line instead of a feeling.
 
 Code: `lib/door/` (the door), `edge/agent.do.ts` + `lib/chat/` (the
-room), `brain/` (the agent).
+room), `harness/` (the agent).
 People and roles: [access.md](access.md).
 Shape: [architecture.md](architecture.md). Reporting a hole:
 [`SECURITY.md`](../SECURITY.md) at the repo root.
@@ -19,9 +19,9 @@ Shape: [architecture.md](architecture.md). Reporting a hole:
 | The allowlist and roles | `GANTREE_ADMINS` / `GANTREE_ALLOW` env, Settings DO | Admins |
 | The chat thread | Agent DO: the room queue and the session rows | Users on that agent's room |
 | The room bearer | Agent DO. Also the token on face / wallpaper / theme | The Worker |
-| Model and tool keys (`LLM_API_KEY`, `GOOGLE_MAPS_API_KEY`, …) | Agent DO `config.env`, in plaintext. House `LLM_*` on the Worker | Admins write. The brain reads |
+| Model and tool keys (`LLM_API_KEY`, `GOOGLE_MAPS_API_KEY`, …) | Agent DO `config.env`, in plaintext. House `LLM_*` on the Worker | Admins write. The harness reads |
 | OAuth refresh tokens for tools (Google Workspace, Strava, Google Health, Garmin) | `oauth_token` in the Agent DO, AES-256-GCM under `snapshot.key` | The plugin, for the call |
-| The brain | DO SQLite (`persona_file`, `selfnote`, sessions, memory, cron) | That agent only |
+| The harness | DO SQLite (`persona_file`, `selfnote`, sessions, memory, cron) | That agent only |
 | `SESSION_SECRET`, `GOOGLE_CLIENT_SECRET`, `CLOUDFLARE_API_TOKEN` | GitHub Actions secrets → Worker secrets; `.dev.vars` locally; `CELLD_VARS_FILE` at home | The operator |
 
 The failures that matter: a stranger reads a thread, a member gains
@@ -133,7 +133,7 @@ recomputed every request and is not stored in the cookie.
 | Theme and typing notices are broadcast; **text is only sent to sockets on the room list** | A dropped member stops seeing new turns immediately | They keep what their phone already cached |
 
 OAuth tokens are ciphertext in that DO's SQLite (`oauth_token`),
-AES-256-GCM under `snapshot.key` (`AesTokenStore` in `brain/tools`).
+AES-256-GCM under `snapshot.key` (`AesTokenStore` in `harness/tools`).
 The plugin sees plaintext for the call. The key stays on the DO. A bug
 in a plugin is that agent's env and tokens, not another agent's.
 
@@ -334,4 +334,4 @@ Settings DO and are readable by admins only. Not a SIEM.
 
 Tests: `test/door/*` (gate, session, allowlist, Google flow, bounces),
 `test/chat/*` (caps, rate, slug, admission), `test/edge/*` (DO glue),
-`test/brain/*` (the agent).
+`test/harness/*` (the agent).

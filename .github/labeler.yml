@@ -1,10 +1,10 @@
-brain:
+harness:
   - changed-files:
-      - any-glob-to-any-file: brain/**
+      - any-glob-to-any-file: harness/**
 
 plugins:
   - changed-files:
-      - any-glob-to-any-file: brain/plugins/**
+      - any-glob-to-any-file: harness/plugins/**
 
 edge:
   - changed-files:

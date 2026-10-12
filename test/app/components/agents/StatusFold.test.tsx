@@ -18,7 +18,7 @@ function line(text: string) {
 }
 
 describe("StatusFold", () => {
-  it("shows a ready brain, its version, and the plugin list", () => {
+  it("shows a ready harness, its version, and the plugin list", () => {
     const status: AgentStatus = {
       ...STATUS,
       since: Date.now() - 5_000,
@@ -132,7 +132,7 @@ describe("StatusFold", () => {
     expect(vi.mocked(client).mock.calls.some((call) => href(call[0]).endsWith("/enabled"))).toBe(true);
   });
 
-  it("restarts the brain and refetches status", async () => {
+  it("restarts the harness and refetches status", async () => {
     const next: AgentStatus = {
       ...STATUS,
       state: "needs_keys",

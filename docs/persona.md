@@ -11,7 +11,7 @@ hydration, history, and **this turn’s tool schemas**.
 | `PERSONA.md` | You | Who the agent **should** be, who you are, builtin policy |
 | `SELF.md` | The agent (`self_note`, distill on `/new`) | Who it **became** with you — voice, jokes, rituals, a few north-star aims |
 
-The prompt concatenates them in that order. The brain stamps the
+The prompt concatenates them in that order. The harness stamps the
 **Self-notes**, **Location pins**, and **Follow-up** sections in
 `PERSONA.md` and the `SELF.md` header. Your bullets stay.
 

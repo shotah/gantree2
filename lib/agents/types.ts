@@ -53,7 +53,7 @@ export type AgentCreate = {
   tags?: string[];
 };
 
-/** What the in-process brain is doing. The Agent DO computes this; a socket does not. */
+/** What the in-process harness is doing. The Agent DO computes this; a socket does not. */
 export type BrainState = "ready" | "needs_keys" | "error" | "starting";
 
 /** One plugin from the registry boot. `reason` is set when `state` is `skipped`. */
@@ -65,13 +65,13 @@ export type PluginStatus = {
 };
 
 /**
- * Brain status the Agent DO computes from the registry boot, plus the
+ * Harness status the Agent DO computes from the registry boot, plus the
  * `perf` / `log` counters. `published`, `skipped`, and `lastTurn` mirror
  * `plugins` and `lastTurnAt` so older readers keep working.
  */
 export type AgentStatus = {
   state: BrainState;
-  /** ms epoch of the last brain open. */
+  /** ms epoch of the last harness open. */
   since: number | null;
   /** `PACKAGE_VERSION` of the isolate that answered. */
   version: string;
@@ -84,7 +84,7 @@ export type AgentStatus = {
   published: string[];
   /** Skipped plugins. The Tools fold reads this. */
   skipped: { name: string; reason: string }[];
-  /** Last error-level `log` line. Cleared when the brain opens. */
+  /** Last error-level `log` line. Cleared when the harness opens. */
   lastError: { message: string; at: string } | null;
   /** Rolling totals. They survive a restart; a fresh isolate keeps the stored row. */
   perf: { turns: number; prompt: number; completion: number; errors: number };

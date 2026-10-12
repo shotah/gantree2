@@ -7,7 +7,7 @@ chatbot that only answers now is not.
 
 There is no ticker. `nextAlarm()` is the soonest due row across cron,
 watches, and memory consolidation. `edge/agent.do.ts` `alarm()` calls
-`brain.alarm()`, which runs `fireDue`, polls due watches, and runs a
+`harness.alarm()`, which runs `fireDue`, polls due watches, and runs a
 consolidation pass when `MEMORY_CONSOLIDATE_MINUTES` says so (default
 30; `0` turns that pass off). The handler arms the next wake. Cost
 between fires is zero. One clock: [architecture.md](architecture.md) §5.
@@ -200,7 +200,7 @@ finished (one-shot disable, silent skip, empty reply, or push error).
 It does not mean the phone got a frame.
 
 On this product the hops are inside the DO: the alarm calls
-`brain.alarm()`, the runner runs the turn, and a spoken result is a
+`harness.alarm()`, the runner runs the turn, and a spoken result is a
 `push` frame the DO fans to `sub:<user_id>` (or every phone in the room
 when `user_id` is empty), plus Web Push if that socket is gone.
 
@@ -245,7 +245,7 @@ The poller shares the cron alarm.
 
 The poller does not know RSS vs X. A watch row is `tool` + `args`.
 Plugins return `{items:[{id,…}]}` JSON. They live under
-`brain/plugins/<name>/`.
+`harness/plugins/<name>/`.
 
 | Plugin | Tools | Watch args |
 | --- | --- | --- |

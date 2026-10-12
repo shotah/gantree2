@@ -64,7 +64,7 @@ money per hour of effort of the three while the user count is small.
 ## Path 2 — hosted door (weeks, LLC first)
 
 The product: **we run the Worker; they bring every key.** No shared
-brain, no shared Google client for the tools, no billing for tokens.
+harness, no shared Google client for the tools, no billing for tokens.
 The existing design already does the hard part — one Agent DO per
 agent, Google sign-in per person, keys pasted into the agent's own
 env.

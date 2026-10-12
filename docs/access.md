@@ -57,7 +57,7 @@ check at request time.**
 - The app list (env floor ∪ Settings DO rows) says whether you may be
   here at all, and with what role.
 - The agent's room list says whether that agent will talk to you. It
-  lives on the Agent DO. Settings edits it. The brain publishes it as
+  lives on the Agent DO. Settings edits it. The harness publishes it as
   an `allow` frame. Nothing else does. Admins may chat with every
   inventoried agent even when that list is empty. Operators and members
   need assignment as in the roles table; `GANTREE_ALLOW` only lets
@@ -115,7 +115,7 @@ set. Code: `lib/door/users.ts`.
 
 **Turn off and destroy (admin only).** Turn off sets the inventory row
 to disabled, drops the Agent Durable Object alarm, and forgets the
-in-memory brain; chat and schedules return `409` `off` while the object
+in-memory harness; chat and schedules return `409` `off` while the object
 and its stored chat, keys, and memory stay. Turn on re-enables the row
 without wiping anything. Destroy is a second confirm on the agent
 dashboard: it clears directory entries and operator assignments,
@@ -237,11 +237,11 @@ Room list = last `allow` frame stored on that agent's Durable Object. New
 Admins are **not** exempt from the room list: operating Ada and
 talking to Ada are different grants.
 
-### Frames (brain ↔ room)
+### Frames (harness ↔ room)
 
-The brain emits these inside the DO. The DO fans the phone-facing kinds.
+The harness emits these inside the DO. The DO fans the phone-facing kinds.
 
-Brain → room, right after `cmds`, and again when the allow list changes:
+Harness → room, right after `cmds`, and again when the allow list changes:
 
 ```json
 { "kind": "allow", "users": [
@@ -250,7 +250,7 @@ Brain → room, right after `cmds`, and again when the allow list changes:
 ] }
 ```
 
-Room → brain, `email` beside `user_id`. The phone kind is `inbound`:
+Room → harness, `email` beside `user_id`. The phone kind is `inbound`:
 
 ```json
 { "kind": "inbound", "user_id": "118212345678901234567",
@@ -258,8 +258,8 @@ Room → brain, `email` beside `user_id`. The phone kind is `inbound`:
 ```
 
 The DO admits the socket when `user_id` **or** a verified `email` is on
-the room list, then stamps `user_id` before the brain sees the frame.
-The brain keeps one session id, `agent`, a row label in that agent's
+the room list, then stamps `user_id` before the harness sees the frame.
+The harness keeps one session id, `agent`, a row label in that agent's
 database. `pendant:<agent id>:<sub>` is the alias until Phase 4.
 
 ---
@@ -306,8 +306,8 @@ signs in; `/agents/ada` opens; `/agents/sam` is `401`; `/users` is
 1. `/agents/ada` → Users fold → tick Bob, or type an email for someone
    who is not on the app list yet (settings adds them as `member` on
    the same save). Settings writes the room list. An env change drops
-   the memoised brain and opens a new one.
-2. The brain publishes `allow`. The DO stores it and indexes the email
+   the memoised harness and opens a new one.
+2. The harness publishes `allow`. The DO stores it and indexes the email
    in KV.
 3. Sam opens `/chat/ada` on a phone. `/api/auth/me` says
    `agents: ["ada"]`. First frame carries `user_id` + `email`; Ada
@@ -354,7 +354,7 @@ list as the agent's own policy.
 
 | Change | Risk | Why it is acceptable |
 | --- | --- | --- |
-| The brain publishes `allow` | The room list is that agent's policy | Ada's list cannot touch Sam's agent id. |
+| The harness publishes `allow` | The room list is that agent's policy | Ada's list cannot touch Sam's agent id. |
 | Session for any verified Google account | Strangers hold a cookie | It opens nothing: the gate re-checks the list on every request. Same `unauthorized` for every miss; the only id shown is your own. |
 | Email as alias | Someone else's Google account with that email? | Google verifies `email` on its own accounts. Exact, lowercased, `email_verified` required. Workspace `hd` is a later knob. |
 | Room list remembered | Yank is the next `allow` | Removing the person from `/users` is instant for everything else. |
@@ -393,4 +393,4 @@ Fail one and the task is later, or wrong.
    own id.
 7. **Isolation.** Adding a person to Ada does not touch Sam.
 8. **`allow` is a frame on the room.** Settings writes the list; the
-   brain publishes it.
+   harness publishes it.

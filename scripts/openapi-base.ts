@@ -2559,7 +2559,7 @@ export const OPENAPI_BASE = {
         tags: [
           "agents",
         ],
-        summary: "Restart brain",
+        summary: "Restart harness",
         security: [
           {
             sessionCookie: [],

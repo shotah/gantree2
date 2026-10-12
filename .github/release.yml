@@ -12,9 +12,9 @@ changelog:
     - title: Plugins
       labels:
         - plugins
-    - title: Brain
+    - title: Harness
       labels:
-        - brain
+        - harness
     - title: Edge
       labels:
         - edge

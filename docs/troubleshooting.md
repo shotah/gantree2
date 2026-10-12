@@ -16,7 +16,7 @@ on the folds.
 
 The clock is the Agent DO alarm. `nextAlarm()` is null when nothing is
 due, and then no alarm is armed. If an agent is quiet past a job you
-scheduled, send any message so the brain opens and arms the next wake.
+scheduled, send any message so the harness opens and arms the next wake.
 `MEMORY_CONSOLIDATE_MINUTES=0` skips the consolidation pass only. Cron
 and watches still use the same alarm.
 
@@ -52,7 +52,7 @@ off the list is not in the catalog.
 
 ## Persona imported once
 
-The first time the brain opens its persona store, `config.persona`
+The first time the harness opens its persona store, `config.persona`
 is copied into `PERSONA.md` if `persona_file` has no rows and the
 string is not blank. That copy does not run again once any row
 exists. Saving the persona fold writes the row, and so does a `PATCH`
@@ -64,10 +64,10 @@ text without writing a row.
 
 ## `SELF.md` — personality drift
 
-The brain's **self-notes** feature is long-horizon personality: the agent grows
+The harness's **self-notes** feature is long-horizon personality: the agent grows
 a voice that survives `/new`.
 
-- The brain overwrites the `SELF.md` header and the `PERSONA.md` Self-notes and Location pins sections. Your bullets stay.
+- The harness overwrites the `SELF.md` header and the `PERSONA.md` Self-notes and Location pins sections. Your bullets stay.
 - Mid-chat: builtin `self_note` appends a short line.
 - On history trim: new `Voice:` bits append the same way (no extra model call).
 - On `/new`: a distill pass **merges** into the file from the dying session,

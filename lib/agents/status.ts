@@ -1,7 +1,7 @@
 /**
- * Fold brain frames into the Agent DO. `status`, `perf`, and `log` stay
+ * Fold harness frames into the Agent DO. `status`, `perf`, and `log` stay
  * here — they are never fanned out to phones. `harnessKind` is that filter.
- * Liveness is the brain the DO opened, not a container socket.
+ * Liveness is the harness the DO opened, not a container socket.
  */
 import { PACKAGE_VERSION } from "@/app/lib/release";
 import {
@@ -157,7 +157,7 @@ export function stateFromPlugins(plugins: readonly PluginStatus[]): Exclude<Brai
   return needs ? "needs_keys" : "ready";
 }
 
-/** Screen word. A booted brain is running; an empty or failed row has not started. */
+/** Screen word. A booted harness is running; an empty or failed row has not started. */
 export function statusLabel(state: BrainState | null | undefined): "running" | "not started" {
   if (state === "ready" || state === "needs_keys") {
     return "running";
@@ -293,7 +293,7 @@ export function parseLog(raw: unknown): LogRing {
   return { seq, lines: kept.slice(-LOG_CAP) };
 }
 
-/** A brain open. Clears the last error and stamps `since`. Perf stays; the stored row outlives the isolate. */
+/** A harness open. Clears the last error and stamps `since`. Perf stays; the stored row outlives the isolate. */
 export function noteBrainOpen(status: AgentStatus, now: number): AgentStatus {
   return {
     ...status,

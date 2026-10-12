@@ -30,7 +30,7 @@ export type AgentBinding = {
   LOCATION_HINT?: string;
 };
 
-/** Same stub everywhere so the first `get()` can pin the room near the Mini. */
+/** Same stub everywhere so the first `get()` can pin the room near the Mini. The name is the inventory slug, never the display name. */
 export function agentStub(env: AgentBinding, slug: string): DurableObjectStub | null {
   if (!env.AGENT) {
     return null;

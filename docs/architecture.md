@@ -3,13 +3,13 @@
 How gantree is put together: the pictures, then the choices that stay
 true as it grows. The reasoning behind the shape is in
 [proposal.md](proposal.md) (the morning's plan) and
-[brain.md](brain.md) (the runtime that was built). Who may do what is
+[harness.md](harness.md) (the runtime that was built). Who may do what is
 in [access.md](access.md); where it runs is in [install.md](install.md).
 When this file and the proposal disagree about the runtime, this file
-and [brain.md](brain.md) win.
+and [harness.md](harness.md) win.
 
 Vocabulary: **settings** (what operators see), **chat** (the PWA a
-member talks through), **agents** (one Durable Object each), **brain**
+member talks through), **agents** (one Durable Object each), **harness**
 (the TypeScript loop inside that object), **users** (one list, three
 roles). Wire names are `CHAT_*`, `agents`, `chat:<agent id>:<sub>`.
 `PENDANT_*`, `CHANNEL=pendant`, and `cranes` are aliases until the
@@ -17,11 +17,11 @@ Phase 4 wire-name drop and are marked where they appear.
 
 ## 1. The product
 
-One Worker, one manifest, two places it runs. The brain is the Agent
+One Worker, one manifest, two places it runs. The harness is the Agent
 Durable Object: no second process, no image, and no socket between the
-brain and the room. `edge/agent.do.ts` builds it with `openRoomBrain`
-(`brain/room`) and `createBrain` (`brain/agent`). The contract is
-`brain/core`: `Sql` on `ctx.storage.sql`, `Clock`, `Logger`,
+harness and the room. `edge/agent.do.ts` builds it with `openRoomBrain`
+(`harness/room`) and `createBrain` (`harness/agent`). The contract is
+`harness/core`: `Sql` on `ctx.storage.sql`, `Clock`, `Logger`,
 `ChatProvider` (`openai` at major 7, against `LLM_BASE_URL`,
 `LLM_API_KEY`, `LLM_MODEL`), and `Plugin` / `Tool`.
 
@@ -47,7 +47,7 @@ flowchart LR
     subgraph dos["Durable Objects"]
       direction LR
       SDO[("Settings DO<br/>users · audit · samples<br/>SQLite")]
-      ADO[("Agent DO<br/>one per agent id<br/>SQLite brain")]
+      ADO[("Agent DO<br/>one per agent id<br/>SQLite harness")]
     end
     KV[("KV directory<br/>sub / email → slugs")]
   end
@@ -70,13 +70,13 @@ flowchart LR
   class SDO,ADO,KV store
 ```
 
-The twelve tools are in-process modules under `brain/plugins`, not
+The twelve tools are in-process modules under `harness/plugins`, not
 child processes: `chat`, `feeds`, `flights`, `garmin`, `google`,
 `google-health`, `image`, `maps`, `math`, `rentals`, `strava`,
 `twitter`. The model sees `{plugin}__{tool}` (`google__calendar_list_events`).
 Schemas stay off until `mcp_enable`; a brief hold drops after 6 hours
 idle, a short hold after 27. Plugin tools take a set and return a list
-(`.cursor/rules/brain-plugins-plural.mdc`). `GARMIN_TOOL_TIER`
+(`.cursor/rules/harness-plugins-plural.mdc`). `GARMIN_TOOL_TIER`
 (`core`, `extended`, `complete`; empty stays `core`) and
 `GOOGLE_TOOL_PRESET` (`lean`, `everyday`, `all`; empty stays
 `everyday`) narrow those two catalogs. A plugin that cannot serve is
@@ -85,7 +85,7 @@ on the `status` frame.
 
 Cron, watches, and memory consolidation share the Agent DO alarm.
 `nextAlarm()` is the soonest due instant; `alarm()` calls
-`brain.alarm()`, which runs due work and returns the next wake. Cost
+`harness.alarm()`, which runs due work and returns the next wake. Cost
 between fires is zero.
 
 Phone-facing frames are `reply`, `draft`, `typing`, `react`, `cmds`,
@@ -128,14 +128,14 @@ the Durable Objects, and the KV directory.
 | | Cloudflare | Home |
 | --- | --- | --- |
 | Worker, DOs, KV | Cloudflare | celld |
-| Brain | Agent Durable Object | the same class under celld |
+| Harness | Agent Durable Object | the same class under celld |
 | What you type | `wrangler deploy` | `celld deploy` |
 
-The brain is TypeScript because the isolate is JavaScript, the Durable
+The harness is TypeScript because the isolate is JavaScript, the Durable
 Object class is JavaScript, and a turn is waiting on the model and on
-`fetch`. Why Go-in-WASM lost is [brain.md](brain.md).
+`fetch`. Why Go-in-WASM lost is [harness.md](harness.md).
 
-Behavioral eval is Vitest: `brain/eval`, `npm run eval`. Setup:
+Behavioral eval is Vitest: `harness/eval`, `npm run eval`. Setup:
 [eval_setup.md](eval_setup.md).
 
 ## One agent, one Durable Object
@@ -162,7 +162,7 @@ enable, and location stores rewrites the old label `gantry`, and
 any other leftover mouth id, onto that conversation id.
 
 KV maps a person to the agent ids they may open. It does not hold
-the brain.
+the harness.
 
 ## 2. Request path — the door
 
@@ -249,12 +249,12 @@ Every miss (`expired`, `state`, `exchange`, `token`, `not_allowed`)
 bounces to `/login?error=` and never sets a session. The only identity
 a stranger ever sees is their own.
 
-## 4. Chat — phone to the brain through the Agent DO
+## 4. Chat — phone to the harness through the Agent DO
 
 The Agent DO is the room. A phone joins with the session — the cookie,
 or the same JWE on `Authorization` — plus that agent's own list. There
 is no second socket. The DO hands `inbound` and `react` to
-`brain.handleInbound` and fans the frames the brain emits.
+`harness.handleInbound` and fans the frames the harness emits.
 
 Native sign-in ([access.md](access.md#phones-native-sign-in)):
 
@@ -292,9 +292,9 @@ sequenceDiagram
   actor M as Member (PWA)
   participant MW as middleware
   participant A as Agent:ada DO
-  participant B as brain<br/>createBrain
+  participant B as harness<br/>createBrain
 
-  Note over A,B: first use opens the brain, announces status and cmds, arms nextAlarm
+  Note over A,B: first use opens the harness, announces status and cmds, arms nextAlarm
   M->>MW: GET /chat/ada (gantree_session)
   MW->>MW: gate → pass (member)
   MW-->>M: PWA shell
@@ -316,7 +316,7 @@ sequenceDiagram
   Note over A: status, perf, log stay on the DO — never fanned to phones
 ```
 
-## 5. Agent lifecycle — the DO is the brain
+## 5. Agent lifecycle — the DO is the harness
 
 ```mermaid
 stateDiagram-v2
@@ -325,10 +325,10 @@ stateDiagram-v2
   Turn --> Idle : frames fanned · nextAlarm armed
   Idle --> Due : Durable Object alarm
   Due --> Idle : cron · watch · consolidation · arm next
-  Idle --> Idle : env or persona change drops the brain
+  Idle --> Idle : env or persona change drops the harness
 
   note right of Idle
-    SQLite in the DO is the brain.
+    SQLite in the DO is the harness.
   end note
 ```
 
@@ -338,7 +338,7 @@ sequenceDiagram
   actor O as Operator
   participant W as Worker /agents/ada
   participant A as Agent:ada DO
-  participant B as brain
+  participant B as harness
 
   O->>W: open the agent
   A->>B: openRoomBrain · createBrain
@@ -347,12 +347,12 @@ sequenceDiagram
 
   O->>W: phone inbound, or the alarm fires
   W->>A: frame, or alarm()
-  A->>B: handleInbound, or brain.alarm()
+  A->>B: handleInbound, or harness.alarm()
   B->>A: reply · push · boards
   A->>A: setAlarm(next wake)
 ```
 
-An env or persona change drops the memoised brain and opens a new one,
+An env or persona change drops the memoised harness and opens a new one,
 then arms the alarm again.
 
 ## 6. Users — one list, three roles
@@ -398,7 +398,7 @@ flowchart LR
   end
   subgraph ev["eval.yml — tag, or by hand"]
     direction LR
-    EV["npm run eval<br/>Vitest · brain/eval"]
+    EV["npm run eval<br/>Vitest · harness/eval"]
   end
   subgraph dep["deploy-cloudflare.yml — after ci on main"]
     direction LR
@@ -431,7 +431,7 @@ flowchart TB
     SESSION --> HTTP
     RT["runtime<br/>(cloudflare:workers only here)"]
   end
-  subgraph brain["brain/ — the agent"]
+  subgraph harness["harness/ — the agent"]
     CORE[core<br/>Sql · Clock · Logger · Provider]
     LOOP[agent<br/>createBrain]
     ROOM[room<br/>openRoomBrain · catch]
@@ -452,11 +452,11 @@ flowchart TB
   RT -.-> ADO
   ADO --> ROOM
   LAYOUT --> ALIB
-  TEST["test/ mirrors every folder"] -.-> door & brain & edge
+  TEST["test/ mirrors every folder"] -.-> door & harness & edge
 ```
 
-The coverage badge counts `lib/**`, `edge/**`, `app/lib/**`. Brain
-suites live under `test/brain/` and run with `npm test`; they are not
+The coverage badge counts `lib/**`, `edge/**`, `app/lib/**`. Harness
+suites live under `test/harness/` and run with `npm test`; they are not
 in that badge's include. `lib/door/runtime.ts` is the one excluded
 file: it imports `cloudflare:workers` and has nothing to assert.
 
@@ -465,14 +465,14 @@ file: it imports `cloudflare:workers` and has nothing to assert.
 **One Worker, not three repos.** Settings and chat are one Vinext app
 on Workers, and state is Durable Objects.
 
-**Why the brain is the Agent DO.** The agent is always available and
+**Why the harness is the Agent DO.** The agent is always available and
 is not billed while idle. The DO wakes in milliseconds, costs nothing
 between alarms, and keeps SQLite that outlives the invocation. The
 loop, the plugins, and the clock run in that object. The record is
-[brain.md](brain.md).
+[harness.md](harness.md).
 
 **Why Durable Objects, not D1.** One actor per agent is the natural
-unit: its config, its room, its bearer, its alarm, and its brain.
+unit: its config, its room, its bearer, its alarm, and its harness.
 Settings is one more actor. Nothing is shared except the KV directory.
 
 ## 10. Choices that stay true
@@ -488,7 +488,7 @@ If a task fails one of these, it is later, or it is wrong.
    bearer live on the DO. Persona rows, `SELF.md`, sessions, memory,
    cron, watches, and OAuth tokens live in that DO's SQLite. Settings
    edits them through the DO. No file on a host, no second inventory.
-3. **The brain does not listen.** A turn is a method call inside the
+3. **The harness does not listen.** A turn is a method call inside the
    DO. Frames fan out to the phones on the room. No `/metrics` port,
    no scrape, no hook. `status`, `perf`, and `log` stay on the DO.
    The Vinext Worker is the HTTP API ([openapi.yaml](openapi.yaml)).
@@ -498,17 +498,17 @@ If a task fails one of these, it is later, or it is wrong.
 5. **One manifest, two targets.** Anything that deploys to Cloudflare
    deploys under celld. celld stops on a key it does not model; that
    is the check.
-6. **TypeScript is the product.** The Worker, the DO, and the brain are
+6. **TypeScript is the product.** The Worker, the DO, and the harness are
    one language. No `gantree` CLI until `npm` scripts are genuinely
    not enough.
 7. **Isolation.** One human list per agent, one DO. Retire a tryout =
    delete its DO. Adding a person to Ada does not touch Sam.
 8. **Env change retargets.** A changed env or persona drops the
-   memoised brain and opens a new one. A restart that keeps a ghost
+   memoised harness and opens a new one. A restart that keeps a ghost
    allowlist is the thing the UI nags.
 9. **Not chat.** Settings never sits in a chat turn. Chat is a PWA on
    the same origin, not a feature of the settings screens.
-10. **Plugins are modules.** The twelve live under `brain/plugins` and
+10. **Plugins are modules.** The twelve live under `harness/plugins` and
     load with the Worker. `ready()` publishes or skips. Grants from
     the Tools fold reach the registry directly: a plugin left off the
     list is not in the catalog. Per-session schemas are `mcp_enable`.
@@ -521,14 +521,14 @@ If a task fails one of these, it is later, or it is wrong.
     not invent a Docker client, a JWT parser, or a theme engine.
 13. **Coverage is a badge, not a hope.** One number on the README.
     The Vitest floor is `vitest.config.ts` (`lib/**`, `edge/**`,
-    `app/lib/**`). Brain suites run with `npm test` and are not in
+    `app/lib/**`). Harness suites run with `npm test` and are not in
     that include.
 
 ## 11. Repo rules
 
 - Tests live under `test/` and mirror the module they cover
   (`lib/door/gate.ts` → `test/door/gate.test.ts`,
-  `brain/core/sql.ts` → `test/brain/core/sql.test.ts`). Never beside
+  `harness/core/sql.ts` → `test/harness/core/sql.test.ts`). Never beside
   source.
 - Import with `@/`. Import leaf modules, not barrels.
 - UI folders match screens (`shared`, `agents`, `chat`, `users`,
@@ -560,7 +560,7 @@ in [todo.md](todo.md#hosted-phase-5--the-paid-door), numbers in
 [monetize.md](monetize.md).
 
 **Not the product:** Kubernetes, Cloud Run / Lambda, a shared family
-brain, pairing the agent through settings, reselling LLM tokens, a
+harness, pairing the agent through settings, reselling LLM tokens, a
 shared Google client for the tools, orgs and invite links beyond one
 household per account, a second login, Cloudflare Access in front of
 the Worker, anything that makes a turn slower so a dashboard looks

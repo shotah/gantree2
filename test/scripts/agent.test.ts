@@ -140,7 +140,7 @@ describe("health and HTTP decisions", () => {
     expect(decideRestartAgent(502)).toBe("fail");
   });
 
-  it("pulls brain fields from restart JSON", () => {
+  it("pulls harness fields from restart JSON", () => {
     expect(statusFromBody({ state: "ready", published: ["maps", 1] })).toEqual({
       state: "ready",
       published: ["maps"],

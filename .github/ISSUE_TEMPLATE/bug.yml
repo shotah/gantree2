@@ -1,5 +1,5 @@
 name: Bug
-description: Something broke in a running assistant, the door, or the brain.
+description: Something broke in a running assistant, the door, or the harness.
 title: "bug: "
 labels:
   - bug

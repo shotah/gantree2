@@ -1,17 +1,17 @@
 /**
  * Every key the Keys fold knows how to explain. Plugin rows come from each
- * plugin's `keys` export. House rows are the Worker env the brain already
+ * plugin's `keys` export. House rows are the Worker env the harness already
  * reads. `needs` on the tools grid is the required slice of this list.
  */
-import { keys as feedsKeys } from "@/brain/plugins/feeds/keys";
-import { keys as flightsKeys } from "@/brain/plugins/flights/keys";
-import { keys as garminKeys } from "@/brain/plugins/garmin/keys";
-import { keys as googleKeys } from "@/brain/plugins/google/keys";
-import { keys as googleHealthKeys } from "@/brain/plugins/google-health/keys";
-import { keys as mapsKeys } from "@/brain/plugins/maps/keys";
-import { keys as rentalsKeys } from "@/brain/plugins/rentals/keys";
-import { keys as stravaKeys } from "@/brain/plugins/strava/keys";
-import { keys as twitterKeys } from "@/brain/plugins/twitter/keys";
+import { keys as feedsKeys } from "@/harness/plugins/feeds/keys";
+import { keys as flightsKeys } from "@/harness/plugins/flights/keys";
+import { keys as garminKeys } from "@/harness/plugins/garmin/keys";
+import { keys as googleKeys } from "@/harness/plugins/google/keys";
+import { keys as googleHealthKeys } from "@/harness/plugins/google-health/keys";
+import { keys as mapsKeys } from "@/harness/plugins/maps/keys";
+import { keys as rentalsKeys } from "@/harness/plugins/rentals/keys";
+import { keys as stravaKeys } from "@/harness/plugins/strava/keys";
+import { keys as twitterKeys } from "@/harness/plugins/twitter/keys";
 
 export type KeyKind = "secret" | "text";
 

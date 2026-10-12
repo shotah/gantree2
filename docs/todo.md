@@ -7,14 +7,16 @@ same thing in both). This is what is left, in the order to do it.
 
 **State today (2026-10-11):** every screen, the door, the chat PWA,
 the agent registry, the mark, the docs site on
-`github.bldhosting.com`, release tooling. The Workers-native brain
-is the only runtime ([todo_done.md](todo_done.md) §10). There is no
-harness directory and no container. `wrangler.jsonc` is Settings
-and Agent (SQLite) plus KV `DIRECTORY`. The catalog is
-`toolCatalog()` from `brain/plugins`. `npm run agent` starts (or
-reuses) Vite and opens browser chat on the native Agent DO with house
+`github.bldhosting.com`, release tooling. The Workers-native harness
+is the only runtime ([todo_done.md](todo_done.md) §10). The runtime
+directory is `harness/`. There is no container. The Durable Object
+class named Harness was deleted in migration v3 and stays deleted.
+`wrangler.jsonc` is Settings and Agent (SQLite) plus KV `DIRECTORY`.
+The catalog is `toolCatalog()` from `harness/plugins`. `npm run agent`
+starts (or reuses) Vite and opens browser chat on the native Agent DO with house
 `LLM_*` from `.dev.vars`. Live eval is 30/30. `package.json` is
-0.2.18, deployed from `main` `c3fa813`.
+0.2.18, deployed from `main` `c3fa813`; local `package.json` is
+0.2.30.
 `GET https://gantree2.bldhosting.com/api/health` returns
 `{"ok":true,"version":"0.2.18"}`. Tag eval for v0.2.18 is in
 progress. Kit files tasks and goals from chat. Phones can sign in
@@ -22,20 +24,29 @@ without a browser (`/api/auth/{config,nonce,token}`). **Not yet
 done:** the provider-console redirects, Bob's walk, the §4 native
 walk, a stranger's README walk, and the one-week soak.
 
-Legend: `[ ]` open · **owner** needs a human with a console · tags are
-`easy` / `medium` / `hard` for effort. Each list is ordered easiest
-first. Decisions (**D**) that are settled live in
+Legend: `[ ]` open · **owner** needs a human with a console · **gated**
+waits on the note in the line · tags are `easy` / `medium` / `hard`
+for effort. Each list is ordered easiest first. Decisions (**D**) that are settled live in
 [todo_done.md](todo_done.md#0-decide); the one still open is hosted
 pricing, in the Hosted section.
 
 ---
 
-## Bugs — this pass
+## Speed
 
-- [ ] **hard** Rename `brain/` to `harness/` (path and wording). The deleted Harness Durable Object class stays deleted.
-- [ ] **easy** Every Agent Durable Object is addressed by `idFromName(slug)`. No path uses the display name or a random id.
+A question in chat is slower than the old Go binary. That is the
+work, not a dashboard. Do not make a turn slower so a chart looks
+nicer. Measure, then cut the biggest wait.
+
+- [ ] **medium** Time one chat question: door, Durable Object wake,
+      model, tools, reply. Write the numbers on this line.
+- [ ] **hard** Cut the largest wait from that trace. One change,
+      then measure again.
 
 ## Now — blocks the first stranger
+
+These need a human at the provider consoles and cannot be closed
+from the repo.
 
 - [ ] **owner · easy** Provider consoles for the tools (§7): the
       **tools** Google client, Strava, and Google Health list
@@ -48,44 +59,71 @@ pricing, in the Hosted section.
       `401` next click (§2).
 - [ ] **owner · medium** Walk: build Kit on `/agents/new`; grant maps;
       put the key in; Kit's card goes green; Kit's log fold streams
-      (§4). The path is the native brain.
+      (§4). The path is the native harness.
 - [ ] **owner · hard** Walk: a stranger with **one** README stands up
       Kit for two humans, yanks one, never opens the Cloudflare
       dashboard after the token (§8). The last box.
 
-## Next — still open on the brain
+## Next — still open on the harness
 
 What has landed is in [todo_done.md](todo_done.md) §10.
+88 tools are ported; the catalog has 139.
 
-- [ ] Tag eval in progress. Run 38172210169 (v0.2.18) was still on
-      the fixture step.
-- [ ] **medium** `braces` (high) and `fflate` (moderate). Both are
-      transitive under vinext: `vite-plugin-dynamic-import` →
-      micromatch → braces, and `@vercel/og` → satori pins fflate
-      0.7.3. No safe lockfile fix. Waits on vinext/satori upstream;
-      re-check weekly with `npm audit`.
-- [ ] **hard** Deferred ports. Garmin `complete`: 81 tools past
-      extended (core is 10, extended is 19;
-      `GARMIN_TOOL_TIER=complete` currently publishes that same
-      19). Google Drive, Docs, and Sheets past the everyday cores
-      (9 + 15 + 10) and Apps Script (17). 88 tools are ported; the
-      catalog has 139. Telegram, Discord, and Slack come back as
-      webhook routes on the Worker.
-- [ ] **medium** Decide: restore or drop. Left out of the loop port
-      on purpose: process RSS on the log (`selfRSSMB`, VmRSS; the
-      feeds plugin is the RSS reader and has landed), coalesce
-      settle, spinup notice, reaction debounce, typing refresh
-      (every 4s), draft throttle (250ms), and the `[room]` stamp
-      (theme, wallpaper, face). Judgment strips a `[room]` line if
-      one appears. Nothing writes the stamp.
+- [ ] **easy** Look up Actions run 38172210169 (v0.2.18) and record
+      pass or the failing step in this list.
+- [ ] **easy** If run 38172210169 failed, fix the fixture or the
+      harness and re-run.
+- [ ] **easy** Weekly: `npm audit` for `braces`. No release after
+      3.0.3. Not a lockfile edit. Do not claim a bump is safe.
+- [ ] **easy** Weekly: `npm audit` for `fflate`. satori pins 0.7.3.
+      0.7.5+ and 0.8.3 fix the advisory. Not a lockfile edit. Do not
+      claim a bump is safe.
+- [ ] **easy** Process RSS on the log (`selfRSSMB`, VmRSS; the feeds
+      plugin is the RSS reader and has landed). Decide restore or
+      drop. Do not implement it.
+- [ ] **easy** Coalesce settle. Decide restore or drop. Do not
+      implement it.
+- [ ] **easy** Spinup notice. Decide restore or drop. Do not
+      implement it.
+- [ ] **easy** Reaction debounce. Decide restore or drop. Do not
+      implement it.
+- [ ] **easy** Typing refresh every 4s. Decide restore or drop. Do
+      not implement it.
+- [ ] **easy** Draft throttle 250ms. Decide restore or drop. Do not
+      implement it.
+- [ ] **easy** The `[room]` stamp (theme, wallpaper, face). Judgment
+      strips a `[room]` line if one appears. Nothing writes the
+      stamp. Decide restore or drop. Do not implement it.
+- [ ] **medium** Google Drive past 9. Next slice: one Drive tool.
+      The rest waits.
+- [ ] **medium** Google Docs past 15. Next slice: one Docs tool.
+      The rest waits.
+- [ ] **medium** Google Sheets past 10. Next slice: one Sheets tool.
+      The rest waits.
+- [ ] **medium** Apps Script (17). Next slice: one Apps Script tool.
+      The rest waits.
+- [ ] **medium** Telegram webhook route on the Worker. Next slice:
+      that route.
+- [ ] **medium** Discord webhook route on the Worker. Next slice:
+      that route.
+- [ ] **medium** Slack webhook route on the Worker. Next slice:
+      that route.
+- [ ] **medium** Garmin `complete` past the 19 extended tools (core
+      is 10, extended is 19; `GARMIN_TOOL_TIER=complete` currently
+      publishes that same 19; 81 tools sit past extended). Next
+      slice: one Garmin group. The rest waits.
 
 ## Then — one stack (§9)
 
-- [ ] **medium** One stack, one week. Kit on the native brain
+Does not start in a coding session.
+
+- [ ] **owner · medium** One stack, one week. Kit on the native harness
       through a real week: the planner fires, memory consolidates,
       a cron survives a restart, the owner talks to it every day.
 
 ## Hosted (Phase 5) — the paid door
+
+Nothing here starts before the soak.
 
 **D — decided 2026-10-10:** gantree is a hosted product as well as a
 self-hosted one. v1 (one household per deploy) was never durable
@@ -107,14 +145,16 @@ product.
       agent, business bank account, EIN; a merchant of record (Lemon
       Squeezy / Paddle / Polar.sh) so sales tax and VAT are theirs.
       Needed before the first paid sign-up, not before.
-- [ ] **owner · medium** Paper: Terms of Service and a hosted privacy
-      policy (the Pages one covers the OAuth catch page only). The
-      inventory they describe is written and exact:
+- [ ] **owner · medium** Terms of Service. The inventory it describes
+      is written and exact:
       [security.md → What the service holds](security.md#what-the-service-holds--the-inventory)
       — credentials (every pasted key in the Agent DO, OAuth refresh
       tokens AES-GCM under `token.key` in that DO), chat (history in
       the Agent DO SQLite), and who-may-talk-to-whom. The paper wraps
-      that list; it does not need to invent anything.
+      that list; it does not invent anything.
+- [ ] **owner · medium** Hosted privacy policy. The Pages one covers
+      the OAuth catch page only. Same inventory as the Terms. It
+      wraps that list; it does not invent anything.
 - [ ] **hard** Tenancy. Today one Settings DO is `idFromName(
       "settings")` and Agent DOs are `idFromName(slug)` —
       one household per deploy. Hosted needs a household id: Settings
@@ -160,24 +200,39 @@ product.
 
 ## Later
 
-- Navigation uses `window.location.assign` (full reloads) — swap for
-  the router once the walks are done (§4).
-- Compare fold (carried): 2–3 agents, overlay tokens. `/` is a router
-  now, so it lives on `/settings` Spend or `/agents`; logs stay per
-  agent.
-- Per-person spend (carried): samples carry `agent`, `kind`, `value`
-  — no `user_id` — so "sub → display name" has nothing to name yet.
-  Add a `who` column from the `perf` frame's `source` first.
-- Chat screen restyle: `PhoneShell` was not touched by the console
-  restyle; the Cab shot the owner likes has a backdrop and an avatar,
-  which the web chat supports but the seed does not set (§7).
-- Web push walk: needs VAPID keys in `.dev.vars` (§3).
-- Workspace `hd` gate on sign-in.
-- Saved watches / tile catalog — after one attention surface stops
-  being enough.
-- Provider billing pull. Spend is tokens plus a pasted rate.
-- Operator writes on boards.
-- A `gantree` CLI only if `npm` scripts are not enough — TypeScript.
+- [ ] **easy** Chat screen restyle. `PhoneShell` was not touched by
+      the console restyle; the Cab shot has a backdrop and an avatar,
+      which the web chat supports and the seed does not set (§7).
+      First slice: set the backdrop on the seed. The avatar and the
+      rest of the restyle wait.
+- [ ] **easy** Per-person spend (carried). Samples carry `agent`,
+      `kind`, `value` — no `user_id` — so "sub → display name" has
+      nothing to name yet. First slice: a `who` column from the
+      `perf` frame's `source`. The display-name join waits.
+- [ ] **owner · easy** Web push walk (§3). First slice: the VAPID
+      trio in `.dev.vars` and one push. The rest of the walk waits.
+- [ ] **medium** Workspace `hd` gate on sign-in. The list stays the
+      rule. First slice: one sign-in branch that reads `hd`. Skipping
+      the allowlist for that domain waits.
+- [ ] **medium** Compare fold (carried): overlay tokens for 2–3
+      agents. Logs stay per agent. First slice: one route (`/settings`
+      Spend or `/agents`) overlaying two agents. The third agent and
+      the other route wait.
+- [ ] **medium** Provider billing pull. Spend is tokens plus a pasted
+      rate. First slice: one provider into one column. Other
+      providers wait.
+- [ ] **medium** Operator writes on boards. First slice: one route
+      that writes the aims board. The todo board waits.
+- [ ] **gated** Navigation uses `window.location.assign` (full
+      reloads). Starts once the walks are done (§4). First slice: the
+      `/chat` leave in `AgentRoomControls`. `assignHref` on the agent
+      screens waits.
+- [ ] **gated** Saved watches / tile catalog. Starts after one
+      attention surface stops being enough. First slice: one saved
+      watch. The catalog waits.
+- [ ] **gated** A `gantree` CLI, TypeScript, only if `npm` scripts
+      are not enough. First slice, if it starts: one command. The
+      rest waits.
 
 ## Other checkouts
 
@@ -187,18 +242,50 @@ Not this repo; listed so they are not forgotten.
   paragraph's three pictures; store listing text; wiring the brand
   PNGs from `shared/brand/`; cab/helm wording of the stolen-phone
   paragraph matching [access.md](access.md).
+- [ ] **owner** `gantree2-apps` cab: sign in against this backend and
+      send one turn. Helm can follow. That work is the other
+      checkout, not this repo.
 
 ## Not this product
 
-- Kubernetes; Cloud Run / Lambda / App Runner — Workers hosted,
-  celld at home
-- Shared family brain — one agent's memory is one agent's
-- Pairing the agent through settings; pairing codes in chat
-- Reselling LLM tokens — bring your key, even on the hosted door
-- A shared Google client for the tools — BYO client, hosted or not
-- Invite links and orgs beyond one household per account
-- A second login (passphrase, magic link, SSO beyond Google)
-- Cloudflare Access in front of the Worker
-- Role in the cookie
-- MCP OAuth as a phone login
-- Anything that makes the brain slower so a dashboard looks nicer
+Decided. These stay out.
+
+- Kubernetes, Cloud Run, Lambda, App Runner. Hosted is Cloudflare
+  Workers. Home is celld.
+- Cloudflare Access in front of the Worker. It rejects the WebSocket
+  and it is a second identity system.
+- Role in the cookie. The cookie proves who. The user row proves the
+  role, and it is read on every request, so taking admin away works
+  on the next click. A role baked into the cookie would stay admin
+  until the cookie died.
+- MCP OAuth as a phone login. That OAuth is how a tool server
+  (Gmail, a plugin) authorizes a call. The phone signs in with
+  Google. The tool token is not the door.
+- Pairing codes. Dropped. They were an old "type a code in chat to
+  link a device" idea. The door is the allow list. Nobody asked
+  for the codes.
+- A passphrase or magic-link door.
+- Anything that makes a turn slower so a dashboard looks nicer.
+
+## Future — not now, not never
+
+These were parked because too much else was open. They are not a
+ban. Do not build one until its box says to.
+
+- [ ] **medium** Shared / group agent. Tell the agent who is
+      speaking (the signed-in user) and let it keep that person's
+      preferences. User A's grants do not include user B's mail,
+      files, or tokens. One agent's memory is still one agent's.
+- [ ] **medium** What more people looks like. Tenancy, a household
+      id, and invite links are the Hosted section, and that section
+      stays gated on the soak. This box is a write-up of what
+      pushing the same door to more households needs, before any of
+      that code.
+- [ ] **easy** Resell LLM tokens only if a customer asks. Until
+      then, bring your own key.
+- [ ] **easy** Shared Google client for the tools. Undecided. Today
+      each agent has its own client. A shared client has to name
+      the mailbox and the person. Write that picture before any
+      code.
+- [ ] **medium** Another login beside Google. Candidates: Cloudflare
+      and GitHub. Not a passphrase. Not this week.

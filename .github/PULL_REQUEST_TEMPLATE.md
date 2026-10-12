@@ -7,7 +7,7 @@
 - [ ] `npm test`
 - [ ] `npm run lint`
 - [ ] `npm run typecheck`
-- [ ] `npm run eval` if this touches `brain/agent` or `brain/plugins`
+- [ ] `npm run eval` if this touches `harness/agent` or `harness/plugins`
 
 CI also runs `npm run test:coverage` and `npm run build`.
 

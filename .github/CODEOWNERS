@@ -4,7 +4,7 @@
 * @shotah
 
 # In-process plugins. Plural tools, Go names kept.
-/brain/plugins/** @shotah
+/harness/plugins/** @shotah
 
 # Durable Objects.
 /edge/** @shotah

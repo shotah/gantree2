@@ -98,7 +98,7 @@ export async function sealNonce(key: Uint8Array, now = Date.now()): Promise<stri
 }
 
 /**
- * OAuth catch. The brain puts this in the provider's `state`; the redirect
+ * OAuth catch. The harness puts this in the provider's `state`; the redirect
  * back to `/api/auth/catch` opens it and learns which agent and plugin
  * finished. A nonce or a session does not open here.
  */

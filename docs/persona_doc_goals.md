@@ -28,7 +28,7 @@ Tags say where a rule is enforced:
 
 | Tag | Meaning | In `PERSONA.md`? |
 | --- | --- | --- |
-| **kernel** | The brain stamps or drives it (`[wait]` pokes, Self-notes / Location pins / Follow-up sections, `[hours]` `[aims]` `[loops]`, `[surface]` `[input]`, the daily planner prompt). Cannot be edited away. | **No** — once verified. |
+| **kernel** | The harness stamps or drives it (`[wait]` pokes, Self-notes / Location pins / Follow-up sections, `[hours]` `[aims]` `[loops]`, `[surface]` `[input]`, the daily planner prompt). Cannot be edited away. | **No** — once verified. |
 | **persona** | Needs the model's cooperation; only the text you write can say it. | Yes — once, in one place. |
 | **per-human** | True for one person only (canonical email, house notes). | Their **Directives** or a `pref/` row. |
 
@@ -83,7 +83,7 @@ goal, nudges toward it, does the legwork, and does not report nothing.
   pulls calendar, mail, and Garmin, sets that day's crons, and is `[silent]`
   on a sick day, vacation, or when nothing needs a message. The agent moves
   the clock with `repeat=planner`. — **kernel wake prompt**
-  (`DefaultDailyPlannerPrompt`, `brain/cron`).
+  (`DefaultDailyPlannerPrompt`, `harness/cron`).
 
 ### Follow-through
 
@@ -92,7 +92,7 @@ A question it asks does not evaporate. A time it commits to has a wake.
 - A question they should answer → `[wait]` on its own line. Two pokes if
   they ghost (2 min, 15 min), then stop. `[nowait]` drops it. While
   `waiting_for_reply=true`, no new different question. — **kernel**
-  (`brain/cron/wait.ts`, `WaitSection`, `waitReplyNote`).
+  (`harness/cron/wait.ts`, `WaitSection`, `waitReplyNote`).
 - A clock time the agent commits to (“scoop at 2”, “leave at 5”) is a
   `cron_schedule` pinned by `memory_subject`, or **one** offer to ping. A
   calendar event is not the reminder. Never a timed checklist with no wake.
@@ -208,7 +208,7 @@ How it shows up. Steers tone. Lives in **Identity** + **Voice**, grows in
   preference. Stays as example #1.
 - **Languages: fact only.** No reply-language rule.
 - **Daily planner recipe: kernel wake prompt owns it.** `DefaultDailyPlannerPrompt`
-  in `brain/cron` carries the clauses — one session, calendar /
+  in `harness/cron` carries the clauses — one session, calendar /
   mail / Garmin, today's crons, sick or vacation → `[silent]`, empty calendar
   → one question, clock move with `repeat=planner`. The persona copy points
   at the same wake and does not restate the kernel prompt.
@@ -238,7 +238,7 @@ bullet (quote the joke), not an example. The daily planner is kernel.
 
 ## Scenario checks
 
-What “pinned” means. Each row is a fixture under `brain/eval/fixtures/`,
+What “pinned” means. Each row is a fixture under `harness/eval/fixtures/`,
 replayed against the live model with the shipped seed by `npm run eval`
 — how it works is in
 [evaluation_fable.md](evaluation_fable.md#the-behavior-contract). The check
@@ -296,8 +296,8 @@ Target after distill: **2–4k characters**, three examples, one closer.
 
 - [ ] More `self_note`s: persona push only, or add the kernel `[self]`
       drought stamp?
-- [x] Daily planner prompt carries the recipe — `brain/cron`.
-      `/planner` is `brain/slash`.
+- [x] Daily planner prompt carries the recipe — `harness/cron`.
+      `/planner` is `harness/slash`.
 
 ## Order of work
 

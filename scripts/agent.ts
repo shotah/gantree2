@@ -7,7 +7,7 @@
  *
  * Loads `.dev.vars` like seed (existing environment wins; values are never
  * printed). Starts or reuses `npm run dev`, ensures the agent exists, restarts
- * the brain, prints the chat URL. Open that URL in the browser to talk.
+ * the harness, prints the chat URL. Open that URL in the browser to talk.
  */
 import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -582,13 +582,13 @@ async function main(): Promise<void> {
     await waitForHealthAfterSpawn(child, base, args.port);
   }
 
-  let brain: ReturnType<typeof statusFromBody> = {};
+  let harness: ReturnType<typeof statusFromBody> = {};
   try {
     const outcome = await ensureAgent(base, args.slug);
     if (!outcome.ok && outcome.auth) {
       process.stderr.write(`${AUTH_HINT}\n`);
     } else if (outcome.ok) {
-      brain = outcome.status;
+      harness = outcome.status;
     }
   } catch (err: unknown) {
     if (spawned && child != null) {
@@ -602,8 +602,8 @@ async function main(): Promise<void> {
     model,
     host,
     chatUrl: url,
-    state: brain.state,
-    published: brain.published,
+    state: harness.state,
+    published: harness.published,
   })}\n`);
 
   if (!spawned) return;

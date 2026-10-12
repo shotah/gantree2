@@ -1,12 +1,12 @@
 # MCP tool naming
 
 Canonical contract for every plugin. Modules live under
-`brain/plugins/<name>/` and `brain/tools/names.ts` prefixes
+`harness/plugins/<name>/` and `harness/tools/names.ts` prefixes
 `{plugin}__{tool}`. This page is what goes on the right of the
 `__`. Plugins do not get a local dialect.
 
 Tools take a set and return a list. The rule is
-`.cursor/rules/brain-plugins-plural.mdc`. A tool that is one thing
+`.cursor/rules/harness-plugins-plural.mdc`. A tool that is one thing
 sets `single` and says why.
 
 **Why it matters:** small models and the host's closest-match repair
@@ -24,7 +24,7 @@ the eval that fails a fixture when a plugin renames a tool
 
 | Layer | Who owns it | Example |
 | --- | --- | --- |
-| Plugin id | directory name under `brain/plugins/` | `strava`, `google`, `garmin` |
+| Plugin id | directory name under `harness/plugins/` | `strava`, `google`, `garmin` |
 | Tool name | what the plugin registers | `activities_list`, `calendar_list_events` |
 | **Host-facing name** | `{plugin}__{tool}` | `strava__activities_list` |
 
@@ -106,7 +106,7 @@ the eval that fails a fixture when a plugin renames a tool
 10. **Tests lock names**
     Every plugin asserts each registered tool matches `^[a-z]+_[a-z]+`
     and does **not** start with the plugin id string. That test lives
-    under `test/brain/plugins/`.
+    under `test/harness/plugins/`.
 
 ---
 

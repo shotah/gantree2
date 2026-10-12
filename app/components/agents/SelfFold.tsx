@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { agentsMessage, codeOf, getSelf, putSelf, type ApiClient } from "@/app/lib/agentsHttp";
 import { api } from "@/app/lib/api";
-import { notesOnly } from "@/brain/selfnote/stamp";
+import { notesOnly } from "@/harness/selfnote/stamp";
 import { alertClass, Fold, primaryClass, quietClass } from "./Fold";
 
 function utf8Length(text: string): number {

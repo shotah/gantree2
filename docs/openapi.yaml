@@ -1890,7 +1890,7 @@ paths:
     post:
       tags:
         - agents
-      summary: Restart brain
+      summary: Restart harness
       security:
         - sessionCookie: []
         - sessionBearer: []

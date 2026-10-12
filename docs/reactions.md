@@ -7,8 +7,8 @@ reacting to the agent's. Cab is not in this repo ([todo.md](todo.md) §0).
 
 | | Chat (this repo) |
 | --- | --- |
-| Human reacts to the agent | The PWA sends `{ kind: "react", id, text }`. The DO stores it and fans it to that person's other mouths. The brain takes it as a turn (`handleInbound`). |
-| Agent reacts to the human | The brain emits `react` on the inbound id. The DO fans it to that person's phones. |
+| Human reacts to the agent | The PWA sends `{ kind: "react", id, text }`. The DO stores it and fans it to that person's other mouths. The harness takes it as a turn (`handleInbound`). |
+| Agent reacts to the human | The harness emits `react` on the inbound id. The DO fans it to that person's phones. |
 
 ## The rule
 
@@ -42,13 +42,13 @@ Set a 6pm wake to ask how it went.
 
 **Kernel.**
 
-The brain strips `[react …]` from the text the phone sees and emits a
+The harness strips `[react …]` from the text the phone sees and emits a
 `react` frame with the emoji. History stores the raw reply, so the
 model later sees `[react 👍]` as its own turn. An `[input] spoken`
 turn, or an emoji off the palette, sends the emoji as the text when
 there is no other text, and drops it when there is.
 
-**Persona.** One section beside `## Follow-up`, written by the brain,
+**Persona.** One section beside `## Follow-up`, written by the harness,
 not per persona file:
 
 ```markdown
@@ -79,7 +79,7 @@ Slack are not ported ([channels.md](channels.md)).
 **Chat inbound.** `{"kind":"react","user_id":…,"id":<agent frame
 id>,"text":"👍"}`. Empty `text` = cleared.
 
-`reply` frames carry an `id` (as `push` already does) and the brain
+`reply` frames carry an `id` (as `push` already does) and the harness
 keeps a small recent ring of `id → text`. `push` ids are kept too
 (a 👍 on a morning cron is the common case). Unknown id →
 `[reaction] 👍 on: (unknown message)`; still handled.
@@ -126,7 +126,7 @@ field `waiting` arms the wait before the turn. How to run it:
   instead.)
 
 12, 14 and 15 are live-model fixtures (`npm run eval`). 13 and the
-plumbing of all four run on the scripted completer under `test/brain/`.
+plumbing of all four run on the scripted completer under `test/harness/`.
 
 ## Decided (2026-09-17)
 

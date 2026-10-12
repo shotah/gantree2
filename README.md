@@ -22,7 +22,7 @@ Cloudflare account, or a box at home — same manifest. Sign in with
 Google, add the people you trust, give each assistant a persona and the
 tools it may touch, and talk to it from the browser, the Android app, or
 the iPhone app. Fast to stand up, simple to run, yours to read. The
-brain is TypeScript inside the Agent Durable Object.
+harness is TypeScript inside the Agent Durable Object.
 
 The tree is the agent. The level bough is the hoist. The orange is what
 it hands you.
@@ -37,7 +37,7 @@ it hands you.
   No passphrases, no second login, no role in the cookie.
 - **Real tools, in the Worker.** Maps, Google (mail, calendar, docs,
   drive), Garmin, Strava, Google Health, image generation, feeds, X,
-  rentals, math — twelve plugins in the same bundle as the brain. A
+  rentals, math — twelve plugins in the same bundle as the harness. A
   missing key or login shows up as skipped. Keys live on the assistant,
   not in your repo.
 - **Memory you can open.** SQLite, persona, and `SELF.md` live in the
@@ -87,19 +87,19 @@ flowchart LR
   subgraph worker[One Cloudflare Worker · or celld at home]
     door[the door<br/>allowlist + session]
     settings[(Settings DO<br/>users · agents · spend)]
-    room[(Agent DO · one per assistant<br/>room · config · SQLite brain · alarm)]
+    room[(Agent DO · one per assistant<br/>room · config · SQLite harness · alarm)]
     door --> settings
     door --> room
   end
   room -- chat completions --> llm[OpenAI-compatible model]
 ```
 
-The Worker is the only thing on the internet. The brain runs inside
+The Worker is the only thing on the internet. The harness runs inside
 the Agent Durable Object: the turn, the twelve plugins, persona,
 `SELF.md`, and the alarm that fires cron, watches, and memory
 consolidation. Phones only ever see chat. Diagrams:
 [architecture](docs/architecture.md). The decision:
-[brain](docs/brain.md). The morning's plan, kept as history:
+[harness](docs/harness.md). The morning's plan, kept as history:
 [proposal](docs/proposal.md).
 
 ## Run it
@@ -124,7 +124,7 @@ home setups; [access.md](docs/access.md) is the people side.
 ```sh
 npm run build && npm run start   # the built Worker under wrangler dev
 npm test · npm run lint · npm run typecheck             # what CI runs
-npm run eval                     # live-model eval; Vitest, brain/eval (docs/eval_setup.md)
+npm run eval                     # live-model eval; Vitest, harness/eval (docs/eval_setup.md)
 ```
 
 ## Tools in the box
@@ -149,7 +149,7 @@ are 6h and 27h. [mcp.md](docs/mcp.md).
 
 One coverage number, published to `gh-pages` on every push to `main`
 and shown above. It counts the Worker (`lib/**`, `edge/**`,
-`app/lib/**`; Vitest, 60 % floor in `vitest.config.ts`). Brain suites
+`app/lib/**`; Vitest, 60 % floor in `vitest.config.ts`). Harness suites
 run with `npm test` and are not in that include.
 
 ```sh
@@ -168,7 +168,7 @@ Same files under [`docs/`](docs/):
 
 | Running it | The assistant | The rules |
 | --- | --- | --- |
-| [install](docs/install.md) · [access](docs/access.md) · [security](docs/security.md) · [openapi](docs/openapi.yaml) · [troubleshooting](docs/troubleshooting.md) — door, keys, and the failures | [persona](docs/persona.md) · [channels](docs/channels.md) · [cron](docs/cron.md) · [reactions](docs/reactions.md) · [planner-siblings](docs/planner-siblings.md) · [connecting accounts](docs/auth.md) — what one assistant does | [architecture](docs/architecture.md) · [runtime](docs/runtime.md) · [brain](docs/brain.md) · [contract](docs/contract.md) · [mcp](docs/mcp.md) · [custom-mcp](docs/custom-mcp.md) · [mcp-naming](docs/mcp-naming.md) · [evals](docs/eval_setup.md) · [evaluation fable](docs/evaluation_fable.md) — the brain and the rules |
+| [install](docs/install.md) · [access](docs/access.md) · [security](docs/security.md) · [openapi](docs/openapi.yaml) · [troubleshooting](docs/troubleshooting.md) — door, keys, and the failures | [persona](docs/persona.md) · [channels](docs/channels.md) · [cron](docs/cron.md) · [reactions](docs/reactions.md) · [planner-siblings](docs/planner-siblings.md) · [connecting accounts](docs/auth.md) — what one assistant does | [architecture](docs/architecture.md) · [runtime](docs/runtime.md) · [harness](docs/harness.md) · [contract](docs/contract.md) · [mcp](docs/mcp.md) · [custom-mcp](docs/custom-mcp.md) · [mcp-naming](docs/mcp-naming.md) · [evals](docs/eval_setup.md) · [evaluation fable](docs/evaluation_fable.md) — the harness and the rules |
 
 Plan and backlog: [proposal](docs/proposal.md) · [todo](docs/todo.md) ·
 [done](docs/todo_done.md). Contributing: [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -185,11 +185,11 @@ lib/door/         allowlist · users · google · session · gate · landing    
 lib/chat/         room · bearer · frames · allow · push · membership          the room
 lib/agents/       registry · config · status · tools                         the assistants
 lib/theme/        fifteen themes, contrast gate                              from pendant
-brain/            the agent: core · agent loop · room · plugins
+harness/          the agent: core · agent loop · room · plugins
 edge/             Durable Objects: Settings · Agent
 worker/           the Worker entry: Vinext + /ws/<agent id>
 scripts/          icons · seed · shot · badge · pages · eval
-test/             mirrors lib/, app/, edge/, brain/, scripts/
+test/             mirrors lib/, app/, edge/, harness/, scripts/
 ```
 
 ## Lineage
