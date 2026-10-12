@@ -64,7 +64,7 @@ Setup by place: <a href="install.html">install.md</a>. Open walks: <a href="todo
 <tr>
 <td><strong>Members</strong></td>
 <td>the agent to <em>answer</em></td>
-<td>a Google account on the list; chat also needs the room list unless they are in <code>GANTREE_ADMINS</code> or <code>GANTREE_ALLOW</code></td>
+<td>a Google account on the list; chat also needs the room list (or directory index). <code>GANTREE_ALLOW</code> is sign-in only.</td>
 </tr>
 </tbody></table>
 <p>Bob can operate Ada and never message her. Sam can message Ada from
@@ -82,13 +82,12 @@ There is no second door and no passphrase.</p>
    admin · locked           member · locked            admin / operator(agents) / member
          └───────────────────────────┼────────────────────────────┘
                                      │  role
-         /users /settings  admin ────┤
-         /agents/&lt;id&gt;      admin, or operator with &lt;id&gt; in agents[]
-         /chat/&lt;id&gt;        any role  ──┐
-                                       └─ on that agent's room list, or on
-                                          GANTREE_ADMINS / GANTREE_ALLOW
-                                          (operators and other Settings-only
-                                          people still need a room row)</code></pre>
+         /users /settings /agents  admin only
+         /chat/&lt;id&gt;        signed in ──┐
+                                       └─ admin: every inventoried agent
+                                          operator: &lt;id&gt; on their row
+                                          member: room list (and inventory)
+                                          `GANTREE_ALLOW` does not open every room</code></pre>
 <hr>
 <h2 id="the-principle">The principle</h2>
 <p><strong>One identity (<code>sub</code>), one app list, one room list per agent, every
@@ -99,9 +98,10 @@ check at request time.</strong></p>
 here at all, and with what role.</li>
 <li>The agent&#39;s room list says whether that agent will talk to you. It
 lives on the Agent DO. Settings edits it. The brain publishes it as
-an <code>allow</code> frame. Nothing else does. People in <code>GANTREE_ADMINS</code> or
-<code>GANTREE_ALLOW</code> may chat with every agent even when that list is empty;
-everyone else still needs a row on it.</li>
+an <code>allow</code> frame. Nothing else does. Admins may chat with every
+inventoried agent even when that list is empty. Operators and members
+need assignment as in the roles table; <code>GANTREE_ALLOW</code> only lets
+someone sign in.</li>
 <li>A cookie only proves who. Removing a person from a list ends their
 access on the next request, not at cookie expiry.</li>
 </ul>
@@ -171,17 +171,17 @@ frames are always <code>sub</code>.</p>
 <tbody><tr>
 <td><code>admin</code></td>
 <td><code>GANTREE_ADMINS</code> (locked) or a Settings row</td>
-<td><code>/users</code>, <code>/settings</code>, every agent. An identity in <code>GANTREE_ADMINS</code> may chat with every agent; a Settings-only admin still needs that agent&#39;s room list.</td>
+<td><code>/users</code>, <code>/settings</code>, <code>/agents</code>, every inventoried agent in chat</td>
 </tr>
 <tr>
 <td><code>operator</code></td>
 <td>Settings row with <code>agents[]</code></td>
-<td><code>/agents/&lt;agent id&gt;</code> for listed ids; chat where the room list allows</td>
+<td>Chat only for listed ids that exist in the inventory; no agents console</td>
 </tr>
 <tr>
 <td><code>member</code></td>
 <td><code>GANTREE_ALLOW</code> (locked) or a Settings row</td>
-<td>An identity in <code>GANTREE_ALLOW</code> may chat with every agent; a Settings-only member still needs that agent&#39;s room list. <code>/api/auth/me</code></td>
+<td>Sign in via allow; chat only where the room list admits them (inventory only). <code>/api/auth/me</code> lists assigned agents</td>
 </tr>
 </tbody></table>
 <p>Resolution is per request: collect every row that matches, take the
@@ -189,6 +189,14 @@ highest role, union the operators&#39; <code>agents[]</code>. Env rows are <stro
 settings shows them and cannot remove them; edit the env to change
 them. Empty <code>GANTREE_ADMINS</code> → every gated route is <code>503</code> until it is
 set. Code: <code>lib/door/users.ts</code>.</p>
+<p><strong>Turn off and destroy (admin only).</strong> Turn off sets the inventory row
+to disabled, drops the Agent Durable Object alarm, and forgets the
+in-memory brain; chat and schedules return <code>409</code> <code>off</code> while the object
+and its stored chat, keys, and memory stay. Turn on re-enables the row
+without wiping anything. Destroy is a second confirm on the agent
+dashboard: it clears directory entries and operator assignments,
+deletes samples, wipes the Agent Durable Object (<code>deleteAll</code>), then
+removes the inventory row.</p>
 <h3 id="cookies">Cookies</h3>
 <table>
 <thead>

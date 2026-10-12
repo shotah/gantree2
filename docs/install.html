@@ -149,8 +149,11 @@ unless something healthy is already on port 3000, ensures a local agent
 (default slug <code>kit</code>), and restarts the Agent Durable Object so
 <code>nativeBrain</code> opens with those house keys and, when agent config leaves them
 blank, fills <code>CHAT_MAILBOX_URL</code> (<code>ws(s)://&lt;origin&gt;/ws/&lt;slug&gt;</code>) and
-<code>CHAT_BEARER</code> (the room bearer) so <code>chat__avatar_update</code> can set the face;
-<code>PUBLIC_ORIGIN</code> is that origin when it is set. Chat at
+<code>CHAT_BEARER</code> (the room bearer) so <code>chat__avatar_update</code> can set the face.
+<code>PUBLIC_ORIGIN</code> is that origin when it is set. When <code>IMAGE_OUTPUT_DIR</code> is
+blank, the same brain uses <code>/images</code>. Those bytes live in the Agent DO
+sqlite table <code>image_output</code>, which is the handoff <code>photo_generate</code> gives
+to <code>chat__avatar_update</code> and <code>chat__backdrop_update</code>. Chat at
 <code>http://127.0.0.1:3000/chat/kit</code> (or <code>--slug ada</code>). Set
 <code>GANTREE_DEV_USER</code> and list that identity in <code>GANTREE_ADMINS</code> so loopback
 API calls can create the agent without a browser session. The script

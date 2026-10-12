@@ -151,8 +151,10 @@ tool name, stable verbs, sibling nouns). This section is the <strong>host</stron
 <p>MCP image bytes are not stuffed into the model prompt. The host
 truncates tool results. The JSON summary stays, and chat puts
 <code>images: [{ url }]</code> on the room reply (same shape as inbound). Grant
-prefix <code>image</code>. Image bytes that another tool must read go to disk via
-<code>IMAGE_OUTPUT_DIR</code>; chat <code>avatar_update</code> / <code>backdrop_update</code> take
+prefix <code>image</code>. Image bytes that another tool must read go to the Agent DO
+sqlite table <code>image_output</code> under the <code>IMAGE_OUTPUT_DIR</code> directory string
+(the native brain fills <code>/images</code> when that var is blank); chat
+<code>avatar_update</code> / <code>backdrop_update</code> take
 <code>source_path</code>.</p>
 <p><strong>Why the prefix?</strong> OpenAI-safe characters, no collisions across plugins, and
 obvious provenance in logs and collapsed history markers. The prefix is
