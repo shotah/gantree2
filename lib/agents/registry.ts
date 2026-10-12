@@ -10,7 +10,8 @@ export const AGENTS_SQL = `CREATE TABLE IF NOT EXISTS agents (
   name TEXT,
   created_by TEXT,
   created_at INTEGER,
-  tags TEXT /*json array*/
+  tags TEXT /*json array*/,
+  enabled INTEGER NOT NULL DEFAULT 1
 )`;
 
 const NAME_MAX = 80;
@@ -25,21 +26,34 @@ export type AgentCreateBody = {
 
 export type AgentWrite
   = | { ok: true; agent: AgentRow }
-    | { ok: false; error: "bad_slug" | "bad_name" | "bad_tags" | "exists" };
+    | { ok: false; error: "bad_slug" | "bad_name" | "bad_tags" | "exists" | "name_exists" };
 
 export type AgentDelete
   = | { ok: true }
     | { ok: false; error: "bad_slug" | "not_found" };
+
+export type AgentEnabledSet
+  = | { ok: true; agent: AgentRow }
+    | { ok: false; error: "bad_slug" | "not_found" | "bad_enabled" };
 
 export type AgentRegistry = {
   list(): Promise<AgentRow[]>;
   get(slug: string): Promise<AgentRow | null>;
   create(input: AgentCreateBody, actor: string): Promise<AgentWrite>;
   remove(slug: string, actor: string): Promise<AgentDelete>;
+  setEnabled(slug: string, enabled: boolean, actor: string): Promise<AgentEnabledSet>;
 };
+
+function agentsHasEnabled(sql: Sql): boolean {
+  const info = rows(sql, "PRAGMA table_info(agents)");
+  return info.some((row) => row.name === "enabled");
+}
 
 export function migrateAgents(sql: Sql): void {
   sql.exec(AGENTS_SQL);
+  if (!agentsHasEnabled(sql)) {
+    sql.exec("ALTER TABLE agents ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1");
+  }
   sql.exec(AUDIT_SQL);
 }
 
@@ -50,6 +64,7 @@ export function openRegistry(sql: Sql, now: () => number = Date.now): AgentRegis
     get: (slug) => Promise.resolve(readAgent(sql, slug)),
     create: (input, actor) => Promise.resolve(createAgent(sql, input, actor, now())),
     remove: (slug, actor) => Promise.resolve(removeAgent(sql, slug, actor, now())),
+    setEnabled: (slug, enabled, actor) => Promise.resolve(setAgentEnabled(sql, slug, enabled, actor, now())),
   };
 }
 
@@ -151,6 +166,14 @@ function normalizeName(raw: unknown, slug: string): { ok: true; name: string } |
   return { ok: true, name };
 }
 
+function asEnabled(value: unknown): boolean {
+  if (value == null) {
+    return true;
+  }
+  const n = asInt(value);
+  return n == null ? true : n !== 0;
+}
+
 function mapAgent(row: Record<string, unknown>): AgentRow | null {
   const slug = asText(row.slug);
   const name = asText(row.name);
@@ -164,11 +187,12 @@ function mapAgent(row: Record<string, unknown>): AgentRow | null {
     createdBy: asText(row.created_by) ?? "",
     createdAt,
     tags: parseTags(row.tags),
+    enabled: asEnabled(row.enabled),
   };
 }
 
 function readAgents(sql: Sql): AgentRow[] {
-  const found = rows(sql, "SELECT slug, name, created_by, created_at, tags FROM agents ORDER BY created_at ASC, slug ASC");
+  const found = rows(sql, "SELECT slug, name, created_by, created_at, tags, enabled FROM agents ORDER BY created_at ASC, slug ASC");
   const out: AgentRow[] = [];
   for (const row of found) {
     const mapped = mapAgent(row);
@@ -184,7 +208,7 @@ function readAgent(sql: Sql, slug: string): AgentRow | null {
   if (!key) {
     return null;
   }
-  const found = rows(sql, "SELECT slug, name, created_by, created_at, tags FROM agents WHERE slug = ?", key);
+  const found = rows(sql, "SELECT slug, name, created_by, created_at, tags, enabled FROM agents WHERE slug = ?", key);
   const row = found[0];
   return row ? mapAgent(row) : null;
 }
@@ -216,10 +240,21 @@ function createAgent(sql: Sql, input: AgentCreateBody, actor: string, at: number
   if (existing.length > 0) {
     return { ok: false, error: "exists" };
   }
+  const resolvedLower = name.name.toLowerCase();
+  const takenName = rows(
+    sql,
+    "SELECT slug FROM agents WHERE LOWER(name) = ? OR slug = ? OR LOWER(name) = ? LIMIT 1",
+    resolvedLower,
+    resolvedLower,
+    slug,
+  );
+  if (takenName.length > 0) {
+    return { ok: false, error: "name_exists" };
+  }
   const who = typeof actor === "string" ? actor : "";
   const tagsJson = JSON.stringify(tags.tags);
   sql.exec(
-    "INSERT INTO agents (slug, name, created_by, created_at, tags) VALUES (?, ?, ?, ?, ?)",
+    "INSERT INTO agents (slug, name, created_by, created_at, tags, enabled) VALUES (?, ?, ?, ?, ?, 1)",
     slug,
     name.name,
     who,
@@ -229,8 +264,30 @@ function createAgent(sql: Sql, input: AgentCreateBody, actor: string, at: number
   insertAudit(sql, at, who, "agent.add", { slug, name: name.name, tags: tags.tags });
   return {
     ok: true,
-    agent: { slug, name: name.name, createdBy: who, createdAt: at, tags: tags.tags },
+    agent: { slug, name: name.name, createdBy: who, createdAt: at, tags: tags.tags, enabled: true },
   };
+}
+
+function setAgentEnabled(sql: Sql, slug: string, enabled: boolean, actor: string, at: number): AgentEnabledSet {
+  const key = normalizeSlug(slug);
+  if (!key) {
+    return { ok: false, error: "bad_slug" };
+  }
+  if (typeof enabled !== "boolean") {
+    return { ok: false, error: "bad_enabled" };
+  }
+  const existing = rows(sql, "SELECT slug FROM agents WHERE slug = ?", key);
+  if (existing.length === 0) {
+    return { ok: false, error: "not_found" };
+  }
+  sql.exec("UPDATE agents SET enabled = ? WHERE slug = ?", enabled ? 1 : 0, key);
+  const row = readAgent(sql, key);
+  if (!row) {
+    return { ok: false, error: "not_found" };
+  }
+  const who = typeof actor === "string" ? actor : "";
+  insertAudit(sql, at, who, "agent.enabled", { slug: key, enabled });
+  return { ok: true, agent: row };
 }
 
 function removeAgent(sql: Sql, slug: string, actor: string, at: number): AgentDelete {

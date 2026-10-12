@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SettingsMenu } from "@/app/components/chat/SettingsMenu";
 
@@ -98,7 +98,7 @@ describe("SettingsMenu", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("gives an operator Manage only for an agent on their row", async () => {
+  it("gives an operator no console links", async () => {
     window.history.pushState({}, "", "/chat/kit");
     vi.stubGlobal("fetch", vi.fn(async () => Response.json({
       sub: "1",
@@ -108,11 +108,13 @@ describe("SettingsMenu", () => {
     })));
     render(<SettingsMenu><span>inside</span></SettingsMenu>);
     fireEvent.click(screen.getByRole("button", { name: "settings" }));
-    expect((await screen.findByRole("link", { name: "Manage kit" })).getAttribute("href")).toBe("/agents/kit");
+    await screen.findByText("inside");
+    expect(screen.queryByRole("link", { name: "Manage kit" })).toBeNull();
     expect(screen.queryByRole("link", { name: "All agents" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Settings" })).toBeNull();
   });
 
-  it("hides both rows from a member, and from an operator on someone else's agent, but always offers Settings", async () => {
+  it("hides console rows from a member and from an operator on someone else's agent", async () => {
     window.history.pushState({}, "", "/chat/kit");
     render(<SettingsMenu><span>inside</span></SettingsMenu>);
     fireEvent.click(screen.getByRole("button", { name: "settings" }));
@@ -120,8 +122,7 @@ describe("SettingsMenu", () => {
     await waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalled());
     expect(screen.queryByRole("link", { name: "Manage kit" })).toBeNull();
     expect(screen.queryByRole("link", { name: "All agents" })).toBeNull();
-    const nav = await screen.findByRole("navigation", { name: "Console" });
-    expect(within(nav).getByRole("link", { name: "Settings" }).getAttribute("href")).toBe("/settings");
+    expect(screen.queryByRole("link", { name: "Settings" })).toBeNull();
 
     cleanup();
     vi.stubGlobal("fetch", vi.fn(async () => Response.json({

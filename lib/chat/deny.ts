@@ -12,3 +12,7 @@ export function forbidden(): Response {
 export function configError(): Response {
   return Response.json({ error: "config" }, { status: 503 });
 }
+
+export function agentOff(): Response {
+  return Response.json({ error: "off" }, { status: 409 });
+}

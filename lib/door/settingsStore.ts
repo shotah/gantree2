@@ -96,6 +96,8 @@ export type SettingsStore = UserStore & UserMutations & {
   addSample(input: SampleInput): Promise<SampleOutcome>;
   samples(limit?: number): Promise<SampleRow[]>;
   listSamples(query?: SampleQuery): Promise<SampleRow[]>;
+  deleteSamplesForAgent(agent: string): Promise<void>;
+  removeSlugFromOperators(slug: string): Promise<void>;
 };
 
 export function hasUserMutations(store: UserStore): store is UserStore & UserMutations {
@@ -135,7 +137,36 @@ export function openSettings(sql: Sql, now: () => number = Date.now): SettingsSt
     addSample: (input) => Promise.resolve(writeSample(sql, input, now())),
     samples: (limit) => Promise.resolve(readSamples(sql, limit)),
     listSamples: (query) => Promise.resolve(querySamples(sql, query ?? {})),
+    deleteSamplesForAgent: (agent) => Promise.resolve(deleteSamplesForAgent(sql, agent)),
+    removeSlugFromOperators: (slug) => Promise.resolve(removeSlugFromOperators(sql, slug)),
   };
+}
+
+function deleteSamplesForAgent(sql: Sql, agentRaw: string): void {
+  const agent = agentRaw.trim().toLowerCase();
+  if (!SLUG.test(agent)) {
+    return;
+  }
+  sql.exec("DELETE FROM samples WHERE agent = ?", agent);
+}
+
+function removeSlugFromOperators(sql: Sql, slugRaw: string): void {
+  const slug = slugRaw.trim().toLowerCase();
+  if (!SLUG.test(slug)) {
+    return;
+  }
+  const found = rows(sql, "SELECT entry, role, agents FROM users");
+  for (const row of found) {
+    if (!isRole(row.role) || row.role !== "operator") {
+      continue;
+    }
+    const agents = parseAgents(row.agents);
+    if (!agents.includes(slug)) {
+      continue;
+    }
+    const next = agents.filter((item) => item !== slug);
+    sql.exec("UPDATE users SET agents = ? WHERE entry = ?", JSON.stringify(next), row.entry);
+  }
 }
 
 function rows(sql: Sql, query: string, ...binds: unknown[]): Record<string, unknown>[] {

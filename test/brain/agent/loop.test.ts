@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { PERSONA_TEMPLATE } from "@/app/components/agents/personaTemplate";
 import { createBrain } from "@/brain/agent";
 import { collapseOldToolResults } from "@/brain/agent/bound";
 import { stripHarnessContext } from "@/brain/agent/judgment";
 import type { Message } from "@/brain/core/provider";
+import { filePersona } from "@/brain/persona";
 import { collect, echoPlugin, scriptResult, Scripted, testDeps } from "./fixture";
 
 const USER = { kind: "inbound" as const, user_id: "u1", id: "m1", text: "Hello" };
@@ -165,6 +167,25 @@ describe("createBrain turns", () => {
     expect(frames.map((frame) => frame.kind)).toEqual(["status", "cmds"]);
     const cmds = frames[1];
     expect(cmds && "commands" in cmds ? cmds.commands?.some((cmd) => cmd.name === "help") : false).toBe(true);
+  });
+
+  it("bakes the room display name into the standing persona", async () => {
+    const provider = new Scripted([
+      scriptResult({ content: "ok", toolCalls: [] }),
+    ]);
+    const brain = createBrain({
+      ...testDeps({
+        provider,
+        persona: [{ name: filePersona, text: PERSONA_TEMPLATE }],
+      }),
+      slug: "george",
+    });
+    const { emit } = collect();
+    await brain.handleInbound(USER, emit);
+    const system = provider.requests[0]?.messages.find((m) => m.role === "system")?.content ?? "";
+    expect(String(system)).toContain("Your name is George. Use that name for yourself.");
+    expect(String(system)).toContain("- **Name:** George");
+    expect(String(system)).not.toContain("(pick one)");
   });
 
   it("drops a pasted harness block before the model sees the text", async () => {

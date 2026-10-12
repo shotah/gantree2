@@ -49,7 +49,7 @@ export function AgentPicker({ client = api }: { client?: ApiClient }) {
     };
   }, [client]);
 
-  const staff = session?.role === "admin" || session?.role === "operator";
+  const admin = session?.role === "admin";
   const agents = [...(session?.agents ?? [])].sort((a, b) => a.localeCompare(b));
 
   return (
@@ -57,7 +57,7 @@ export function AgentPicker({ client = api }: { client?: ApiClient }) {
       <PageHeader
         title="Choose an agent"
         blurb="Every door here opens a chat."
-        nav={staff ? [{ href: "/agents", label: "Manage agents" }] : []}
+        nav={admin ? [{ href: "/agents", label: "Manage agents" }] : []}
       />
 
       {phase === "loading"

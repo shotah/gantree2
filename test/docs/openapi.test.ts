@@ -14,14 +14,22 @@ type SecurityRequirement = Record<string, string[]>;
 
 type OperationObject = {
   security?: SecurityRequirement[];
+  responses?: Record<string, ResponseObject>;
 };
 
 type PathItem = Partial<Record<HttpMethod, OperationObject>>;
+
+type ResponseObject = {
+  $ref?: string;
+  content?: Record<string, { schema?: unknown }>;
+};
 
 type OpenApiDoc = {
   paths: Record<string, PathItem>;
   components: {
     securitySchemes: Record<string, unknown>;
+    schemas: Record<string, unknown>;
+    responses?: Record<string, ResponseObject>;
   };
 };
 
@@ -48,7 +56,12 @@ function parseOpenApi(raw: unknown): OpenApiDoc {
     for (const method of HTTP_METHODS) {
       const op = item[method];
       if (isRecord(op)) {
-        pathItem[method] = { security: readSecurity(op.security) };
+        const operation: OperationObject = { security: readSecurity(op.security) };
+        const resp = op.responses;
+        if (isRecord(resp)) {
+          operation.responses = resp as Record<string, ResponseObject>;
+        }
+        pathItem[method] = operation;
       }
     }
     paths[pathKey] = pathItem;
@@ -61,7 +74,19 @@ function parseOpenApi(raw: unknown): OpenApiDoc {
   if (!isRecord(schemesRaw)) {
     throw new Error("OpenAPI securitySchemes missing");
   }
-  return { paths, components: { securitySchemes: schemesRaw } };
+  const schemasRaw = componentsRaw.schemas;
+  if (!isRecord(schemasRaw)) {
+    throw new Error("OpenAPI schemas missing");
+  }
+  const responsesRaw = componentsRaw.responses;
+  return {
+    paths,
+    components: {
+      securitySchemes: schemesRaw,
+      schemas: schemasRaw,
+      responses: isRecord(responsesRaw) ? (responsesRaw as Record<string, ResponseObject>) : undefined,
+    },
+  };
 }
 
 function readSecurity(raw: unknown): SecurityRequirement[] | undefined {
@@ -157,6 +182,59 @@ function hasScheme(security: SecurityRequirement[] | undefined, scheme: string):
 
 function securityIncludesRoomBearer(security: SecurityRequirement[] | undefined): boolean {
   return hasScheme(security, "roomBearer");
+}
+
+function operationResponses(
+  doc: OpenApiDoc,
+  path: string,
+  method: HttpMethod,
+): Record<string, ResponseObject> | undefined {
+  return operation(doc, path, method)?.responses;
+}
+
+function hasStatus(
+  doc: OpenApiDoc,
+  path: string,
+  method: HttpMethod,
+  status: string,
+): boolean {
+  const responses = operationResponses(doc, path, method);
+  if (!responses?.[status]) {
+    return false;
+  }
+  const row = responses[status];
+  if (row.$ref && doc.components.responses?.[row.$ref.replace("#/components/responses/", "")]) {
+    return true;
+  }
+  return true;
+}
+
+function responseContentSchema(
+  doc: OpenApiDoc,
+  path: string,
+  method: HttpMethod,
+  status: string,
+  contentType: string,
+): unknown {
+  const responses = operationResponses(doc, path, method);
+  const row = responses?.[status];
+  if (!row) {
+    return undefined;
+  }
+  let content = row.content;
+  if (row.$ref) {
+    const name = row.$ref.replace("#/components/responses/", "");
+    content = doc.components.responses?.[name]?.content;
+  }
+  return content?.[contentType]?.schema;
+}
+
+function schemaRefName(schema: unknown): string | undefined {
+  if (!isRecord(schema)) {
+    return undefined;
+  }
+  const ref = schema.$ref;
+  return typeof ref === "string" ? ref.replace("#/components/schemas/", "") : undefined;
 }
 
 describe("docs/openapi.yaml", () => {
@@ -294,5 +372,73 @@ describe("docs/openapi.yaml", () => {
     expect(Object.keys(doc.components.securitySchemes).sort()).toEqual(
       ["roomBearer", "sessionBearer", "sessionCookie"].sort(),
     );
+  });
+
+  it("types UserRow.entry as AllowEntry and UserCreate.entry as string", () => {
+    const userRow = doc.components.schemas.UserRow;
+    const userCreate = doc.components.schemas.UserCreate;
+    expect(isRecord(userRow) && isRecord(userRow.properties)).toBe(true);
+    expect(isRecord(userCreate) && isRecord(userCreate.properties)).toBe(true);
+    const entryRow = (userRow as { properties: Record<string, unknown> }).properties.entry;
+    const entryCreate = (userCreate as { properties: Record<string, unknown> }).properties.entry;
+    expect(schemaRefName(entryRow)).toBe("AllowEntry");
+    expect(isRecord(entryCreate) && entryCreate.type).toBe("string");
+  });
+
+  it("documents avatar and backdrop write success as JSON BlobWriteOk", () => {
+    for (const path of ["/api/chat/avatar", "/api/chat/backdrop"]) {
+      const schema = responseContentSchema(doc, path, "post", "200", "application/json");
+      expect(schemaRefName(schema), path).toBe("BlobWriteOk");
+    }
+  });
+
+  it("documents avatar and backdrop GET 304 and 404", () => {
+    for (const path of ["/api/chat/avatar", "/api/chat/backdrop"]) {
+      expect(hasStatus(doc, path, "get", "304"), path).toBe(true);
+      expect(hasStatus(doc, path, "get", "404"), path).toBe(true);
+    }
+  });
+
+  it("documents push POST and DELETE 200 bodies", () => {
+    expect(schemaRefName(responseContentSchema(doc, "/api/chat/push", "post", "200", "application/json"))).toBe(
+      "PushTestCounts",
+    );
+    expect(schemaRefName(responseContentSchema(doc, "/api/chat/push", "delete", "200", "application/json"))).toBe(
+      "OkTrue",
+    );
+  });
+
+  it("requires 401 on non-public operations", () => {
+    const publicKeys = new Set(
+      [
+        "get /api/health",
+        "get /api/auth/google",
+        "get /api/auth/callback/google",
+        "get /api/auth/config",
+        "get /api/auth/nonce",
+        "post /api/auth/token",
+      ],
+    );
+    const missing: string[] = [];
+    for (const [path, item] of Object.entries(doc.paths)) {
+      for (const method of HTTP_METHODS) {
+        const op = item[method];
+        if (!op) {
+          continue;
+        }
+        const key = `${method} ${path}`;
+        if (publicKeys.has(key)) {
+          continue;
+        }
+        if (!hasStatus(doc, path, method, "401")) {
+          missing.push(key);
+        }
+      }
+    }
+    expect(missing, missing.join("\n")).toEqual([]);
+  });
+
+  it("documents GET /ws/{slug} 503", () => {
+    expect(hasStatus(doc, "/ws/{slug}", "get", "503")).toBe(true);
   });
 });

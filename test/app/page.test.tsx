@@ -18,7 +18,21 @@ vi.mock("cloudflare:workers", () => ({
     if (state.mode === "missing") {
       return undefined;
     }
+    const inventory = ["kit", "ada"];
     return {
+      SETTINGS: {
+        getByName: () => ({
+          listAgents: async () => inventory.map((slug) => ({
+            slug,
+            name: slug,
+            status: "idle",
+            createdAt: 0,
+            updatedAt: 0,
+            createdBy: "test",
+            tags: [],
+          })),
+        }),
+      },
       DIRECTORY: {
         get: async (key: string) => {
           if (state.rows[key] === "throw") {
@@ -85,12 +99,12 @@ describe("home router", () => {
     expect(await destination()).toBe("/login");
   });
 
-  it("sends admin and operator to /agents", async () => {
+  it("sends an admin to /agents and an operator to chat", async () => {
     state.rows[`sub:${SUB}`] = JSON.stringify(["kit"]);
     signIn("admin", []);
     expect(await destination()).toBe("/agents");
     signIn("operator", ["kit"]);
-    expect(await destination()).toBe("/agents");
+    expect(await destination()).toBe("/chat/kit");
   });
 
   it("sends a member with one admitted agent into that chat", async () => {
@@ -128,10 +142,10 @@ describe("home router", () => {
   });
 
   it("honours the landing cookie for staff", async () => {
-    state.rows[`sub:${SUB}`] = JSON.stringify(["kit"]);
-    signIn("admin", []);
+    state.rows[`sub:${SUB}`] = JSON.stringify(["kit", "ada"]);
+    signIn("admin", ["kit", "ada"]);
     headerState.current.set("cookie", "gantree.landing=chat");
-    expect(await destination()).toBe("/chat/kit");
+    expect(await destination()).toBe("/chat");
     headerState.current.set("cookie", "gantree.session=x; gantree.landing=chat%3Aada");
     expect(await destination()).toBe("/chat/ada");
     headerState.current.set("cookie", "gantree.landing=nope");

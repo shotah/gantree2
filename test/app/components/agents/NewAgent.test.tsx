@@ -11,6 +11,16 @@ afterEach(() => {
   cleanup();
 });
 
+async function nextFromName() {
+  fireEvent.click(screen.getByRole("button", { name: "Next" }));
+  await screen.findByLabelText("Persona");
+}
+
+async function nextFromPersona() {
+  fireEvent.click(screen.getByRole("button", { name: "Next" }));
+  await screen.findByLabelText("LLM_BASE_URL");
+}
+
 function toolsClient(tools = [MAPS, CAST], failPatch = false, house: string[] = []): { client: ApiClient; calls: { url: string; method: string; body?: string }[] } {
   const calls: { url: string; method: string; body?: string }[] = [];
   let patches = 0;
@@ -22,6 +32,12 @@ function toolsClient(tools = [MAPS, CAST], failPatch = false, house: string[] = 
     calls.push({ url, method, body });
     if (url === "/api/tools") {
       return json(200, { tools, house });
+    }
+    if (url === "/api/auth/me" && method === "GET") {
+      return json(200, { sub: "u1", email: "creator@example.com", role: "admin", agents: [] });
+    }
+    if (url === "/api/agents" && method === "GET") {
+      return json(200, { agents: [] });
     }
     if (method === "POST") {
       return json(201, { agent: card() });
@@ -48,12 +64,17 @@ async function reachTools(home = false, tools = [MAPS, CAST]) {
   fireEvent.change(screen.getByLabelText("Agent ID"), { target: { value: "kit" } });
   fireEvent.change(screen.getByLabelText("Shown as"), { target: { value: "Kit" } });
   fireEvent.change(screen.getByLabelText("Tags"), { target: { value: "home, home, travel" } });
-  fireEvent.click(screen.getByRole("button", { name: "Next" }));
-  expect(areaOf(await screen.findByLabelText("Persona")).value).toContain("Personal assistant");
+  await nextFromName();
+  const personaValue = areaOf(screen.getByLabelText("Persona")).value;
+  expect(personaValue).toContain("Personal assistant");
+  expect(personaValue).toContain("Your name is Kit.");
+  expect(personaValue).toContain("- **Name:** Kit");
+  expect(personaValue).not.toContain("(pick one)");
+  expect(personaValue).toContain("creator@example.com");
   fireEvent.click(screen.getByRole("button", { name: "Back" }));
   expect(screen.getByLabelText("Agent ID")).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Next" }));
-  fireEvent.click(screen.getByRole("button", { name: "Next" }));
+  await nextFromName();
+  await nextFromPersona();
   fireEvent.change(screen.getByLabelText("LLM_BASE_URL"), { target: { value: "https://llm.example/v1" } });
   fireEvent.change(screen.getByLabelText("LLM_API_KEY"), { target: { value: "secret" } });
   fireEvent.change(screen.getByLabelText("LLM_MODEL"), { target: { value: "m" } });
@@ -72,6 +93,36 @@ describe("parseTagList", () => {
 });
 
 describe("NewAgent", () => {
+  it("blocks step 2 when the id or display name collides", async () => {
+    const client: ApiClient = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      await Promise.resolve();
+      const url = href(input);
+      const method = init?.method ?? "GET";
+      if (url === "/api/tools") {
+        return json(200, { tools: [], house: [] });
+      }
+      if (url === "/api/auth/me") {
+        return json(200, { sub: "u1", email: null, role: "admin", agents: [] });
+      }
+      if (url === "/api/agents" && method === "GET") {
+        return json(200, { agents: [card()] });
+      }
+      return json(500, { error: "nope" });
+    });
+    render(<NewAgent client={client} go={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText("Agent ID"), { target: { value: "kit" } });
+    fireEvent.change(screen.getByLabelText("Shown as"), { target: { value: "Other" } });
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("That agent ID is already in use.");
+    expect(screen.getByText("Step 1 of 4 — Name")).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("Agent ID"), { target: { value: "bob" } });
+    fireEvent.change(screen.getByLabelText("Shown as"), { target: { value: "Kit" } });
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("That agent name is already in use.");
+    expect(screen.getByText("Step 1 of 4 — Name")).toBeTruthy();
+  });
+
   it("paints a step rail and puts each step on a card", async () => {
     render(<NewAgent client={toolsClient().client} go={vi.fn()} />);
     expect(screen.getByRole("heading", { name: "New agent" })).toBeTruthy();
@@ -84,11 +135,11 @@ describe("NewAgent", () => {
     expect(screen.getByLabelText("Agent ID").parentElement?.parentElement?.className).toContain("bg-panel/90");
     fireEvent.change(screen.getByLabelText("Agent ID"), { target: { value: "kit" } });
     fireEvent.change(screen.getByLabelText("Shown as"), { target: { value: "Kit" } });
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    await nextFromName();
     const moved = screen.getByRole("list", { name: "Steps" });
     expect(within(moved).getByText("1").className).toContain("bg-ok/20");
     expect(within(moved).getByText("2").className).toContain("bg-accent");
-    expect((await screen.findByLabelText("Persona")).parentElement?.parentElement?.className).toContain("rounded-2xl");
+    expect(screen.getByLabelText("Persona").parentElement?.parentElement?.className).toContain("rounded-2xl");
   });
 
   it("walks the steps and posts the agent, then patches persona, keys, and tools", async () => {
@@ -114,7 +165,7 @@ describe("NewAgent", () => {
         EXTRA: "v",
         MAPS_KEY: "mk",
       },
-      persona: expect.stringContaining("Personal assistant") as string,
+      persona: expect.stringMatching(/Your name is Kit\.\n[\s\S]*- \*\*Name:\*\* Kit/) as string,
       mcp: tomlFromGrants([{ name: "maps", command: "maps-bin", env: ["MAPS_KEY"] }]),
     });
   });
@@ -125,8 +176,8 @@ describe("NewAgent", () => {
     render(<NewAgent client={client} go={go} />);
     fireEvent.change(screen.getByLabelText("Agent ID"), { target: { value: "kit" } });
     fireEvent.change(screen.getByLabelText("Shown as"), { target: { value: "Kit" } });
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Next" }));
+    await nextFromName();
+    await nextFromPersona();
     expect((await screen.findByRole("note")).textContent).toContain("House keys on the server: LLM_BASE_URL, LLM_API_KEY, LLM_MODEL.");
     expect(inputOf(screen.getByLabelText("LLM_API_KEY")).placeholder).toBe("house");
     expect(buttonOf(screen.getByRole("button", { name: "Next" })).disabled).toBe(false);
@@ -143,8 +194,8 @@ describe("NewAgent", () => {
     render(<NewAgent client={toolsClient([MAPS], false, ["LLM_BASE_URL"]).client} go={vi.fn()} />);
     fireEvent.change(screen.getByLabelText("Agent ID"), { target: { value: "kit" } });
     fireEvent.change(screen.getByLabelText("Shown as"), { target: { value: "Kit" } });
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Next" }));
+    await nextFromName();
+    await nextFromPersona();
     await screen.findByRole("note");
     expect(buttonOf(screen.getByRole("button", { name: "Next" })).disabled).toBe(true);
     fireEvent.change(screen.getByLabelText("LLM_API_KEY"), { target: { value: "k" } });
@@ -170,8 +221,8 @@ describe("NewAgent", () => {
     render(<NewAgent client={client} go={go} />);
     fireEvent.change(screen.getByLabelText("Agent ID"), { target: { value: "kit" } });
     fireEvent.change(screen.getByLabelText("Shown as"), { target: { value: "Kit" } });
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    await nextFromName();
+    await nextFromPersona();
     fireEvent.change(screen.getByLabelText("LLM_BASE_URL"), { target: { value: "https://llm.example/v1" } });
     fireEvent.change(screen.getByLabelText("LLM_API_KEY"), { target: { value: "secret" } });
     fireEvent.change(screen.getByLabelText("LLM_MODEL"), { target: { value: "m" } });
@@ -184,8 +235,8 @@ describe("NewAgent", () => {
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
     expect((inputOf(screen.getByLabelText("Agent ID"))).disabled).toBe(true);
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    await nextFromName();
+    await nextFromPersona();
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     fireEvent.click(screen.getByRole("button", { name: "Create agent" }));
     await vi.waitFor(() => expect(go).toHaveBeenCalledWith("/agents/kit"));
@@ -197,10 +248,17 @@ describe("NewAgent", () => {
     const broken: ApiClient = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       await Promise.resolve();
       const url = href(input);
+      const method = init?.method ?? "GET";
       if (url === "/api/tools") {
         return json(500, { error: "request_failed" });
       }
-      if ((init?.method ?? "GET") === "POST") {
+      if (url === "/api/auth/me") {
+        return json(200, { sub: "u1", email: null, role: "admin", agents: [] });
+      }
+      if (url === "/api/agents" && method === "GET") {
+        return json(200, { agents: [] });
+      }
+      if (method === "POST") {
         return json(400, { error: "bad_slug" });
       }
       return json(500, { error: "nope" });
@@ -208,8 +266,8 @@ describe("NewAgent", () => {
     const { rerender } = render(<NewAgent client={broken} go={vi.fn()} />);
     fireEvent.change(screen.getByLabelText("Agent ID"), { target: { value: "kit" } });
     fireEvent.change(screen.getByLabelText("Shown as"), { target: { value: "Kit" } });
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    await nextFromName();
+    await nextFromPersona();
     fireEvent.change(screen.getByLabelText("LLM_BASE_URL"), { target: { value: "https://llm.example/v1" } });
     fireEvent.change(screen.getByLabelText("LLM_API_KEY"), { target: { value: "secret" } });
     fireEvent.change(screen.getByLabelText("LLM_MODEL"), { target: { value: "m" } });
@@ -218,8 +276,16 @@ describe("NewAgent", () => {
     expect((buttonOf(screen.getByRole("button", { name: "Create agent" }))).disabled).toBe(true);
 
     let released = false;
-    const pending: ApiClient = vi.fn(async () => {
+    const pending: ApiClient = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       await Promise.resolve();
+      const url = href(input);
+      const method = init?.method ?? "GET";
+      if (url === "/api/auth/me") {
+        return json(200, { sub: "u1", email: null, role: "admin", agents: [] });
+      }
+      if (url === "/api/agents" && method === "GET") {
+        return json(200, { agents: [] });
+      }
       if (!released) {
         return json(200, { tools: [] });
       }
@@ -231,8 +297,8 @@ describe("NewAgent", () => {
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
     fireEvent.change(screen.getByLabelText("Agent ID"), { target: { value: "kit" } });
     fireEvent.change(screen.getByLabelText("Shown as"), { target: { value: "Kit" } });
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    await nextFromName();
+    await nextFromPersona();
     fireEvent.change(screen.getByLabelText("LLM_BASE_URL"), { target: { value: "https://llm.example/v1" } });
     fireEvent.change(screen.getByLabelText("LLM_API_KEY"), { target: { value: "secret" } });
     fireEvent.change(screen.getByLabelText("LLM_MODEL"), { target: { value: "m" } });
@@ -250,8 +316,8 @@ describe("NewAgent", () => {
     render(<NewAgent client={client} />);
     fireEvent.change(screen.getByLabelText("Agent ID"), { target: { value: "kit" } });
     fireEvent.change(screen.getByLabelText("Shown as"), { target: { value: "Kit" } });
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    await nextFromName();
+    await nextFromPersona();
     fireEvent.change(screen.getByLabelText("LLM_BASE_URL"), { target: { value: "https://llm.example/v1" } });
     fireEvent.change(screen.getByLabelText("LLM_API_KEY"), { target: { value: "secret" } });
     fireEvent.change(screen.getByLabelText("LLM_MODEL"), { target: { value: "m" } });

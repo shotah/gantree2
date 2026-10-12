@@ -21,6 +21,7 @@ import { AesTokenStore, mintTokenKey, TOKEN_KEY_STORE_KEY, tokenKeyOk } from "@/
 import { canonicalEnv, CONFIG_STORE_KEY, frameEnv, parseConfig } from "@/lib/agents/config";
 import { houseEnv, type HouseEnv } from "@/lib/agents/house";
 import { parseStoredSlug, SLUG_STORE_KEY } from "@/lib/chat/allow";
+import { withImageHandoff } from "@/brain/plugins/image/config";
 import { chatLoopbackFetch, withChatMailbox } from "@/brain/room/mailbox";
 
 export type { CatchEnv } from "./catch";
@@ -33,6 +34,8 @@ export type { PersonaStoreOpts } from "./persona";
 export type OpenRoomOpts = {
   /** Room slug when the caller already has it. Otherwise the DO's stored slug. */
   slug?: string;
+  /** Inventory display name when the caller has it; the DO config does not store this yet. */
+  name?: string;
   /** Fold one `log` frame the way a crane `log` line is folded. Also mirrored to console. */
   foldLog: (frame: LogFrame) => void | Promise<void>;
   /** Native catch. Slash reads it off the same sql object passed to `createBrain`. */
@@ -64,6 +67,7 @@ export async function openRoomBrain(ctx: DurableObjectState, env: HouseEnv, opts
       bearer: chat.bearer,
     });
   }
+  map = withImageHandoff(map);
   const store = await openPersonaStore(ctx, opts);
   const parts = personaParts(store);
   const personaText = parts.find((part) => part.name === filePersona)?.text ?? "";
@@ -98,6 +102,7 @@ export async function openRoomBrain(ctx: DurableObjectState, env: HouseEnv, opts
     env: map,
     persona: parts,
     slug,
+    ...((opts.name ?? "").trim() !== "" ? { name: (opts.name ?? "").trim() } : {}),
   });
   open.set(ctx, { generation, brain });
   return brain;

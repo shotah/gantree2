@@ -16,7 +16,7 @@ Setup by place: [install.md](install.md). Open walks: [todo.md](todo.md).
 | Who | Wants | Needs |
 | --- | --- | --- |
 | **Operators** | to *touch* an agent — config, tools, recreate, users | a Google account on the list with role `admin` or `operator` |
-| **Members** | the agent to *answer* | a Google account on the list; chat also needs the room list unless they are in `GANTREE_ADMINS` or `GANTREE_ALLOW` |
+| **Members** | the agent to *answer* | a Google account on the list; chat also needs the room list (or directory index). `GANTREE_ALLOW` is sign-in only. |
 
 Bob can operate Ada and never message her. Sam can message Ada from
 a phone and never see settings. Both sign in at the same `/login`.
@@ -38,13 +38,12 @@ There is no second door and no passphrase.
    admin · locked           member · locked            admin / operator(agents) / member
          └───────────────────────────┼────────────────────────────┘
                                      │  role
-         /users /settings  admin ────┤
-         /agents/<id>      admin, or operator with <id> in agents[]
-         /chat/<id>        any role  ──┐
-                                       └─ on that agent's room list, or on
-                                          GANTREE_ADMINS / GANTREE_ALLOW
-                                          (operators and other Settings-only
-                                          people still need a room row)
+         /users /settings /agents  admin only
+         /chat/<id>        signed in ──┐
+                                       └─ admin: every inventoried agent
+                                          operator: <id> on their row
+                                          member: room list (and inventory)
+                                          `GANTREE_ALLOW` does not open every room
 ```
 
 ---
@@ -59,9 +58,10 @@ check at request time.**
   here at all, and with what role.
 - The agent's room list says whether that agent will talk to you. It
   lives on the Agent DO. Settings edits it. The brain publishes it as
-  an `allow` frame. Nothing else does. People in `GANTREE_ADMINS` or
-  `GANTREE_ALLOW` may chat with every agent even when that list is empty;
-  everyone else still needs a row on it.
+  an `allow` frame. Nothing else does. Admins may chat with every
+  inventoried agent even when that list is empty. Operators and members
+  need assignment as in the roles table; `GANTREE_ALLOW` only lets
+  someone sign in.
 - A cookie only proves who. Removing a person from a list ends their
   access on the next request, not at cookie expiry.
 
@@ -103,15 +103,24 @@ frames are always `sub`.
 
 | Role | From | May |
 | --- | --- | --- |
-| `admin` | `GANTREE_ADMINS` (locked) or a Settings row | `/users`, `/settings`, every agent. An identity in `GANTREE_ADMINS` may chat with every agent; a Settings-only admin still needs that agent's room list. |
-| `operator` | Settings row with `agents[]` | `/agents/<agent id>` for listed ids; chat where the room list allows |
-| `member` | `GANTREE_ALLOW` (locked) or a Settings row | An identity in `GANTREE_ALLOW` may chat with every agent; a Settings-only member still needs that agent's room list. `/api/auth/me` |
+| `admin` | `GANTREE_ADMINS` (locked) or a Settings row | `/users`, `/settings`, `/agents`, every inventoried agent in chat |
+| `operator` | Settings row with `agents[]` | Chat only for listed ids that exist in the inventory; no agents console |
+| `member` | `GANTREE_ALLOW` (locked) or a Settings row | Sign in via allow; chat only where the room list admits them (inventory only). `/api/auth/me` lists assigned agents |
 
 Resolution is per request: collect every row that matches, take the
 highest role, union the operators' `agents[]`. Env rows are **locked**:
 settings shows them and cannot remove them; edit the env to change
 them. Empty `GANTREE_ADMINS` → every gated route is `503` until it is
 set. Code: `lib/door/users.ts`.
+
+**Turn off and destroy (admin only).** Turn off sets the inventory row
+to disabled, drops the Agent Durable Object alarm, and forgets the
+in-memory brain; chat and schedules return `409` `off` while the object
+and its stored chat, keys, and memory stay. Turn on re-enables the row
+without wiping anything. Destroy is a second confirm on the agent
+dashboard: it clears directory entries and operator assignments,
+deletes samples, wipes the Agent Durable Object (`deleteAll`), then
+removes the inventory row.
 
 ### Cookies
 

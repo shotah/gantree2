@@ -3,6 +3,7 @@ import { handleAvatar, type RoomEnv } from "@/lib/avatar/http";
 import { handleBackdrop } from "@/lib/backdrop/http";
 import { memoryStore, type UserStore } from "@/lib/door/users";
 import { sealSession, SESSION_COOKIE, sessionKey } from "@/lib/door/session";
+import { settingsInventory } from "../chat/settingsStub";
 
 const SECRET = "0123456789abcdef0123456789abcdef-more";
 const SUB = "118212345678901234567";
@@ -18,9 +19,10 @@ async function cookie(): Promise<string> {
   return `${SESSION_COOKIE}=${token}`;
 }
 
-function room(handler: (req: Request) => Promise<Response> | Response): RoomEnv {
+function room(handler: (req: Request) => Promise<Response> | Response, slugs: string[] = ["kit", "ada"]): RoomEnv {
   return {
     ...base,
+    SETTINGS: settingsInventory(slugs),
     AGENT: {
       idFromName: () => "id",
       get: () => ({ fetch: (req: Request) => Promise.resolve(handler(req)) }),
@@ -46,7 +48,7 @@ describe("handleAvatar", () => {
   it("is 503 until the Agent binding exists", async () => {
     const res = await handleAvatar(new Request("https://chat.test/api/chat/avatar?slug=kit", {
       headers: { cookie: await cookie() },
-    }), base, store);
+    }), { ...base, SETTINGS: settingsInventory(["kit"]) }, store);
     expect(res.status).toBe(503);
   });
 

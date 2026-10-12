@@ -1,7 +1,16 @@
 import { devIdentity } from "@/lib/door/gate";
-import { fetchRoomUsers } from "./allow";
+import { memoryStore, resolveUser } from "@/lib/door/users";
+import type { UserStore } from "@/lib/door/users";
+import {
+  doorUserForRequest,
+  humanChatPrecheck,
+  memberInDirectory,
+  memberRoomUsersWhenNeeded,
+  inventoriedAgent,
+} from "./admission";
+import type { RoomUser } from "./allow";
 import { fetchRoomBearer } from "./bearer";
-import { configError, forbidden, unauthorized } from "./deny";
+import { agentOff, configError, forbidden, unauthorized } from "./deny";
 import type { AgentEnv } from "./env";
 import { hasGeo, hasImages, hasText, type FrameKind, type Role, type WireFrame } from "./frame";
 import { shouldQueue } from "./queue";
@@ -97,7 +106,6 @@ export function exceptSender<T>(sockets: readonly T[], sender: T): T[] {
 
 import {
   handshake,
-  handshakePhone,
   rateId,
   roleFromQuery,
   stampEmail,
@@ -132,6 +140,7 @@ export async function routeAgentSocket(
   req: Request,
   env: AgentEnv,
   slug: string | null,
+  store: UserStore = memoryStore(),
 ): Promise<Response | null> {
   if (!slug) {
     return null;
@@ -144,24 +153,104 @@ export async function routeAgentSocket(
   if (!upgradeOriginOk(req.headers.get("Origin"), url.origin)) {
     return new Response("forbidden", { status: 403 });
   }
-  const stub = agentStub(env, slug);
   const dev = role === "phone" ? devIdentity(env, url) : null;
   const mode = resolveAuthMode(env, url.hostname);
   if (!mode.ok && !dev) {
     return configError();
   }
   const authMode = mode.ok ? mode.mode : "oidc";
-  const auth = dev
-    ? await devPhone(env, stub, dev)
+  const inventoried = authMode === "spike" ? { slug, name: slug, createdBy: "", createdAt: 0, tags: [], enabled: true } : await inventoriedAgent(env, slug);
+  if (!inventoried) {
+    return new Response("not found", { status: 404 });
+  }
+  if (!inventoried.enabled) {
+    return agentOff();
+  }
+
+  let roomList: readonly RoomUser[] = [];
+  let admit: Parameters<typeof handshake>[0]["admit"];
+  let doorUser: Awaited<ReturnType<typeof doorUserForRequest>> = null;
+
+  if (dev && role === "phone") {
+    doorUser = await resolveUser(env, store, { sub: dev.sub, email: dev.email, emailVerified: true });
+    if (!doorUser) {
+      return unauthorized();
+    }
+    const session = {
+      sub: doorUser.entry.sub ?? dev.sub,
+      email: doorUser.entry.email ?? dev.email ?? undefined,
+      emailVerified: Boolean(doorUser.entry.email ?? dev.email),
+    };
+    const pre = humanChatPrecheck(env, doorUser, slug, session);
+    if (pre === "forbidden") {
+      return forbidden();
+    }
+    const inDirectory = doorUser.role === "member" && await memberInDirectory(env, session, slug);
+    roomList = await memberRoomUsersWhenNeeded(env, slug, doorUser.role, inDirectory);
+    if (!phoneAdmitted(roomList, session, env, {
+      role: doorUser.role,
+      assignedSlugs: doorUser.agents,
+      slug,
+      inDirectory,
+    })) {
+      return forbidden();
+    }
+    const stub = agentStub(env, slug);
+    if (!stub) {
+      return new Response("not found", { status: 404 });
+    }
+    const headers = stampAgentHeaders(req, {
+      role,
+      rateId: `sub:${session.sub}`,
+      slug,
+      userId: session.sub,
+      email: session.email,
+      emailVerified: session.emailVerified,
+      doorRole: doorUser.role,
+      assignedAgents: doorUser.agents,
+    });
+    return stub.fetch(new Request(req, { headers }));
+  }
+
+  if (role === "phone" && authMode === "oidc") {
+    doorUser = await doorUserForRequest(env, req, store);
+    if (doorUser) {
+      const session = {
+        sub: doorUser.entry.sub ?? "",
+        email: doorUser.entry.email ?? undefined,
+        emailVerified: Boolean(doorUser.entry.email),
+      };
+      const pre = humanChatPrecheck(env, doorUser, slug, session);
+      if (pre === "forbidden") {
+        return forbidden();
+      }
+      const inDirectory = doorUser.role === "member" && await memberInDirectory(env, session, slug);
+      roomList = await memberRoomUsersWhenNeeded(env, slug, doorUser.role, inDirectory);
+      admit = { role: doorUser.role, assignedSlugs: doorUser.agents, slug, inDirectory };
+    }
+  }
+
+  const auth = authMode === "spike"
+    ? await handshake({
+        env,
+        slug,
+        role,
+        cookieHeader: req.headers.get("Cookie"),
+        authorization: req.headers.get("Authorization"),
+        querySecret: url.searchParams.get("secret"),
+        host: url.hostname,
+      })
     : role === "phone"
-      ? await handshakePhone({
+      ? await handshake({
           env,
           slug,
+          role: "phone",
           cookieHeader: req.headers.get("Cookie"),
           authorization: req.headers.get("Authorization"),
           querySecret: url.searchParams.get("secret"),
           host: url.hostname,
-          loadRoom: async () => (stub ? fetchRoomUsers(stub) : []),
+          roomList,
+          admit,
         })
       : await handshake({
           env,
@@ -170,7 +259,10 @@ export async function routeAgentSocket(
           authorization: req.headers.get("Authorization"),
           queryBearer: url.searchParams.get("bearer"),
           host: url.hostname,
-          roomBearer: stub ? await fetchRoomBearer(stub) : null,
+          roomBearer: await (async () => {
+            const craneStub = agentStub(env, slug);
+            return craneStub ? fetchRoomBearer(craneStub) : null;
+          })(),
         });
   if (!auth.ok) {
     if (auth.error === "config") {
@@ -181,6 +273,7 @@ export async function routeAgentSocket(
     }
     return unauthorized();
   }
+  const stub = agentStub(env, slug);
   if (!stub) {
     return new Response("not found", { status: 404 });
   }
@@ -192,31 +285,8 @@ export async function routeAgentSocket(
     email: stampEmail(auth.principal),
     emailVerified: auth.principal.kind === "phone" && auth.principal.emailVerified,
     exp: auth.principal.kind === "phone" ? auth.principal.exp : undefined,
+    doorRole: doorUser?.role,
+    assignedAgents: doorUser?.agents,
   });
   return stub.fetch(new Request(req, { headers }));
-}
-
-async function devPhone(
-  env: AgentEnv,
-  stub: DurableObjectStub | null,
-  dev: { sub: string; email: string | null },
-): Promise<Awaited<ReturnType<typeof handshake>>> {
-  const roomList = stub ? await fetchRoomUsers(stub) : [];
-  const session = {
-    sub: dev.sub,
-    email: dev.email ?? undefined,
-    emailVerified: Boolean(dev.email),
-  };
-  if (!phoneAdmitted(roomList, session, env)) {
-    return { ok: false, error: "forbidden" };
-  }
-  return {
-    ok: true,
-    principal: {
-      kind: "phone",
-      sub: dev.sub,
-      email: session.email,
-      emailVerified: session.emailVerified,
-    },
-  };
 }

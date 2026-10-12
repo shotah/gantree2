@@ -4,33 +4,41 @@ import { parseEmailVerified, parseExpMs, socketMessageAllowed } from "@/lib/chat
 const ada = "118212345678901234567";
 const extra = `${ada}:ada@example.test`;
 
+function phone(input: Omit<Parameters<typeof socketMessageAllowed>[0], "role" | "enforce" | "doorRole" | "slug"> & {
+  doorRole?: "admin" | "operator" | "member";
+  slug?: string;
+}) {
+  return socketMessageAllowed({
+    role: "phone",
+    enforce: true,
+    doorRole: input.doorRole ?? "member",
+    slug: input.slug ?? "kit",
+    assignedAgents: input.assignedAgents ?? [],
+    ...input,
+  });
+}
+
 describe("socketAuth", () => {
   it("closes on a yanked sub when Google is on", () => {
-    expect(socketMessageAllowed({
-      role: "phone",
+    expect(phone({
       userId: "9999999999",
       allowedSubs: extra,
-      enforce: true,
       now: 1_000,
     })).toBe(false);
   });
 
   it("closes when exp has passed", () => {
-    expect(socketMessageAllowed({
-      role: "phone",
+    expect(phone({
       userId: ada,
       allowedSubs: extra,
       expMs: 1_000,
-      enforce: true,
       now: 1_001,
     })).toBe(false);
   });
 
   it("closes when the phone sub is missing", () => {
-    expect(socketMessageAllowed({
-      role: "phone",
+    expect(phone({
       allowedSubs: extra,
-      enforce: true,
       now: 1_000,
     })).toBe(false);
   });
@@ -52,64 +60,51 @@ describe("socketAuth", () => {
   });
 
   it("allows a listed sub before expiry", () => {
-    expect(socketMessageAllowed({
-      role: "phone",
+    expect(phone({
       userId: ada,
       allowedSubs: extra,
       expMs: 2_000,
-      enforce: true,
       now: 1_000,
     })).toBe(true);
-    expect(socketMessageAllowed({
-      role: "phone",
+    expect(phone({
       userId: ada,
       allowedSubs: extra,
-      enforce: true,
       now: 1_000,
     })).toBe(true);
   });
 
-  it("admits floor env on an empty room and still rejects strangers", () => {
-    expect(socketMessageAllowed({
-      role: "phone",
+  it("admits an admin on an empty room and still rejects strangers", () => {
+    expect(phone({
       userId: ada,
       email: "ada@example.com",
       emailVerified: true,
       roomUsers: [],
-      gantreeAdmins: "ada@example.com",
-      enforce: true,
+      doorRole: "admin",
       now: 1_000,
     })).toBe(true);
-    expect(socketMessageAllowed({
-      role: "phone",
+    expect(phone({
       userId: ada,
       email: "ada@example.com",
       emailVerified: true,
       roomUsers: [],
-      gantreeAllow: "other@example.com",
-      enforce: true,
       now: 1_000,
     })).toBe(false);
   });
 
   it("admits a verified email on the room list and closes a removed socket", () => {
     const room = [{ email: "ada@example.com" }];
-    expect(socketMessageAllowed({
-      role: "phone",
+    expect(phone({
       userId: ada,
       email: "ada@example.com",
       emailVerified: true,
       roomUsers: room,
-      enforce: true,
       now: 1_000,
     })).toBe(true);
-    expect(socketMessageAllowed({
-      role: "phone",
+    expect(phone({
       userId: ada,
       email: "ada@example.com",
       emailVerified: true,
       roomUsers: [],
-      enforce: true,
       now: 1_000,
     })).toBe(false);
   });

@@ -27,6 +27,7 @@
     "seed": "node scripts/seed.ts",
     "shot": "node scripts/shot.mjs",
     "theme:export": "node scripts/theme-export.ts",
+    "openapi": "node scripts/openapi.ts",
     "pages": "node scripts/pages.mjs",
     "release": "node scripts/release.mjs",
     "release:dry": "node scripts/release.mjs --dry-run",
@@ -80,6 +81,7 @@
     "typescript-eslint": "^8.71.1",
     "vite": "^8.3.4",
     "vitest": "^5.0.3",
-    "wrangler": "^4.149.0"
+    "wrangler": "^4.149.0",
+    "yaml": "^2.9.1"
   }
 }

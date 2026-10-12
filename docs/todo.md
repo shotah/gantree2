@@ -30,6 +30,11 @@ pricing, in the Hosted section.
 
 ---
 
+## Bugs — this pass
+
+- [ ] **hard** Rename `brain/` to `harness/` (path and wording). The deleted Harness Durable Object class stays deleted.
+- [ ] **easy** Every Agent Durable Object is addressed by `idFromName(slug)`. No path uses the display name or a random id.
+
 ## Now — blocks the first stranger
 
 - [ ] **owner · easy** Provider consoles for the tools (§7): the

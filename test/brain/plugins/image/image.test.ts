@@ -1,11 +1,34 @@
 import { describe, expect, it } from "vitest";
-import { isEnabled, loadImageConfig, defaultModel } from "@/brain/plugins/image/config";
-import { extForMime, mimeFromPath, putOutputFile, readOutputFile, writeOutputFile } from "@/brain/plugins/image/files";
+import {
+  defaultImageOutputDir,
+  imageRoots,
+  isEnabled,
+  loadImageConfig,
+  defaultModel,
+  withImageHandoff,
+} from "@/brain/plugins/image/config";
+import {
+  extForMime,
+  mimeFromPath,
+  putOutputFile,
+  readInsideRoots,
+  readOutputFile,
+  writeOutputFile,
+  type PathMessages,
+} from "@/brain/plugins/image/files";
 import { buildBody, generateImage, parseGeminiResponse, validateAspectSize } from "@/brain/plugins/image/gemini";
 import { decodeSourceImage, imagePlugin, readEditSource } from "@/brain/plugins/image/index";
 import { b64, bodyText, callTool, hrefOf, jsonResponse, pluginCtx, textOf, textResponse } from "../helpers";
 
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+
+const pathMessages: PathMessages = {
+  needDir: "need dir",
+  required: "required",
+  refuse: "refuse",
+  unreadable: "unreadable",
+  empty: "empty",
+};
 
 function geminiBody(data: Uint8Array, mime = "image/png", note?: string): unknown {
   const parts: Record<string, unknown>[] = [];
@@ -115,6 +138,17 @@ describe("image config and files", () => {
   it("treats the usual truthy flags as enabled", () => {
     for (const v of ["1", "true", "YES", " on "]) expect(isEnabled(v)).toBe(true);
     for (const v of ["", "0", "false"]) expect(isEnabled(v)).toBe(false);
+  });
+
+  it("round-trips handoff bytes under the default /images root", () => {
+    const ctx = pluginCtx();
+    const env = withImageHandoff({});
+    expect(env.IMAGE_OUTPUT_DIR).toBe(defaultImageOutputDir);
+    const roots = imageRoots(env);
+    const bytes = new TextEncoder().encode("handoff-png");
+    const stored = writeOutputFile(ctx.sql, ctx.clock, env.IMAGE_OUTPUT_DIR, bytes, extForMime("image/png"));
+    expect(stored.startsWith(`${defaultImageOutputDir}/`)).toBe(true);
+    expect(readInsideRoots(ctx.sql, stored, roots, pathMessages)).toEqual(bytes);
   });
 
   it("skips an unset dir, writes png and jpg, and rejects ..", () => {

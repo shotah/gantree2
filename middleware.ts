@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { gate } from "@/lib/door/gate";
+import { adminConsoleRefusal, gate } from "@/lib/door/gate";
 import { forwardHeaders, refusal } from "@/lib/door/http";
 import { doorEnv, userStore } from "@/lib/door/runtime";
 
@@ -10,9 +10,16 @@ import { doorEnv, userStore } from "@/lib/door/runtime";
  */
 export async function middleware(request: Request): Promise<Response> {
   const decision = await gate(request, doorEnv(), userStore());
-  const refused = refusal(decision, new URL(request.url));
+  const url = new URL(request.url);
+  const refused = refusal(decision, url);
   if (refused) {
     return refused;
+  }
+  if (decision.kind === "pass") {
+    const consoleRefused = adminConsoleRefusal(decision.who, url, request.method);
+    if (consoleRefused) {
+      return consoleRefused;
+    }
   }
   return NextResponse.next({ request: { headers: forwardHeaders(decision, request.headers) } });
 }

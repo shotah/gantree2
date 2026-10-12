@@ -118,6 +118,12 @@ class FakeStorage {
     return Promise.resolve();
   }
 
+  deleteAll(): Promise<void> {
+    this.rows.clear();
+    this.alarmAt = null;
+    return Promise.resolve();
+  }
+
   queued(): Queued[] {
     return [...this.rows.entries()]
       .filter(([k]) => k.startsWith(QUEUE_STORE_PREFIX))
@@ -845,14 +851,30 @@ describe("Agent room ops", () => {
         return Promise.resolve();
       },
     };
-    const { state, box, crane, phone, say } = room({
+    const { state, box, crane, say } = room({
       GOOGLE_CLIENT_ID: "id",
       DIRECTORY: directory,
     });
     const ada = "118212345678901234567";
     await state.storage.put("slug", "kit");
-    const kept = phone(ada);
-    const dropped = phone("9999999999");
+    const kept = new FakeSocket();
+    const dropped = new FakeSocket();
+    state.acceptWebSocket(kept, socketTags({
+      role: "phone",
+      rateId: `sub:${ada}`,
+      userId: ada,
+      email: "ada@example.com",
+      emailVerified: true,
+      doorRole: "member",
+      chatSlug: "kit",
+    }));
+    state.acceptWebSocket(dropped, socketTags({
+      role: "phone",
+      rateId: "sub:9999999999",
+      userId: "9999999999",
+      doorRole: "member",
+      chatSlug: "kit",
+    }));
 
     const bad = await box.fetch(new Request("https://agent/bearer", {
       method: "PUT",
@@ -1293,6 +1315,27 @@ describe("Agent native runtime", () => {
     expect(roomMock.brain.announce).toHaveBeenCalledTimes(1);
   });
 
+  it("floors a past nextAlarm when arming after inbound", async () => {
+    const past = Date.now() - 60_000;
+    roomMock.brain.nextAlarm.mockReturnValue(past);
+    const { state, phone, say } = room();
+    await state.storage.put("slug", "kit");
+    await state.storage.put(CONFIG_STORE_KEY, nativeConfig());
+    await say(phone("1182"), { id: "m1", text: "wake" });
+    expect(state.storage.alarmAt).not.toBe(past);
+    expect(state.storage.alarmAt).toBeGreaterThanOrEqual(Date.now());
+  });
+
+  it("clears the storage alarm when brain.alarm() returns null", async () => {
+    roomMock.brain.alarm.mockResolvedValue(null);
+    const { state, box } = room();
+    await state.storage.put("slug", "kit");
+    await state.storage.put(CONFIG_STORE_KEY, nativeConfig());
+    await state.storage.setAlarm(4_200_000_000_000);
+    await box.alarm();
+    expect(state.storage.alarmAt).toBeNull();
+  });
+
   it("sets the next alarm from alarm()", async () => {
     roomMock.brain.alarm.mockImplementation(async (emit) => {
       emit({ kind: "push", user_id: "1182", id: "wake", text: "ping" });
@@ -1365,6 +1408,37 @@ describe("Agent native runtime", () => {
     expect(roomMock.dropRoomBrain).toHaveBeenCalledTimes(1);
     expect(roomMock.openRoomBrain).toHaveBeenCalledTimes(2);
     expect(roomMock.brain.announce).toHaveBeenCalledTimes(2);
+  });
+
+  it("pauses by dropping the brain and alarm without wiping storage", async () => {
+    const { state, box } = room();
+    await state.storage.put("chat.keep", "stay");
+    state.storage.alarmAt = Date.now() + 60_000;
+    const paused = await box.fetch(new Request("https://agent/pause", {
+      method: "POST",
+      headers: { "X-Chat-Op": "pause" },
+    }));
+    expect(paused.status).toBe(204);
+    expect(await state.storage.get("chat.keep")).toBe("stay");
+    expect(state.storage.alarmAt).toBeNull();
+    expect(roomMock.dropRoomBrain).toHaveBeenCalled();
+  });
+
+  it("destroys by wiping storage and not reopening the brain", async () => {
+    const { state, box } = room();
+    await state.storage.put("chat.keep", "gone");
+    state.storage.alarmAt = Date.now() + 60_000;
+    const destroyed = await box.fetch(new Request("https://agent/destroy", {
+      method: "POST",
+      headers: { "X-Chat-Op": "destroy" },
+    }));
+    expect(destroyed.status).toBe(204);
+    expect(await state.storage.get("chat.keep")).toBeUndefined();
+    expect(state.storage.alarmAt).toBeNull();
+    expect(roomMock.dropRoomBrain).toHaveBeenCalled();
+    const callsBefore = roomMock.openRoomBrain.mock.calls.length;
+    await box.fetch(new Request("https://agent/status", { headers: { "X-Chat-Op": "status" } }));
+    expect(roomMock.openRoomBrain.mock.calls.length).toBeGreaterThan(callsBefore);
   });
 
   it("rebuilds the brain when grants, env, or persona change", async () => {

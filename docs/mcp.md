@@ -64,8 +64,10 @@ Examples:
 MCP image bytes are not stuffed into the model prompt. The host
 truncates tool results. The JSON summary stays, and chat puts
 `images: [{ url }]` on the room reply (same shape as inbound). Grant
-prefix `image`. Image bytes that another tool must read go to disk via
-`IMAGE_OUTPUT_DIR`; chat `avatar_update` / `backdrop_update` take
+prefix `image`. Image bytes that another tool must read go to the Agent DO
+sqlite table `image_output` under the `IMAGE_OUTPUT_DIR` directory string
+(the native brain fills `/images` when that var is blank); chat
+`avatar_update` / `backdrop_update` take
 `source_path`.
 
 **Why the prefix?** OpenAI-safe characters, no collisions across plugins, and

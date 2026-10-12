@@ -22,11 +22,12 @@ describe("landing pref", () => {
     expect(landingCookie(null)).toBe("gantree.landing=; Path=/; Max-Age=0; SameSite=Lax");
   });
 
-  it("sends staff into chat when the pref is on, and straight to a pinned room", () => {
+  it("sends staff into chat when the pref is on, and straight to a pinned room when assigned", () => {
     expect(landing({ role: "admin", agents: ["kit"] }, { slug: null })).toBe("/chat/kit");
     expect(landing({ role: "admin", agents: [] }, { slug: null })).toBe("/chat");
     expect(landing({ role: "operator", agents: ["a", "b"] }, { slug: null })).toBe("/chat");
-    expect(landing({ role: "admin", agents: [] }, { slug: "a b" })).toBe("/chat/a%20b");
+    expect(landing({ role: "admin", agents: ["a b"] }, { slug: "a b" })).toBe("/chat/a%20b");
+    expect(landing({ role: "admin", agents: [] }, { slug: "a b" })).toBe("/chat");
     expect(landing({ role: "member", agents: ["kit", "ada"] }, { slug: "ada" })).toBe("/chat/ada");
     expect(landing({ role: "member", agents: ["kit"] }, { slug: null })).toBe("/chat/kit");
   });
@@ -37,9 +38,9 @@ describe("landing", () => {
     ["admin", [], "/agents"],
     ["admin", ["kit"], "/agents"],
     ["admin", ["kit", "ada"], "/agents"],
-    ["operator", [], "/agents"],
-    ["operator", ["kit"], "/agents"],
-    ["operator", ["a", "b"], "/agents"],
+    ["operator", [], "/chat"],
+    ["operator", ["kit"], "/chat/kit"],
+    ["operator", ["a", "b"], "/chat"],
     ["member", [], "/chat"],
     ["member", ["kit"], "/chat/kit"],
     ["member", ["a b"], "/chat/a%20b"],
@@ -91,11 +92,12 @@ describe("readSession", () => {
 });
 
 describe("manageRows", () => {
-  it("gates Manage and All agents", () => {
+  it("only admins get console links", () => {
     const settings = { href: "/settings", label: "Settings" };
     expect(manageRows(null, "kit")).toEqual([]);
-    expect(manageRows({ role: "member", agents: ["kit"] }, "kit")).toEqual([settings]);
-    expect(manageRows({ role: "member", agents: [] }, null)).toEqual([settings]);
+    expect(manageRows({ role: "member", agents: ["kit"] }, "kit")).toEqual([]);
+    expect(manageRows({ role: "member", agents: [] }, null)).toEqual([]);
+    expect(manageRows({ role: "operator", agents: ["kit"] }, "kit")).toEqual([]);
     expect(manageRows({ role: "admin", agents: [] }, null)).toEqual([
       { href: "/agents", label: "All agents" },
       settings,
@@ -105,13 +107,6 @@ describe("manageRows", () => {
       { href: "/agents", label: "All agents" },
       settings,
     ]);
-    expect(manageRows({ role: "operator", agents: ["kit"] }, "kit")).toEqual([
-      { href: "/agents/kit", label: "Manage kit" },
-      settings,
-    ]);
-    expect(manageRows({ role: "operator", agents: ["ada"] }, "kit")).toEqual([settings]);
-    expect(manageRows({ role: "operator", agents: ["kit"] }, null)).toEqual([settings]);
-    expect(manageRows({ role: "operator", agents: [] }, "")).toEqual([settings]);
     expect(manageRows({ role: "admin", agents: [] }, "a b")).toEqual([
       { href: "/agents/a%20b", label: "Manage a b" },
       { href: "/agents", label: "All agents" },

@@ -2,6 +2,7 @@ import { phoneAdmitted } from "./floor";
 import type { RoomSession } from "./room";
 import type { RoomUser } from "./allow";
 import type { Role } from "./frame";
+import type { Role as DoorRole } from "@/lib/door/users";
 
 /** Decimal millisecond expiry from `X-Chat-Exp`. Absent / junk → skip the exp check. */
 export function parseExpMs(raw: string | undefined): number | undefined {
@@ -26,9 +27,11 @@ export type SocketAuthInput = {
   emailVerified?: boolean;
   expMs?: number;
   allowedSubs?: string;
-  gantreeAdmins?: string;
-  gantreeAllow?: string;
   roomUsers?: RoomUser[];
+  doorRole?: DoorRole;
+  assignedAgents?: readonly string[];
+  slug?: string;
+  inDirectory?: boolean;
   /** Google is on — empty room + no extra admits nobody. Spike skips. */
   enforce?: boolean;
   now: number;
@@ -57,10 +60,13 @@ export function socketMessageAllowed(input: SocketAuthInput): boolean {
     return true;
   }
   const session = phoneSession(input);
-  if (!session || !phoneAdmitted(input.roomUsers, session, {
+  if (!session || !input.doorRole || !input.slug || !phoneAdmitted(input.roomUsers, session, {
     ALLOWED_SUBS: input.allowedSubs,
-    GANTREE_ADMINS: input.gantreeAdmins,
-    GANTREE_ALLOW: input.gantreeAllow,
+  }, {
+    role: input.doorRole,
+    assignedSlugs: input.assignedAgents ?? [],
+    slug: input.slug,
+    inDirectory: input.inDirectory,
   })) {
     return false;
   }

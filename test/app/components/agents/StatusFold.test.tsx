@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { StatusFold } from "@/app/components/agents/StatusFold";
 import type { ApiClient } from "@/app/lib/agentsHttp";
@@ -102,6 +103,33 @@ describe("StatusFold", () => {
     expect(screen.getByText("No status yet.")).toBeTruthy();
     expect(screen.getAllByText("unknown").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Restart" })).toBeNull();
+  });
+
+  it("turns off and shows the stopped hint", async () => {
+    const client: ApiClient = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      await Promise.resolve();
+      const url = href(input);
+      if (url.endsWith("/enabled") && init?.method === "POST") {
+        return json(200, { agent: { slug: "kit", name: "Kit", createdBy: "sub", createdAt: 1, tags: [], enabled: false, status: STATUS, canMutate: true } });
+      }
+      return json(200, STATUS);
+    });
+    function Harness() {
+      const [enabled, setEnabled] = useState(true);
+      return (
+        <StatusFold
+          slug="kit"
+          status={STATUS}
+          enabled={enabled}
+          client={client}
+          onEnabled={setEnabled}
+        />
+      );
+    }
+    render(<Harness />);
+    fireEvent.click(screen.getByRole("button", { name: "Turn off" }));
+    expect(await screen.findByText("stopped — chat and schedules are paused")).toBeTruthy();
+    expect(vi.mocked(client).mock.calls.some((call) => href(call[0]).endsWith("/enabled"))).toBe(true);
   });
 
   it("restarts the brain and refetches status", async () => {

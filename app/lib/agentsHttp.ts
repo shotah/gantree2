@@ -40,9 +40,12 @@ const COPY: Record<string, string> = {
   empty: "SELF.md cannot be empty.",
   bad_self: "That self note was not valid.",
   bad_slug: "Use a letter, then lowercase letters, digits, or hyphens.",
+  exists: "That agent ID is already in use.",
+  name_exists: "That agent name is already in use.",
   bad_json: "That request was not valid JSON.",
   bad_body: "The agents service sent an unexpected reply.",
   request_failed: "Could not reach agents. Try again.",
+  off: "This agent is stopped. Turn it on to chat or restart.",
   unauthorized: "Sign in again.",
   bad_plugin: "That tool does not connect from here.",
   no_origin: "This agent has no public address yet.",
@@ -86,6 +89,10 @@ export function statusUrl(slug: string): string {
 
 export function restartUrl(slug: string): string {
   return `${agentUrl(slug)}/restart`;
+}
+
+export function enabledUrl(slug: string): string {
+  return `${agentUrl(slug)}/enabled`;
 }
 
 export function logUrl(slug: string, after?: number): string {
@@ -253,6 +260,10 @@ export async function createAgent(body: AgentCreate, client: ApiClient = api): P
 
 export async function deleteAgent(slug: string, client: ApiClient = api): Promise<void> {
   await send(client, agentUrl(slug), { method: "DELETE" });
+}
+
+export async function setAgentEnabled(slug: string, enabled: boolean, client: ApiClient = api): Promise<AgentCard> {
+  return asCard(await send(client, enabledUrl(slug), jsonInit("POST", { enabled })));
 }
 
 export async function getConfig(slug: string, client: ApiClient = api): Promise<AgentConfigView> {

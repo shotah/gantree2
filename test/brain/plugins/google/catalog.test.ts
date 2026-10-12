@@ -111,7 +111,16 @@ function schemaExtends(actual: JsonSchema, spec: JsonSchema): boolean {
   return required.every((name) => actualRequired.includes(name));
 }
 
+const USER_GOOGLE_EMAIL_DESCRIPTION
+  = "Google account for this call: the person's work, personal, or other mailbox. If you do not already know which one, ask them before calling, then pass that address here. Do not guess.";
+
 describe("published google tools", () => {
+  it("toolDef replaces user_google_email description for the model", () => {
+    const schema = toolDef("gmail_search_messages").inputSchema;
+    const prop = isRecord(schema.properties) ? schema.properties.user_google_email : undefined;
+    expect(isRecord(prop) && prop.description).toBe(USER_GOOGLE_EMAIL_DESCRIPTION);
+  });
+
   it("preset all matches the Go tools/list name, description, and inputSchema", () => {
     const tools = google.tools(testCtx());
     expect(tools.map((t) => t.name)).toEqual(published);

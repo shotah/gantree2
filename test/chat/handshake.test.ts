@@ -13,6 +13,10 @@ import {
 const SECRET = "s".repeat(32);
 const now = Date.UTC(2026, 8, 4);
 
+function admit(role: "admin" | "operator" | "member", slug = "kit", assignedSlugs: string[] = []) {
+  return { role, assignedSlugs, slug };
+}
+
 async function cookie(human: { sub: string; email: string | null }): Promise<string> {
   const token = await sealSession(await sessionKey(SECRET), human, now);
   return `${SESSION_COOKIE}=${encodeURIComponent(token)}`;
@@ -54,6 +58,7 @@ describe("handshake", () => {
       slug: "kit",
       role: "phone",
       cookieHeader: `${SESSION_COOKIE}=${encodeURIComponent(session)}`,
+      admit: admit("member"),
       now,
     });
     expect(phone.ok).toBe(true);
@@ -70,6 +75,7 @@ describe("handshake", () => {
       slug: "kit",
       role: "phone",
       cookieHeader: `${SESSION_COOKIE}=${encodeURIComponent(stranger)}`,
+      admit: admit("member"),
       now,
     });
     const junk = await handshake({
@@ -87,6 +93,7 @@ describe("handshake", () => {
       slug: "kit",
       role: "phone",
       authorization: `Bearer ${session}`,
+      admit: admit("member"),
       now,
     });
     expect(viaHeader).toEqual(phone);
@@ -255,6 +262,7 @@ describe("handshakeSlug", () => {
       env,
       slug: "kit",
       cookieHeader: `${SESSION_COOKIE}=${encodeURIComponent(session)}`,
+      admit: admit("member"),
       now,
     });
     expect(phone.ok && phone.principal.kind === "phone" && phone.principal.sub).toBe("1182");
@@ -270,6 +278,7 @@ describe("handshakeSlug", () => {
       env,
       slug: "kit",
       authorization: `Bearer ${session}`,
+      admit: admit("member"),
       now,
     });
     expect(phoneHeader.ok && phoneHeader.principal.kind === "phone" && phoneHeader.principal.sub).toBe("1182");
@@ -294,6 +303,7 @@ describe("handshakeSlug", () => {
       slug: "kit",
       cookieHeader: `${SESSION_COOKIE}=${encodeURIComponent(session)}`,
       authorization: "Bearer crane-tok",
+      admit: admit("member"),
       now,
     });
     expect(phone).toEqual({ ok: false, error: "forbidden" });
@@ -315,6 +325,7 @@ describe("handshake room list", () => {
       role: "phone",
       cookieHeader: await cookie({ sub: ada, email: "ada@example.com" }),
       roomList: [{ sub: ada, email: "ada@example.com" }],
+      admit: admit("member"),
       now,
     });
     expect(ok.ok && ok.principal.kind === "phone" && ok.principal.sub).toBe(ada);
@@ -327,6 +338,7 @@ describe("handshake room list", () => {
       role: "phone",
       cookieHeader: await cookie({ sub: ada, email: "ada@example.com" }),
       roomList: [{ email: "ada@example.com" }],
+      admit: admit("member"),
       now,
     });
     expect(ok.ok && ok.principal.kind === "phone" && ok.principal.sub).toBe(ada);
@@ -339,6 +351,7 @@ describe("handshake room list", () => {
       role: "phone",
       cookieHeader: await cookie({ sub: ada, email: null }),
       roomList: [],
+      admit: admit("member"),
       now,
     });
     expect(ok.ok && ok.principal.kind === "phone" && ok.principal.sub).toBe(ada);
@@ -350,33 +363,36 @@ describe("handshake room list", () => {
       slug: "kit",
       role: "phone",
       cookieHeader: await cookie({ sub: ada, email: "ada@example.com" }),
+      admit: admit("member"),
       now,
     });
     expect(refused).toEqual({ ok: false, error: "forbidden" });
   });
 
-  it("admits GANTREE_ADMINS on an empty room list", async () => {
+  it("admits an admin on an empty room list", async () => {
     const ok = await handshake({
-      env: { ...env, GANTREE_ADMINS: "ada@example.com" },
+      env,
       slug: "kit",
       role: "phone",
       cookieHeader: await cookie({ sub: ada, email: "ada@example.com" }),
       roomList: [],
+      admit: admit("admin"),
       now,
     });
     expect(ok.ok && ok.principal.kind === "phone" && ok.principal.sub).toBe(ada);
   });
 
-  it("admits GANTREE_ALLOW by sub on an empty room list", async () => {
-    const ok = await handshake({
+  it("does not admit GANTREE_ALLOW alone on an empty room list", async () => {
+    const refused = await handshake({
       env: { ...env, GANTREE_ALLOW: ada },
       slug: "kit",
       role: "phone",
       cookieHeader: await cookie({ sub: ada, email: null }),
       roomList: [],
+      admit: admit("member"),
       now,
     });
-    expect(ok.ok && ok.principal.kind === "phone" && ok.principal.sub).toBe(ada);
+    expect(refused).toEqual({ ok: false, error: "forbidden" });
   });
 
   it("still forbids a stranger on an empty room when floor env is set", async () => {
@@ -386,6 +402,7 @@ describe("handshake room list", () => {
       role: "phone",
       cookieHeader: await cookie({ sub: ada, email: "ada@example.com" }),
       roomList: [],
+      admit: admit("member"),
       now,
     });
     expect(refused).toEqual({ ok: false, error: "forbidden" });
@@ -438,6 +455,7 @@ describe("handshakePhone", () => {
       env,
       slug: "kit",
       cookieHeader: await cookie({ sub: ada, email: "ada@example.com" }),
+      admit: admit("member"),
       now,
       loadRoom: async () => {
         loaded += 1;

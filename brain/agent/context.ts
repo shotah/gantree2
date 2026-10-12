@@ -169,9 +169,29 @@ export function assemble(a: Assembler, turn: TurnIn): Assembled {
   };
 }
 
+const PICK_SENTENCE = "Pick a name and keep it.";
+const IDENTITY_PICK = "- **Name:** (pick one)";
+
+function bakeAgentNameIntoPersona(text: string, name: string): string {
+  let out = text;
+  if (out.includes(PICK_SENTENCE)) {
+    out = out.replace(PICK_SENTENCE, `Your name is ${name}.`);
+  }
+  if (out.includes("(pick one)")) {
+    out = out.replace(IDENTITY_PICK, `- **Name:** ${name}`);
+  }
+  return out;
+}
+
 /** Persona the model sees: operator text, SELF, narration, memory precedence. */
-export function standingPersona(assembled: string): string {
-  const base = assembled.trim();
+export function standingPersona(assembled: string, name?: string): string {
+  const resolved = (name ?? "").trim();
+  let base = assembled.trim();
+  if (resolved !== "") {
+    base = bakeAgentNameIntoPersona(base, resolved);
+    const fact = `Your name is ${resolved}. Use that name for yourself. The human's name is under About you.`;
+    base = base === "" ? fact : `${fact}\n\n${base}`;
+  }
   const notes = `${TOOL_NARRATION_NOTE}\n${PERSONA_PRECEDENCE_NOTE.trim()}`;
   if (base === "") return notes;
   return `${base}\n${notes}`;

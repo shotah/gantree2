@@ -6,6 +6,8 @@ import {
   agentsMessage,
   codeOf,
   createAgent,
+  getMe,
+  listAgents,
   patchConfig,
   toolsPage,
   type ApiClient,
@@ -13,13 +15,42 @@ import {
 import { api } from "@/app/lib/api";
 import { llmCovered } from "@/lib/agents/house";
 import { tomlFromGrants } from "@/lib/agents/mcpToml";
-import { AGENT_SLUG, type AgentCreate, type Grant, type ToolEntry } from "@/lib/agents/types";
+import { AGENT_SLUG, type AgentCard, type AgentCreate, type Grant, type ToolEntry } from "@/lib/agents/types";
 import { assignHref } from "./follow";
 import { alertClass, inputClass, labelClass, mainClass, primaryClass, quietClass } from "./Fold";
-import { PERSONA_TEMPLATE } from "./personaTemplate";
+import { PERSONA_TEMPLATE, personaFor, scrubPersonaPlaceholders } from "./personaTemplate";
 
 const STEPS = ["Name", "Persona", "Keys", "Tools"] as const;
 const panelClass = `${cardClass} flex flex-col gap-4`;
+
+function resolvedName(nameRaw: string, slug: string): string {
+  const trimmed = nameRaw.trim();
+  return trimmed || slug;
+}
+
+export function agentCreateCollision(
+  agents: Pick<AgentCard, "slug" | "name">[],
+  slugRaw: string,
+  nameRaw: string,
+): "exists" | "name_exists" | null {
+  const slug = slugRaw.trim().toLowerCase();
+  if (!AGENT_SLUG.test(slug)) {
+    return null;
+  }
+  for (const agent of agents) {
+    if (agent.slug === slug) {
+      return "exists";
+    }
+  }
+  const resolvedLower = resolvedName(nameRaw, slug).toLowerCase();
+  for (const agent of agents) {
+    const otherNameLower = agent.name.toLowerCase();
+    if (otherNameLower === resolvedLower || agent.slug === resolvedLower || otherNameLower === slug) {
+      return "name_exists";
+    }
+  }
+  return null;
+}
 
 export function parseTagList(raw: string): string[] {
   const out: string[] = [];
@@ -85,6 +116,8 @@ export function NewAgent({
   const [name, setName] = useState("");
   const [tags, setTags] = useState("");
   const [persona, setPersona] = useState(PERSONA_TEMPLATE);
+  const [personaTouched, setPersonaTouched] = useState(false);
+  const [creatorEmail, setCreatorEmail] = useState<string | null>(null);
   const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [model, setModel] = useState("");
@@ -98,6 +131,20 @@ export function NewAgent({
   const [made, setMade] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let dead = false;
+    void getMe(client).then((session) => {
+      if (!dead) {
+        setCreatorEmail(session.email);
+      }
+    }).catch(() => {
+      /* persona still works without email */
+    });
+    return () => {
+      dead = true;
+    };
+  }, [client]);
 
   useEffect(() => {
     let dead = false;
@@ -124,8 +171,34 @@ export function NewAgent({
   const visible = (tools ?? []).filter((tool) => home || !tool.homeOnly);
   const nextDisabled = busy || (step === 1 && (!slugOk || !nameOk)) || (step === 3 && !keysOk);
 
-  function forward() {
+  async function forward() {
     setError(null);
+    if (step === 1) {
+      let agents: AgentCard[];
+      try {
+        agents = await listAgents(client);
+      } catch (err: unknown) {
+        setError(codeOf(err));
+        return;
+      }
+      const collision = agentCreateCollision(agents, slug, name);
+      if (collision) {
+        setError(collision);
+        return;
+      }
+      if (!personaTouched) {
+        let email = creatorEmail;
+        if (email === null) {
+          try {
+            email = (await getMe(client)).email;
+            setCreatorEmail(email);
+          } catch {
+            /* persona still works without email */
+          }
+        }
+        setPersona(personaFor({ agentName: name.trim(), email }));
+      }
+    }
     setStep((current) => current === 1 ? 2 : current === 2 ? 3 : 4);
   }
 
@@ -194,7 +267,8 @@ export function NewAgent({
         target = created.slug;
         setMade(target);
       }
-      await patchConfig(target, { env, persona, mcp: tomlFromGrants(grants) }, client);
+      const personaOut = scrubPersonaPlaceholders(persona, { agentName: name.trim(), email: creatorEmail });
+      await patchConfig(target, { env, persona: personaOut, mcp: tomlFromGrants(grants) }, client);
       go(`/agents/${target}`);
     } catch (err) {
       setError(codeOf(err));
@@ -206,7 +280,7 @@ export function NewAgent({
   function onSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     if (step < 4) {
-      forward();
+      void forward();
       return;
     }
     void create();
@@ -282,7 +356,10 @@ export function NewAgent({
                     id="agent-persona"
                     value={persona}
                     rows={16}
-                    onChange={(e) => setPersona(e.target.value)}
+                    onChange={(e) => {
+                      setPersonaTouched(true);
+                      setPersona(e.target.value);
+                    }}
                     className={`${inputClass} min-h-64 font-mono text-xs`}
                   />
                 </div>

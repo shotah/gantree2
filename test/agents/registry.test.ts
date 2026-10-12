@@ -18,7 +18,7 @@ describe("agents table", () => {
     const created = await registry.create({ slug: " Kit ", name: " Kit ", tags: [" house ", "house", "keys"] }, ADA);
     expect(created).toEqual({
       ok: true,
-      agent: { slug: "kit", name: "Kit", createdBy: ADA, createdAt: 40, tags: ["house", "keys"] },
+      agent: { slug: "kit", name: "Kit", createdBy: ADA, createdAt: 40, tags: ["house", "keys"], enabled: true },
     });
     expect(await registry.create({ slug: "kit", name: "" }, ADA)).toEqual({ ok: false, error: "exists" });
     expect(await registry.get("KIT")).toMatchObject({ name: "Kit", tags: ["house", "keys"] });
@@ -48,6 +48,28 @@ describe("agents table", () => {
     expect(await registry.list()).toHaveLength(1);
   });
 
+  it("rejects duplicate names and cross id/name matches", async () => {
+    const registry = openRegistry(memorySql(), () => 1);
+    expect(await registry.create({ slug: "ada", name: "Ada" }, ADA)).toMatchObject({ ok: true });
+    expect(await registry.create({ slug: "bob", name: "Ada" }, ADA)).toEqual({ ok: false, error: "name_exists" });
+    expect(await registry.create({ slug: "bob", name: "ada" }, ADA)).toEqual({ ok: false, error: "name_exists" });
+    expect(await registry.create({ slug: "dan", name: "ada" }, ADA)).toEqual({ ok: false, error: "name_exists" });
+    expect(await registry.create({ slug: "eve", name: "Bob" }, ADA)).toMatchObject({ ok: true });
+    expect(await registry.create({ slug: "bob", name: "Other" }, ADA)).toEqual({ ok: false, error: "name_exists" });
+    expect(await registry.create({ slug: "ada", name: "Other" }, ADA)).toEqual({ ok: false, error: "exists" });
+  });
+
+  it("defaults new rows to enabled and can turn off without deleting", async () => {
+    const registry = openRegistry(memorySql(), () => 1);
+    const created = await registry.create({ slug: "kit" }, ADA);
+    expect(created).toMatchObject({ ok: true, agent: { enabled: true } });
+    const off = await registry.setEnabled("kit", false, ADA);
+    expect(off).toMatchObject({ ok: true, agent: { slug: "kit", enabled: false } });
+    expect(await registry.get("kit")).toMatchObject({ enabled: false });
+    const on = await registry.setEnabled("kit", true, ADA);
+    expect(on).toMatchObject({ ok: true, agent: { enabled: true } });
+  });
+
   it("skips corrupt rows and reads a bigint timestamp", async () => {
     const all = [
       { slug: "kit", name: "Kit", created_by: ADA, created_at: 9n, tags: "[\"a\"]" },
@@ -68,8 +90,8 @@ describe("agents table", () => {
     };
     const registry = openRegistry(sql, () => 1);
     expect(await registry.list()).toEqual([
-      { slug: "kit", name: "Kit", createdBy: ADA, createdAt: 9, tags: ["a"] },
-      { slug: "ada", name: "Ada", createdBy: "", createdAt: 2, tags: [] },
+      { slug: "kit", name: "Kit", createdBy: ADA, createdAt: 9, tags: ["a"], enabled: true },
+      { slug: "ada", name: "Ada", createdBy: "", createdAt: 2, tags: [], enabled: true },
     ]);
     expect(await registry.get("kit")).toMatchObject({ createdAt: 9, tags: ["a"] });
     expect(await registry.get("missing")).toBeNull();

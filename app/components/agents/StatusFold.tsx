@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { agentsMessage, codeOf, getStatus, restartAgent, type ApiClient } from "@/app/lib/agentsHttp";
+import { agentsMessage, codeOf, getStatus, restartAgent, setAgentEnabled, type ApiClient } from "@/app/lib/agentsHttp";
 import { api } from "@/app/lib/api";
 import type { AgentStatus, BrainState, PluginStatus } from "@/lib/agents/types";
 import { Fold, quietClass } from "./Fold";
@@ -80,11 +80,15 @@ function SkippedLine({ plugins }: { plugins: readonly PluginStatus[] }) {
 export function StatusFold({
   slug,
   status,
+  enabled = true,
   client = api,
+  onEnabled,
 }: {
   slug?: string;
   status: AgentStatus | null;
+  enabled?: boolean;
   client?: ApiClient;
+  onEnabled?: (enabled: boolean) => void;
 }) {
   const [open, setOpen] = useState(true);
   const [fetched, setFetched] = useState<AgentStatus | null>(null);
@@ -107,6 +111,27 @@ export function StatusFold({
     try {
       await restartAgent(slug, client);
       setFetched(await getStatus(slug, client));
+    } catch (err) {
+      setError(codeOf(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggleEnabled(next: boolean) {
+    if (!slug || busy) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const card = await setAgentEnabled(slug, next, client);
+      onEnabled?.(card.enabled);
+      if (next) {
+        setFetched(await getStatus(slug, client));
+      } else {
+        setFetched(null);
+      }
     } catch (err) {
       setError(codeOf(err));
     } finally {
@@ -148,11 +173,21 @@ export function StatusFold({
         : <p className="mt-2 text-sm text-muted">No status yet.</p>}
       {slug
         ? (
-            <div className="mt-3">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
               <button type="button" className={quietClass} disabled={busy} onClick={() => void restart()}>
                 Restart
               </button>
-              <p className="mt-1 text-xs text-dim">reloads tools, chat stays</p>
+              <button
+                type="button"
+                className={quietClass}
+                disabled={busy}
+                onClick={() => void toggleEnabled(!enabled)}
+              >
+                {enabled ? "Turn off" : "Turn on"}
+              </button>
+              <p className="w-full text-xs text-dim">
+                {enabled ? "reloads tools, chat stays" : "stopped — chat and schedules are paused"}
+              </p>
               {error ? <p role="alert" className="mt-2 text-xs text-danger">{agentsMessage(error)}</p> : null}
             </div>
           )

@@ -11,6 +11,12 @@ export const envGoogleGenAIUseVertexAI = "GOOGLE_GENAI_USE_VERTEXAI";
 export const providerGemini = "gemini";
 export const defaultModel = "gemini-3.1-flash-image";
 export const defaultLocation = "global";
+export const defaultImageOutputDir = "/images";
+
+export function withImageHandoff(env: Record<string, string>): Record<string, string> {
+  if ((env.IMAGE_OUTPUT_DIR ?? "").trim() || (env.PENDANT_IMAGE_DIR ?? "").trim()) return env;
+  return { ...env, IMAGE_OUTPUT_DIR: defaultImageOutputDir };
+}
 
 const nextGenerate = "Next: photo_generate(prompt=\"a red bicycle leaning on a brick wall\")";
 

@@ -1,4 +1,5 @@
 import type { Role } from "./frame";
+import type { Role as DoorRole } from "@/lib/door/users";
 import { parseEmailVerified, parseExpMs } from "./socketAuth";
 
 export const ROLE_PHONE = "role:phone";
@@ -13,6 +14,10 @@ export type SocketMeta = {
   expMs?: number;
   email?: string;
   emailVerified?: boolean;
+  doorRole?: DoorRole;
+  assignedAgents?: string[];
+  chatSlug?: string;
+  inDirectory?: boolean;
 };
 
 export function roleTag(role: Role): string {
@@ -99,6 +104,18 @@ export function socketTags(meta: SocketMeta): string[] {
   if (meta.emailVerified) {
     tags.push("verified:1");
   }
+  if (meta.doorRole) {
+    tags.push(`door:${meta.doorRole}`);
+  }
+  if (meta.assignedAgents?.length) {
+    tags.push(`agents:${meta.assignedAgents.join(",")}`);
+  }
+  if (meta.chatSlug) {
+    tags.push(`slug:${meta.chatSlug}`);
+  }
+  if (meta.inDirectory) {
+    tags.push("dir:1");
+  }
   return tags;
 }
 
@@ -126,6 +143,10 @@ export function parseSocketTags(tags: readonly string[]): SocketMeta {
   let expMs: number | undefined;
   let email: string | undefined;
   let emailVerified = false;
+  let doorRole: DoorRole | undefined;
+  let assignedAgents: string[] | undefined;
+  let chatSlug: string | undefined;
+  let inDirectory = false;
   for (const tag of tags) {
     if (tag === ROLE_AGENT) {
       role = "crane";
@@ -141,7 +162,29 @@ export function parseSocketTags(tags: readonly string[]): SocketMeta {
       email = tag.slice(6) || undefined;
     } else if (tag === "verified:1") {
       emailVerified = true;
+    } else if (tag.startsWith("door:")) {
+      const raw = tag.slice(5);
+      if (raw === "admin" || raw === "operator" || raw === "member") {
+        doorRole = raw;
+      }
+    } else if (tag.startsWith("agents:")) {
+      assignedAgents = tag.slice(7).split(",").filter(Boolean);
+    } else if (tag.startsWith("slug:")) {
+      chatSlug = tag.slice(5) || undefined;
+    } else if (tag === "dir:1") {
+      inDirectory = true;
     }
   }
-  return { role, rateId, userId, expMs, email, emailVerified };
+  return {
+    role,
+    rateId,
+    userId,
+    expMs,
+    email,
+    emailVerified,
+    doorRole,
+    assignedAgents,
+    chatSlug,
+    inDirectory,
+  };
 }

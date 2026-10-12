@@ -160,3 +160,37 @@ or add for you?” That closer takes no [wait]. [silent] stays
 silent, except an empty calendar on an ordinary morning is not
 [silent]. A goal with no nudge today is a miss.
 `;
+
+const PICK_SENTENCE = "Pick a name and keep it.";
+const IDENTITY_PICK = "- **Name:** (pick one)";
+const CANONICAL_EMAIL = "**Google / Workspace email (canonical):** you@example.com";
+
+/** Fill agent name and optional creator email; leaves the human About you name alone. */
+export function personaFor({ agentName, email }: { agentName: string; email?: string | null }): string {
+  let text = PERSONA_TEMPLATE.replace(PICK_SENTENCE, `Your name is ${agentName}.`);
+  text = text.replace(IDENTITY_PICK, `- **Name:** ${agentName}`);
+  const trimmedEmail = typeof email === "string" ? email.trim() : "";
+  if (trimmedEmail !== "") {
+    text = text.replace(CANONICAL_EMAIL, `**Google / Workspace email (canonical):** ${trimmedEmail}`);
+  }
+  return text;
+}
+
+/** Strip stale placeholders from an edited persona before save. */
+export function scrubPersonaPlaceholders(
+  persona: string,
+  { agentName, email }: { agentName: string; email?: string | null },
+): string {
+  let text = persona;
+  if (text.includes(PICK_SENTENCE)) {
+    text = text.replace(PICK_SENTENCE, `Your name is ${agentName}.`);
+  }
+  if (text.includes("(pick one)")) {
+    text = text.replace(IDENTITY_PICK, `- **Name:** ${agentName}`);
+  }
+  const trimmedEmail = typeof email === "string" ? email.trim() : "";
+  if (trimmedEmail !== "" && text.includes("you@example.com")) {
+    text = text.replace(CANONICAL_EMAIL, `**Google / Workspace email (canonical):** ${trimmedEmail}`);
+  }
+  return text;
+}

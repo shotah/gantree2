@@ -17,6 +17,7 @@ import { MicEnable } from "./MicEnable";
 import { NotifyEnable } from "./NotifyEnable";
 import { GoalsButton, GoalsSheet } from "./GoalsBoard";
 import { TasksButton, TasksSheet } from "./TasksBoard";
+import { AgentRoomControls } from "./AgentRoomControls";
 import { SettingsMenu } from "./SettingsMenu";
 import { bubbleFrom, Thread, type ChatBubble } from "./Thread";
 import { mailboxUrl, parseIncoming } from "@/app/lib/socket";
@@ -501,11 +502,8 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
     if (agents.includes(slug)) {
       return slug;
     }
-    if (slugTouched) {
-      return slug;
-    }
-    if (routeParsed && slug === routeParsed && agents.length === 0) {
-      return slug;
+    if (routeParsed && agents.includes(routeParsed)) {
+      return routeParsed;
     }
     return agents[0] ?? "";
   })();
@@ -517,8 +515,7 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
     ),
   );
   const listed = !phone || cfg?.mode !== "oidc" || Boolean(cfg.dev)
-    || agents.includes(roomSlug)
-    || (routeParsed !== null && roomSlug === routeParsed && agents.length === 0);
+    || (roomSlug !== "" && agents.includes(roomSlug));
   const waitingForAgent = Boolean(
     phone && cfg?.mode === "oidc" && !cfg.dev && me && !listed,
   );
@@ -1307,25 +1304,6 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
         >
           {copied ? "Copied" : "Copy"}
         </button>
-        <label className="mt-4 flex w-full max-w-xs flex-col gap-1 text-left text-xs text-muted">
-          Agent name
-          <input
-            className="w-full rounded border border-edge bg-canvas px-1.5 py-1 text-sm text-fg"
-            value={slugTouched ? slug : ""}
-            placeholder="agent name"
-            spellCheck={false}
-            autoCapitalize="none"
-            autoCorrect="off"
-            autoComplete="off"
-            onChange={(e) => {
-              setSlugTouched(true);
-              setSlug(e.target.value.toLowerCase());
-            }}
-          />
-        </label>
-        <p className="max-w-xs text-xs text-dim">
-          The picker fills in after the agent dials. If you know the agent name, type it.
-        </p>
       </main>
     );
   } else {
@@ -1455,10 +1433,7 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
                     <SettingsSelect
                       label="Agent"
                       value={slug}
-                      options={[
-                        ...(slug && !agents.includes(slug) ? [{ id: slug, label: displaySlug(slug) }] : []),
-                        ...agents.map((c) => ({ id: c, label: displaySlug(c) })),
-                      ]}
+                      options={agents.map((c) => ({ id: c, label: displaySlug(c) }))}
                       onChange={(id) => {
                         setSlugTouched(true);
                         setSlug(id);
@@ -1466,26 +1441,6 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
                     />
                   )
                 : null}
-              {mailboxGap || (phone && cfg?.mode === "oidc" && waitingForAgent)
-                ? null
-                : (
-                    <label className="flex flex-col gap-1 text-xs text-muted">
-                      Agent name
-                      <input
-                        className="w-full rounded border border-edge bg-canvas px-1.5 py-1 text-sm text-fg"
-                        value={slug}
-                        placeholder="agent name"
-                        spellCheck={false}
-                        autoCapitalize="none"
-                        autoCorrect="off"
-                        autoComplete="off"
-                        onChange={(e) => {
-                          setSlugTouched(true);
-                          setSlug(e.target.value.toLowerCase());
-                        }}
-                      />
-                    </label>
-                  )}
               {cfg?.mode === "spike" && !hideSecrets
                 ? (
                     <label className="flex flex-col gap-1 text-xs text-muted">
@@ -1573,6 +1528,9 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
                       <p className="text-[11px] text-dim">Visiting gantree lands here instead of the console. Settings can turn it off too.</p>
                     </div>
                   )
+                : null}
+              {phone && roomSlug && listed && cfg?.mode === "oidc" && me
+                ? <AgentRoomControls slug={roomSlug} />
                 : null}
               {(cfg?.dev || (cfg?.google && phone))
                 ? (

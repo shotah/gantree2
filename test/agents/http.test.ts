@@ -12,6 +12,7 @@ import {
   getAgents,
   getAgentStatus,
   postAgentRestart,
+  postAgentEnabled,
   getAgentUsers,
   getSamples,
   patchAgentConfig,
@@ -28,6 +29,7 @@ import { openSettings, type SampleInput, type SampleQuery } from "@/lib/door/set
 import { memorySql } from "../door/memorySql";
 
 const ADA = "118212345678901234567";
+const MEM = "118200000000000000003";
 
 function usersFrom(body: string): unknown[] {
   if (!body) {
@@ -58,11 +60,15 @@ function world() {
   const calls: { url: string; method: string; op: string | null; body: string }[] = [];
   let bearer: string | null = "room-secret";
   let down = false;
+  let destroyFails = false;
   const api = {
     listAgents: () => agents.list(),
     getAgent: (slug: string) => agents.get(slug),
     createAgent: (input: AgentCreateBody, actor: string) => agents.create(input, actor),
     deleteAgent: (slug: string, actor: string) => agents.remove(slug, actor),
+    setAgentEnabled: (slug: string, enabled: boolean, actor: string) => agents.setEnabled(slug, enabled, actor),
+    deleteSamplesForAgent: (agent: string) => users.deleteSamplesForAgent(agent),
+    removeSlugFromOperators: (slug: string) => users.removeSlugFromOperators(slug),
     listSamples: (query?: SampleQuery) => users.listSamples(query),
     addSample: (input: SampleInput) => users.addSample(input),
   };
@@ -80,6 +86,15 @@ function world() {
           const op = req.headers.get("X-Chat-Op");
           if (op === "bearer") {
             return Response.json({ bearer });
+          }
+          if (op === "destroy") {
+            if (destroyFails) {
+              throw new Error("wipe failed");
+            }
+            return new Response(null, { status: 204 });
+          }
+          if (op === "pause") {
+            return new Response(null, { status: 204 });
           }
           if (op === "status" || op === "restart") {
             return Response.json({ ...emptyStatus(), state: "ready", since: 50 });
@@ -110,11 +125,14 @@ function world() {
     setDown: (value: boolean) => {
       down = value;
     },
+    setDestroyFails: (value: boolean) => {
+      destroyFails = value;
+    },
   };
 }
 
 describe("agents http", () => {
-  it("lists every agent for an admin and only runnable ones for an operator", async () => {
+  it("lists every agent for an admin and refuses operators and members", async () => {
     const { env, agents } = world();
     await agents.create({ slug: "kit", name: "Kit" }, ADA);
     await agents.create({ slug: "ada", name: "Ada" }, ADA);
@@ -124,10 +142,7 @@ describe("agents http", () => {
     expect(body.agents.map((row) => row.slug)).toEqual(["ada", "kit"]);
     expect(body.agents.every((row) => row.canMutate && row.status.state === "ready")).toBe(true);
 
-    const mine = await getAgents(asRole("operator", "/api/agents", ["kit"]), env);
-    expect((await mine.json<{ agents: { slug: string; canMutate: boolean }[] }>()).agents).toEqual([
-      expect.objectContaining({ slug: "kit", canMutate: true }),
-    ]);
+    expect((await getAgents(asRole("operator", "/api/agents", ["kit"]), env)).status).toBe(403);
     expect((await getAgents(asRole("member", "/api/agents"), env)).status).toBe(403);
     expect((await getAgents(new Request("https://g.test/api/agents"), env)).status).toBe(401);
   });
@@ -147,22 +162,31 @@ describe("agents http", () => {
     expect(calls.filter((c) => c.op === "bearer" && c.method === "PUT")).toHaveLength(0);
   });
 
-  it("creates for an admin, refuses an operator, and deletes the row", async () => {
-    const { env, agents, users } = world();
+  it("creates for an admin, refuses an operator, and destroys the agent", async () => {
+    const { env, agents, users, calls } = world();
     const created = await postAgent(asRole("admin", "/api/agents", [], "POST", JSON.stringify({ slug: "Kit", tags: ["house"] })), env);
     expect(created.status).toBe(201);
     expect(await created.json()).toMatchObject({ agent: { slug: "kit", name: "kit", tags: ["house"], canMutate: true } });
     expect((await postAgent(asRole("operator", "/api/agents", ["kit"], "POST", "{}"), env)).status).toBe(403);
     expect((await postAgent(asRole("admin", "/api/agents", [], "POST", "{"), env)).status).toBe(400);
     expect((await postAgent(asRole("admin", "/api/agents", [], "POST", JSON.stringify({ slug: "kit" })), env)).status).toBe(409);
+    const nameTaken = await postAgent(asRole("admin", "/api/agents", [], "POST", JSON.stringify({ slug: "bob", name: "kit" })), env);
+    expect(nameTaken.status).toBe(409);
+    expect(await nameTaken.json()).toEqual({ error: "name_exists" });
 
     await users.addSample({ agent: "kit", kind: "turn", value: 1 });
+    await users.putUser({ entry: "op@example.com", role: "operator", agents: ["kit", "ada"] }, ADA);
     const removed = await deleteAgent(asRole("admin", "/api/agents/kit", [], "DELETE"), env, "Kit");
     expect(removed.status).toBe(204);
     expect(await agents.get("kit")).toBeNull();
-    expect(await users.listSamples({ agent: "kit" })).toHaveLength(1);
+    expect(await users.listSamples({ agent: "kit" })).toHaveLength(0);
+    expect((await users.list()).find((row) => row.entry.email === "op@example.com")?.agents).toEqual(["ada"]);
+    expect(calls.some((c) => c.op === "destroy")).toBe(true);
+    const destroyAt = calls.findIndex((c) => c.op === "destroy");
+    expect(destroyAt).toBeGreaterThanOrEqual(0);
+    await agents.create({ slug: "ada", name: "Ada" }, ADA);
     expect((await deleteAgent(asRole("admin", "/api/agents/kit", [], "DELETE"), env, "kit")).status).toBe(404);
-    expect((await deleteAgent(asRole("operator", "/api/agents/kit", ["kit"], "DELETE"), env, "kit")).status).toBe(403);
+    expect((await deleteAgent(asRole("operator", "/api/agents/ada", ["kit"], "DELETE"), env, "ada")).status).toBe(403);
   });
 
   it("hands the room bearer only to an admin on the loopback dev door", async () => {
@@ -190,12 +214,12 @@ describe("agents http", () => {
     expect((await getAgent(asRole("operator", "/api/agents/ada", ["kit"]), env, "ada")).status).toBe(403);
     expect((await getAgent(asRole("admin", "/api/agents/ada"), env, "ada")).status).toBe(404);
     expect((await getAgent(asRole("admin", "/api/agents/nope"), env, "Bad_Slug")).status).toBe(400);
-    const card = await getAgent(asRole("operator", "/api/agents/kit", ["kit"]), env, "kit");
+    const card = await getAgent(asRole("admin", "/api/agents/kit"), env, "kit");
     expect((await card.json<{ agent: { slug: string } }>()).agent.slug).toBe("kit");
 
-    expect((await getAgentConfig(asRole("operator", "/api/agents/kit/config", ["kit"]), env, "kit")).status).toBe(200);
+    expect((await getAgentConfig(asRole("admin", "/api/agents/kit/config"), env, "kit")).status).toBe(200);
     const patched = await patchAgentConfig(
-      asRole("operator", "/api/agents/kit/config", ["kit"], "PATCH", JSON.stringify({ mcp: "toml" })),
+      asRole("admin", "/api/agents/kit/config", [], "PATCH", JSON.stringify({ mcp: "toml" })),
       env,
       "kit",
     );
@@ -222,7 +246,8 @@ describe("agents http", () => {
     expect((await getAgentSelf(asRole("member", "/api/agents/kit/self"), env, "kit")).status).toBe(403);
     expect((await getAgentSelf(asRole("operator", "/api/agents/ada/self", ["kit"]), env, "ada")).status).toBe(403);
     expect((await getAgentSelf(asRole("admin", "/api/agents/nope/self"), env, "Bad_Slug")).status).toBe(400);
-    expect((await getAgentSelf(asRole("operator", "/api/agents/kit/self", ["kit"]), env, "kit")).status).toBe(200);
+    expect((await getAgentSelf(asRole("operator", "/api/agents/kit/self", ["kit"]), env, "kit")).status).toBe(403);
+    expect((await getAgentSelf(asRole("admin", "/api/agents/kit/self"), env, "kit")).status).toBe(200);
     expect(calls.at(-1)).toMatchObject({ method: "GET", op: "self_get" });
     const put = await putAgentSelf(
       asRole("admin", "/api/agents/kit/self", [], "PUT", JSON.stringify({ text: "- dry" })),
@@ -246,7 +271,8 @@ describe("agents http", () => {
     expect((await post("admin", "kit", [], JSON.stringify({ plugin: "garmin" }))).status).toBe(400);
     expect((await post("admin", "kit", [], "not-json")).status).toBe(400);
     expect(calls.length).toBe(before);
-    const ok = await post("operator", "kit", ["kit"], JSON.stringify({ plugin: "google" }));
+    expect((await post("operator", "kit", ["kit"], JSON.stringify({ plugin: "google" }))).status).toBe(403);
+    const ok = await post("admin", "kit", [], JSON.stringify({ plugin: "google" }));
     expect(ok.status).toBe(200);
     expect(calls.at(-1)).toMatchObject({
       method: "POST",
@@ -262,7 +288,8 @@ describe("agents http", () => {
     expect((await getAgentPersona(asRole("member", "/api/agents/kit/persona"), env, "kit")).status).toBe(403);
     expect((await getAgentPersona(asRole("operator", "/api/agents/ada/persona", ["kit"]), env, "ada")).status).toBe(403);
     expect((await getAgentPersona(asRole("admin", "/api/agents/nope/persona"), env, "Bad_Slug")).status).toBe(400);
-    expect((await getAgentPersona(asRole("operator", "/api/agents/kit/persona", ["kit"]), env, "kit")).status).toBe(200);
+    expect((await getAgentPersona(asRole("operator", "/api/agents/kit/persona", ["kit"]), env, "kit")).status).toBe(403);
+    expect((await getAgentPersona(asRole("admin", "/api/agents/kit/persona"), env, "kit")).status).toBe(200);
     expect(calls.at(-1)).toMatchObject({ method: "GET", op: "persona_get" });
     const put = await putAgentPersona(
       asRole("admin", "/api/agents/kit/persona", [], "PUT", JSON.stringify({ name: "PERSONA.md", text: "Be brief." })),
@@ -308,18 +335,14 @@ describe("agents http", () => {
     expect((await getAgents(asRole("admin", "/api/agents"), env)).status).toBe(200);
   });
 
-  it("filters samples by role", async () => {
+  it("lists samples for an admin only", async () => {
     const { env, users } = world();
     await users.addSample({ agent: "kit", kind: "turn", value: 1 });
     await users.addSample({ agent: "ada", kind: "turn", value: 2 });
     const all = await getSamples(asRole("admin", "/api/samples"), env);
     expect(await all.json()).toMatchObject({ samples: [{ agent: "ada" }, { agent: "kit" }] });
-    const mine = await getSamples(asRole("operator", "/api/samples?agent=kit", ["kit"]), env);
-    expect((await mine.json<{ samples: { agent: string }[] }>()).samples).toEqual([
-      expect.objectContaining({ agent: "kit" }),
-    ]);
-    const scoped = await getSamples(asRole("operator", "/api/samples", ["kit"]), env);
-    expect((await scoped.json<{ samples: unknown[] }>()).samples).toHaveLength(1);
+    expect((await getSamples(asRole("operator", "/api/samples?agent=kit", ["kit"]), env)).status).toBe(403);
+    expect((await getSamples(asRole("operator", "/api/samples", ["kit"]), env)).status).toBe(403);
     expect((await getSamples(asRole("operator", "/api/samples?agent=ada", ["kit"]), env)).status).toBe(403);
     expect((await getSamples(asRole("admin", "/api/samples?since=nope"), env)).status).toBe(400);
     expect((await getSamples(asRole("admin", "/api/samples?agent=Bad_Slug"), env)).status).toBe(400);
@@ -393,16 +416,121 @@ describe("agents http", () => {
     expect((await getSamples(asRole("admin", "/api/samples?since=9007199254740993"), env)).status).toBe(400);
   });
 
-  it("restarts for an admin or the operator who runs the agent", async () => {
+  it("lets an operator control an assigned slug and forbids another", async () => {
+    const { env, agents, calls } = world();
+    await agents.create({ slug: "kit", name: "Kit" }, ADA);
+    await agents.create({ slug: "ada", name: "Ada" }, ADA);
+    calls.length = 0;
+    const off = await postAgentEnabled(
+      asRole("operator", "/api/agents/kit/enabled", ["kit"], "POST", JSON.stringify({ enabled: false })),
+      env,
+      "kit",
+    );
+    expect(off.status).toBe(200);
+    expect(await agents.get("kit")).toMatchObject({ enabled: false });
+    expect(calls.some((c) => c.op === "pause")).toBe(true);
+    calls.length = 0;
+    expect((await deleteAgent(asRole("operator", "/api/agents/ada", ["kit"], "DELETE"), env, "ada")).status).toBe(403);
+    expect(calls.some((c) => c.op === "destroy")).toBe(false);
+    expect(await agents.get("ada")).not.toBeNull();
+    const removed = await deleteAgent(asRole("operator", "/api/agents/kit", ["kit"], "DELETE"), env, "kit");
+    expect(removed.status).toBe(204);
+    expect(await agents.get("kit")).toBeNull();
+  });
+
+  it("lets a member on the room list destroy that slug and forbids others", async () => {
+    const { agents, users } = world();
+    await agents.create({ slug: "kit", name: "Kit" }, ADA);
+    await agents.create({ slug: "ada", name: "Ada" }, ADA);
+    const calls: { op: string | null }[] = [];
+    const env = {
+      GANTREE_ALLOW: "member@example.com",
+      DIRECTORY: {
+        get: async () => null,
+        put: async () => {},
+        delete: async () => {},
+      },
+      SETTINGS: {
+        getByName: () => ({
+          listAgents: () => agents.list(),
+          getAgent: (slug: string) => agents.get(slug),
+          createAgent: agents.create.bind(agents),
+          deleteAgent: agents.remove.bind(agents),
+          setAgentEnabled: agents.setEnabled.bind(agents),
+          deleteSamplesForAgent: (agent: string) => users.deleteSamplesForAgent(agent),
+          removeSlugFromOperators: (slug: string) => users.removeSlugFromOperators(slug),
+          listSamples: users.listSamples.bind(users),
+        }),
+      },
+      AGENT: {
+        idFromName: (name: string) => ({ toString: () => name }),
+        get: (id: { toString(): string }) => ({
+          fetch: async (req: Request) => {
+            const op = req.headers.get("X-Chat-Op");
+            calls.push({ op });
+            const room = id.toString();
+            if (op === "allow") {
+              const users = room === "kit" ? [{ sub: MEM, email: "member@example.com" }] : [];
+              return Response.json({ users });
+            }
+            if (op === "destroy") {
+              return new Response(null, { status: 204 });
+            }
+            return new Response(null, { status: 204 });
+          },
+        }),
+      },
+    } as unknown as AgentsHttpEnv;
+    const memberHeaders = {
+      "x-gantree-sub": MEM,
+      "x-gantree-email": "member@example.com",
+      "x-gantree-role": "member",
+      "x-gantree-agents": "",
+    };
+    const denied = await deleteAgent(new Request("https://g.test/api/agents/ada", { method: "DELETE", headers: memberHeaders }), env, "ada");
+    expect(denied.status).toBe(403);
+    expect(calls.some((c) => c.op === "destroy")).toBe(false);
+    calls.length = 0;
+    const removed = await deleteAgent(new Request("https://g.test/api/agents/kit", { method: "DELETE", headers: memberHeaders }), env, "kit");
+    expect(removed.status).toBe(204);
+    expect(calls.some((c) => c.op === "destroy")).toBe(true);
+    expect(await agents.get("kit")).toBeNull();
+  });
+
+  it("turns off, keeps the row, and blocks restart with off", async () => {
+    const { env, agents, calls } = world();
+    await agents.create({ slug: "kit", name: "Kit" }, ADA);
+    const off = await postAgentEnabled(
+      asRole("admin", "/api/agents/kit/enabled", [], "POST", JSON.stringify({ enabled: false })),
+      env,
+      "kit",
+    );
+    expect(off.status).toBe(200);
+    expect(await off.json()).toMatchObject({ agent: { slug: "kit", enabled: false } });
+    expect(await agents.get("kit")).toMatchObject({ enabled: false });
+    expect(calls.some((c) => c.op === "pause")).toBe(true);
+    expect((await postAgentRestart(asRole("admin", "/api/agents/kit/restart", [], "POST"), env, "kit")).status).toBe(409);
+    const blocked = await postAgentRestart(asRole("admin", "/api/agents/kit/restart", [], "POST"), env, "kit");
+    expect(await blocked.json()).toEqual({ error: "off" });
+  });
+
+  it("keeps the inventory row when the durable object wipe fails", async () => {
+    const { env, agents, setDestroyFails } = world();
+    await agents.create({ slug: "kit", name: "Kit" }, ADA);
+    setDestroyFails(true);
+    expect((await deleteAgent(asRole("admin", "/api/agents/kit", [], "DELETE"), env, "kit")).status).toBe(503);
+    expect(await agents.get("kit")).toMatchObject({ slug: "kit" });
+  });
+
+  it("restarts for an admin only", async () => {
     const { env, agents, calls } = world();
     await agents.create({ slug: "kit", name: "Kit" }, ADA);
     expect((await postAgentRestart(new Request("https://g.test/api/agents/kit/restart", { method: "POST" }), env, "kit")).status).toBe(401);
     expect((await postAgentRestart(asRole("member", "/api/agents/kit/restart", [], "POST"), env, "kit")).status).toBe(403);
     expect((await postAgentRestart(asRole("operator", "/api/agents/ada/restart", ["kit"], "POST"), env, "ada")).status).toBe(403);
     expect((await postAgentRestart(asRole("admin", "/api/agents/nope/restart", [], "POST"), env, "Bad_Slug")).status).toBe(400);
-    const ok = await postAgentRestart(asRole("operator", "/api/agents/kit/restart", ["kit"], "POST"), env, "kit");
-    expect(ok.status).toBe(200);
-    expect(calls.at(-1)).toMatchObject({ method: "POST", op: "restart" });
+    expect((await postAgentRestart(asRole("operator", "/api/agents/kit/restart", ["kit"], "POST"), env, "kit")).status).toBe(403);
     expect((await postAgentRestart(asRole("admin", "/api/agents/kit/restart", [], "POST"), env, "kit")).status).toBe(200);
+    expect(calls.at(-1)).toMatchObject({ method: "POST", op: "restart" });
   });
 });

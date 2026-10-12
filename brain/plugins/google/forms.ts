@@ -3,6 +3,7 @@ import { errorResult, textResult } from "@/brain/core/tools";
 import { arrField, boolField, errorText, getBoolOnly, getInt, getString, isRecord, needArg, requireString, strField } from "@/brain/plugins/google/args";
 import { toolDef } from "@/brain/plugins/google/catalog";
 import { googleIDError, isIdFailure, takeGoogleID } from "@/brain/plugins/google/ids";
+import { EMAIL_REQUIRED_MESSAGE } from "@/brain/plugins/google/oauth";
 import { isResult, openUser } from "@/brain/plugins/google/session";
 
 const FORMS = "https://forms.googleapis.com/v1/forms";
@@ -297,8 +298,8 @@ function textAnswerValues(answer: unknown): string[] | undefined {
 function plainEmail(result: ToolResult): ToolResult {
   const first = result.content[0];
   const text = first?.type === "text" ? first.text : "";
-  if (result.isError && text === "USER_GOOGLE_EMAIL is required (or pass user_google_email)") {
-    return errorResult("user_google_email is required");
+  if (result.isError && text === EMAIL_REQUIRED_MESSAGE) {
+    return errorResult(EMAIL_REQUIRED_MESSAGE);
   }
   return result;
 }

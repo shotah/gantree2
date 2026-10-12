@@ -717,3 +717,41 @@ Decision and the package map: [brain.md](brain.md). Landed
       `security-extended` rescan went from 15 alerts to 0.
       `eslint-plugin-security` and `eslint-plugin-regexp` rules
       are errors. [codeql.md](codeql.md) is the page.
+
+## Bugs — 2026-10-12
+
+The bug list that had piled up on the open page in
+[todo.md](todo.md).
+
+- [x] **easy** Unique agent name and id (2026-10-12). Slug and
+      display name, case-insensitive. The new-agent wizard checks
+      before step 2; the server answers 409 `exists` or
+      `name_exists`.
+- [x] **medium** Only an admin opens the agents dashboard, settings,
+      and users (2026-10-12). An operator or member only sees and
+      talks to agents assigned to them. `GANTREE_ALLOW` is sign-in,
+      not every room.
+- [x] **medium** Turn off and destroy (2026-10-12). Turn off pauses
+      chat and schedules and keeps the durable object. Destroy
+      deletes the durable object, chat, keys, memory, samples, and
+      directory rows. Two confirms, and the second says everything
+      will be deleted. An admin may do this to every agent. An
+      operator may do it only to agents on their row. A member may
+      do it only to an agent whose room list admits them. Not to
+      anyone else's agent.
+- [x] **medium** Agent name in persona and prompt (2026-10-12). The
+      agent's name is baked into the persona and the runtime prompt
+      (`Your name is {name}.`). Create writes the creator's email
+      into About you.
+- [x] **easy** Self notes for people (2026-10-12). Self notes shown
+      to a person are the note lines only. The kernel header stays
+      on the file the agent reads.
+- [x] **easy** Google mailbox prompt (2026-10-12). Google tools tell
+      the agent to ask which mailbox — work, personal, or another —
+      and not to guess.
+- [x] **easy** Unnamed Durable Object (2026-10-12). The unnamed
+      Durable Object is not a person and not an auth nonce. A slug
+      that is not in the inventory does not mint an Agent object.
+- [x] **medium** Assigned agents only in chat (2026-10-12). A
+      person cannot talk to an agent id they are not assigned to. A
+      typed agent id in chat is a choice of assigned agents only.

@@ -43,7 +43,9 @@ describe("forms tools", () => {
       env: { GOOGLE_OAUTH_CLIENT_ID: "cid", GOOGLE_OAUTH_CLIENT_SECRET: "csecret", GOOGLE_TOOL_PRESET: "all" },
       token: null,
     }), "forms_update_publish_settings", { form_id: "FORM1" });
-    expect(textOf(missing)).toBe("user_google_email is required");
+    expect(textOf(missing)).toBe(
+      "Ask which Google account to use — work, personal, or another mailbox — then call again with user_google_email set to that address. Do not guess.",
+    );
     const { fetch, hits } = recordingFetch(() => jsonResponse({}));
     const text = textOf(await callTool(authed(fetch), "forms_update_publish_settings", {
       form_id: "FORM1",

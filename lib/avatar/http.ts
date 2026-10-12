@@ -1,12 +1,19 @@
 import { me, type DoorEnv } from "@/lib/door/http";
 import type { UserStore } from "@/lib/door/users";
-import { fetchRoomUsers } from "@/lib/chat/allow";
 import { bearerForSlug, bearerMatches, fetchRoomBearer, parseBearers } from "@/lib/chat/bearer";
 import { blobEtag, blobResponse, etagMatches } from "@/lib/chat/blob";
 import { headerSaysTooLarge } from "@/lib/chat/caps";
 import { configError, forbidden, unauthorized } from "@/lib/chat/deny";
+import {
+  humanChatPrecheck,
+  memberInDirectory,
+  memberRoomUsersWhenNeeded,
+  slugInInventory,
+} from "@/lib/chat/admission";
+import type { DirectoryKv } from "@/lib/chat/directory";
 import { agentStub, type AgentBinding } from "@/lib/chat/location";
 import { phoneAdmitted } from "@/lib/chat/floor";
+import type { Role } from "@/lib/door/users";
 import { bearerToken } from "@/lib/chat/session";
 import { parseSlug } from "@/lib/chat/slug";
 import { fromStub } from "@/lib/chat/slugRoute";
@@ -113,6 +120,8 @@ export type ChatUser = {
 
 export type RoomEnv = DoorEnv & AgentBinding & {
   ALLOWED_SUBS?: string;
+  SETTINGS?: DurableObjectNamespace;
+  DIRECTORY?: DirectoryKv;
   /** `kit:token,ada:token` — env map of room bearers. The DO row wins when this slug is absent. */
   AGENT_BEARERS?: string;
 };
@@ -159,6 +168,9 @@ async function admitAgent(
   slug: string,
   presented: string,
 ): Promise<{ user: ChatUser; stub: RoomStub } | { response: Response }> {
+  if (!(await slugInInventory(env, slug))) {
+    return { response: Response.json({ error: "not_found" }, { status: 404 }) };
+  }
   const stub = agentStub(env, slug);
   if (!stub) {
     return { response: configError() };
@@ -190,18 +202,33 @@ export async function admitRoom(
   if ("response" in who) {
     return who;
   }
-  const stub = agentStub(env, slug);
-  if (!stub) {
-    return { response: configError() };
+  if (!(await slugInInventory(env, slug))) {
+    return { response: Response.json({ error: "not_found" }, { status: 404 }) };
   }
-  const list = await fetchRoomUsers(stub);
-  const allowed = phoneAdmitted(list, {
+  const doorRole = who.user.role as Role;
+  const session = {
     sub: who.user.sub,
     email: who.user.email ?? undefined,
     emailVerified: Boolean(who.user.email),
-  }, env);
+  };
+  const pre = humanChatPrecheck(env, { role: doorRole, agents: who.user.agents }, slug, session);
+  if (pre === "forbidden") {
+    return { response: forbidden() };
+  }
+  const inDirectory = doorRole === "member" && await memberInDirectory(env, session, slug);
+  const list = await memberRoomUsersWhenNeeded(env, slug, doorRole, inDirectory);
+  const allowed = phoneAdmitted(list, session, env, {
+    role: doorRole,
+    assignedSlugs: who.user.agents,
+    slug,
+    inDirectory,
+  });
   if (!allowed) {
     return { response: forbidden() };
+  }
+  const stub = agentStub(env, slug);
+  if (!stub) {
+    return { response: configError() };
   }
   return { user: who.user, stub };
 }

@@ -41,9 +41,12 @@ const REFRESH_SKEW_MS = 60_000;
 
 const MISSING_CLIENT = "OAuth client credentials not found. Please set GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET environment variables";
 
+export const EMAIL_REQUIRED_MESSAGE
+  = "Ask which Google account to use — work, personal, or another mailbox — then call again with user_google_email set to that address. Do not guess.";
+
 export class EmailRequired extends Error {
   constructor() {
-    super("USER_GOOGLE_EMAIL is required (or pass user_google_email)");
+    super(EMAIL_REQUIRED_MESSAGE);
     this.name = "EmailRequired";
   }
 }

@@ -123,7 +123,10 @@ describe("AgentDashboard", () => {
     fireEvent.change(screen.getByLabelText("Type the agent ID to confirm"), { target: { value: "kit" } });
     expect(remove.disabled).toBe(false);
     fireEvent.click(remove);
+    expect(vi.mocked(client).mock.calls.some((call) => call[1]?.method === "DELETE")).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Destroy kit" }));
     await vi.waitFor(() => expect(go).toHaveBeenCalledWith("/agents"));
+    expect(vi.mocked(client).mock.calls.filter((call) => call[1]?.method === "DELETE")).toHaveLength(1);
   });
 
   it("has no runtime switch", async () => {
@@ -163,6 +166,7 @@ describe("AgentDashboard", () => {
     expect(await screen.findByRole("heading", { name: "Kit" })).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Type the agent ID to confirm"), { target: { value: "kit" } });
     fireEvent.click(screen.getByRole("button", { name: "Delete kit" }));
+    fireEvent.click(screen.getByRole("button", { name: "Destroy kit" }));
     expect((await screen.findByRole("alert")).textContent).toContain("You do not have access to that.");
     expect(assign).not.toHaveBeenCalled();
     Object.defineProperty(window, "location", { configurable: true, value: previous });

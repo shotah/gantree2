@@ -64,6 +64,7 @@ export function card(over: Partial<AgentCard> = {}): AgentCard {
     createdBy: "sub",
     createdAt: 1,
     tags: ["home"],
+    enabled: true,
     status: STATUS,
     canMutate: true,
     ...over,

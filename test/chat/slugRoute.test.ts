@@ -2,11 +2,14 @@ import { describe, expect, it, vi } from "vitest";
 import { sealSession, sessionKey, SESSION_COOKIE } from "@/lib/door/session";
 import type { AgentEnv } from "@/lib/chat/env";
 import { authorizeSlug, fromStub, withSlug } from "@/lib/chat/slugRoute";
+import { memoryStore } from "@/lib/door/users";
+import { settingsInventory } from "./settingsStub";
 
 const SECRET = "s".repeat(32);
 const ADA = "118212345678901234567";
 
 function fakeAgent(users: unknown[] = [], bearer: string | null = null) {
+  const idFromName = vi.fn((name: string) => name);
   const stub = {
     fetch: vi.fn(async (input: RequestInfo | URL) => {
       const req = input instanceof Request ? input : new Request(input);
@@ -20,10 +23,14 @@ function fakeAgent(users: unknown[] = [], bearer: string | null = null) {
     }),
   };
   const AGENT = {
-    idFromName: (name: string) => name,
+    idFromName,
     get: () => stub,
   } as unknown as DurableObjectNamespace;
-  return { stub, AGENT };
+  return { stub, AGENT, idFromName };
+}
+
+function invEnv(base: AgentEnv, slugs: string[]): AgentEnv {
+  return { ...base, SETTINGS: settingsInventory(slugs) };
 }
 
 describe("withSlug", () => {
@@ -44,7 +51,7 @@ describe("withSlug", () => {
       return new Response("ok");
     });
     const res = await withSlug(
-      { AGENT, CHAT_SECRET: "shared" },
+      invEnv({ AGENT, CHAT_SECRET: "shared" }, ["kit"]),
       new Request("http://127.0.0.1/api/backdrop?slug=kit&secret=shared"),
       next,
     );
@@ -55,7 +62,7 @@ describe("withSlug", () => {
   it("denies a wrong spike secret with the shared 401 body", async () => {
     const { AGENT } = fakeAgent();
     const next = vi.fn();
-    const res = await withSlug({ AGENT, CHAT_SECRET: "shared" }, new Request("http://127.0.0.1/api/backdrop?slug=kit&secret=nope"), next);
+    const res = await withSlug(invEnv({ AGENT, CHAT_SECRET: "shared" }, ["kit"]), new Request("http://127.0.0.1/api/backdrop?slug=kit&secret=nope"), next);
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({ error: "unauthorized" });
     expect(next).not.toHaveBeenCalled();
@@ -63,12 +70,12 @@ describe("withSlug", () => {
 
   it("lets the harness bearer in on the Authorization header only", async () => {
     const { AGENT } = fakeAgent();
-    const env: AgentEnv = {
+    const env: AgentEnv = invEnv({
       AGENT,
       GOOGLE_CLIENT_ID: "g",
       SESSION_SECRET: SECRET,
       AGENT_BEARERS: "kit:crane-tok",
-    };
+    }, ["kit", "ada"]);
     const next = vi.fn(async () => new Response("ok"));
     const header = await withSlug(env, new Request("https://gantree.example/api/backdrop?slug=kit", {
       headers: { Authorization: "Bearer crane-tok" },
@@ -86,11 +93,11 @@ describe("withSlug", () => {
   it("lets the bearer stored on the room in", async () => {
     const { AGENT } = fakeAgent([], "from-do");
     const next = vi.fn(async () => new Response("ok"));
-    const res = await withSlug({
+    const res = await withSlug(invEnv({
       AGENT,
       GOOGLE_CLIENT_ID: "g",
       SESSION_SECRET: SECRET,
-    }, new Request("https://gantree.example/api/avatar?slug=kit", {
+    }, ["kit"]), new Request("https://gantree.example/api/avatar?slug=kit", {
       headers: { Authorization: "Bearer from-do" },
     }), next);
     expect(res.status).toBe(200);
@@ -99,7 +106,12 @@ describe("withSlug", () => {
   it("admits a phone cookie on the room list and forbids a stranger", async () => {
     const token = await sealSession(await sessionKey(SECRET), { sub: ADA, email: "ada@example.com" });
     const { AGENT } = fakeAgent([{ sub: ADA }]);
-    const env: AgentEnv = { AGENT, GOOGLE_CLIENT_ID: "g", SESSION_SECRET: SECRET };
+    const env: AgentEnv = invEnv({
+      AGENT,
+      GOOGLE_CLIENT_ID: "g",
+      SESSION_SECRET: SECRET,
+      GANTREE_ADMINS: `${ADA}:ada@example.com`,
+    }, ["kit"]);
     const next = vi.fn(async () => new Response("ok"));
     const ok = await withSlug(env, new Request("https://gantree.example/api/theme?slug=kit", {
       headers: { Cookie: `${SESSION_COOKIE}=${encodeURIComponent(token)}` },
@@ -115,19 +127,43 @@ describe("withSlug", () => {
 
   it("is a config error when the binding is missing", async () => {
     const next = vi.fn();
-    const res = await withSlug({ CHAT_SECRET: "shared" }, new Request("http://127.0.0.1/api/backdrop?slug=kit&secret=shared"), next);
+    const res = await withSlug(invEnv({ CHAT_SECRET: "shared" }, ["kit"]), new Request("http://127.0.0.1/api/backdrop?slug=kit&secret=shared"), next);
     expect(res.status).toBe(503);
     expect(next).not.toHaveBeenCalled();
   });
 });
 
 describe("authorizeSlug", () => {
-  it("skips auth for the loopback dev user only", async () => {
-    const { AGENT } = fakeAgent();
-    const env: AgentEnv = { AGENT, GANTREE_DEV_USER: `${ADA}:ada@example.com` };
+  it("404s an unknown inventory slug without idFromName", async () => {
+    const { AGENT, idFromName } = fakeAgent();
+    const env: AgentEnv = invEnv({ AGENT, GOOGLE_CLIENT_ID: "g", SESSION_SECRET: SECRET }, ["ada"]);
+    const res = await authorizeSlug(env, new Request("https://gantree.example/api/backdrop?slug=kit"), "kit");
+    expect(res?.status).toBe(404);
+    expect(idFromName).not.toHaveBeenCalled();
+  });
+
+  it("applies assignment for the loopback dev user", async () => {
+    const { AGENT, idFromName } = fakeAgent([{ sub: ADA }]);
+    const env: AgentEnv = invEnv({
+      AGENT,
+      GOOGLE_CLIENT_ID: "g",
+      SESSION_SECRET: SECRET,
+      GANTREE_DEV_USER: `${ADA}:ada@example.com`,
+      GANTREE_ADMINS: `${ADA}:ada@example.com`,
+    }, ["kit"]);
     expect(await authorizeSlug(env, new Request("http://127.0.0.1:3000/api/backdrop?slug=kit"), "kit")).toBeNull();
-    const remote = await authorizeSlug(env, new Request("https://gantree.example/api/backdrop?slug=kit"), "kit");
-    expect(remote?.status).toBe(503);
+    const strangerToken = await sealSession(await sessionKey(SECRET), { sub: "9999999999", email: "stranger@example.com" });
+    const strangerEnv = invEnv({
+      AGENT,
+      GOOGLE_CLIENT_ID: "g",
+      SESSION_SECRET: SECRET,
+      GANTREE_ALLOW: "stranger@example.com",
+    }, ["kit"]);
+    const denied = await authorizeSlug(strangerEnv, new Request("https://gantree.example/api/backdrop?slug=kit", {
+      headers: { Cookie: `${SESSION_COOKIE}=${encodeURIComponent(strangerToken)}` },
+    }), "kit", memoryStore());
+    expect(denied?.status).toBe(403);
+    expect(idFromName).toHaveBeenCalledTimes(1);
   });
 });
 

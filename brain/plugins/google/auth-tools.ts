@@ -27,7 +27,10 @@ async function listAccounts(ctx: PluginContext, _args: Record<string, unknown>, 
   const tok = await ctx.tokens.get("google");
   const email = canonicalEmail(tok?.extra?.email ?? "");
   if (!email) {
-    return textResult("No Google accounts are signed in. A person runs `google-mcp auth` once per account.");
+    return textResult(
+      "No Google accounts are signed in. A person must connect Google for this agent. "
+      + "If they use more than one mailbox (work, personal, or another), ask which address to use as user_google_email before calling Google tools.",
+    );
   }
   return textResult(`Signed-in Google accounts (1):\n- ${email}\nPass one of these as user_google_email on later calls.`);
 }
@@ -61,7 +64,6 @@ function authStartMessage(serviceName: string, userEmail: string, authURL: strin
   const initialEmailProvided = userEmail.trim() !== "" && userEmail.toLowerCase() !== "default";
   const userDisplayName = initialEmailProvided ? `${serviceName} for '${userEmail}'` : serviceName;
   let msg = `**ACTION REQUIRED: Google Authentication Needed for ${userDisplayName}**\n\n`;
-  msg += "Prefer first-time setup via CLI: `google-mcp auth` (or `google-mcp login`).\n\n";
   msg += `To proceed, the user must authorize this application for ${serviceName} access using all required permissions.\n`;
   msg += "**LLM, please present this exact authorization URL to the user as a clickable hyperlink:**\n";
   msg += `Authorization URL: ${authURL}\n`;
@@ -70,8 +72,8 @@ function authStartMessage(serviceName: string, userEmail: string, authURL: strin
   msg += "1. Click the link and complete the authorization in their browser.\n";
   if (!initialEmailProvided) {
     msg += "2. After successful authorization, the browser page will display the authenticated email address.\n";
-    msg += "   **LLM: Instruct the user to provide you with this email address.**\n";
-    msg += "3. Once you have the email, **retry their original command, ensuring you include this `user_google_email`.**\n";
+    msg += "   **LLM: Ask which Google account they authorized — work, personal, or another mailbox — and have them confirm that address.**\n";
+    msg += "3. Once you know the address, **retry their original command, ensuring you include it as `user_google_email`.** Do not guess.\n";
   } else {
     msg += "2. After successful authorization, **retry their original command**.\n";
   }

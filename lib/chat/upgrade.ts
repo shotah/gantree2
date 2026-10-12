@@ -1,4 +1,5 @@
 import type { Role } from "./frame";
+import type { Role as DoorRole } from "@/lib/door/users";
 
 /** Browser Origin must match the request URL origin. Missing Origin (Go harness) is allowed. */
 export function upgradeOriginOk(originHeader: string | null, urlOrigin: string): boolean {
@@ -32,6 +33,8 @@ export type UpgradeStamp = {
   email?: string;
   emailVerified?: boolean;
   exp?: number;
+  doorRole?: DoorRole;
+  assignedAgents?: readonly string[];
 };
 
 /** Copy the upgrade request, strip client stamps, write the principal the Worker earned. */
@@ -52,6 +55,12 @@ export function stampAgentHeaders(request: Request, stamp: UpgradeStamp): Header
   }
   if (stamp.exp != null) {
     headers.set("X-Chat-Exp", String(stamp.exp));
+  }
+  if (stamp.doorRole) {
+    headers.set("X-Chat-Door-Role", stamp.doorRole);
+  }
+  if (stamp.assignedAgents?.length) {
+    headers.set("X-Chat-Assigned", stamp.assignedAgents.join(","));
   }
   headers.delete("Authorization");
   return headers;

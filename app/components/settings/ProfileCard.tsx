@@ -79,10 +79,14 @@ export function ProfileCard({ client = api }: { client?: ApiClient }) {
         title="Profile"
         blurb="This browser's signed-in account."
         theme={false}
-        nav={[
-          { href: "/settings", label: "Settings" },
-          { href: "/agents", label: "Agents" },
-        ]}
+        nav={
+          session?.role === "admin"
+            ? [
+                { href: "/settings", label: "Settings" },
+                { href: "/agents", label: "Agents" },
+              ]
+            : []
+        }
       />
 
       {phase === "loading"

@@ -27,8 +27,8 @@ describe("ProfileCard", () => {
     expect(await screen.findByText("ada@example.com")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Profile" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "gantree home" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Settings" }).getAttribute("href")).toBe("/settings");
-    expect(screen.getByRole("link", { name: "Agents" }).getAttribute("href")).toBe("/agents");
+    expect(screen.queryByRole("link", { name: "Settings" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Agents" })).toBeNull();
     expect(screen.getByText("operator").className).toContain("text-info");
     expect(screen.getByText("A")).toBeTruthy();
     const account = screen.getByRole("region", { name: "Account" });

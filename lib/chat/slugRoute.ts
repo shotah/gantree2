@@ -1,7 +1,17 @@
 import { devIdentity } from "@/lib/door/gate";
-import { fetchRoomUsers } from "./allow";
+import { memoryStore } from "@/lib/door/users";
+import type { UserStore } from "@/lib/door/users";
+import {
+  doorUserForRequest,
+  humanChatPrecheck,
+  memberInDirectory,
+  memberRoomUsersWhenNeeded,
+  inventoriedAgent,
+} from "./admission";
+import type { RoomUser } from "./allow";
+import { phoneAdmitted } from "./floor";
 import { fetchRoomBearer } from "./bearer";
-import { configError, forbidden, unauthorized } from "./deny";
+import { agentOff, configError, forbidden, unauthorized } from "./deny";
 import type { AgentEnv } from "./env";
 import { handshakeSlug } from "./handshake";
 import { agentStub } from "./location";
@@ -9,15 +19,69 @@ import { parseSlug } from "./slug";
 
 /** Per-slug room routes (`/api/avatar`, `/api/backdrop`, `/api/theme`, `/api/push`): same door. */
 
+function notFound(): Response {
+  return Response.json({ error: "not_found" }, { status: 404 });
+}
+
 /** Null when the caller may touch this slug; otherwise the deny response. */
-export async function authorizeSlug(env: AgentEnv, req: Request, slug: string): Promise<Response | null> {
-  const url = new URL(req.url);
-  if (devIdentity(env, url)) {
-    return null;
+export async function authorizeSlug(
+  env: AgentEnv,
+  req: Request,
+  slug: string,
+  store: UserStore = memoryStore(),
+): Promise<Response | null> {
+  const row = await inventoriedAgent(env, slug);
+  if (!row) {
+    return notFound();
   }
-  const stub = agentStub(env, slug);
-  const roomList = stub ? await fetchRoomUsers(stub) : [];
-  const roomBearer = stub ? await fetchRoomBearer(stub) : null;
+  if (!row.enabled) {
+    return agentOff();
+  }
+  const url = new URL(req.url);
+  const who = await doorUserForRequest(env, req, store);
+  let roomList: readonly RoomUser[] = [];
+  let roomBearer: string | null = null;
+  let admit: Parameters<typeof handshakeSlug>[0]["admit"];
+
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const presentedBearer = authHeader.toLowerCase().startsWith("bearer ")
+    ? authHeader.slice(7).trim()
+    : url.searchParams.get("bearer")?.trim() ?? "";
+  if (!who && presentedBearer) {
+    const stub = agentStub(env, slug);
+    roomBearer = stub ? await fetchRoomBearer(stub) : null;
+  }
+
+  if (who) {
+    const session = {
+      sub: who.entry.sub ?? "",
+      email: who.entry.email ?? undefined,
+      emailVerified: Boolean(who.entry.email),
+    };
+    const pre = humanChatPrecheck(env, who, slug, session);
+    if (pre === "forbidden") {
+      return forbidden();
+    }
+    const inDirectory = who.role === "member" && await memberInDirectory(env, session, slug);
+    roomList = await memberRoomUsersWhenNeeded(env, slug, who.role, inDirectory);
+    admit = { role: who.role, assignedSlugs: who.agents, slug, inDirectory };
+  }
+
+  if (devIdentity(env, url) && who) {
+    const session = {
+      sub: who.entry.sub ?? "",
+      email: who.entry.email ?? undefined,
+      emailVerified: Boolean(who.entry.email),
+    };
+    const ctx = admit ?? {
+      role: who.role,
+      assignedSlugs: who.agents,
+      slug,
+      inDirectory: who.role === "member" && await memberInDirectory(env, session, slug),
+    };
+    return phoneAdmitted(roomList, session, env, ctx) ? null : forbidden();
+  }
+
   const auth = await handshakeSlug({
     env,
     slug,
@@ -28,6 +92,7 @@ export async function authorizeSlug(env: AgentEnv, req: Request, slug: string): 
     roomList,
     roomBearer,
     host: url.hostname,
+    admit,
   });
   if (auth.ok) {
     return null;
@@ -45,12 +110,13 @@ export async function withSlug(
   env: AgentEnv,
   req: Request,
   next: (slug: string, stub: DurableObjectStub) => Promise<Response>,
+  store: UserStore = memoryStore(),
 ): Promise<Response> {
   const slug = parseSlug(new URL(req.url).searchParams.get("slug") ?? "");
   if (!slug) {
     return Response.json({ error: "bad slug" }, { status: 400 });
   }
-  const denied = await authorizeSlug(env, req, slug);
+  const denied = await authorizeSlug(env, req, slug, store);
   if (denied) {
     return denied;
   }

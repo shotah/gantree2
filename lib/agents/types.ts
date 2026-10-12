@@ -5,21 +5,22 @@
  *
  * HTTP — same origin, session cookie, role gate (`lib/door/users.ts`):
  *
- *   GET    /api/agents                      → { agents: AgentCard[] }     admin all · operator theirs · member 403
+ *   GET    /api/agents                      → { agents: AgentCard[] }     admin
  *   POST   /api/agents  AgentCreate         → { agent: AgentCard } 201    admin
- *   GET    /api/agents/:slug                → { agent: AgentCard }        canRun
- *   DELETE /api/agents/:slug                → 204                         admin
- *   GET    /api/agents/:slug/config         → AgentConfigView             canRun
- *   PATCH  /api/agents/:slug/config  AgentConfigPatch → AgentConfigView   canRun
- *   GET    /api/agents/:slug/status         → AgentStatus                 canRun
- *   POST   /api/agents/:slug/restart        → AgentStatus                 canRun
- *   GET    /api/agents/:slug/log?after=N    → LogPage                     canRun
- *   GET    /api/agents/:slug/users          → { users: RoomUser[] }       canRun (Agent DO `allow`)
- *   PUT    /api/agents/:slug/users  { users: RoomUser[] } → same          canRun
- *   POST   /api/agents/:slug/auth/start { plugin } → { url }            canRun (google, strava, google-health)
+ *   GET    /api/agents/:slug                → { agent: AgentCard }        admin
+ *   DELETE /api/agents/:slug                → 204                         admin (destroy)
+ *   POST   /api/agents/:slug/enabled { enabled } → { agent: AgentCard }   admin
+ *   GET    /api/agents/:slug/config         → AgentConfigView             admin
+ *   PATCH  /api/agents/:slug/config  AgentConfigPatch → AgentConfigView   admin
+ *   GET    /api/agents/:slug/status         → AgentStatus                 admin
+ *   POST   /api/agents/:slug/restart        → AgentStatus                 admin
+ *   GET    /api/agents/:slug/log?after=N    → LogPage                     admin
+ *   GET    /api/agents/:slug/users          → { users: RoomUser[] }       admin (Agent DO `allow`)
+ *   PUT    /api/agents/:slug/users  { users: RoomUser[] } → same          admin
+ *   POST   /api/agents/:slug/auth/start { plugin } → { url }            admin (google, strava, google-health)
  *   GET    /api/agents/:slug/bearer         → { bearer }                  admin, loopback dev only
  *   GET    /api/tools                       → { tools: ToolEntry[], house: string[] }  any signed-in
- *   GET    /api/samples?agent=&since=       → { samples: SampleRow[] }    canRun (admin: all when no agent)
+ *   GET    /api/samples?agent=&since=       → { samples: SampleRow[] }    admin
  *
  * Errors are `{ error: string }` with the status. `401` = door (see app/lib/api.ts), `403` = role.
  */
@@ -42,6 +43,8 @@ export type AgentRow = {
   createdAt: number;
   /** Board labels — whose keys, which house. Never secrets. */
   tags: string[];
+  /** Inventory on/off. Off pauses chat and schedules; data stays on the Agent DO. */
+  enabled: boolean;
 };
 
 export type AgentCreate = {

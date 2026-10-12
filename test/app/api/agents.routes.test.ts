@@ -52,6 +52,9 @@ describe("agent routes", () => {
           getAgent: (slug: string) => agents.get(slug),
           createAgent: (input: { slug: unknown; name?: unknown; tags?: unknown }, actor: string) => agents.create(input, actor),
           deleteAgent: (slug: string, actor: string) => agents.remove(slug, actor),
+          setAgentEnabled: (slug: string, enabled: boolean, actor: string) => agents.setEnabled(slug, enabled, actor),
+          deleteSamplesForAgent: (agent: string) => users.deleteSamplesForAgent(agent),
+          removeSlugFromOperators: (slug: string) => users.removeSlugFromOperators(slug),
           listSamples: (query?: { agent?: string }) => users.listSamples(query),
         }),
       },
@@ -65,6 +68,9 @@ describe("agent routes", () => {
             }
             if (op === "allow") {
               return Response.json({ users: [] });
+            }
+            if (op === "destroy" || op === "pause") {
+              return new Response(null, { status: 204 });
             }
             if (op === "status" || op === "restart") {
               return Response.json({

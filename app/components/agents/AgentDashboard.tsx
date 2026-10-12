@@ -76,6 +76,7 @@ export function AgentDashboard({
   const [users, setUsers] = useState<RoomUser[]>([]);
   const [role, setRole] = useState<Role | null>(null);
   const [confirm, setConfirm] = useState("");
+  const [destroyStep, setDestroyStep] = useState(false);
   const [busy, setBusy] = useState(false);
   const [keyPick, setKeyPick] = useState<{ name: string; n: number } | null>(null);
 
@@ -160,7 +161,13 @@ export function AgentDashboard({
                 Looking only. Changes belong to an admin or this agent&apos;s operator.
               </p>
             )}
-        <StatusFold slug={agent.slug} status={agent.status} client={client} />
+        <StatusFold
+          slug={agent.slug}
+          status={agent.status}
+          enabled={agent.enabled}
+          client={client}
+          onEnabled={(enabled) => setAgent((prev) => prev ? { ...prev, enabled } : prev)}
+        />
         {spend}
         <PersonaFold
           slug={agent.slug}
@@ -203,8 +210,8 @@ export function AgentDashboard({
         {role === "admin"
           ? (
               <section aria-label="Danger zone" className="rounded-2xl border border-danger-line bg-danger-soft/40 px-5 py-5">
-                <h2 className="text-sm font-semibold text-danger">Delete agent</h2>
-                <p className="mt-1 text-xs text-dim">Type {agent.slug} to confirm.</p>
+                <h2 className="text-sm font-semibold text-danger">Destroy agent</h2>
+                <p className="mt-1 text-xs text-dim">Type {agent.slug} to continue.</p>
                 <div className="mt-3 flex flex-wrap items-end gap-2">
                   <div className="flex flex-col gap-1">
                     <label htmlFor="confirm-slug" className={labelClass}>Type the agent ID to confirm</label>
@@ -213,19 +220,41 @@ export function AgentDashboard({
                       value={confirm}
                       autoComplete="off"
                       spellCheck={false}
-                      onChange={(e) => setConfirm(e.target.value)}
+                      onChange={(e) => {
+                        setConfirm(e.target.value);
+                        if (destroyStep && e.target.value !== agent.slug) {
+                          setDestroyStep(false);
+                        }
+                      }}
                       className={inputClass}
                     />
                   </div>
                   <button
                     type="button"
-                    disabled={busy || confirm !== agent.slug}
-                    onClick={() => void destroy()}
+                    disabled={busy || confirm !== agent.slug || destroyStep}
+                    onClick={() => setDestroyStep(true)}
                     className={dangerClass}
                   >
                     Delete {agent.slug}
                   </button>
                 </div>
+                {destroyStep
+                  ? (
+                      <div className="mt-4 space-y-2 border-t border-danger-line/60 pt-4">
+                        <p className="text-xs text-body">
+                          This will delete EVERYTHING — chat, keys, memory, and the durable object — and cannot be undone. Are you sure?
+                        </p>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void destroy()}
+                          className={dangerClass}
+                        >
+                          Destroy {agent.slug}
+                        </button>
+                      </div>
+                    )
+                  : null}
               </section>
             )
           : null}

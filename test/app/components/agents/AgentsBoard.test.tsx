@@ -99,13 +99,13 @@ describe("AgentsBoard", () => {
     expect(await screen.findByText("No agents on your row.")).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Users" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Create your first agent" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Settings" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Settings" })).toBeNull();
   });
 
   it("says when the list is forbidden and when the request fails", async () => {
     const denied: ApiClient = vi.fn(() => Promise.resolve(json(403, { error: "forbidden" })));
     const { rerender } = render(<AgentsBoard client={denied} />);
-    expect((await screen.findByRole("alert")).textContent).toContain("Only an admin or an operator can open agents.");
+    expect((await screen.findByRole("alert")).textContent).toContain("Only an admin can open agents.");
     expect(screen.queryByRole("link", { name: "Create your first agent" })).toBeNull();
 
     const down: ApiClient = vi.fn(() => {
@@ -113,7 +113,7 @@ describe("AgentsBoard", () => {
     });
     rerender(<AgentsBoard client={down} />);
     expect(await screen.findByText("Could not reach agents. Try again.")).toBeTruthy();
-    expect(screen.queryByText("Only an admin or an operator can open agents.")).toBeNull();
+    expect(screen.queryByText("Only an admin can open agents.")).toBeNull();
   });
 
   it("polls every 10 seconds while the tab is visible and waits while it is hidden", async () => {

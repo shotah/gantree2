@@ -47,7 +47,7 @@ describe("socket tags", () => {
       rateId: "anon",
       userId: "1",
       emailVerified: true,
-    }))).toEqual({
+    }))).toMatchObject({
       role: "phone",
       rateId: "anon",
       userId: "1",

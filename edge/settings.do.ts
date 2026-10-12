@@ -4,7 +4,14 @@
  * `lib/door/settingsStore` and `lib/agents/registry`.
  */
 import { DurableObject } from "cloudflare:workers";
-import { openRegistry, type AgentCreateBody, type AgentDelete, type AgentRegistry, type AgentWrite } from "@/lib/agents/registry";
+import {
+  openRegistry,
+  type AgentCreateBody,
+  type AgentDelete,
+  type AgentEnabledSet,
+  type AgentRegistry,
+  type AgentWrite,
+} from "@/lib/agents/registry";
 import type { AgentRow } from "@/lib/agents/types";
 import {
   asSql,
@@ -70,5 +77,17 @@ export class Settings extends DurableObject {
 
   deleteAgent(slug: string, actor: string): Promise<AgentDelete> {
     return this.#agents.remove(slug, actor);
+  }
+
+  setAgentEnabled(slug: string, enabled: boolean, actor: string): Promise<AgentEnabledSet> {
+    return this.#agents.setEnabled(slug, enabled, actor);
+  }
+
+  deleteSamplesForAgent(agent: string): Promise<void> {
+    return this.#store.deleteSamplesForAgent(agent);
+  }
+
+  removeSlugFromOperators(slug: string): Promise<void> {
+    return this.#store.removeSlugFromOperators(slug);
   }
 }

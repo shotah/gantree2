@@ -3,7 +3,7 @@ import type { ChatAuthEnv } from "./env";
 import type { RoomUser } from "./allow";
 import type { Role } from "./frame";
 import { type AuthMode, resolveAuthMode } from "./mode";
-import { phoneAdmitted } from "./floor";
+import { phoneAdmitted, type PhoneAdmitCtx } from "./floor";
 import { secretEqual } from "./secret";
 import { readChatSession } from "./session";
 
@@ -36,6 +36,7 @@ export type HandshakeInput = {
   /** Bearer stored on the Agent DO, used when `AGENT_BEARERS` has no row for this slug. */
   roomBearer?: string | null;
   host?: string;
+  admit?: PhoneAdmitCtx;
 };
 
 function bearerFrom(
@@ -134,11 +135,11 @@ async function oidcHandshake(input: HandshakeInput, now: number): Promise<Handsh
     if (!session) {
       return { ok: false, error: "unauthorized" };
     }
-    if (!phoneAdmitted(input.roomList, {
+    if (!input.admit || !phoneAdmitted(input.roomList, {
       sub: session.sub,
       email: session.email,
       emailVerified: session.emailVerified,
-    }, input.env)) {
+    }, input.env, input.admit)) {
       return { ok: false, error: "forbidden" };
     }
     return {

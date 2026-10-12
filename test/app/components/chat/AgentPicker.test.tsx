@@ -51,7 +51,7 @@ describe("AgentPicker", () => {
     expect(screen.queryByRole("link", { name: "Manage agents" })).toBeNull();
   });
 
-  it("links admins and operators at the agent list", async () => {
+  it("links admins at the agent list but not operators", async () => {
     const client: ApiClient = vi.fn(async () => json({ sub: "1", role: "admin", agents: [] }));
     const { unmount } = render(<AgentPicker client={client} />);
     expect(await screen.findByText(EMPTY)).toBeTruthy();
@@ -60,8 +60,8 @@ describe("AgentPicker", () => {
 
     const operator: ApiClient = vi.fn(async () => json({ sub: "1", role: "operator", agents: ["kit"] }));
     render(<AgentPicker client={operator} />);
-    expect(await screen.findByRole("link", { name: "Manage agents" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Kit" })).toBeTruthy();
+    expect(await screen.findByRole("link", { name: "Kit" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Manage agents" })).toBeNull();
   });
 
   it("keeps log out when the account cannot be read", async () => {

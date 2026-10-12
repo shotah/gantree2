@@ -167,11 +167,13 @@ export function AgentsBoard({ client = api, pollMs = BOARD_POLL_MS }: { client?:
   }, [client, pollMs]);
 
   const admin = session?.role === "admin";
-  const nav = [
-    ...(admin ? [{ href: "/users", label: "Users" }] : []),
-    { href: "/settings", label: "Settings" },
-    ...(admin ? [{ href: "/agents/new", label: "New agent" }] : []),
-  ];
+  const nav = admin
+    ? [
+        { href: "/users", label: "Users" },
+        { href: "/settings", label: "Settings" },
+        { href: "/agents/new", label: "New agent" },
+      ]
+    : [];
 
   return (
     <main className={boardMainClass}>
@@ -182,7 +184,7 @@ export function AgentsBoard({ client = api, pollMs = BOARD_POLL_MS }: { client?:
       />
 
       {denied
-        ? <p role="alert" className={alertClass}>Only an admin or an operator can open agents.</p>
+        ? <p role="alert" className={alertClass}>Only an admin can open agents.</p>
         : null}
       {error
         ? <p role="alert" className={alertClass}>{agentsMessage(error)}</p>

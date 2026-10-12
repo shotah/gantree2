@@ -3,6 +3,7 @@ import { handlePush } from "@/app/lib/pushHttp";
 import type { RoomEnv } from "@/lib/avatar/http";
 import { encodeBase64Url, generateVapidKeys } from "@/lib/chat/push/vapid";
 import { memoryStore } from "@/lib/door/users";
+import { settingsInventory } from "../../chat/settingsStub";
 import { sealSession, SESSION_COOKIE, sessionKey } from "@/lib/door/session";
 
 const SECRET = "0123456789abcdef0123456789abcdef-more";
@@ -28,6 +29,7 @@ function room(handler: (req: Request) => Promise<Response> | Response): RoomEnv 
     SESSION_SECRET: SECRET,
     GOOGLE_CLIENT_ID: "cid.apps.googleusercontent.com",
     GANTREE_ADMINS: "ada@example.com",
+    SETTINGS: settingsInventory(["kit"]),
     ...vapid,
     AGENT: {
       idFromName: () => "id",

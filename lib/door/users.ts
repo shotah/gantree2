@@ -3,9 +3,9 @@ import { type AllowEntry, type Identity, entryMatches, formatEntry, parseAllowli
 /**
  * Who may be here, and what they may touch.
  *
- *   admin     users, settings, every agent
- *   operator  settings for the agents on their row
- *   member    sign in; chat with agents whose own list has them
+ *   admin     users, settings, agents console, every inventoried agent
+ *   operator  chat only for slugs on their row (inventory ∩ agents[])
+ *   member    sign in; chat where the room list admits them (inventory only)
  *
  * Env is the floor: GANTREE_ADMINS and GANTREE_ALLOW are applied on every
  * request and can never be removed from the UI. Stored users come from a

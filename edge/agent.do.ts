@@ -133,6 +133,9 @@ import { sealOAuthCatch, sessionKey } from "@/lib/door/session";
 
 const RATE_KEY = "rate";
 
+/** Alarms at or before now are dropped; schedule at least this far ahead. */
+const ALARM_MIN_LEAD_MS = 1000;
+
 /** One JPEG per slug, served over HTTP and announced on every socket when it changes. */
 type StoredJpeg = StoredAvatar | StoredBackdrop;
 type BlobSpec = {
@@ -212,6 +215,12 @@ export class Agent extends DurableObject<AgentEnv> {
     if (request.headers.get("X-Chat-Op") === "restart") {
       return this.restartHttp(request);
     }
+    if (request.headers.get("X-Chat-Op") === "pause") {
+      return this.pauseHttp(request);
+    }
+    if (request.headers.get("X-Chat-Op") === "destroy") {
+      return this.destroyHttp(request);
+    }
     if (request.headers.get("X-Chat-Op") === "log") {
       return this.logHttp(request);
     }
@@ -237,6 +246,11 @@ export class Agent extends DurableObject<AgentEnv> {
     const email = request.headers.get("X-Chat-Email") ?? undefined;
     const verified = request.headers.get("X-Chat-EmailVerified") ?? "";
     const exp = request.headers.get("X-Chat-Exp") ?? "";
+    const doorRoleRaw = request.headers.get("X-Chat-Door-Role") ?? "";
+    const doorRole = doorRoleRaw === "admin" || doorRoleRaw === "operator" || doorRoleRaw === "member"
+      ? doorRoleRaw
+      : undefined;
+    const assignedAgents = (request.headers.get("X-Chat-Assigned") ?? "").split(",").filter(Boolean);
     const slug = parseStoredSlug(request.headers.get("X-Chat-Slug") ?? "");
     if (role !== "phone" && role !== "crane") {
       return new Response("bad role", { status: 400 });
@@ -255,6 +269,9 @@ export class Agent extends DurableObject<AgentEnv> {
       expMs: parseExpMs(exp),
       email,
       emailVerified: parseEmailVerified(verified),
+      doorRole,
+      assignedAgents,
+      chatSlug: slug ?? undefined,
     }));
     if (role === "crane") {
       await this.sendConfig(pair[1]);
@@ -279,9 +296,7 @@ export class Agent extends DurableObject<AgentEnv> {
     await this.withEmit(async (emit) => {
       next = await brain.alarm(emit);
     });
-    if (next) {
-      await this.ctx.storage.setAlarm(next);
-    }
+    await this.armAlarm(next);
   }
 
   /**
@@ -306,9 +321,11 @@ export class Agent extends DurableObject<AgentEnv> {
       emailVerified: meta.emailVerified,
       expMs: meta.expMs,
       allowedSubs: this.env.ALLOWED_SUBS,
-      gantreeAdmins: this.env.GANTREE_ADMINS,
-      gantreeAllow: this.env.GANTREE_ALLOW,
       roomUsers,
+      doorRole: meta.doorRole,
+      assignedAgents: meta.assignedAgents,
+      slug: meta.chatSlug,
+      inDirectory: meta.inDirectory,
       enforce: this.enforce(),
       now,
     })) {
@@ -722,9 +739,11 @@ export class Agent extends DurableObject<AgentEnv> {
         emailVerified: phone.emailVerified,
         expMs: phone.expMs,
         allowedSubs: this.env.ALLOWED_SUBS,
-        gantreeAdmins: this.env.GANTREE_ADMINS,
-        gantreeAllow: this.env.GANTREE_ALLOW,
         roomUsers: users,
+        doorRole: phone.doorRole,
+        assignedAgents: phone.assignedAgents,
+        slug: phone.chatSlug,
+        inDirectory: phone.inDirectory,
         enforce: this.enforce(),
         now,
       })) {
@@ -1159,6 +1178,29 @@ export class Agent extends DurableObject<AgentEnv> {
     return Response.json(await this.loadStatus());
   }
 
+  private async pauseHttp(request: Request): Promise<Response> {
+    if (request.method !== "POST") {
+      return new Response("method", { status: 405 });
+    }
+    this.forgetBrain();
+    await this.ctx.storage.deleteAlarm();
+    return new Response(null, { status: 204 });
+  }
+
+  private async destroyHttp(request: Request): Promise<Response> {
+    if (request.method !== "POST") {
+      return new Response("method", { status: 405 });
+    }
+    this.forgetBrain();
+    try {
+      await this.ctx.storage.deleteAlarm();
+    } catch {
+      // No alarm is fine.
+    }
+    await this.ctx.storage.deleteAll();
+    return new Response(null, { status: 204 });
+  }
+
   private async logHttp(request: Request): Promise<Response> {
     if (request.method !== "GET") {
       return new Response("method", { status: 405 });
@@ -1356,9 +1398,12 @@ export class Agent extends DurableObject<AgentEnv> {
   }
 
   private async armAlarm(at: number | null): Promise<void> {
-    if (at) {
-      await this.ctx.storage.setAlarm(at);
+    if (at == null) {
+      await this.ctx.storage.deleteAlarm();
+      return;
     }
+    const floor = Date.now() + ALARM_MIN_LEAD_MS;
+    await this.ctx.storage.setAlarm(at < floor ? floor : at);
   }
 
   private async personaHttp(request: Request): Promise<Response> {

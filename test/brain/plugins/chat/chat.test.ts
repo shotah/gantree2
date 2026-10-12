@@ -20,6 +20,7 @@ import { decodeChatImage, readSource, chatPlugin } from "@/brain/plugins/chat/in
 import { fitSize, isJpeg, prepareJpeg, setJpegEncoder, shrinkToJpeg, type JpegEncoder, type Rgba } from "@/brain/plugins/chat/jpeg";
 import { putOutputFile } from "@/brain/plugins/image/files";
 import { cachedThemeIDs, forgetThemeCatalog, parseThemeIDs, rememberThemeCatalog, themeCatalogTTL } from "@/brain/plugins/chat/theme";
+import { chatLoopbackFetch } from "@/brain/room/mailbox";
 import { b64, bodyBytes, callTool, hrefOf, jsonResponse, pluginCtx, responseBytes, textOf } from "../helpers";
 import { makeLogger, memorySink } from "@/brain/core/log";
 import { fixedClock } from "@/brain/core/clock";
@@ -298,6 +299,39 @@ describe("chat plugin", () => {
     const refused = await callTool(chatPlugin, ctx, "avatar_update", { source_path: "/etc/hostname" });
     expect(refused.isError).toBe(true);
     expect(textOf(refused)).toContain("source_path");
+  });
+
+  it("theme_update POSTs JSON through chatLoopbackFetch to serve", async () => {
+    let postedTheme = "";
+    const origin = "https://example.workers.dev";
+    const serve = async (req: Request) => {
+      if (req.method === "GET") {
+        return jsonResponse({
+          theme: null,
+          themes: [{ id: "marquee", label: "Marquee", feel: "neutral", scheme: "dark" }],
+        });
+      }
+      const parsed = JSON.parse(await req.text()) as { theme?: string };
+      postedTheme = parsed.theme ?? "";
+      return jsonResponse({ ok: true, theme: "marquee", detail: "theme marquee" });
+    };
+    const loopback = chatLoopbackFetch(async () => new Response("unexpected", { status: 500 }), {
+      origin,
+      slug: "kit",
+      bearer: "secret-token",
+      apiPrefix: "/api/chat",
+      serve,
+    });
+    const ctx = pluginCtx({
+      env: {
+        CHAT_MAILBOX_URL: "wss://example.workers.dev/ws/kit",
+        CHAT_BEARER: "secret-token",
+      },
+      fetch: loopback,
+    });
+    const updated = await callTool(chatPlugin, ctx, "theme_update", { theme: "marquee" });
+    expect(postedTheme).toBe("marquee");
+    expect(textOf(updated)).toContain("marquee");
   });
 
   it("lists themes once and posts a catalog id", async () => {

@@ -7,20 +7,27 @@ import {
   normalizeSlug,
   type AgentCreateBody,
   type AgentDelete,
+  type AgentEnabledSet,
   type AgentWrite,
 } from "@/lib/agents/registry";
 import { isAgentStatus } from "@/lib/agents/status";
 import type { AgentCard, AgentRow, AgentStatus, AgentsEnv } from "@/lib/agents/types";
 import { fetchRoomBearer } from "@/lib/chat/bearer";
+import { fetchRoomUsers } from "@/lib/chat/allow";
+import { directoryApply } from "@/lib/chat/directory";
 import { randomToken } from "@/lib/door/google";
+import { memberInDirectory, memberRoomUsersWhenNeeded } from "@/lib/chat/admission";
+import { phoneAdmitted } from "@/lib/chat/floor";
 import { agentStub } from "@/lib/chat/location";
 import { fromStub } from "@/lib/chat/slugRoute";
 import { devIdentity, principalFromHeaders, type Principal } from "@/lib/door/gate";
 import { json } from "@/lib/door/http";
-import type { SampleQuery, SampleRow } from "@/lib/door/settingsStore";
 import { canRunAgent } from "@/lib/door/users";
+import type { DirectoryKv } from "@/lib/chat/directory";
+import type { SampleQuery, SampleRow } from "@/lib/door/settingsStore";
 
 export type AgentsHttpEnv = AgentsEnv & {
+  DIRECTORY?: DirectoryKv;
   LOCATION_HINT?: string;
   /** Read by `getAgentBearer` only: the bearer route exists where the gate honours this. */
   GANTREE_DEV_USER?: string;
@@ -34,6 +41,9 @@ type SettingsApi = {
   getAgent(slug: string): Promise<AgentRow | null>;
   createAgent(input: AgentCreateBody, actor: string): Promise<AgentWrite>;
   deleteAgent(slug: string, actor: string): Promise<AgentDelete>;
+  setAgentEnabled(slug: string, enabled: boolean, actor: string): Promise<AgentEnabledSet>;
+  deleteSamplesForAgent(agent: string): Promise<void>;
+  removeSlugFromOperators(slug: string): Promise<void>;
   listSamples(query?: SampleQuery): Promise<SampleRow[]>;
 };
 
@@ -61,15 +71,49 @@ export function settingsApi(env: AgentsEnv): SettingsApi | null {
   return null;
 }
 
-function authorize(req: Request): Principal | Response {
+function authorizeSignedIn(req: Request): Principal | Response {
   const who = principalFromHeaders(req.headers);
   if (!who) {
     return json({ error: "unauthorized" }, 401);
   }
-  if (who.role === "member") {
-    return json({ error: "forbidden" }, 403);
+  return who;
+}
+
+function authorize(req: Request): Principal | Response {
+  const who = authorizeSignedIn(req);
+  if (isResponse(who)) {
+    return who;
+  }
+  const admin = requireAdmin(who);
+  if (admin) {
+    return admin;
   }
   return who;
+}
+
+async function requireAgentControl(env: AgentsHttpEnv, who: Principal, slug: string): Promise<Response | null> {
+  if (who.role === "admin") {
+    return null;
+  }
+  if (who.role === "operator") {
+    return who.agents.includes(slug) ? null : json({ error: "forbidden" }, 403);
+  }
+  const session = {
+    sub: who.sub,
+    email: who.email ?? undefined,
+    emailVerified: Boolean(who.email),
+  };
+  const inDirectory = await memberInDirectory(env, session, slug);
+  const roomList = await memberRoomUsersWhenNeeded(env, slug, "member", inDirectory);
+  if (phoneAdmitted(roomList, session, env, {
+    role: "member",
+    assignedSlugs: who.agents,
+    slug,
+    inDirectory,
+  })) {
+    return null;
+  }
+  return json({ error: "forbidden" }, 403);
 }
 
 function isResponse(value: Principal | Response): value is Response {
@@ -78,13 +122,6 @@ function isResponse(value: Principal | Response): value is Response {
 
 function requireAdmin(who: Principal): Response | null {
   if (who.role !== "admin") {
-    return json({ error: "forbidden" }, 403);
-  }
-  return null;
-}
-
-function requireRun(who: Principal, slug: string): Response | null {
-  if (!canRunAgent(who, slug)) {
     return json({ error: "forbidden" }, 403);
   }
   return null;
@@ -123,7 +160,7 @@ async function readStatus(env: AgentsHttpEnv, slug: string): Promise<AgentStatus
 
 async function cardFor(env: AgentsHttpEnv, who: Principal, row: AgentRow): Promise<AgentCard> {
   const status = await readStatus(env, row.slug);
-  return { ...row, status, canMutate: canRunAgent(who, row.slug) };
+  return { ...row, status, canMutate: who.role === "admin" };
 }
 
 async function callAgent(env: AgentsHttpEnv, slug: string, url: string, init?: RequestInit): Promise<Response> {
@@ -157,8 +194,7 @@ export async function getAgents(req: Request, env: AgentsHttpEnv): Promise<Respo
   }
   try {
     const rows = await api.listAgents();
-    const visible = who.role === "admin" ? rows : rows.filter((row) => canRunAgent(who, row.slug));
-    const agents = await Promise.all(visible.map((row) => cardFor(env, who, row)));
+    const agents = await Promise.all(rows.map((row) => cardFor(env, who, row)));
     return json({ agents });
   } catch {
     return json({ error: "settings_unavailable" }, 503);
@@ -189,7 +225,7 @@ export async function postAgent(req: Request, env: AgentsHttpEnv): Promise<Respo
     return json({ error: "settings_unavailable" }, 503);
   }
   if (!outcome.ok) {
-    const status = outcome.error === "exists" ? 409 : 400;
+    const status = outcome.error === "exists" || outcome.error === "name_exists" ? 409 : 400;
     return json({ error: outcome.error }, status);
   }
   await mintBearer(env, outcome.agent.slug);
@@ -226,10 +262,6 @@ export async function getAgent(req: Request, env: AgentsHttpEnv, slugRaw: string
   if (slug instanceof Response) {
     return slug;
   }
-  const denied = requireRun(who, slug);
-  if (denied) {
-    return denied;
-  }
   const api = settingsApi(env);
   if (!api) {
     return json({ error: "settings_unavailable" }, 503);
@@ -246,13 +278,9 @@ export async function getAgent(req: Request, env: AgentsHttpEnv, slugRaw: string
 }
 
 export async function deleteAgent(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
-  const who = authorize(req);
+  const who = authorizeSignedIn(req);
   if (isResponse(who)) {
     return who;
-  }
-  const admin = requireAdmin(who);
-  if (admin) {
-    return admin;
   }
   const slug = slugOr400(slugRaw);
   if (slug instanceof Response) {
@@ -261,6 +289,54 @@ export async function deleteAgent(req: Request, env: AgentsHttpEnv, slugRaw: str
   const api = settingsApi(env);
   if (!api) {
     return json({ error: "settings_unavailable" }, 503);
+  }
+  let row: AgentRow | null;
+  try {
+    row = await api.getAgent(slug);
+  } catch {
+    return json({ error: "settings_unavailable" }, 503);
+  }
+  if (!row) {
+    return json({ error: "not_found" }, 404);
+  }
+  const denied = await requireAgentControl(env, who, slug);
+  if (denied) {
+    return denied;
+  }
+  const stub = agentStub(env, slug);
+  let prevUsers: Awaited<ReturnType<typeof fetchRoomUsers>> = [];
+  if (stub) {
+    try {
+      prevUsers = await fetchRoomUsers(stub);
+    } catch {
+      prevUsers = [];
+    }
+  }
+  if (env.DIRECTORY) {
+    try {
+      await directoryApply(env.DIRECTORY, slug, prevUsers, []);
+    } catch {
+      // Missing KV or a stale index should not block destroy.
+    }
+  }
+  try {
+    await api.removeSlugFromOperators(slug);
+    await api.deleteSamplesForAgent(slug);
+  } catch {
+    return json({ error: "settings_unavailable" }, 503);
+  }
+  if (stub) {
+    try {
+      const wiped = await stub.fetch(new Request("https://agent/destroy", {
+        method: "POST",
+        headers: { "X-Chat-Op": "destroy" },
+      }));
+      if (!wiped.ok) {
+        return json({ error: "destroy_failed" }, 503);
+      }
+    } catch {
+      return json({ error: "destroy_failed" }, 503);
+    }
   }
   let outcome: AgentDelete;
   try {
@@ -273,6 +349,62 @@ export async function deleteAgent(req: Request, env: AgentsHttpEnv, slugRaw: str
     return json({ error: outcome.error }, status);
   }
   return new Response(null, { status: 204 });
+}
+
+export async function postAgentEnabled(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
+  const who = authorizeSignedIn(req);
+  if (isResponse(who)) {
+    return who;
+  }
+  const slug = slugOr400(slugRaw);
+  if (slug instanceof Response) {
+    return slug;
+  }
+  const api = settingsApi(env);
+  if (!api) {
+    return json({ error: "settings_unavailable" }, 503);
+  }
+  let row: AgentRow | null;
+  try {
+    row = await api.getAgent(slug);
+  } catch {
+    return json({ error: "settings_unavailable" }, 503);
+  }
+  if (!row) {
+    return json({ error: "not_found" }, 404);
+  }
+  const denied = await requireAgentControl(env, who, slug);
+  if (denied) {
+    return denied;
+  }
+  const body = await readJson(req);
+  if (!body || typeof body.enabled !== "boolean") {
+    return json({ error: "bad_json" }, 400);
+  }
+  let outcome: AgentEnabledSet;
+  try {
+    outcome = await api.setAgentEnabled(slug, body.enabled, who.sub);
+  } catch {
+    return json({ error: "settings_unavailable" }, 503);
+  }
+  if (!outcome.ok) {
+    const status = outcome.error === "not_found" ? 404 : 400;
+    return json({ error: outcome.error }, status);
+  }
+  if (!body.enabled) {
+    const stub = agentStub(env, slug);
+    if (stub) {
+      try {
+        await stub.fetch(new Request("https://agent/pause", {
+          method: "POST",
+          headers: { "X-Chat-Op": "pause" },
+        }));
+      } catch {
+        // Row is off; the next open can pause again.
+      }
+    }
+  }
+  return json({ agent: await cardFor(env, who, outcome.agent) });
 }
 
 /**
@@ -317,10 +449,6 @@ export async function getAgentConfig(req: Request, env: AgentsHttpEnv, slugRaw: 
   if (slug instanceof Response) {
     return slug;
   }
-  const denied = requireRun(who, slug);
-  if (denied) {
-    return denied;
-  }
   return callAgent(env, slug, "https://agent/config", { headers: { "X-Chat-Op": "config" } });
 }
 
@@ -332,10 +460,6 @@ export async function patchAgentConfig(req: Request, env: AgentsHttpEnv, slugRaw
   const slug = slugOr400(slugRaw);
   if (slug instanceof Response) {
     return slug;
-  }
-  const denied = requireRun(who, slug);
-  if (denied) {
-    return denied;
   }
   const body = await req.text();
   return callAgent(env, slug, "https://agent/config", {
@@ -354,10 +478,6 @@ export async function getAgentSelf(req: Request, env: AgentsHttpEnv, slugRaw: st
   if (slug instanceof Response) {
     return slug;
   }
-  const denied = requireRun(who, slug);
-  if (denied) {
-    return denied;
-  }
   return callAgent(env, slug, "https://agent/self", { headers: { "X-Chat-Op": "self_get" } });
 }
 
@@ -369,10 +489,6 @@ export async function putAgentSelf(req: Request, env: AgentsHttpEnv, slugRaw: st
   const slug = slugOr400(slugRaw);
   if (slug instanceof Response) {
     return slug;
-  }
-  const denied = requireRun(who, slug);
-  if (denied) {
-    return denied;
   }
   const body = await req.text();
   return callAgent(env, slug, "https://agent/self", {
@@ -391,10 +507,6 @@ export async function getAgentPersona(req: Request, env: AgentsHttpEnv, slugRaw:
   if (slug instanceof Response) {
     return slug;
   }
-  const denied = requireRun(who, slug);
-  if (denied) {
-    return denied;
-  }
   return callAgent(env, slug, "https://agent/persona", { headers: { "X-Chat-Op": "persona_get" } });
 }
 
@@ -406,10 +518,6 @@ export async function putAgentPersona(req: Request, env: AgentsHttpEnv, slugRaw:
   const slug = slugOr400(slugRaw);
   if (slug instanceof Response) {
     return slug;
-  }
-  const denied = requireRun(who, slug);
-  if (denied) {
-    return denied;
   }
   const body = await req.text();
   return callAgent(env, slug, "https://agent/persona", {
@@ -427,10 +535,6 @@ export async function startAgentAuth(req: Request, env: AgentsHttpEnv, slugRaw: 
   const slug = slugOr400(slugRaw);
   if (slug instanceof Response) {
     return slug;
-  }
-  const denied = requireRun(who, slug);
-  if (denied) {
-    return denied;
   }
   const body = await readJson(req);
   const plugin = typeof body?.plugin === "string" ? body.plugin.trim() : "";
@@ -459,10 +563,6 @@ export async function deleteAgentPersona(req: Request, env: AgentsHttpEnv, slugR
   if (slug instanceof Response) {
     return slug;
   }
-  const denied = requireRun(who, slug);
-  if (denied) {
-    return denied;
-  }
   const body = await req.text();
   return callAgent(env, slug, "https://agent/persona", {
     method: "DELETE",
@@ -480,10 +580,6 @@ export async function getAgentStatus(req: Request, env: AgentsHttpEnv, slugRaw: 
   if (slug instanceof Response) {
     return slug;
   }
-  const denied = requireRun(who, slug);
-  if (denied) {
-    return denied;
-  }
   return callAgent(env, slug, "https://agent/status", { headers: { "X-Chat-Op": "status" } });
 }
 
@@ -496,9 +592,21 @@ export async function postAgentRestart(req: Request, env: AgentsHttpEnv, slugRaw
   if (slug instanceof Response) {
     return slug;
   }
-  const denied = requireRun(who, slug);
-  if (denied) {
-    return denied;
+  const api = settingsApi(env);
+  if (!api) {
+    return json({ error: "settings_unavailable" }, 503);
+  }
+  let row: AgentRow | null;
+  try {
+    row = await api.getAgent(slug);
+  } catch {
+    return json({ error: "settings_unavailable" }, 503);
+  }
+  if (!row) {
+    return json({ error: "not_found" }, 404);
+  }
+  if (!row.enabled) {
+    return json({ error: "off" }, 409);
   }
   return callAgent(env, slug, "https://agent/restart", {
     method: "POST",
@@ -515,10 +623,6 @@ export async function getAgentLog(req: Request, env: AgentsHttpEnv, slugRaw: str
   if (slug instanceof Response) {
     return slug;
   }
-  const denied = requireRun(who, slug);
-  if (denied) {
-    return denied;
-  }
   const after = new URL(req.url).searchParams.get("after");
   const url = after == null ? "https://agent/log" : `https://agent/log?after=${encodeURIComponent(after)}`;
   return callAgent(env, slug, url, { headers: { "X-Chat-Op": "log" } });
@@ -533,10 +637,6 @@ export async function getAgentUsers(req: Request, env: AgentsHttpEnv, slugRaw: s
   if (slug instanceof Response) {
     return slug;
   }
-  const denied = requireRun(who, slug);
-  if (denied) {
-    return denied;
-  }
   return callAgent(env, slug, "https://agent/allow", { headers: { "X-Chat-Op": "allow" } });
 }
 
@@ -548,10 +648,6 @@ export async function putAgentUsers(req: Request, env: AgentsHttpEnv, slugRaw: s
   const slug = slugOr400(slugRaw);
   if (slug instanceof Response) {
     return slug;
-  }
-  const denied = requireRun(who, slug);
-  if (denied) {
-    return denied;
   }
   const body = await req.text();
   return callAgent(env, slug, "https://agent/allow", {

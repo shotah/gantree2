@@ -68,6 +68,20 @@ export function body(raw: string): string {
   return lines.slice(i).join("\n").trim();
 }
 
+const headerLineSet = new Set(
+  header.split("\n").map((line) => line.trim()).filter((line) => line !== ""),
+);
+
+/** Operator-facing notes: body with any kernel header line removed. */
+export function notesOnly(raw: string): string {
+  const lines = body(raw).split("\n");
+  const kept = lines.filter((line) => !headerLineSet.has(line.trim()));
+  return kept
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 /** Header plus the file body. Empty body is the header alone. */
 export function stamp(raw: string): string {
   const text = body(raw);

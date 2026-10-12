@@ -47,6 +47,49 @@ export function isApiPath(pathname: string): boolean {
   return pathname.startsWith("/api/") || pathname.startsWith("/ws/");
 }
 
+/** Agents console, settings, and user management — admin only. */
+export function isAdminConsolePath(pathname: string): boolean {
+  if (pathname === "/settings" || pathname === "/users") {
+    return true;
+  }
+  if (pathname === "/agents" || pathname.startsWith("/agents/")) {
+    return true;
+  }
+  if (pathname === "/api/agents" || pathname.startsWith("/api/agents/")) {
+    return true;
+  }
+  if (pathname === "/api/users" || pathname.startsWith("/api/users/")) {
+    return true;
+  }
+  return false;
+}
+
+const AGENT_SLUG_ONLY = /^\/api\/agents\/[a-z][a-z0-9-]{0,31}$/;
+const AGENT_ENABLED = /^\/api\/agents\/[a-z][a-z0-9-]{0,31}\/enabled$/;
+
+/** Turn off, turn on, and destroy for an agent you may control — not the rest of the console. */
+export function isAgentSelfServiceApi(pathname: string, method: string): boolean {
+  const verb = method.toUpperCase();
+  if (verb === "DELETE" && AGENT_SLUG_ONLY.test(pathname)) {
+    return true;
+  }
+  return verb === "POST" && AGENT_ENABLED.test(pathname);
+}
+
+/** After the door passes: non-admin hits on console paths redirect or 403. */
+export function adminConsoleRefusal(who: Principal, url: URL, method = "GET"): Response | null {
+  if (who.role === "admin" || !isAdminConsolePath(url.pathname)) {
+    return null;
+  }
+  if (isAgentSelfServiceApi(url.pathname, method)) {
+    return null;
+  }
+  if (isApiPath(url.pathname)) {
+    return Response.json({ error: "forbidden" }, { status: 403 });
+  }
+  return Response.redirect(new URL("/chat", url.origin).toString(), 302);
+}
+
 /** `next` must be a same-origin path. Anything else goes home. */
 export function safeNext(raw: string | null | undefined): string {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.includes("\\")) {

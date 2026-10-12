@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { agentsMessage, codeOf, getSelf, putSelf, type ApiClient } from "@/app/lib/agentsHttp";
 import { api } from "@/app/lib/api";
+import { notesOnly } from "@/brain/selfnote/stamp";
 import { alertClass, Fold, primaryClass, quietClass } from "./Fold";
 
 function utf8Length(text: string): number {
@@ -40,8 +41,9 @@ export function SelfFold({
       if (gone) {
         return;
       }
-      setSaved(page.text);
-      setDraft(page.text);
+      const notes = notesOnly(page.text);
+      setSaved(notes);
+      setDraft(notes);
       setMaxChars(page.maxChars);
     }).catch((err: unknown) => {
       if (!gone) {
@@ -58,9 +60,10 @@ export function SelfFold({
     setError(null);
     setNotice(null);
     try {
-      const page = await putSelf(slug, draft, client);
-      setSaved(page.text);
-      setDraft(page.text);
+      const page = await putSelf(slug, notesOnly(draft), client);
+      const notes = notesOnly(page.text);
+      setSaved(notes);
+      setDraft(notes);
       setMaxChars(page.maxChars);
       setNotice("Saved.");
     } catch (err) {
@@ -80,15 +83,17 @@ export function SelfFold({
   }
 
   function dropLine(index: number) {
-    const lines = draft.split("\n");
+    const lines = notesOnly(draft).split("\n");
     lines.splice(index, 1);
     setDraft(lines.join("\n"));
     setNotice(null);
   }
 
-  const chars = utf8Length(draft);
+  const visible = notesOnly(draft);
+  const chars = utf8Length(visible);
   const over = maxChars > 0 && chars > maxChars;
-  const lines = draft.split("\n");
+  const lines = visible.split("\n");
+  const dirty = visible !== saved;
 
   return (
     <Fold title="Self notes" open={open} onOpen={setOpen}>
@@ -101,11 +106,11 @@ export function SelfFold({
               <label htmlFor="self-draft" className="mb-1 block text-xs text-muted">Self notes text</label>
               <textarea
                 id="self-draft"
-                value={draft}
+                value={visible}
                 rows={12}
                 disabled={!canMutate || busy}
                 onChange={(e) => {
-                  setDraft(e.target.value);
+                  setDraft(notesOnly(e.target.value));
                   setNotice(null);
                 }}
                 className="w-full rounded border border-line bg-canvas px-3 py-2 font-mono text-xs text-body"
@@ -113,7 +118,9 @@ export function SelfFold({
               <p aria-label="Self notes length" className={`mt-2 text-xs ${over ? "text-danger" : "text-dim"}`}>
                 {`${String(chars)} / ${String(maxChars)}`}
               </p>
-              <p className="mt-1 text-xs text-dim">Saving restores the kernel header.</p>
+              <p className="mt-1 text-xs text-dim">
+                Notes the agent keeps about how it shows up. You can remove a line. The agent&apos;s own instructions stay off this list.
+              </p>
               <ul aria-label="Self note lines" className="mt-3 space-y-1">
                 {lines.map((line, index) => (
                   <li key={`${String(index)}:${line}`} className="flex items-center gap-2">
@@ -137,10 +144,10 @@ export function SelfFold({
               {canMutate
                 ? (
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <button type="button" disabled={busy || draft === saved} onClick={() => void save()} className={primaryClass}>
+                      <button type="button" disabled={busy || !dirty} onClick={() => void save()} className={primaryClass}>
                         Save self notes
                       </button>
-                      <button type="button" disabled={busy || draft === saved} onClick={revert} className={quietClass}>
+                      <button type="button" disabled={busy || !dirty} onClick={revert} className={quietClass}>
                         Revert
                       </button>
                     </div>

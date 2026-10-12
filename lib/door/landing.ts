@@ -47,16 +47,26 @@ export function landingCookie(pref: LandingPref): string {
 /**
  * Where `/` sends a signed-in person.
  *
- * Admin and operator run agents, so they land on `/agents`. A member with
- * one agent goes straight into that chat. Several agents, or none, get the
- * picker at `/chat`. A landing cookie (`pref`) makes staff land like a
- * member, or straight in a named room.
+ * Admins land on `/agents` unless a landing cookie sends them to chat.
+ * Operators and members use the chat list only. A landing cookie pins a
+ * room when that slug is on the person's agent list.
  */
 export function landing(who: { role: Role; agents: readonly string[] }, pref: LandingPref = null): string {
   if (pref?.slug) {
-    return `/chat/${encodeURIComponent(pref.slug)}`;
+    const slug = pref.slug.trim();
+    if (slug && who.agents.includes(slug)) {
+      return `/chat/${encodeURIComponent(slug)}`;
+    }
+  } else if (pref && who.role === "admin") {
+    if (who.agents.length === 1) {
+      const slug = who.agents[0]?.trim();
+      if (slug) {
+        return `/chat/${encodeURIComponent(slug)}`;
+      }
+    }
+    return "/chat";
   }
-  if (!pref && (who.role === "admin" || who.role === "operator")) {
+  if (!pref && who.role === "admin") {
     return "/agents";
   }
   if (who.agents.length === 1) {
@@ -111,21 +121,18 @@ export function readSession(body: unknown): SessionView | null {
 export type ManageLink = { href: string; label: string };
 
 /**
- * Gear-menu rows: the way back out of chat. Admin gets Manage `<slug>` and
- * All agents. An operator gets Manage only when this slug is on their row.
- * Everyone signed in gets Settings, so no role is stuck in the chat.
+ * Gear-menu rows: the way back out of chat. Only admins get manage links
+ * and Settings; operators and members stay in chat.
  */
 export function manageRows(who: { role: Role; agents: readonly string[] } | null, slug: string | null): ManageLink[] {
-  if (!who) {
+  if (!who || who.role !== "admin") {
     return [];
   }
   const rows: ManageLink[] = [];
-  if (slug && (who.role === "admin" || (who.role === "operator" && who.agents.includes(slug)))) {
+  if (slug) {
     rows.push({ href: `/agents/${encodeURIComponent(slug)}`, label: `Manage ${slug}` });
   }
-  if (who.role === "admin") {
-    rows.push({ href: "/agents", label: "All agents" });
-  }
+  rows.push({ href: "/agents", label: "All agents" });
   rows.push({ href: "/settings", label: "Settings" });
   return rows;
 }

@@ -386,8 +386,7 @@ describe("PhoneShell", () => {
     expect(screen.getByRole("dialog", { name: "Settings" })).toBeTruthy();
     expect(screen.getByText(RELEASE)).toBeTruthy();
     expect(screen.getByText(/Cast, save and share/)).toBeTruthy();
-    expect(screen.getByLabelText("Agent name")).toBeTruthy();
-    expect(screen.getByLabelText<HTMLInputElement>("Agent name").value).toBe("");
+    expect(screen.queryByLabelText("Agent name")).toBeNull();
     expect(screen.getByLabelText("Agent access secret")).toBeTruthy();
     expect(screen.getByRole("button", { name: "color theme" })).toBeTruthy();
     expect((screen.getByLabelText("Font size") as unknown as HTMLSelectElement).value).toBe("sm");
@@ -396,9 +395,6 @@ describe("PhoneShell", () => {
     expect(screen.getByRole("button", { name: "Enable location" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Enable microphone" })).toBeNull();
     expect(screen.getByRole("link", { name: "Open chat" }).getAttribute("href")).toBe("/chat");
-    fireEvent.change(screen.getByLabelText("Agent name"), { target: { value: "Ada" } });
-    expect(screen.getByLabelText<HTMLInputElement>("Agent name").value).toBe("ada");
-    expect(screen.getByText("Ada")).toBeTruthy();
   });
 
   it("applies a chat font size from the query string", async () => {
@@ -1864,7 +1860,7 @@ describe("PhoneShell", () => {
     expect(screen.getAllByText("Sure.").some((n) => n.closest(".italic"))).toBe(true);
   });
 
-  it("picks from /me cranes and still lets you type another slug", async () => {
+  it("picks from /me agents in the settings drawer", async () => {
     stubOidc({ sub: DEV_USER.sub, email: DEV_USER.email, cranes: ["kit", "ada"] });
     stubSocket();
     render(<PhoneShell />);
@@ -1875,7 +1871,7 @@ describe("PhoneShell", () => {
     fireEvent.change(picker, { target: { value: "ada" } });
     expect(picker.value).toBe("ada");
     expect(screen.getAllByText("Ada").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByLabelText("Agent name")).toBeTruthy();
+    expect(screen.queryByLabelText("Agent name")).toBeNull();
     expect(window.location.search).not.toContain("sub=");
   });
 
@@ -1913,48 +1909,6 @@ describe("PhoneShell", () => {
     fireEvent.click(screen.getByRole("button", { name: "Copy" }));
     expect(write).toHaveBeenCalledWith(`bob@example.com\n${DEV_USER.sub}`);
     expect(window.location.search).not.toContain("sub=");
-  });
-
-  it("does not dial a typed slug until /me lists it", async () => {
-    stubOidc({ sub: DEV_USER.sub, email: "bob@example.com", cranes: [] });
-    stubSocket();
-    const fetches: string[] = [];
-    const inner = globalThis.fetch;
-    vi.stubGlobal("fetch", async (input: RequestInfo) => {
-      fetches.push(requestUrl(input));
-      return inner(input);
-    });
-    render(<PhoneShell />);
-    expect(await screen.findByText(/not on any agent yet/i)).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("Agent name"), { target: { value: "tim" } });
-    expect(await screen.findByText(/not on any agent yet/i)).toBeTruthy();
-    expect(FakeSocket.instances).toHaveLength(0);
-    expect(fetches.some((u) => u.includes("/api/chat/avatar?slug=tim"))).toBe(false);
-    expect(fetches.some((u) => u.includes("/api/auth/me?slug=tim"))).toBe(true);
-  });
-
-  it("dials a typed slug after /me admits it", async () => {
-    vi.stubGlobal("fetch", async (input: RequestInfo) => {
-      const url = requestUrl(input);
-      if (url.includes("/api/auth/config")) {
-        return Response.json({ mode: "oidc", google: true, dev: false });
-      }
-      if (url.includes("/api/auth/me")) {
-        const cranes = url.includes("slug=tim") ? ["tim"] : [];
-        return Response.json({ sub: DEV_USER.sub, email: "bob@example.com", cranes });
-      }
-      return new Response(null, { status: 404 });
-    });
-    stubSocket();
-    render(<PhoneShell />);
-    expect(await screen.findByText(/not on any agent yet/i)).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("Agent name"), { target: { value: "tim" } });
-    expect(await screen.findByPlaceholderText(/Message Tim/)).toBeTruthy();
-    expect(screen.queryByText(/not on any agent yet/i)).toBeNull();
-    await waitFor(() => {
-      expect(FakeSocket.instances.some((s) => s.url.includes("/ws/tim"))).toBe(true);
-    });
-    expect(FakeSocket.instances.some((s) => s.url.includes("/ws/kit"))).toBe(false);
   });
 
   it("paints give it a minute when /me is rate-limited", async () => {

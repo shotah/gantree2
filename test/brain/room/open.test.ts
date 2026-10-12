@@ -120,6 +120,7 @@ describe("openRoomBrain", () => {
     expect(deps.env.LLM_MODEL).toBe("mine");
     expect(deps.env.LLM_API_KEY).toBe("mine-key");
     expect(deps.env.LLM_BASE_URL).toBe("https://llm.example/v1");
+    expect(deps.env.IMAGE_OUTPUT_DIR).toBe("/images");
     expect(deps.env.SNAPSHOT_KEY).toBeUndefined();
     expect(tokenKeyOk(String(rows.get(TOKEN_KEY_STORE_KEY)))).toBe(true);
     expect(deps.tokens).toBeInstanceOf(AesTokenStore);
@@ -243,6 +244,40 @@ describe("openRoomBrain", () => {
     await openRoomBrain(ctx as unknown as DurableObjectState, house, opts);
     expect(vi.mocked(createBrain)).toHaveBeenCalledTimes(3);
     expect(await depsOf().plugins.find((plugin) => plugin.name === "math")?.ready({} as never)).toBe("disabled");
+  });
+
+  it("defaults IMAGE_OUTPUT_DIR to /images and keeps an explicit dir", async () => {
+    const rows = new Map<string, unknown>();
+    rows.set("slug", "kit");
+    rows.set(CONFIG_STORE_KEY, { env: {}, mcp: "", persona: "", runtime: "native", updatedAt: 1 });
+    const ctx = ctxFor(rows) as unknown as DurableObjectState;
+    const opts = { foldLog: () => undefined };
+    const house = { LLM_API_KEY: "house-key" };
+    await openRoomBrain(ctx, house, opts);
+    expect(depsOf().env.IMAGE_OUTPUT_DIR).toBe("/images");
+
+    rows.set(CONFIG_STORE_KEY, {
+      env: { IMAGE_OUTPUT_DIR: "/kept" },
+      mcp: "",
+      persona: "",
+      runtime: "native",
+      updatedAt: 2,
+    });
+    dropRoomBrain(ctx);
+    await openRoomBrain(ctx, house, opts);
+    expect(depsOf().env.IMAGE_OUTPUT_DIR).toBe("/kept");
+
+    rows.set(CONFIG_STORE_KEY, {
+      env: { PENDANT_IMAGE_DIR: "/pendant-only" },
+      mcp: "",
+      persona: "",
+      runtime: "native",
+      updatedAt: 3,
+    });
+    dropRoomBrain(ctx);
+    await openRoomBrain(ctx, house, opts);
+    expect(depsOf().env.IMAGE_OUTPUT_DIR).toBeUndefined();
+    expect(depsOf().env.PENDANT_IMAGE_DIR).toBe("/pendant-only");
   });
 
   it("fills chat env and loopbacks avatar uploads to serve", async () => {

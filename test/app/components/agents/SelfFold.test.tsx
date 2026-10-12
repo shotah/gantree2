@@ -6,13 +6,14 @@ import { SelfFold } from "@/app/components/agents/SelfFold";
 import type { ApiClient } from "@/app/lib/agentsHttp";
 import { areaOf, href, json, textBody } from "./fixtures";
 
-const NOTE = "# SELF.md — Who You Are Becoming\n\n- dry humor\n- calls them Boss";
+const STORED = "# SELF.md — Who You Are Becoming\n\n> Agent-written file. Cap ~4KB; the operator may prune any line.\n\n- dry humor\n- calls them Boss";
+const VISIBLE = "- dry humor\n- calls them Boss";
 
 afterEach(() => {
   cleanup();
 });
 
-function clientFor(note = NOTE, failEmpty = false): { client: ApiClient; sent: string[] } {
+function clientFor(note = STORED, failEmpty = false): { client: ApiClient; sent: string[] } {
   const sent: string[] = [];
   const client: ApiClient = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
     await Promise.resolve();
@@ -36,25 +37,28 @@ describe("SelfFold", () => {
     render(<SelfFold slug="kit" canMutate client={client} />);
     fireEvent.click(screen.getByRole("button", { name: "Self notes" }));
     const field = areaOf(await screen.findByLabelText("Self notes text"));
-    expect(field.value).toBe(NOTE);
-    expect(screen.getByLabelText("Self notes length").textContent).toBe(`${String(new TextEncoder().encode(NOTE).length)} / 4096`);
+    expect(field.value).toBe(VISIBLE);
+    expect(field.value).not.toContain("SELF.md");
+    expect(field.value).not.toContain("self_note");
+    expect(screen.getByText("- dry humor")).toBeTruthy();
+    expect(screen.getByLabelText("Self notes length").textContent).toBe(`${String(new TextEncoder().encode(VISIBLE).length)} / 4096`);
 
-    fireEvent.click(screen.getByRole("button", { name: "Remove line 3: - dry humor" }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove line 1: - dry humor" }));
     expect(field.value).not.toContain("dry humor");
     expect(field.value).toContain("calls them Boss");
 
     fireEvent.click(screen.getByRole("button", { name: "Revert" }));
-    expect(field.value).toBe(NOTE);
+    expect(field.value).toBe(VISIBLE);
 
-    fireEvent.click(screen.getByRole("button", { name: "Remove line 3: - dry humor" }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove line 1: - dry humor" }));
     fireEvent.click(screen.getByRole("button", { name: "Save self notes" }));
     expect(await screen.findByRole("status")).toBeTruthy();
-    expect(sent).toEqual([NOTE.replace("- dry humor\n", "")]);
+    expect(sent).toEqual([VISIBLE.replace("- dry humor\n", "")]);
     expect(href(vi.mocked(client).mock.calls[0]?.[0] ?? "")).toBe("/api/agents/kit/self");
   });
 
   it("shows the store's empty refusal", async () => {
-    const { client } = clientFor(NOTE, true);
+    const { client } = clientFor(STORED, true);
     render(<SelfFold slug="kit" canMutate client={client} />);
     fireEvent.click(screen.getByRole("button", { name: "Self notes" }));
     const field = areaOf(await screen.findByLabelText("Self notes text"));

@@ -85,7 +85,7 @@ export function chatLoopbackFetch(
     if (url.searchParams.get("slug") !== opts.slug) {
       return base.call(globalThis, input, init);
     }
-    const request = input instanceof Request ? input : new Request(input, init);
+    const request = new Request(input, init);
     const presented = bearerToken(request.headers.get("Authorization")) ?? "";
     if (!bearerMatches(opts.bearer, presented)) {
       return Promise.resolve(Response.json({ error: "unauthorized" }, { status: 401 }));

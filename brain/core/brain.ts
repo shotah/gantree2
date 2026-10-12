@@ -24,6 +24,8 @@ export type BrainDeps = {
   persona: { name: string; text: string }[];
   /** Room slug, for logs and the `status` frame. */
   slug: string;
+  /** Inventory display name when the room knows it; otherwise derive from slug. */
+  name?: string;
 };
 
 export type Brain = {

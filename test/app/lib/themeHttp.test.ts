@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { handleTheme } from "@/app/lib/themeHttp";
 import type { RoomEnv } from "@/lib/avatar/http";
 import { memoryStore } from "@/lib/door/users";
+import { settingsInventory } from "../../chat/settingsStub";
 import { sealSession, SESSION_COOKIE, sessionKey } from "@/lib/door/session";
 
 const SECRET = "0123456789abcdef0123456789abcdef-more";
@@ -17,6 +18,7 @@ function room(handler: (req: Request) => Response): RoomEnv {
     SESSION_SECRET: SECRET,
     GOOGLE_CLIENT_ID: "cid.apps.googleusercontent.com",
     GANTREE_ADMINS: "ada@example.com",
+    SETTINGS: settingsInventory(["kit"]),
     AGENT: {
       idFromName: () => "id",
       get: () => ({ fetch: (req: Request) => Promise.resolve(handler(req)) }),

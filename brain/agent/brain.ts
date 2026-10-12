@@ -44,6 +44,7 @@ import { WATCH_WAKE_MAX_ITEMS } from "@/brain/watch/interval";
 import { quietResumeAt } from "@/brain/watch/quiet";
 import { WebSearch } from "@/brain/websearch/search";
 import type { Brain, BrainDeps } from "@/brain/core/brain";
+import { displaySlug } from "@/lib/chat/slug";
 import type { CallContext, PluginContext } from "@/brain/core/tools";
 import type { Emit, Inbound } from "@/brain/core/wire";
 import { assemble, standingPersona, type Assembler, type TurnIn } from "./context";
@@ -172,11 +173,12 @@ export function createBrain(deps: BrainDeps): Brain {
     }
   };
 
+  const agentDisplayName = resolvedBrainName(deps);
   let personaText = "";
   reloadPersona = () => {
     const parts = personaParts(deps.persona);
     const assembled = assemblePersona(parts, selfNote.read());
-    personaText = standingPersona(assembled);
+    personaText = standingPersona(assembled, agentDisplayName);
     const tz = resolveTimezone(assembled, (env.CRON_TZ ?? "").trim() || loc.zone);
     loc.zone = tz.name;
     deps.clock.zone = tz.name;
@@ -801,4 +803,12 @@ function envTrace(raw: string | undefined): string {
 function csv(raw: string | undefined): string[] {
   if (!raw) return [];
   return raw.split(",").map((p) => p.trim()).filter((p) => p !== "");
+}
+
+function resolvedBrainName(deps: BrainDeps): string {
+  const fromDeps = (deps.name ?? "").trim();
+  if (fromDeps !== "") return fromDeps;
+  const slug = deps.slug.trim();
+  if (slug === "") return "";
+  return displaySlug(slug);
 }

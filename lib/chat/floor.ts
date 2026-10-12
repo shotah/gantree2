@@ -1,38 +1,33 @@
-import { onList, parseAllowlist, type Identity } from "@/lib/door/allowlist";
+import type { Role } from "@/lib/door/users";
 import type { RoomUser } from "./allow";
 import type { ChatAuthEnv } from "./env";
 import { roomAllows, type RoomSession } from "./room";
 
-export type FloorEnv = Pick<ChatAuthEnv, "GANTREE_ADMINS" | "GANTREE_ALLOW">;
+export type PhoneAdmitEnv = Pick<ChatAuthEnv, "ALLOWED_SUBS">;
 
-export type PhoneAdmitEnv = Pick<ChatAuthEnv, "ALLOWED_SUBS" | "GANTREE_ADMINS" | "GANTREE_ALLOW">;
+export type PhoneAdmitCtx = {
+  role: Role;
+  /** Operator assignment from the Settings row; ignored for admin and member. */
+  assignedSlugs: readonly string[];
+  slug: string;
+  /** Member already indexed for this slug in DIRECTORY KV. */
+  inDirectory?: boolean;
+};
 
-function identity(session: RoomSession): Identity {
-  const email = session.email?.trim() ?? "";
-  return {
-    sub: session.sub,
-    email: email || null,
-    emailVerified: session.emailVerified === true && Boolean(email),
-  };
-}
-
-/** `GANTREE_ADMINS` ∪ `GANTREE_ALLOW`, same grammar and matching as the app door. */
-export function deploymentFloorAllows(env: FloorEnv, session: RoomSession): boolean {
-  if (!session.sub) {
-    return false;
-  }
-  const who = identity(session);
-  const floor = [...parseAllowlist(env.GANTREE_ADMINS), ...parseAllowlist(env.GANTREE_ALLOW)];
-  return onList(floor, who);
-}
-
-/** Floor env vars or the agent's room list (and optional static extra). */
+/** Settings role and room list — not `GANTREE_ALLOW` (sign-in only). */
 export function phoneAdmitted(
   roomUsers: readonly RoomUser[] | undefined,
   session: RoomSession,
   env: PhoneAdmitEnv,
+  ctx: PhoneAdmitCtx,
 ): boolean {
-  if (deploymentFloorAllows(env, session)) {
+  if (ctx.role === "admin") {
+    return true;
+  }
+  if (ctx.role === "operator") {
+    return ctx.assignedSlugs.includes(ctx.slug);
+  }
+  if (ctx.inDirectory) {
     return true;
   }
   return roomAllows(roomUsers, session, env.ALLOWED_SUBS);

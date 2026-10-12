@@ -233,6 +233,8 @@ describe("sheets", () => {
     expect(created).toBe("Successfully created spreadsheet 'Budget' for test@example.com. ID: s1 | URL: https://sheets/s1 | Locale: Unknown");
     expect(hits.some((hit) => hit.url.searchParams.get("valueInputOption") === "USER_ENTERED")).toBe(true);
     const none = textOf(await callTool(testCtx({ env: { GOOGLE_OAUTH_CLIENT_ID: "cid", GOOGLE_OAUTH_CLIENT_SECRET: "csecret" } }), "sheets_list_spreadsheets"));
-    expect(none).toBe("USER_GOOGLE_EMAIL is required (or pass user_google_email)");
+    expect(none).toBe(
+      "Ask which Google account to use — work, personal, or another mailbox — then call again with user_google_email set to that address. Do not guess.",
+    );
   });
 });
