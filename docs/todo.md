@@ -11,8 +11,9 @@ the agent registry, the mark, the docs site on
 is the only runtime ([todo_done.md](todo_done.md) §10). There is no
 harness directory and no container. `wrangler.jsonc` is Settings
 and Agent (SQLite) plus KV `DIRECTORY`. The catalog is
-`toolCatalog()` from `brain/plugins`. `npm run agent` is a local
-REPL on `createBrain`. Live eval is 30/30. `package.json` is
+`toolCatalog()` from `brain/plugins`. `npm run agent` starts (or
+reuses) Vite and opens browser chat on the native Agent DO with house
+`LLM_*` from `.dev.vars`. Live eval is 30/30. `package.json` is
 0.2.18, deployed from `main` `c3fa813`.
 `GET https://gantree2.bldhosting.com/api/health` returns
 `{"ok":true,"version":"0.2.18"}`. Tag eval for v0.2.18 is in

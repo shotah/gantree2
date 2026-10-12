@@ -1,155 +1,197 @@
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  AUTH_REPL_NOTE,
-  LOOPBACK_REDIRECT,
   type AgentArgs,
-  type FrameView,
-  type PaintState,
+  applyDevVars,
   baseHost,
-  commandHead,
-  dbPath,
-  displayDb,
+  chatUrl,
+  classifyHealthProbe,
+  collectSecrets,
+  decideCreateAgent,
+  decideEnsureAgentGet,
+  decideRestartAgent,
   formatBanner,
-  paint,
+  formatPublished,
+  isGantreeHealth,
+  isHealthFetchDown,
+  missingLlm,
   parseArgs,
-  personaHint,
-  renderFrame,
-  resetDb,
+  parseDevVars,
+  pollGantreeHealth,
+  redact,
+  roomWithDev,
+  statusFromBody,
 } from "@/scripts/agent";
-import type { BrainFrame } from "@/brain/core/wire";
 
-const defaults: AgentArgs = { slug: "kit", db: null, fresh: false, verbose: false, once: false };
-
-function shown(frame: BrainFrame, opts: { slug: string; verbose: boolean } = { slug: "kit", verbose: false }): FrameView {
-  const view = renderFrame(frame, opts);
-  if (view == null) throw new Error(`expected a view for ${frame.kind ?? "frame"}`);
-  return view;
-}
+const defaults: AgentArgs = { slug: "kit", port: 3000 };
 
 describe("parseArgs", () => {
-  it("defaults to kit with no flags", () => {
+  it("defaults to kit on port 3000", () => {
     expect(parseArgs([])).toEqual(defaults);
   });
 
-  it("reads slug, db, fresh, verbose, and once", () => {
-    expect(parseArgs(["--slug", "ada", "--db", "notes.sqlite", "--fresh", "--verbose", "--once"])).toEqual({
-      slug: "ada",
-      db: "notes.sqlite",
-      fresh: true,
-      verbose: true,
-      once: true,
-    });
-    expect(parseArgs(["--slug=ada", "--db=notes.sqlite"])).toMatchObject({ slug: "ada", db: "notes.sqlite" });
+  it("reads slug and port", () => {
+    expect(parseArgs(["--slug", "ada", "--port", "4000"])).toEqual({ slug: "ada", port: 4000 });
+    expect(parseArgs(["--slug=ada", "--port=4000"])).toEqual({ slug: "ada", port: 4000 });
   });
 
-  it("rejects an unknown flag, a bare word, and a bad slug", () => {
+  it("rejects unknown REPL flags, bare words, and bad values", () => {
+    expect(() => parseArgs(["--db"])).toThrow(/unknown flag --db/);
+    expect(() => parseArgs(["--fresh"])).toThrow(/unknown flag --fresh/);
+    expect(() => parseArgs(["--verbose"])).toThrow(/unknown flag --verbose/);
+    expect(() => parseArgs(["--once"])).toThrow(/unknown flag --once/);
     expect(() => parseArgs(["--nope"])).toThrow(/unknown flag/);
     expect(() => parseArgs(["hello"])).toThrow(/unexpected argument/);
     expect(() => parseArgs(["--slug"])).toThrow(/missing value for --slug/);
+    expect(() => parseArgs(["--port"])).toThrow(/missing value for --port/);
     expect(() => parseArgs(["--slug", ""])).toThrow(/bad slug/);
+    expect(() => parseArgs(["--port", "0"])).toThrow(/bad port/);
   });
 });
 
-describe("db path", () => {
-  it("defaults under .agent and honors --db", () => {
-    expect(dbPath("kit", null, "/repo")).toBe("/repo/.agent/kit.sqlite");
-    expect(dbPath("kit", "other.sqlite", "/repo")).toBe("/repo/other.sqlite");
-    expect(displayDb("/repo/.agent/kit.sqlite", "/repo")).toBe(".agent/kit.sqlite");
-    expect(displayDb("/tmp/kit.sqlite", "/repo")).toBe("/tmp/kit.sqlite");
+describe("dev vars and LLM keys", () => {
+  it("lists missing house LLM keys", () => {
+    expect(missingLlm({})).toEqual(["LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL"]);
+    expect(missingLlm({
+      LLM_BASE_URL: "https://example.com",
+      LLM_API_KEY: "key",
+      LLM_MODEL: "m",
+    })).toEqual([]);
+    expect(missingLlm({ LLM_BASE_URL: "  ", LLM_API_KEY: "x", LLM_MODEL: "y" })).toEqual(["LLM_BASE_URL"]);
   });
 
-  it("deletes the sqlite file and sidecars on --fresh", () => {
-    const dir = mkdtempSync(join(tmpdir(), "agent-repl-"));
-    const path = join(dir, "kit.sqlite");
-    try {
-      writeFileSync(path, "keep");
-      writeFileSync(`${path}-wal`, "wal");
-      writeFileSync(`${path}-shm`, "shm");
-      resetDb(path, false);
-      expect(existsSync(path)).toBe(true);
-      resetDb(path, true);
-      expect(existsSync(path)).toBe(false);
-      expect(existsSync(`${path}-wal`)).toBe(false);
-      expect(existsSync(`${path}-shm`)).toBe(false);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
+  it("overlays .dev.vars without clobbering existing env", () => {
+    const file = [
+      "LLM_MODEL=file-model",
+      "LLM_API_KEY=file-key",
+      "GANTREE_DEV_USER=1:a@b.com",
+    ].join("\n");
+    const merged = applyDevVars(file, { LLM_MODEL: "env-model" });
+    expect(merged.LLM_MODEL).toBe("env-model");
+    expect(merged.LLM_API_KEY).toBe("file-key");
+    expect(merged.GANTREE_DEV_USER).toBe("1:a@b.com");
+    expect(parseDevVars('LLM_API_KEY="quoted"').get("LLM_API_KEY")).toBe("quoted");
   });
 });
 
-describe("frame printer", () => {
-  const opts = { slug: "kit", verbose: false };
-
-  it("prints a reply as slug> text and a react as the emoji", () => {
-    expect(shown({ kind: "reply", text: "hello" }, opts)).toEqual({ text: "kit> hello", overwrite: false, dim: false });
-    expect(shown({ kind: "react", text: "👍" }, opts).text).toBe("👍");
-    expect(shown({ kind: "push", text: "ping" }, opts).text).toBe("kit> ping");
-  });
-
-  it("overwrites typing and cumulative drafts in place on a terminal", () => {
-    expect(shown({ kind: "typing" }, opts)).toEqual({ text: "…", overwrite: true, dim: true });
-    const state: PaintState = { pending: false };
-    const first = shown({ kind: "draft", text: "hel" }, opts);
-    const second = shown({ kind: "draft", text: "hello" }, opts);
-    expect(paint(state, first, true)).toBe("\r\x1b[2Khel");
-    expect(paint(state, second, true)).toBe("\r\x1b[2Khello");
-    expect(state.pending).toBe(true);
-    const reply = shown({ kind: "reply", text: "hello" }, opts);
-    expect(paint(state, reply, true)).toBe("\nkit> hello\n");
-    expect(state.pending).toBe(false);
-    expect(paint({ pending: false }, first, false)).toBe("");
-  });
-
-  it("puts perf and status on one dim line each", () => {
-    const perf = shown({
-      kind: "perf",
-      tokens: { prompt: 12, completion: 3 },
-      iterations: 2,
-      tool_calls: 4,
-    }, opts);
-    expect(perf.dim).toBe(true);
-    expect(perf.overwrite).toBe(false);
-    expect(perf.text).toBe("perf tool_calls=4 iterations=2 tokens=12/3");
-    expect(perf.text.includes("\n")).toBe(false);
-    const status = shown({
-      kind: "status",
-      published: ["math"],
-      skipped: [{ name: "strava", reason: "no_oauth" }],
-    }, opts);
-    expect(status).toEqual({
-      text: "status published=math skipped=strava(no_oauth)",
-      overwrite: false,
-      dim: true,
-    });
-    const state: PaintState = { pending: false };
-    expect(paint(state, perf, true)).toBe(`\x1b[2m${perf.text}\x1b[0m\n`);
-    expect(paint({ pending: false }, perf, false)).toBe(`${perf.text}\n`);
-  });
-
-  it("hides log lines unless verbose", () => {
-    const frame: BrainFrame = { kind: "log", level: "info", message: "opened" };
-    expect(renderFrame(frame, opts)).toBeNull();
-    expect(shown(frame, { slug: "kit", verbose: true }).text).toBe("log info opened");
-  });
-
-  it("formats the banner with the host and skip summary", () => {
+describe("banner and URLs", () => {
+  it("extracts the LLM host and chat URL", () => {
     expect(baseHost("https://generativelanguage.googleapis.com/v1beta/openai")).toBe("generativelanguage.googleapis.com");
     expect(baseHost("not a url")).toBe("unknown-host");
+    expect(chatUrl(3000, "kit")).toBe("http://127.0.0.1:3000/chat/kit");
+    expect(formatPublished(["maps", "math"])).toBe("maps,math");
+    expect(formatPublished([])).toBe("none");
     expect(formatBanner({
+      slug: "kit",
       model: "gemini",
       host: "generativelanguage.googleapis.com",
-      db: ".agent/kit.sqlite",
-      skipped: [
-        { name: "strava", reason: "no_oauth" },
-        { name: "garmin", reason: "no_key" },
-      ],
-    })).toBe("gemini  generativelanguage.googleapis.com  .agent/kit.sqlite  skipped: strava(no_oauth) garmin(no_key)");
-    expect(personaHint(".agent/kit.sqlite")).toBe("PERSONA.md is a row in .agent/kit.sqlite");
-    expect(commandHead("/auth google")).toBe("/auth");
-    expect(AUTH_REPL_NOTE).toContain("/auth <plugin> <code>");
-    expect(AUTH_REPL_NOTE).toContain(LOOPBACK_REDIRECT);
+      chatUrl: "http://127.0.0.1:3000/chat/kit",
+      state: "ready",
+      published: ["maps"],
+    })).toBe(
+      "kit  gemini  generativelanguage.googleapis.com  http://127.0.0.1:3000/chat/kit  state=ready  published=maps",
+    );
+  });
+});
+
+describe("health and HTTP decisions", () => {
+  it("recognizes gantree health", () => {
+    expect(isGantreeHealth(200, { ok: true, version: "0.2.22" })).toBe(true);
+    expect(isGantreeHealth(200, { ok: false })).toBe(false);
+    expect(isGantreeHealth(404, { ok: true })).toBe(false);
+    expect(classifyHealthProbe(200, { ok: true }, false).kind).toBe("gantree");
+    expect(classifyHealthProbe(200, {}, false).kind).toBe("busy");
+    expect(classifyHealthProbe(0, null, true).kind).toBe("down");
+    expect(classifyHealthProbe(0, null, false).kind).toBe("busy");
+  });
+
+  it("treats fetch failures (including timeouts) as down, not busy", () => {
+    expect(isHealthFetchDown(new DOMException("timed out", "TimeoutError"))).toBe(true);
+    expect(isHealthFetchDown(new DOMException("aborted", "AbortError"))).toBe(true);
+    expect(isHealthFetchDown(Object.assign(new Error("reset"), { cause: { code: "ECONNRESET" } }))).toBe(true);
+    expect(isHealthFetchDown(new TypeError("fetch failed"))).toBe(true);
+    expect(classifyHealthProbe(0, null, isHealthFetchDown(new Error("TimeoutError"))).kind).toBe("down");
+  });
+
+  it("keeps polling after busy or down probes until gantree health", async () => {
+    let calls = 0;
+    const result = await pollGantreeHealth(async () => {
+      calls += 1;
+      if (calls === 1) return { kind: "down", status: 0, body: null };
+      if (calls === 2) return { kind: "busy", status: 503, body: null };
+      return { kind: "gantree", status: 200, body: { ok: true } };
+    }, () => true, 5_000, 1);
+    expect(result.ok).toBe(true);
+    expect(calls).toBe(3);
+  });
+
+  it("maps agent API statuses", () => {
+    expect(decideEnsureAgentGet(200)).toBe("exists");
+    expect(decideEnsureAgentGet(404)).toBe("missing");
+    expect(decideEnsureAgentGet(401)).toBe("auth");
+    expect(decideEnsureAgentGet(500)).toBe("fail");
+
+    expect(decideCreateAgent(201)).toBe("created");
+    expect(decideCreateAgent(409)).toBe("present");
+    expect(decideCreateAgent(403)).toBe("auth");
+    expect(decideCreateAgent(400)).toBe("fail");
+
+    expect(decideRestartAgent(200)).toBe("ok");
+    expect(decideRestartAgent(403)).toBe("auth");
+    expect(decideRestartAgent(502)).toBe("fail");
+  });
+
+  it("pulls brain fields from restart JSON", () => {
+    expect(statusFromBody({ state: "ready", published: ["maps", 1] })).toEqual({
+      state: "ready",
+      published: ["maps"],
+    });
+    expect(statusFromBody(null)).toEqual({});
+  });
+});
+
+describe("roomWithDev", () => {
+  it("does not add when the dev sub is already on the room list", () => {
+    const existing = [{ sub: "100000000000000000001", email: "dev@example.com" }];
+    const result = roomWithDev(existing, { sub: "100000000000000000001", email: "other@example.com" });
+    expect(result.added).toBe(false);
+    expect(result.users).toEqual(existing);
+  });
+
+  it("appends the dev user and keeps other rows", () => {
+    const existing = [{ sub: "100000000000000000002", email: "sam@example.com" }];
+    const result = roomWithDev(existing, { sub: "100000000000000000001", email: "dev@example.com" });
+    expect(result.added).toBe(true);
+    expect(result.users).toEqual([
+      ...existing,
+      { sub: "100000000000000000001", email: "dev@example.com" },
+    ]);
+  });
+
+  it("omits email on the new row when empty and skips add when sub is empty", () => {
+    expect(roomWithDev([], { sub: "100000000000000000001" })).toEqual({
+      added: true,
+      users: [{ sub: "100000000000000000001" }],
+    });
+    expect(roomWithDev([{ sub: "100000000000000000002" }], { sub: "   ", email: "a@b.com" })).toEqual({
+      added: false,
+      users: [{ sub: "100000000000000000002" }],
+    });
+  });
+});
+
+describe("redact", () => {
+  it("strips secret-like env values from error text", () => {
+    const env = {
+      LLM_BASE_URL: "https://secret-host.example/v1",
+      LLM_API_KEY: "super-secret-key-value",
+      LLM_MODEL: "m",
+      SESSION_SECRET: "longsessionsecret",
+    };
+    const secrets = collectSecrets(env);
+    expect(secrets.length).toBeGreaterThan(0);
+    const msg = `failed: ${env.LLM_API_KEY} at ${env.LLM_BASE_URL}`;
+    expect(redact(msg, secrets)).not.toContain(env.LLM_API_KEY);
+    expect(redact(msg, secrets)).not.toContain(env.LLM_BASE_URL);
+    expect(redact(msg, secrets)).toContain("[redacted]");
   });
 });

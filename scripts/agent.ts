@@ -1,79 +1,60 @@
-#!/usr/bin/env -S node --experimental-transform-types --disable-warning=ExperimentalWarning
+#!/usr/bin/env node
 /**
- * In-process brain REPL. Talks to the real model and the real plugins.
+ * Local chat against the real Agent DO and house LLM keys.
  *
- *   npm run agent -- --slug kit --db .agent/kit.sqlite --fresh
+ *   npm run agent
+ *   npm run agent -- --slug ada --port 3000
  *
- * Loads `.dev.vars` the same way `scripts/eval.mjs` does (existing
- * environment wins; values are never printed). Persists one `node:sqlite`
- * file so memory, aims, cron, persona, and SELF.md survive a restart.
- * `--once`, or a stdin that is not a terminal, reads lines until EOF and
- * exits. Ctrl-C closes the database and exits.
+ * Loads `.dev.vars` like seed (existing environment wins; values are never
+ * printed). Starts or reuses `npm run dev`, ensures the agent exists, restarts
+ * the brain, prints the chat URL. Open that URL in the browser to talk.
  */
-import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from "node:fs";
-import * as nodeModule from "node:module";
-import { isAbsolute, dirname, join, relative, resolve } from "node:path";
-import { createInterface } from "node:readline/promises";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { PERSONA_TEMPLATE } from "../app/components/agents/personaTemplate.ts";
-import { type NodeDatabase, type Sql } from "../brain/core/sql.ts";
-import { type BrainFrame, type Inbound, type PerfFrame, type StatusFrame } from "../brain/core/wire.ts";
+import { spawn, type ChildProcess } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-/** Loopback catch the Worker serves. The REPL cannot receive that redirect. */
-export const LOOPBACK_REDIRECT = "http://127.0.0.1:3000/api/auth/catch";
+export const REPO_ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 
-/** Printed after every `/auth` reply. The brain's own text stays unchanged. */
-export const AUTH_REPL_NOTE = `The catch redirect does not run outside the Worker. Paste the code: /auth <plugin> <code> with redirect ${LOOPBACK_REDIRECT}.`;
+/** Wire shape for `GET/PUT /api/agents/:slug/users` (launcher-only parse). */
+export type RoomUser = { sub?: string; email?: string };
 
-/** Fixed local user. Not an account and not a secret. */
-export const DEV_USER = "dev";
-
-const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SLUG = /^[A-Za-z0-9][A-Za-z0-9-]{0,62}$/;
 const SECRET_NAME = /(?:KEY|TOKEN|SECRET|PASSWORD|BEARER)/i;
-const MAX_TIMER = 2_147_483_647;
+const HEALTH_PATH = "/api/health";
+const WAIT_MS = 90_000;
+const POLL_MS = 500;
+
+export const AUTH_HINT = [
+  "Agent API returned 401 or 403.",
+  "Set GANTREE_DEV_USER in .dev.vars (loopback only) and list that identity in GANTREE_ADMINS.",
+  "The dev server is still running.",
+].join(" ");
 
 export type AgentArgs = {
   slug: string;
-  /** Null selects `.agent/<slug>.sqlite` under the working directory. */
-  db: string | null;
-  fresh: boolean;
-  verbose: boolean;
-  once: boolean;
+  port: number;
 };
 
-export type FrameView = {
-  text: string;
-  /** Replace the current line (typing spinner, cumulative draft). */
-  overwrite: boolean;
-  dim: boolean;
+export type BannerParts = {
+  slug: string;
+  model: string;
+  host: string;
+  chatUrl: string;
+  state?: string;
+  published?: string[];
 };
 
-export type PaintState = { pending: boolean };
-
-const secrets: string[] = [];
+export type EnsureDecision = "exists" | "missing" | "auth" | "fail";
+export type CreateDecision = "created" | "present" | "auth" | "fail";
+export type RestartDecision = "ok" | "auth" | "fail";
 
 export function parseArgs(argv: string[]): AgentArgs {
   let slug = "kit";
-  let db: string | null = null;
-  let fresh = false;
-  let verbose = false;
-  let once = false;
+  let port = 3000;
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i] ?? "";
     if (arg === "--") continue;
-    if (arg === "--fresh") {
-      fresh = true;
-      continue;
-    }
-    if (arg === "--verbose") {
-      verbose = true;
-      continue;
-    }
-    if (arg === "--once") {
-      once = true;
-      continue;
-    }
     if (arg === "--slug" || arg.startsWith("--slug=")) {
       if (arg === "--slug") {
         i += 1;
@@ -83,41 +64,118 @@ export function parseArgs(argv: string[]): AgentArgs {
       }
       continue;
     }
-    if (arg === "--db" || arg.startsWith("--db=")) {
-      if (arg === "--db") {
+    if (arg === "--port" || arg.startsWith("--port=")) {
+      if (arg === "--port") {
         i += 1;
-        db = take(argv, i, "--db");
+        const raw = take(argv, i, "--port");
+        port = parsePort(raw);
       } else {
-        db = arg.slice("--db=".length);
+        port = parsePort(arg.slice("--port=".length));
       }
       continue;
+    }
+    if (arg === "--db" || arg.startsWith("--db=") || arg === "--fresh" || arg === "--verbose" || arg === "--once") {
+      const name = arg.startsWith("--") ? arg.split("=")[0] ?? arg : arg;
+      throw new Error(`unknown flag ${name}`);
     }
     if (arg.startsWith("-")) throw new Error(`unknown flag ${arg}`);
     throw new Error(`unexpected argument ${arg}`);
   }
   if (!SLUG.test(slug)) throw new Error(`bad slug ${JSON.stringify(slug)}`);
-  if (db != null && db.trim() === "") throw new Error("missing value for --db");
-  return { slug, db, fresh, verbose, once };
+  return { slug, port };
 }
 
-export function dbPath(slug: string, db: string | null, cwd: string): string {
-  if (db != null && db !== "") return resolve(cwd, db);
-  return resolve(cwd, ".agent", `${slug}.sqlite`);
+function take(argv: string[], index: number, flag: string): string {
+  const value = argv[index];
+  if (value == null || value.startsWith("-")) throw new Error(`missing value for ${flag}`);
+  return value;
 }
 
-/** Relative to `cwd` when the file lives under it, otherwise absolute. */
-export function displayDb(abs: string, cwd: string): string {
-  const rel = relative(cwd, abs);
-  if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) return abs;
-  return rel;
+function parsePort(raw: string): number {
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1 || n > 65535) throw new Error(`bad port ${JSON.stringify(raw)}`);
+  return n;
 }
 
-/** Deletes the sqlite file and its WAL sidecars when `fresh` is set. */
-export function resetDb(path: string, fresh: boolean): void {
-  if (!fresh) return;
-  for (const extra of ["", "-wal", "-shm"]) {
-    rmSync(`${path}${extra}`, { force: true });
+/** Parse `.dev.vars` assignments (no export prefix required). */
+export function parseDevVars(text: string): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const rawLine of text.split("\n")) {
+    const line = rawLine.trim();
+    if (line === "" || line.startsWith("#")) continue;
+    const body = line.startsWith("export ") ? line.slice("export ".length).trim() : line;
+    const eq = body.indexOf("=");
+    if (eq <= 0) continue;
+    const key = body.slice(0, eq).trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;
+    let value = body.slice(eq + 1).trim();
+    if (
+      (value.startsWith("\"") && value.endsWith("\""))
+      || (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    out.set(key, value);
   }
+  return out;
+}
+
+/** Overlay file keys onto `base`; existing keys in `base` win. */
+export function applyDevVars(text: string, base: Record<string, string>): Record<string, string> {
+  const out = { ...base };
+  for (const [key, value] of parseDevVars(text)) {
+    if (out[key] === undefined) out[key] = value;
+  }
+  return out;
+}
+
+export function loadDevVars(path: string): void {
+  if (!existsSync(path)) return;
+  const text = readFileSync(path, "utf8");
+  for (const [key, value] of parseDevVars(text)) {
+    if (process.env[key] === undefined) process.env[key] = value;
+  }
+}
+
+export function envRecord(): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (typeof value === "string") out[key] = value;
+  }
+  return out;
+}
+
+export function missingLlm(env: Record<string, string>): string[] {
+  const missing: string[] = [];
+  if ((env.LLM_BASE_URL ?? "").trim() === "") missing.push("LLM_BASE_URL");
+  if ((env.LLM_API_KEY ?? "").trim() === "") missing.push("LLM_API_KEY");
+  if ((env.LLM_MODEL ?? "").trim() === "") missing.push("LLM_MODEL");
+  return missing;
+}
+
+export function collectSecrets(env: Record<string, string>): string[] {
+  const found: string[] = [];
+  const base = (env.LLM_BASE_URL ?? "").trim();
+  if (base.length >= 8) found.push(base);
+  for (const [name, value] of Object.entries(env)) {
+    const trimmed = value.trim();
+    if (trimmed.length < 8) continue;
+    if (SECRET_NAME.test(name)) found.push(trimmed);
+  }
+  found.sort((a, b) => b.length - a.length);
+  const unique: string[] = [];
+  for (const value of found) {
+    if (!unique.includes(value)) unique.push(value);
+  }
+  return unique;
+}
+
+export function redact(text: string, secrets: readonly string[]): string {
+  let out = text;
+  for (const secret of secrets) {
+    if (out.includes(secret)) out = out.split(secret).join("[redacted]");
+  }
+  return out;
 }
 
 export function baseHost(url: string): string {
@@ -129,252 +187,157 @@ export function baseHost(url: string): string {
   }
 }
 
-export function formatSkipped(skipped: { name: string; reason: string }[]): string {
-  if (skipped.length === 0) return "skipped: none";
-  return `skipped: ${skipped.map((item) => `${item.name}(${item.reason})`).join(" ")}`;
+export function chatUrl(port: number, slug: string): string {
+  return `http://127.0.0.1:${port}/chat/${slug}`;
 }
 
-export function formatBanner(parts: {
-  model: string;
-  host: string;
-  db: string;
-  skipped: { name: string; reason: string }[];
-}): string {
-  return `${parts.model}  ${parts.host}  ${parts.db}  ${formatSkipped(parts.skipped)}`;
+export function formatPublished(names: string[] | undefined): string {
+  if (names == null || names.length === 0) return "none";
+  return names.join(",");
 }
 
-export function personaHint(db: string): string {
-  return `PERSONA.md is a row in ${db}`;
-}
-
-export function commandHead(line: string): string {
-  const first = line.trim().split(/\s+/u)[0] ?? "";
-  const at = first.indexOf("@");
-  return (at >= 0 ? first.slice(0, at) : first).toLowerCase();
-}
-
-export function formatPerf(frame: PerfFrame): string {
-  const calls = frame.tool_calls ?? 0;
-  const iterations = frame.iterations ?? 0;
-  return `perf tool_calls=${String(calls)} iterations=${String(iterations)} tokens=${String(frame.tokens.prompt)}/${String(frame.tokens.completion)}`;
-}
-
-export function formatStatus(frame: StatusFrame): string {
-  const published = frame.published.length === 0 ? "none" : frame.published.join(",");
-  const skipped = frame.skipped.length === 0
-    ? "none"
-    : frame.skipped.map((item) => `${item.name}(${item.reason})`).join(" ");
-  return `status published=${published} skipped=${skipped}`;
-}
-
-/** One compact view of a brain frame. Null frames are not shown. */
-export function renderFrame(frame: BrainFrame, opts: { slug: string; verbose: boolean }): FrameView | null {
-  switch (frame.kind) {
-    case "typing":
-      return { text: "…", overwrite: true, dim: true };
-    case "draft":
-      return { text: frame.text ?? "", overwrite: true, dim: false };
-    case "reply":
-    case "push":
-      return { text: `${opts.slug}> ${frame.text ?? ""}`, overwrite: false, dim: false };
-    case "react":
-      return { text: frame.text ?? "", overwrite: false, dim: false };
-    case "error":
-      return { text: `error: ${frame.text ?? ""}`, overwrite: false, dim: false };
-    case "status":
-      return { text: formatStatus(frame), overwrite: false, dim: true };
-    case "perf":
-      return { text: formatPerf(frame), overwrite: false, dim: true };
-    case "log":
-      if (!opts.verbose) return null;
-      return { text: `log ${frame.level} ${frame.message}`, overwrite: false, dim: true };
-    default:
-      return null;
-  }
-}
-
-/**
- * Bytes for one view. Overwrite frames paint with CR + clear-line on a
- * terminal and are dropped when stdout is a pipe. Dim uses ANSI only on a
- * terminal. Updates `state.pending` when a draft is still on the line.
- */
-export function paint(state: PaintState, view: FrameView, tty: boolean): string {
-  if (view.overwrite) {
-    if (!tty) return "";
-    state.pending = true;
-    return `\r\x1b[2K${view.text}`;
-  }
-  const lead = state.pending ? "\n" : "";
-  state.pending = false;
-  const text = view.dim && tty ? `\x1b[2m${view.text}\x1b[0m` : view.text;
-  return `${lead}${text}\n`;
-}
-
-function take(argv: string[], index: number, flag: string): string {
-  const value = argv[index];
-  if (value == null || value.startsWith("-")) throw new Error(`missing value for ${flag}`);
-  return value;
-}
-
-function loadDevVars(path: string): void {
-  if (!existsSync(path)) return;
-  const text = readFileSync(path, "utf8");
-  for (const rawLine of text.split("\n")) {
-    const line = rawLine.trim();
-    if (line === "" || line.startsWith("#")) continue;
-    const body = line.startsWith("export ") ? line.slice("export ".length).trim() : line;
-    const eq = body.indexOf("=");
-    if (eq <= 0) continue;
-    const key = body.slice(0, eq).trim();
-    let value = body.slice(eq + 1).trim();
-    if (
-      (value.startsWith("\"") && value.endsWith("\""))
-      || (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
-    }
-    if (process.env[key] === undefined) process.env[key] = value;
-  }
-}
-
-function envRecord(): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [key, value] of Object.entries(process.env)) {
-    if (typeof value === "string") out[key] = value;
-  }
-  if ((out.OAUTH_REDIRECT_URI ?? "").trim() === "") out.OAUTH_REDIRECT_URI = LOOPBACK_REDIRECT;
-  return out;
-}
-
-function rememberSecrets(env: Record<string, string>): void {
-  const found: string[] = [];
-  const base = (env.LLM_BASE_URL ?? "").trim();
-  if (base.length >= 8) found.push(base);
-  for (const [name, value] of Object.entries(env)) {
-    const trimmed = value.trim();
-    if (trimmed.length < 8) continue;
-    if (SECRET_NAME.test(name)) found.push(trimmed);
-  }
-  found.sort((a, b) => b.length - a.length);
-  secrets.length = 0;
-  for (const value of found) {
-    if (!secrets.includes(value)) secrets.push(value);
-  }
-}
-
-function redact(text: string): string {
-  let out = text;
-  for (const secret of secrets) {
-    if (out.includes(secret)) out = out.split(secret).join("[redacted]");
-  }
-  return out;
-}
-
-function publicError(err: unknown): string {
-  const message = err instanceof Error && err.message.trim() !== "" ? err.message : "agent failed";
-  return redact(message);
-}
-
-function missingLlm(env: Record<string, string>): string[] {
-  const missing: string[] = [];
-  if ((env.LLM_BASE_URL ?? "").trim() === "") missing.push("LLM_BASE_URL");
-  if ((env.LLM_API_KEY ?? "").trim() === "") missing.push("LLM_API_KEY");
-  if ((env.LLM_MODEL ?? "").trim() === "") missing.push("LLM_MODEL");
-  return missing;
-}
-
-type ResolveContext = { parentURL?: string };
-type ResolveNext = (specifier: string, context: ResolveContext) => { url: string; shortCircuit?: boolean };
-type LoadResult = { format?: string; source?: string; shortCircuit?: boolean };
-type LoadNext = (url: string, context: ResolveContext) => LoadResult;
-
-let resolverInstalled = false;
-
-/**
- * Node's type loader does not read tsconfig paths. Brain modules import
- * `@/…` and extensionless `./` files. Register this before importing them.
- */
-function installResolver(): void {
-  if (resolverInstalled) return;
-  resolverInstalled = true;
-  const register = (nodeModule as unknown as {
-    registerHooks?: (hooks: {
-      resolve: (specifier: string, context: ResolveContext, next: ResolveNext) => { url: string; shortCircuit?: boolean };
-      load: (url: string, context: ResolveContext, next: LoadNext) => LoadResult;
-    }) => void;
-  }).registerHooks;
-  if (typeof register !== "function") {
-    throw new Error("node:module registerHooks is required to load the brain");
-  }
-  register({
-    resolve(specifier, context, next) {
-      if (
-        specifier.startsWith("node:")
-        || specifier.startsWith("file:")
-        || (!specifier.startsWith("@/") && !specifier.startsWith("."))
-      ) {
-        return next(specifier, context);
-      }
-      const abs = specifier.startsWith("@/")
-        ? join(REPO_ROOT, specifier.slice(2))
-        : relativeFile(specifier, context.parentURL);
-      if (abs == null) return next(specifier, context);
-      const file = resolveFile(abs);
-      if (file == null) return next(specifier, context);
-      return { url: pathToFileURL(file).href, shortCircuit: true };
-    },
-    load(url, context, next) {
-      if (url.startsWith("file:") && url.endsWith(".json")) {
-        return { format: "json", source: readFileSync(fileURLToPath(url), "utf8"), shortCircuit: true };
-      }
-      return next(url, context);
-    },
-  });
-}
-
-function relativeFile(specifier: string, parentURL: string | undefined): string | null {
-  if (parentURL == null || !parentURL.startsWith("file:")) return null;
-  return fileURLToPath(new URL(specifier, parentURL));
-}
-
-function isFile(path: string): boolean {
-  try {
-    return statSync(path).isFile();
-  } catch {
-    return false;
-  }
-}
-
-function resolveFile(specPath: string): string | null {
-  if (isFile(specPath)) return specPath;
-  const base = specPath.endsWith(".js") ? specPath.slice(0, -3) : specPath;
-  const list = [
-    `${base}.ts`,
-    `${base}.tsx`,
-    `${base}.js`,
-    `${base}.mjs`,
-    `${base}.json`,
-    join(base, "index.ts"),
-    join(base, "index.js"),
+export function formatBanner(parts: BannerParts): string {
+  const bits = [
+    parts.slug,
+    parts.model,
+    parts.host,
+    parts.chatUrl,
   ];
-  for (const path of list) {
-    if (isFile(path)) return path;
-  }
-  return null;
+  if (parts.state != null && parts.state !== "") bits.push(`state=${parts.state}`);
+  if (parts.published != null) bits.push(`published=${formatPublished(parts.published)}`);
+  return bits.join("  ");
 }
 
-function loadTokenKey(sql: Sql, ok: (value: string) => boolean, mint: () => string): string {
-  sql.exec("CREATE TABLE IF NOT EXISTS agent_repl (k TEXT PRIMARY KEY, v TEXT NOT NULL)");
-  const row = sql.one("SELECT v FROM agent_repl WHERE k = ?", "token.key");
-  const stored = row?.v;
-  if (typeof stored === "string" && ok(stored)) return stored;
-  const key = mint();
-  sql.exec(
-    "INSERT INTO agent_repl (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v",
-    "token.key",
-    key,
-  );
-  return key;
+export function isGantreeHealth(status: number, body: unknown): boolean {
+  if (status !== 200) return false;
+  if (body == null || typeof body !== "object") return false;
+  return (body as { ok?: unknown }).ok === true;
+}
+
+export type HealthProbe = {
+  kind: "gantree" | "busy" | "down";
+  status: number;
+  body: unknown;
+};
+
+export function classifyHealthProbe(status: number, body: unknown, connError: boolean): HealthProbe {
+  if (connError) return { kind: "down", status: 0, body: null };
+  if (isGantreeHealth(status, body)) return { kind: "gantree", status, body };
+  return { kind: "busy", status, body };
+}
+
+/** Fetch failed before an HTTP response — keep polling; not a foreign server on the port. */
+export function isHealthFetchDown(err: unknown): boolean {
+  if (err instanceof TypeError) return true;
+  if (err instanceof Error) {
+    if (err.name === "TimeoutError" || err.name === "AbortError") return true;
+    const cause = "cause" in err ? err.cause : err;
+    if (cause != null && typeof cause === "object" && "code" in cause) {
+      const code = (cause as { code?: string }).code;
+      if (code === "ECONNREFUSED" || code === "ENOTFOUND" || code === "ECONNRESET") return true;
+    }
+  }
+  return true;
+}
+
+export function decideEnsureAgentGet(status: number): EnsureDecision {
+  if (status === 200) return "exists";
+  if (status === 404) return "missing";
+  if (status === 401 || status === 403) return "auth";
+  return "fail";
+}
+
+export function decideCreateAgent(status: number): CreateDecision {
+  if (status === 201) return "created";
+  if (status === 409) return "present";
+  if (status === 401 || status === 403) return "auth";
+  return "fail";
+}
+
+export function decideRestartAgent(status: number): RestartDecision {
+  if (status === 200) return "ok";
+  if (status === 401 || status === 403) return "auth";
+  return "fail";
+}
+
+export type DevRoomIdentity = { sub: string; email?: string };
+
+export type RoomUsersPatch = { users: RoomUser[]; added: boolean };
+
+/** Loopback dev identity from `GET /api/auth/me` (200, non-empty `sub`). */
+export function devIdentityFromMe(body: unknown): DevRoomIdentity | null {
+  if (body == null || typeof body !== "object") return null;
+  const record = body as Record<string, unknown>;
+  if (typeof record.sub !== "string" || record.sub.trim() === "") return null;
+  const sub = record.sub.trim();
+  const emailRaw = record.email;
+  if (typeof emailRaw === "string" && emailRaw.trim() !== "") {
+    return { sub, email: emailRaw.trim() };
+  }
+  return { sub };
+}
+
+function parseRoomUserRow(raw: unknown): RoomUser | null {
+  if (raw == null || typeof raw !== "object") return null;
+  const row = raw as Record<string, unknown>;
+  const out: RoomUser = {};
+  const sub = typeof row.sub === "string" ? row.sub.trim() : "";
+  const email = typeof row.email === "string" ? row.email.trim() : "";
+  if (sub !== "") out.sub = sub;
+  if (email !== "") out.email = email;
+  if (out.sub === undefined && out.email === undefined) return null;
+  return out;
+}
+
+export function parseRoomUsersList(raw: unknown): RoomUser[] {
+  if (!Array.isArray(raw)) return [];
+  const out: RoomUser[] = [];
+  for (const item of raw) {
+    const user = parseRoomUserRow(item);
+    if (user != null) out.push(user);
+  }
+  return out;
+}
+
+export function roomUsersFromBody(body: unknown): RoomUser[] {
+  if (body == null || typeof body !== "object") return [];
+  return parseRoomUsersList((body as { users?: unknown }).users);
+}
+
+function rowSub(row: RoomUser): string {
+  return (row.sub ?? "").trim();
+}
+
+/**
+ * Append the dev user to the room list when missing. Keeps every existing row.
+ * Empty `dev.sub` does not add. Omits `email` on the new row when blank.
+ */
+export function roomWithDev(users: readonly RoomUser[], dev: DevRoomIdentity): RoomUsersPatch {
+  const sub = dev.sub.trim();
+  const kept = users.map((row) => ({ ...row }));
+  if (sub === "") return { users: kept, added: false };
+  if (kept.some((row) => rowSub(row) === sub)) return { users: kept, added: false };
+  const next: RoomUser = { sub };
+  const email = dev.email?.trim() ?? "";
+  if (email !== "") next.email = email;
+  return { users: [...kept, next], added: true };
+}
+
+export function decidePutRoomUsers(status: number): RestartDecision {
+  if (status === 200) return "ok";
+  if (status === 401 || status === 403) return "auth";
+  return "fail";
+}
+
+export function statusFromBody(body: unknown): { state?: string; published?: string[] } {
+  if (body == null || typeof body !== "object") return {};
+  const row = body as { state?: unknown; published?: unknown };
+  const state = typeof row.state === "string" ? row.state : undefined;
+  let published: string[] | undefined;
+  if (Array.isArray(row.published)) {
+    published = row.published.filter((item): item is string => typeof item === "string");
+  }
+  return { state, published };
 }
 
 function invokedDirectly(): boolean {
@@ -383,259 +346,296 @@ function invokedDirectly(): boolean {
   return resolve(entry) === fileURLToPath(import.meta.url);
 }
 
+function publicError(err: unknown, secrets: readonly string[]): string {
+  const message = err instanceof Error && err.message.trim() !== "" ? err.message : "agent failed";
+  return redact(message, secrets);
+}
+
+async function fetchHealth(base: string): Promise<HealthProbe> {
+  const url = new URL(HEALTH_PATH, base);
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(5_000) });
+    const text = await res.text();
+    let body: unknown = null;
+    if (text) {
+      try {
+        body = JSON.parse(text) as unknown;
+      } catch {
+        body = null;
+      }
+    }
+    return classifyHealthProbe(res.status, body, false);
+  } catch (err: unknown) {
+    if (!isHealthFetchDown(err)) {
+      return classifyHealthProbe(0, null, false);
+    }
+    return classifyHealthProbe(0, null, true);
+  }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolveWait) => setTimeout(resolveWait, ms));
+}
+
+export type HealthPollResult = { ok: boolean; last: HealthProbe | null };
+
+/** Poll until gantree health, deadline, or `alive` is false. Non-gantree HTTP responses keep polling. */
+export async function pollGantreeHealth(
+  probe: () => Promise<HealthProbe>,
+  alive: () => boolean,
+  deadlineMs: number,
+  pollMs: number = POLL_MS,
+): Promise<HealthPollResult> {
+  const end = Date.now() + deadlineMs;
+  let last: HealthProbe | null = null;
+  while (Date.now() < end) {
+    if (!alive()) return { ok: false, last };
+    const result = await probe();
+    last = result;
+    if (result.kind === "gantree") return { ok: true, last };
+    await sleep(pollMs);
+  }
+  return { ok: false, last };
+}
+
+export async function waitForGantreeHealth(
+  base: string,
+  deadlineMs: number,
+  probe: (base: string) => Promise<HealthProbe> = fetchHealth,
+): Promise<boolean> {
+  const { ok } = await pollGantreeHealth(() => probe(base), () => true, deadlineMs);
+  return ok;
+}
+
+function childAlive(child: ChildProcess): boolean {
+  return child.exitCode == null && child.signalCode == null;
+}
+
+async function waitForHealthAfterSpawn(child: ChildProcess, base: string, port: number): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const finish = (err?: Error): void => {
+      child.off("error", onError);
+      child.off("exit", onExit);
+      if (err) reject(err);
+      else resolve();
+    };
+
+    const onError = (err: Error): void => {
+      finish(err);
+    };
+
+    const onExit = (code: number | null, signal: NodeJS.Signals | null): void => {
+      if (code != null && code !== 0) process.exitCode = code;
+      void signal;
+      finish(new Error("dev server exited before health was ready"));
+    };
+
+    child.once("error", onError);
+    child.once("exit", onExit);
+
+    void pollGantreeHealth(
+      () => fetchHealth(base),
+      () => childAlive(child),
+      WAIT_MS,
+    ).then(({ ok, last }) => {
+      if (ok) {
+        finish();
+        return;
+      }
+      if (!childAlive(child)) {
+        const code = child.exitCode;
+        if (code != null && code !== 0) process.exitCode = code;
+        finish(new Error("dev server exited before health was ready"));
+        return;
+      }
+      if (last?.kind === "busy") {
+        finish(new Error(`port ${port} is in use but /api/health is not gantree`));
+        return;
+      }
+      finish(new Error(`timed out waiting for ${HEALTH_PATH}`));
+    });
+  });
+}
+
+type HttpResult = { status: number; body: unknown };
+
+async function apiCall(base: string, method: string, path: string, body?: unknown): Promise<HttpResult> {
+  const headers = new Headers();
+  let init: RequestInit = { method, headers };
+  if (body !== undefined) {
+    headers.set("content-type", "application/json");
+    init = { ...init, body: JSON.stringify(body) };
+  }
+  const res = await fetch(new URL(path, base), init);
+  const text = await res.text();
+  let parsed: unknown = null;
+  if (text) {
+    try {
+      parsed = JSON.parse(text) as unknown;
+    } catch {
+      parsed = null;
+    }
+  }
+  return { status: res.status, body: parsed };
+}
+
+function viteBin(): string {
+  return join(REPO_ROOT, "node_modules", ".bin", "vite");
+}
+
+function spawnDev(port: number): ChildProcess {
+  const bin = viteBin();
+  return spawn(bin, ["dev", "--host", "127.0.0.1", "--port", String(port)], {
+    cwd: REPO_ROOT,
+    stdio: "inherit",
+    env: process.env,
+  });
+}
+
+type EnsureOutcome
+  = | { ok: true; status: ReturnType<typeof statusFromBody> }
+    | { ok: false; auth: true }
+    | { ok: false; auth: false };
+
+async function ensureDevInRoom(base: string, slug: string): Promise<{ auth: true } | { auth: false }> {
+  const me = await apiCall(base, "GET", "/api/auth/me");
+  if (me.status === 401 || me.status === 403) return { auth: true };
+  if (me.status !== 200) throw new Error(`GET /api/auth/me → ${me.status}`);
+  const dev = devIdentityFromMe(me.body);
+  if (dev == null) throw new Error("GET /api/auth/me → missing sub");
+
+  const listed = await apiCall(base, "GET", `/api/agents/${slug}/users`);
+  if (listed.status === 401 || listed.status === 403) return { auth: true };
+  if (listed.status !== 200) throw new Error(`GET /api/agents/${slug}/users → ${listed.status}`);
+
+  const patch = roomWithDev(roomUsersFromBody(listed.body), dev);
+  if (!patch.added) return { auth: false };
+
+  const put = await apiCall(base, "PUT", `/api/agents/${slug}/users`, { users: patch.users });
+  switch (decidePutRoomUsers(put.status)) {
+    case "ok":
+      return { auth: false };
+    case "auth":
+      return { auth: true };
+    case "fail":
+      throw new Error(`PUT /api/agents/${slug}/users → ${put.status}`);
+  }
+}
+
+async function ensureAgent(base: string, slug: string): Promise<EnsureOutcome> {
+  const got = await apiCall(base, "GET", `/api/agents/${slug}`);
+  switch (decideEnsureAgentGet(got.status)) {
+    case "exists":
+      break;
+    case "missing": {
+      const created = await apiCall(base, "POST", "/api/agents", { slug, name: slug });
+      const createDecision = decideCreateAgent(created.status);
+      if (createDecision === "auth") return { ok: false, auth: true };
+      if (createDecision === "fail") {
+        throw new Error(`POST /api/agents → ${created.status}`);
+      }
+      break;
+    }
+    case "auth":
+      return { ok: false, auth: true };
+    case "fail":
+      throw new Error(`GET /api/agents/${slug} → ${got.status}`);
+  }
+
+  const room = await ensureDevInRoom(base, slug);
+  if (room.auth) return { ok: false, auth: true };
+
+  const restarted = await apiCall(base, "POST", `/api/agents/${slug}/restart`);
+  switch (decideRestartAgent(restarted.status)) {
+    case "ok":
+      return { ok: true, status: statusFromBody(restarted.body) };
+    case "auth":
+      return { ok: false, auth: true };
+    case "fail":
+      throw new Error(`POST /api/agents/${slug}/restart → ${restarted.status}`);
+  }
+}
+
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   loadDevVars(join(REPO_ROOT, ".dev.vars"));
   const env = envRecord();
-  rememberSecrets(env);
   const missing = missingLlm(env);
   if (missing.length > 0) {
     throw new Error(`missing ${missing.join(", ")}. Set them in .dev.vars or the environment`);
   }
-  installResolver();
 
-  const [{ systemClock }, { makeLogger }, { nodeSql }, tokens, personaMod, { openaiProvider }, { allPlugins }, { createBrain }] = await Promise.all([
-    import("../brain/core/clock.ts"),
-    import("../brain/core/log.ts"),
-    import("../brain/core/sql.ts"),
-    import("../brain/tools/tokens.ts"),
-    import("../brain/persona/index.ts"),
-    import("../brain/provider/index.ts"),
-    import("../brain/plugins/index.ts"),
-    import("../brain/agent/brain.ts"),
-  ]);
-  const { DatabaseSync } = await import("node:sqlite");
+  const base = `http://127.0.0.1:${args.port}`;
+  const model = (env.LLM_MODEL ?? "").trim();
+  const host = baseHost((env.LLM_BASE_URL ?? "").trim());
+  const url = chatUrl(args.port, args.slug);
 
-  const abs = dbPath(args.slug, args.db, process.cwd());
-  const shown = displayDb(abs, process.cwd());
-  resetDb(abs, args.fresh);
-  mkdirSync(dirname(abs), { recursive: true });
-  const db = new DatabaseSync(abs);
-  let closed = false;
-  let stopped = false;
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const closeDb = (): void => {
-    if (closed) return;
-    closed = true;
-    stopped = true;
-    if (timer !== undefined) clearTimeout(timer);
-    timer = undefined;
-    db.close();
-  };
+  let child: ChildProcess | null = null;
+  let spawned = false;
 
-  const sql = nodeSql(db as unknown as NodeDatabase);
-  const quiet = makeLogger(() => undefined, () => Date.now(), { slug: args.slug });
-  const store = new personaMod.PersonaStore(sql, systemClock("UTC"), quiet, args.slug);
-  store.importLegacy(PERSONA_TEMPLATE);
-  const personaText = store.read(personaMod.filePersona) ?? "";
-  const zone = personaMod.resolveTimezone(personaText, env.CRON_TZ ?? "").name;
-  const clock = systemClock(zone);
-  const log = makeLogger(() => undefined, () => clock.now(), { slug: args.slug });
-  const parts: { name: string; text: string }[] = [];
-  for (const file of store.list()) {
-    if (file.name === personaMod.fileSelf) continue;
-    parts.push({ name: file.name, text: file.text });
+  const initial = await fetchHealth(base);
+  if (initial.kind === "busy") {
+    throw new Error(`port ${args.port} is in use but /api/health is not gantree`);
+  } else if (initial.kind !== "gantree") {
+    child = spawnDev(args.port);
+    spawned = true;
+    await waitForHealthAfterSpawn(child, base, args.port);
   }
 
-  const provider = openaiProvider({
-    baseUrl: (env.LLM_BASE_URL ?? "").trim(),
-    apiKey: (env.LLM_API_KEY ?? "").trim(),
-    model: (env.LLM_MODEL ?? "").trim(),
-    ...tokenOptions(env),
-  });
-  const brain = createBrain({
-    sql,
-    clock,
-    log,
-    provider,
-    plugins: [...allPlugins],
-    tokens: new tokens.AesTokenStore(sql, loadTokenKey(sql, tokens.tokenKeyOk, tokens.mintTokenKey), clock),
-    fetch: globalThis.fetch,
-    env,
-    persona: parts,
-    slug: args.slug,
-  });
-
-  const tty = process.stdout.isTTY === true;
-  const paintState: PaintState = { pending: false };
-  const screen = {
-    show(view: FrameView | null): void {
-      if (view == null) return;
-      const painted = paint(paintState, { ...view, text: redact(view.text) }, tty);
-      if (painted !== "") process.stdout.write(painted);
-    },
-    write(text: string): void {
-      if (paintState.pending) {
-        process.stdout.write("\n");
-        paintState.pending = false;
-      }
-      process.stdout.write(redact(text.endsWith("\n") ? text : `${text}\n`));
-    },
-  };
-
-  const frameOpts = { slug: args.slug, verbose: args.verbose };
-  let busy = false;
-  let rl: ReturnType<typeof createInterface> | undefined;
-  const emit = (frame: BrainFrame): void => {
-    screen.show(renderFrame(frame, frameOpts));
-    if (!busy && rl != null && frame.kind !== "typing" && frame.kind !== "draft") rl.prompt(true);
-  };
-
-  let tail = Promise.resolve();
-  const enqueue = (work: () => Promise<void>): Promise<void> => {
-    const run = tail.then(() => (stopped ? undefined : work()), () => (stopped ? undefined : work()));
-    tail = run.then(() => undefined, () => undefined);
-    return run;
-  };
-
-  const arm = (at: number | null): void => {
-    if (timer !== undefined) clearTimeout(timer);
-    timer = undefined;
-    if (stopped || at == null || !Number.isFinite(at)) return;
-    const delay = at - Date.now();
-    const wait = delay <= 0 ? 0 : Math.min(delay, MAX_TIMER);
-    timer = setTimeout(() => {
-      void enqueue(() => fire(false)).catch((err: unknown) => {
-        screen.write(`error: ${publicError(err)}`);
-      });
-    }, wait);
-  };
-
-  const fire = async (force: boolean): Promise<void> => {
-    if (stopped) return;
-    if (!force) {
-      const due = brain.nextAlarm();
-      if (due == null || due > Date.now() + 500) {
-        arm(due);
-        return;
-      }
-    }
-    const next = await brain.alarm(emit);
-    const follow = next ?? brain.nextAlarm();
-    if (follow != null && follow <= Date.now()) {
-      arm(Date.now() + 1000);
-      return;
-    }
-    arm(follow);
-  };
-
-  const startup: BrainFrame[] = [];
-  await brain.announce((frame) => {
-    startup.push(frame);
-  });
-  const status = startup.find((frame): frame is StatusFrame => frame.kind === "status");
-  screen.write(formatBanner({
-    model: (env.LLM_MODEL ?? "").trim(),
-    host: baseHost((env.LLM_BASE_URL ?? "").trim()),
-    db: shown,
-    skipped: status?.skipped ?? [],
-  }));
-  if (args.verbose) {
-    for (const frame of startup) {
-      if (frame.kind === "log") screen.show(renderFrame(frame, frameOpts));
-    }
-  }
-  arm(brain.nextAlarm());
-
-  let turns = 0;
-  const turn = async (line: string): Promise<void> => {
-    const head = commandHead(line);
-    if (head === "/alarm") {
-      await fire(true);
-      return;
-    }
-    if (head === "/persona") {
-      const text = store.read(personaMod.filePersona) ?? "";
-      const body = text === "" || text.endsWith("\n") ? text : `${text}\n`;
-      screen.write(`${body}${personaHint(shown)}`);
-      return;
-    }
-    busy = true;
-    try {
-      turns += 1;
-      const inbound: Inbound = {
-        kind: "inbound",
-        user_id: DEV_USER,
-        id: `repl-${String(turns)}`,
-        text: line,
-        context: {
-          tz: clock.zone,
-          at: new Date(clock.now()).toISOString(),
-          surface: "browser",
-        },
-      };
-      await brain.handleInbound(inbound, emit);
-      if (head === "/auth") screen.write(AUTH_REPL_NOTE);
-    } finally {
-      busy = false;
-      arm(brain.nextAlarm());
-    }
-  };
-
-  const onSigint = (): void => {
-    closeDb();
-    process.exit(0);
-  };
-  process.on("SIGINT", onSigint);
-
+  let brain: ReturnType<typeof statusFromBody> = {};
   try {
-    const piped = process.stdin.isTTY !== true;
-    if (piped || args.once) {
-      if (!piped && args.once) {
-        const onceRl = createInterface({ input: process.stdin, output: process.stdout, prompt: "you> " });
-        rl = onceRl;
-        const line = await new Promise<string>((resolveLine) => {
-          onceRl.once("line", (value: string) => resolveLine(value));
-          onceRl.prompt();
-        });
-        rl = undefined;
-        onceRl.close();
-        if (line.trim() !== "") await enqueue(() => turn(line));
-      } else {
-        const text = readFileSync(0, "utf8");
-        for (const line of text.split(/\r?\n/u)) {
-          if (line.trim() === "") continue;
-          await enqueue(() => turn(line));
-        }
-      }
+    const outcome = await ensureAgent(base, args.slug);
+    if (!outcome.ok && outcome.auth) {
+      process.stderr.write(`${AUTH_HINT}\n`);
+    } else if (outcome.ok) {
+      brain = outcome.status;
+    }
+  } catch (err: unknown) {
+    if (spawned && child != null) {
+      child.kill("SIGTERM");
+    }
+    throw err;
+  }
+
+  process.stdout.write(`${formatBanner({
+    slug: args.slug,
+    model,
+    host,
+    chatUrl: url,
+    state: brain.state,
+    published: brain.published,
+  })}\n`);
+
+  if (!spawned) return;
+
+  const killChild = (): void => {
+    if (child != null && child.exitCode == null && child.signalCode == null) {
+      child.kill("SIGTERM");
+    }
+  };
+  process.on("SIGINT", killChild);
+  process.on("SIGTERM", killChild);
+
+  await new Promise<void>((resolveWait) => {
+    if (child == null) {
+      process.off("SIGINT", killChild);
+      process.off("SIGTERM", killChild);
+      resolveWait();
       return;
     }
-
-    const interactive = createInterface({ input: process.stdin, output: process.stdout, prompt: "you> " });
-    rl = interactive;
-    interactive.on("SIGINT", onSigint);
-    interactive.prompt();
-    for await (const line of interactive) {
-      if (line.trim() !== "") {
-        try {
-          await enqueue(() => turn(line));
-        } catch (err: unknown) {
-          screen.write(`error: ${publicError(err)}`);
-        }
-      }
-      interactive.prompt();
-    }
-  } finally {
-    process.off("SIGINT", onSigint);
-    closeDb();
-  }
-}
-
-function tokenOptions(env: Record<string, string>): { maxTokens?: number; reasoningEffort?: string; systemFold?: "auto" | "one" | "many" } {
-  const out: { maxTokens?: number; reasoningEffort?: string; systemFold?: "auto" | "one" | "many" } = {};
-  const maxRaw = (env.LLM_MAX_TOKENS ?? "").trim();
-  const maxTokens = maxRaw === "" ? undefined : Number(maxRaw);
-  if (maxTokens !== undefined && Number.isFinite(maxTokens) && maxTokens > 0) out.maxTokens = Math.floor(maxTokens);
-  const effort = (env.LLM_REASONING_EFFORT ?? "").trim();
-  if (effort !== "") out.reasoningEffort = effort;
-  const fold = (env.LLM_SYSTEM_FOLD ?? "").trim();
-  if (fold === "auto" || fold === "one" || fold === "many") out.systemFold = fold;
-  return out;
+    child.once("exit", (code) => {
+      process.off("SIGINT", killChild);
+      process.off("SIGTERM", killChild);
+      if (code != null && code !== 0) process.exitCode = code;
+      resolveWait();
+    });
+  });
 }
 
 if (invokedDirectly()) {
   main().catch((err: unknown) => {
-    process.stderr.write(`${publicError(err)}\n`);
+    loadDevVars(join(REPO_ROOT, ".dev.vars"));
+    process.stderr.write(`${publicError(err, collectSecrets(envRecord()))}\n`);
     process.exitCode = 1;
   });
 }

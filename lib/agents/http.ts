@@ -276,9 +276,9 @@ export async function deleteAgent(req: Request, env: AgentsHttpEnv, slugRaw: str
 }
 
 /**
- * `GET /api/agents/:slug/bearer` → `{ bearer }`. The room token a harness
- * dials with, for `npm run agent` to run one on the dev box. Admin, and only
- * where `GANTREE_DEV_USER` is honoured (set, and the request is loopback);
+ * `GET /api/agents/:slug/bearer` → `{ bearer }`. Room token for loopback
+ * tooling that dials the agent socket. Admin, and only where
+ * `GANTREE_DEV_USER` is honoured (set, and the request is loopback);
  * anywhere else the route is a 404, the same as a path that does not exist.
  */
 export async function getAgentBearer(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {

@@ -66,6 +66,19 @@ and the brain. Screenshots in this repo were taken against `npm run dev`.
 (`dist/server/wrangler.json`); use it when you want the production
 bundle, not to get Durable Objects.
 
+### Chat with a real agent locally
+
+With house `LLM_BASE_URL`, `LLM_API_KEY`, and `LLM_MODEL` in `.dev.vars`,
+run `npm run agent`. It starts Vite (Worker, Durable Objects, native brain)
+unless something healthy is already on port 3000, ensures a local agent
+(default slug `kit`), and restarts the Agent Durable Object so
+`nativeBrain` opens with those house keys. Chat at
+`http://127.0.0.1:3000/chat/kit` (or `--slug ada`). Set
+`GANTREE_DEV_USER` and list that identity in `GANTREE_ADMINS` so loopback
+API calls can create the agent without a browser session. The script
+also puts that user on the agent room, which is what opens the chat
+socket. The brain is the Agent Durable Object that deploy ships.
+
 House keys the brain reads from `.dev.vars` (and, in production, from
 Worker secrets): `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, and
 optionally `BRAVE_SEARCH_API_KEY`. An agent's own `config.env` wins
