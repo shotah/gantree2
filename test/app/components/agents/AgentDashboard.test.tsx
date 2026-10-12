@@ -118,9 +118,9 @@ describe("AgentDashboard", () => {
 
     const remove = buttonOf(screen.getByRole("button", { name: "Delete kit" }));
     expect(remove.disabled).toBe(true);
-    fireEvent.change(screen.getByLabelText("Type the slug to confirm"), { target: { value: "nope" } });
+    fireEvent.change(screen.getByLabelText("Type the agent ID to confirm"), { target: { value: "nope" } });
     expect(remove.disabled).toBe(true);
-    fireEvent.change(screen.getByLabelText("Type the slug to confirm"), { target: { value: "kit" } });
+    fireEvent.change(screen.getByLabelText("Type the agent ID to confirm"), { target: { value: "kit" } });
     expect(remove.disabled).toBe(false);
     fireEvent.click(remove);
     await vi.waitFor(() => expect(go).toHaveBeenCalledWith("/agents"));
@@ -161,7 +161,7 @@ describe("AgentDashboard", () => {
     });
     render(<AgentDashboard slug="kit" client={client} />);
     expect(await screen.findByRole("heading", { name: "Kit" })).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("Type the slug to confirm"), { target: { value: "kit" } });
+    fireEvent.change(screen.getByLabelText("Type the agent ID to confirm"), { target: { value: "kit" } });
     fireEvent.click(screen.getByRole("button", { name: "Delete kit" }));
     expect((await screen.findByRole("alert")).textContent).toContain("You do not have access to that.");
     expect(assign).not.toHaveBeenCalled();

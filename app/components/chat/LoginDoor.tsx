@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { chipClass } from "../shared/PageHeader";
-import { ThemeSelect } from "../shared/ThemeSelect";
 import { TreeMark } from "../shared/TreeMark";
 import { isIos, isStandalone, signInHint } from "@/app/lib/install";
 import { loginHref } from "@/app/lib/login";
@@ -57,9 +56,6 @@ export function LoginDoor() {
       className="relative flex h-full flex-col items-center justify-center gap-6 bg-canvas px-6 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
       data-shot="login"
     >
-      <div className="absolute right-4 top-[calc(env(safe-area-inset-top)+1rem)] z-20 w-36">
-        <ThemeSelect align="end" />
-      </div>
       <section className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-line bg-gradient-to-br from-accent-soft via-panel to-panel px-5 py-6 shadow-[0_1px_0_0_var(--line)_inset]">
         <span aria-hidden className="pointer-events-none absolute -right-8 -top-14 h-40 w-40 rounded-full bg-accent/20 blur-3xl" />
         <span aria-hidden className="pointer-events-none absolute -bottom-14 left-4 h-36 w-36 rounded-full bg-info/15 blur-3xl" />

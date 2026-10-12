@@ -109,7 +109,7 @@ describe("SettingsScreen", () => {
     render(<SettingsScreen client={clientFor("operator", ["kit"])} />);
     const entry = await screen.findByRole("region", { name: "Entry" });
     expect(within(entry).getByLabelText<HTMLInputElement>("Open chat on entry").checked).toBe(true);
-    expect(entry.textContent).toContain("the chat with kit");
+    expect(entry.textContent).toContain("kit's chat");
   });
 
   it("keeps appearance when the account cannot be read", async () => {

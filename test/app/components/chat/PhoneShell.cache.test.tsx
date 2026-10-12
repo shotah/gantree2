@@ -90,7 +90,7 @@ async function connectSpike() {
   stubAuth("spike");
   FakeSocket.instances = [];
   vi.stubGlobal("WebSocket", FakeSocket);
-  render(<PhoneShell />);
+  render(<PhoneShell slug="kit" />);
   expect(await screen.findByText("live")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "settings" }));
   fireEvent.change(screen.getByLabelText("Agent access secret"), { target: { value: "s" } });

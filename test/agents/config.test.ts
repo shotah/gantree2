@@ -48,7 +48,10 @@ describe("config", () => {
       { env: { "bad-key": "x" } },
       { env: { constructor: "x" } },
       { env: { A: 1 } },
-      { env: { A: "line\n" } },
+      { env: { A: "li\nne" } },
+      { env: { A: "" } },
+      { env: { A: "\n" } },
+      { env: { A: "  " } },
       { mcp: 1 },
       { persona: 1 },
     ];
@@ -61,6 +64,16 @@ describe("config", () => {
     }
     expect(applyConfigPatch(start, { env }, 1)).toEqual({ ok: false, error: "bad_config" });
     expect(applyConfigPatch(start, { mcp: "x".repeat(262_145) }, 1)).toEqual({ ok: false, error: "bad_config" });
+  });
+
+  it("stores a pasted secret with its trailing newline trimmed", () => {
+    const start = emptyConfig();
+    const next = applyConfigPatch(start, { env: { GOOGLE_OAUTH_CLIENT_SECRET: "sekrit\n" } }, 3);
+    expect(next).toEqual({
+      ok: true,
+      changed: true,
+      config: { env: { GOOGLE_OAUTH_CLIENT_SECRET: "sekrit" }, mcp: "", persona: "", updatedAt: 3 },
+    });
   });
 
   it("recreates only after a start and a later env change", () => {

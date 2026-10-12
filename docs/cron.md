@@ -90,7 +90,7 @@ day's crons and (ask-first) events. There is no quantity and no hour window.
 Sick, vacation, holiday, or a quiet day: reply `[silent]` and do not schedule
 nag crons. The session still runs so the model can look and decide.
 
-On boot, one `daily_planner` job is bound to the agent conversation (`gantry`).
+On boot, one `daily_planner` job is bound to the agent conversation (`agent`).
 Jobs do not store a chat or user id. Push delivers to the room.
 `/planner off` opts out.
 
@@ -207,13 +207,13 @@ when `user_id` is empty), plus Web Push if that socket is gone.
 The `log` frame (or the platform tail) carries the same id:
 
 ```text
-cron job firing     id=319 session_id=gantry
+cron job firing     id=319 session_id=agent
 cron silent skip    outcome=silent          # Handle ran; nothing written to the room
 cron job pushed     outcome=push frame_id=cron-319-…
 cron push failed    outcome=error           # last_error on the row
 ```
 
-The phone bubble `id` is that `frame_id`. Session id is `gantry`.
+The phone bubble `id` is that `frame_id`. Session id is `agent`.
 
 ---
 

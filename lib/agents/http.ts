@@ -487,6 +487,25 @@ export async function getAgentStatus(req: Request, env: AgentsHttpEnv, slugRaw: 
   return callAgent(env, slug, "https://agent/status", { headers: { "X-Chat-Op": "status" } });
 }
 
+export async function postAgentRestart(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
+  const who = authorize(req);
+  if (isResponse(who)) {
+    return who;
+  }
+  const slug = slugOr400(slugRaw);
+  if (slug instanceof Response) {
+    return slug;
+  }
+  const denied = requireRun(who, slug);
+  if (denied) {
+    return denied;
+  }
+  return callAgent(env, slug, "https://agent/restart", {
+    method: "POST",
+    headers: { "X-Chat-Op": "restart" },
+  });
+}
+
 export async function getAgentLog(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
   const who = authorize(req);
   if (isResponse(who)) {

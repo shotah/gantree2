@@ -44,7 +44,7 @@ describe("login page", () => {
     ]));
     expect(link.querySelector("svg")).toBeTruthy();
     expect(screen.getByText(/Not on the list\?/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "color theme" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "color theme" })).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
     const card = container.querySelector("section");
     expect(card?.className).toContain("rounded-2xl");

@@ -51,7 +51,7 @@ function EntryCard({ landing, onLanding }: { landing: LandingPref; onLanding: (n
       <p className="text-xs text-dim">
         {on
           ? landing.slug
-            ? `Visiting gantree opens the chat with ${landing.slug}. The chat's own settings can pick a different agent.`
+            ? `Opening the app goes straight to ${landing.slug}'s chat. The chat's own settings can pick a different agent.`
             : "Visiting gantree opens your chat, or the agent picker when you have more than one. The chat's own settings can pin one agent."
           : "Visiting gantree opens the console. Turn this on to land in chat instead."}
       </p>

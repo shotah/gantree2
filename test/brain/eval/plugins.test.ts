@@ -36,7 +36,7 @@ function pluginCtx(): PluginContext {
   };
 }
 
-const callCtx: CallContext = { userId: "eval", sessionId: "gantry" };
+const callCtx: CallContext = { userId: "eval", sessionId: "agent" };
 
 describe("eval plugins", () => {
   it("merges live defs with canned results and rejects a renamed tool", () => {

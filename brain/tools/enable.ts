@@ -9,6 +9,7 @@
 import { type Clock } from "@/brain/core/clock";
 import { type Sql, type SqlValue } from "@/brain/core/sql";
 import { errorResult, textResult, type JsonSchema, type ToolDef, type ToolResult } from "@/brain/core/tools";
+import { agentSession, roomSession } from "@/brain/session/types";
 import { errorMessage, toolErrorText } from "./errors";
 import { migrateTools } from "./migrate";
 
@@ -302,10 +303,11 @@ export function runEnableTool(
 }
 
 export class EnableStore {
-  constructor(sql: Sql, clock: Clock) {
+  constructor(sql: Sql, clock: Clock, sessionId = agentSession) {
     this.sql = sql;
     this.clock = clock;
     migrateTools(sql);
+    collapseSession(sql, roomSession(sessionId));
     // OpenDB rewrote `long` on every open, not only the first migration.
     sql.exec("UPDATE mcp_enable SET hold = ? WHERE hold = ?", HOLD_SHORT, LEGACY_HOLD);
   }
@@ -433,6 +435,23 @@ export class EnableStore {
 
   private readonly sql: Sql;
   private readonly clock: Clock;
+}
+
+/** One prefix survives (newest `last_used`). Then every row is labeled with the room session id. */
+function collapseSession(sql: Sql, sid: string): void {
+  sql.exec(
+    `DELETE FROM mcp_enable
+     WHERE rowid IN (
+       SELECT a.rowid FROM mcp_enable AS a
+       JOIN mcp_enable AS b
+         ON a.prefix = b.prefix
+        AND (
+          a.last_used < b.last_used
+          OR (a.last_used = b.last_used AND a.rowid > b.rowid)
+        )
+     )`,
+  );
+  sql.exec("UPDATE mcp_enable SET session_id = ? WHERE session_id != ?", sid, sid);
 }
 
 function enableMessage(outcome: EnableOutcome, hold: string): string {

@@ -13,6 +13,7 @@ export type CatchEnv = AgentBinding & UsersEnv & {
 };
 
 const PLUGIN_NAME = /^[a-z][a-z0-9-]{0,63}$/;
+const FAILURE_LINE = 240;
 
 function text(body: string, status = 200): Response {
   return new Response(body, {
@@ -27,7 +28,9 @@ function text(body: string, status = 200): Response {
  * `oauth-catch` JWE (`sealOAuthCatch`) holding `{ slug, plugin }`. The
  * signed-in user must be an admin or on that agent's room allow list.
  * The code is finished on that agent's DO (`X-Chat-Op: auth`), which posts
- * `<plugin> connected` into that user's room.
+ * `<plugin> connected` into that user's room. When that DO is not OK, the
+ * page is its JSON `message` (one line, at most 240 characters, status 502)
+ * or `could not connect`. The code is not written into the page.
  */
 export async function catchOAuth(
   request: Request,
@@ -106,7 +109,54 @@ export async function catchOAuth(
     return text("could not connect", 502);
   }
   if (!res.ok) {
-    return text("could not connect", 502);
+    return text(await failureText(res, code), 502);
   }
   return text(`Connected ${claims.plugin}. Go back to chat.`);
+}
+
+/** DO `{ message }` as one line, or `could not connect` when there is nothing safe to show. */
+async function failureText(res: Response, code: string): Promise<string> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(await res.text());
+  } catch {
+    return "could not connect";
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || !("message" in parsed)) {
+    return "could not connect";
+  }
+  const message = parsed.message;
+  if (typeof message !== "string") {
+    return "could not connect";
+  }
+  return safeLine(message, code) || "could not connect";
+}
+
+function safeLine(message: string, code: string): string {
+  let line = message;
+  if (code) {
+    line = line.split(code).join(" ");
+    const encoded = encodeURIComponent(code);
+    if (encoded !== code) {
+      line = line.split(encoded).join(" ");
+    }
+  }
+  let out = "";
+  let gap = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line.charCodeAt(i);
+    if (c <= 0x1f || c === 0x7f || c === 0x20) {
+      gap = out.length > 0;
+      continue;
+    }
+    if (gap) {
+      out += " ";
+      gap = false;
+    }
+    out += line.charAt(i);
+  }
+  if (out.length > FAILURE_LINE) {
+    out = out.slice(0, FAILURE_LINE).trim();
+  }
+  return out;
 }

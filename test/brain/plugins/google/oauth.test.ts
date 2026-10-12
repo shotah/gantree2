@@ -83,6 +83,40 @@ describe("google oauth", () => {
     expect(ctx.sql.one("SELECT id FROM google_oauth_pending WHERE id = 1")).toBeNull();
   });
 
+  it("does not call Google when no login is in progress", async () => {
+    const code = "auth-code";
+    const { fetch, hits } = recordingFetch(() => jsonResponse({ access_token: "nope" }));
+    const ctx = testCtx({ fetch });
+    const logged: string[] = [];
+    ctx.log.error = (message, fields) => {
+      logged.push(message);
+      expect(fields).toBeUndefined();
+    };
+    if (!google.authFinish) {
+      throw new Error("google authFinish missing");
+    }
+    await expect(google.authFinish(ctx, "https://app.example/callback", code)).rejects.toThrow(
+      "no login in progress; click Connect again",
+    );
+    expect(hits).toEqual([]);
+    expect(logged).toEqual(["no login in progress; click Connect again"]);
+    expect(logged.join("")).not.toContain(code);
+    expect(logged.join("")).not.toContain("csecret");
+  });
+
+  it("keeps a redirect mismatch off Google", async () => {
+    const { fetch, hits } = recordingFetch(() => jsonResponse({ access_token: "nope" }));
+    const ctx = testCtx({ fetch });
+    if (!google.authStart || !google.authFinish) {
+      throw new Error("google auth methods missing");
+    }
+    await google.authStart(ctx, "https://app.example/callback", "state-1");
+    await expect(google.authFinish(ctx, "https://other.example/callback", "auth-code")).rejects.toThrow(
+      "redirect_uri does not match the pending auth session",
+    );
+    expect(hits).toEqual([]);
+  });
+
   it("refreshes an expired token and writes it back", async () => {
     const expired = liveToken();
     expired.expiresAt = Date.parse("2026-07-28T15:00:00Z") - 1000;

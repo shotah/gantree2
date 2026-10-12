@@ -20,6 +20,7 @@ import {
   getMe,
   getRoomUsers,
   getStatus,
+  restartAgent,
   listAgents,
   listTools,
   logUrl,
@@ -43,11 +44,14 @@ function json(status: number, body: unknown): Response {
 }
 
 const status = {
-  harness: "connected",
+  state: "ready",
   since: 1,
+  version: "0.2.19",
+  lastTurnAt: 1,
+  lastTurn: 1,
+  plugins: [{ name: "maps", state: "ready" }],
   published: ["maps"],
   skipped: [],
-  lastTurn: 1,
   lastError: null,
   perf: { turns: 0, prompt: 0, completion: 0, errors: 0 },
 };
@@ -158,7 +162,7 @@ describe("agentsHttp", () => {
     await deleteAgent("kit", http);
     expect((await getConfig("kit", http)).recreate).toBe(false);
     expect((await patchConfig("kit", { persona: "hi" }, http)).persona).toBe("hi");
-    expect((await getStatus("kit", http)).harness).toBe("connected");
+    expect((await getStatus("kit", http)).state).toBe("ready");
     expect((await getLog("kit", undefined, http)).next).toBe(2);
     expect((await getLog("kit", 4, http)).lines).toHaveLength(1);
     expect(await getRoomUsers("kit", http)).toEqual([{ sub: "1" }]);
@@ -247,7 +251,7 @@ describe("agentsHttp", () => {
 
     await expect(listAgents(client(() => json(200, { agents: [{ slug: "kit" }] })))).rejects.toMatchObject({ code: "bad_body" });
     await expect(getAgent("kit", client(() => json(200, { agent: { slug: "kit", name: "Kit" } })))).rejects.toMatchObject({ code: "bad_body" });
-    await expect(getStatus("kit", client(() => json(200, { harness: "asleep", published: [], skipped: [] })))).rejects.toMatchObject({ code: "bad_body" });
+    await expect(getStatus("kit", client(() => json(200, { state: "asleep", plugins: [] })))).rejects.toMatchObject({ code: "bad_body" });
     await expect(getLog("kit", undefined, client(() => json(200, { lines: [], next: "0" })))).rejects.toMatchObject({ code: "bad_body" });
     await expect(getMe(client(() => json(200, { sub: "s", role: "guest", agents: [] })))).rejects.toMatchObject({ code: "bad_body" });
     await expect(getConfig("kit", client(() => json(200, { envKeys: [], mcp: "", persona: "", recreate: "yes" })))).rejects.toMatchObject({ code: "bad_body" });
@@ -266,5 +270,15 @@ describe("agentsHttp", () => {
     const emailMissing = await getMe(client(() => json(200, { sub: "s", role: "member", agents: [] })));
     expect(emailMissing.email).toBeNull();
     expect(emailMissing.role).toBe("member");
+  });
+
+  it("posts restart and uses the returned status", async () => {
+    const seen: string[] = [];
+    const http = client((url, init) => {
+      seen.push(`${init?.method ?? "GET"} ${url}`);
+      return json(200, status);
+    });
+    expect((await restartAgent("kit", http)).state).toBe("ready");
+    expect(seen).toEqual(["POST /api/agents/kit/restart"]);
   });
 });

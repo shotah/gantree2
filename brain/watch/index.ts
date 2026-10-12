@@ -33,7 +33,7 @@ export type { FetchParse, Item } from "./items";
 export { WAKE_PREFIX } from "./poll";
 export type { CallTool, OnNewItems, WatchWake } from "./poll";
 export { quietResumeAt } from "./quiet";
-export { AGENT_SESSION, WatchStore, watchMigrations } from "./store";
+export { WatchStore, watchMigrations } from "./store";
 export type { QuietHours, Watch, WatchDelivery } from "./store";
 export { TOOL_ADD, TOOL_CANCEL, TOOL_LIST, callWatchTool, isWatchTool, toolDefs, watchTools } from "./tools";
 export type { IntervalFloor } from "./tools";

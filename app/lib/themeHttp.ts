@@ -7,7 +7,7 @@ import { parseThemeWrite } from "@/lib/theme/store";
 export async function handleTheme(req: Request, env: RoomEnv, store: UserStore): Promise<Response> {
   const slug = slugFromRequest(req);
   if (!slug) {
-    return Response.json({ error: "bad slug" }, { status: 400 });
+    return Response.json({ error: "bad agent id" }, { status: 400 });
   }
   const admitted = await admitRoom(req, env, store, slug);
   if ("response" in admitted) {

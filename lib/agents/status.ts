@@ -1,8 +1,17 @@
 /**
  * Fold brain frames into the Agent DO. `status`, `perf`, and `log` stay
- * here — they are never fanned out to phones.
+ * here — they are never fanned out to phones. `harnessKind` is that filter.
+ * Liveness is the brain the DO opened, not a container socket.
  */
-import { AGENT_SLUG, type AgentStatus, type LogLine, type LogPage } from "@/lib/agents/types";
+import { PACKAGE_VERSION } from "@/app/lib/release";
+import {
+  AGENT_SLUG,
+  type AgentStatus,
+  type BrainState,
+  type LogLine,
+  type LogPage,
+  type PluginStatus,
+} from "@/lib/agents/types";
 import type { SampleInput } from "@/lib/door/settingsStore";
 
 export const STATUS_STORE_KEY = "agent.status";
@@ -24,28 +33,140 @@ export type HarnessFold = {
   samples: SampleInput[];
 };
 
+const BRAIN_STATES = new Set<BrainState>(["ready", "needs_keys", "error", "starting"]);
+const KEY_REASONS = new Set(["no_key", "no_oauth"]);
+
 export function emptyStatus(): AgentStatus {
   return {
-    harness: "disconnected",
+    state: "starting",
     since: null,
+    version: PACKAGE_VERSION,
+    lastTurnAt: null,
+    lastTurn: null,
+    plugins: [],
     published: [],
     skipped: [],
-    lastTurn: null,
     lastError: null,
     perf: { turns: 0, prompt: 0, completion: 0, errors: 0 },
   };
 }
 
-export function emptyLog(): LogRing {
-  return { seq: 0, lines: [] };
+function isBrainState(value: unknown): value is BrainState {
+  return typeof value === "string" && BRAIN_STATES.has(value as BrainState);
 }
 
-function isSkipped(value: unknown): value is { name: string; reason: string } {
-  if (!value || typeof value !== "object") {
-    return false;
+function perfOf(raw: unknown): AgentStatus["perf"] | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
   }
-  const row = value as { name?: unknown; reason?: unknown };
-  return typeof row.name === "string" && typeof row.reason === "string";
+  const counts = raw as Record<string, unknown>;
+  if (
+    typeof counts.turns !== "number"
+    || typeof counts.prompt !== "number"
+    || typeof counts.completion !== "number"
+    || typeof counts.errors !== "number"
+  ) {
+    return null;
+  }
+  return {
+    turns: counts.turns,
+    prompt: counts.prompt,
+    completion: counts.completion,
+    errors: counts.errors,
+  };
+}
+
+function pluginOf(value: unknown): PluginStatus | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const row = value as { name?: unknown; state?: unknown; reason?: unknown };
+  if (typeof row.name !== "string" || !row.name.trim()) {
+    return null;
+  }
+  if (row.state !== "ready" && row.state !== "skipped") {
+    return null;
+  }
+  const name = row.name.trim().slice(0, 128);
+  if (row.state === "ready") {
+    return { name, state: "ready" };
+  }
+  const reason = typeof row.reason === "string" ? row.reason.trim().slice(0, 64) : "";
+  return reason ? { name, state: "skipped", reason } : { name, state: "skipped" };
+}
+
+/** Ready names first, then skips, in the order the registry published them. */
+export function pluginsFromLists(
+  published: readonly string[],
+  skipped: readonly { name: string; reason: string }[],
+): PluginStatus[] {
+  const plugins: PluginStatus[] = [];
+  for (const name of published) {
+    if (!name || plugins.length >= LIST_MAX) {
+      continue;
+    }
+    plugins.push({ name, state: "ready" });
+  }
+  for (const row of skipped) {
+    if (!row.name || plugins.length >= LIST_MAX) {
+      continue;
+    }
+    plugins.push(row.reason
+      ? { name: row.name, state: "skipped", reason: row.reason }
+      : { name: row.name, state: "skipped" });
+  }
+  return plugins;
+}
+
+export function listsFromPlugins(plugins: readonly PluginStatus[]): {
+  published: string[];
+  skipped: { name: string; reason: string }[];
+} {
+  const published: string[] = [];
+  const skipped: { name: string; reason: string }[] = [];
+  for (const plugin of plugins) {
+    if (plugin.state === "ready") {
+      published.push(plugin.name);
+    } else {
+      skipped.push({ name: plugin.name, reason: plugin.reason ?? "" });
+    }
+  }
+  return { published, skipped };
+}
+
+/**
+ * Boot outcome. A disabled plugin is off on purpose. `no_key` and `no_oauth`
+ * still need a credential. Any other skip is a load failure.
+ */
+export function stateFromPlugins(plugins: readonly PluginStatus[]): Exclude<BrainState, "starting"> {
+  let needs = false;
+  for (const plugin of plugins) {
+    if (plugin.state !== "skipped") {
+      continue;
+    }
+    const reason = plugin.reason ?? "";
+    if (reason === "disabled") {
+      continue;
+    }
+    if (KEY_REASONS.has(reason)) {
+      needs = true;
+      continue;
+    }
+    return "error";
+  }
+  return needs ? "needs_keys" : "ready";
+}
+
+/** Screen word. A booted brain is running; an empty or failed row has not started. */
+export function statusLabel(state: BrainState | null | undefined): "running" | "not started" {
+  if (state === "ready" || state === "needs_keys") {
+    return "running";
+  }
+  return "not started";
+}
+
+export function emptyLog(): LogRing {
+  return { seq: 0, lines: [] };
 }
 
 function isLastError(value: unknown): value is { message: string; at: string } {
@@ -56,46 +177,84 @@ function isLastError(value: unknown): value is { message: string; at: string } {
   return typeof row.message === "string" && typeof row.at === "string";
 }
 
+function turnOf(row: Record<string, unknown>): number | null | "bad" {
+  const raw = row.lastTurnAt !== undefined ? row.lastTurnAt : row.lastTurn;
+  if (raw == null) {
+    return null;
+  }
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    return raw;
+  }
+  return "bad";
+}
+
 export function isAgentStatus(value: unknown): value is AgentStatus {
   if (!value || typeof value !== "object") {
     return false;
   }
   const row = value as Record<string, unknown>;
-  const perf = row.perf;
-  if (!perf || typeof perf !== "object") {
-    return false;
-  }
-  const counts = perf as Record<string, unknown>;
-  return (row.harness === "connected" || row.harness === "disconnected")
+  const turn = turnOf(row);
+  return isBrainState(row.state)
     && (row.since === null || typeof row.since === "number")
-    && Array.isArray(row.published)
-    && Array.isArray(row.skipped)
-    && (row.lastTurn === null || typeof row.lastTurn === "number")
-    // Stored rows from before the field have no key at all.
+    && Array.isArray(row.plugins)
+    && turn !== "bad"
     && (row.lastError == null || isLastError(row.lastError))
-    && typeof counts.turns === "number"
-    && typeof counts.prompt === "number"
-    && typeof counts.completion === "number"
-    && typeof counts.errors === "number";
+    && perfOf(row.perf) !== null;
 }
 
 export function parseStatus(raw: unknown): AgentStatus {
-  if (!isAgentStatus(raw)) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     return emptyStatus();
   }
+  const row = raw as Record<string, unknown>;
+  const perf = perfOf(row.perf);
+  if (!perf) {
+    return emptyStatus();
+  }
+  if (row.lastError != null && !isLastError(row.lastError)) {
+    return emptyStatus();
+  }
+  const legacy = row.harness === "connected" || row.harness === "disconnected";
+  if (!isBrainState(row.state) && !legacy && !Array.isArray(row.plugins) && !Array.isArray(row.published)) {
+    return emptyStatus();
+  }
+  const turn = turnOf(row);
+  if (turn === "bad") {
+    return emptyStatus();
+  }
+  let plugins: PluginStatus[];
+  if (Array.isArray(row.plugins)) {
+    plugins = [];
+    for (const item of row.plugins) {
+      if (plugins.length >= LIST_MAX) {
+        break;
+      }
+      const plugin = pluginOf(item);
+      if (plugin) {
+        plugins.push(plugin);
+      }
+    }
+  } else {
+    plugins = pluginsFromLists(asNameList(row.published) ?? [], asSkipped(row.skipped) ?? []);
+  }
+  let state: BrainState = "starting";
+  if (isBrainState(row.state)) {
+    state = row.state;
+  } else if (row.harness === "connected" || plugins.length > 0) {
+    state = stateFromPlugins(plugins);
+  }
+  const lists = listsFromPlugins(plugins);
   return {
-    harness: raw.harness,
-    since: raw.since,
-    published: raw.published.filter((item): item is string => typeof item === "string"),
-    skipped: raw.skipped.filter(isSkipped).map((row) => ({ name: row.name, reason: row.reason })),
-    lastTurn: raw.lastTurn,
-    lastError: isLastError(raw.lastError) ? { message: raw.lastError.message, at: raw.lastError.at } : null,
-    perf: {
-      turns: raw.perf.turns,
-      prompt: raw.perf.prompt,
-      completion: raw.perf.completion,
-      errors: raw.perf.errors,
-    },
+    state,
+    since: typeof row.since === "number" && Number.isFinite(row.since) ? row.since : null,
+    version: PACKAGE_VERSION,
+    lastTurnAt: turn,
+    lastTurn: turn,
+    plugins,
+    published: lists.published,
+    skipped: lists.skipped,
+    lastError: isLastError(row.lastError) ? { message: row.lastError.message, at: row.lastError.at } : null,
+    perf,
   };
 }
 
@@ -134,22 +293,14 @@ export function parseLog(raw: unknown): LogRing {
   return { seq, lines: kept.slice(-LOG_CAP) };
 }
 
-/** Reset rolling perf and the last error the first time the harness connects. A second socket does not. */
-export function noteConnected(status: AgentStatus, now: number): AgentStatus {
-  if (status.harness === "connected") {
-    return status;
-  }
+/** A brain open. Clears the last error and stamps `since`. Perf stays; the stored row outlives the isolate. */
+export function noteBrainOpen(status: AgentStatus, now: number): AgentStatus {
   return {
     ...status,
-    harness: "connected",
     since: now,
+    version: PACKAGE_VERSION,
     lastError: null,
-    perf: { turns: 0, prompt: 0, completion: 0, errors: 0 },
   };
-}
-
-export function noteDisconnected(status: AgentStatus, now: number): AgentStatus {
-  return { ...status, harness: "disconnected", since: now };
 }
 
 function textOf(message: string | ArrayBuffer): string {
@@ -226,10 +377,16 @@ function foldStatus(status: AgentStatus, raw: object): AgentStatus {
   if (!published && !skipped) {
     return status;
   }
+  const nextPublished = published ?? status.published;
+  const nextSkipped = skipped ?? status.skipped;
+  const plugins = pluginsFromLists(nextPublished, nextSkipped);
   return {
     ...status,
-    published: published ?? status.published,
-    skipped: skipped ?? status.skipped,
+    state: stateFromPlugins(plugins),
+    version: PACKAGE_VERSION,
+    plugins,
+    published: nextPublished,
+    skipped: nextSkipped,
   };
 }
 
@@ -256,6 +413,8 @@ function foldPerf(status: AgentStatus, log: LogRing, raw: object, now: number, s
   const outcome = (raw as { outcome?: unknown }).outcome;
   const next: AgentStatus = {
     ...status,
+    version: PACKAGE_VERSION,
+    lastTurnAt: now,
     lastTurn: now,
     perf: {
       turns: addCount(status.perf.turns, 1),

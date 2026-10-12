@@ -1,6 +1,7 @@
 import type { Clock } from "@/brain/core/clock";
 import { migrate, type Migration, type Sql, type SqlRow, type SqlValue } from "@/brain/core/sql";
-import { AgentSession, KindDailyPlanner, KindExamples, KindExamplesPing, KindFollowUp } from "./constants";
+import { roomSession } from "@/brain/session/types";
+import { KindDailyPlanner, KindExamples, KindExamplesPing, KindFollowUp } from "./constants";
 import { FollowUpPrompt } from "./prompts";
 import { advanceNext, formatPlannerAt, nextPlannerAt, parsePlannerAt } from "./schedule";
 import {
@@ -64,11 +65,15 @@ export class CronError extends Error {
 }
 
 export class Store {
+  private readonly sessionId: string;
+
   constructor(
     readonly sql: Sql,
     readonly clock: Clock,
     readonly maxJobs: number,
+    sessionId = "agent",
   ) {
+    this.sessionId = roomSession(sessionId);
     migrate(sql, migrations);
     this.collapseAgentScope();
   }
@@ -534,9 +539,9 @@ export class Store {
     this.scheduleExamplesPings(prompt, delivery, zone, times);
   }
 
-  /** Rewrites leftover per-mouth rows onto the one agent conversation. Runs on every open. */
+  /** Rewrites leftover per-mouth rows onto this store's session id. Runs on every open. */
   private collapseAgentScope(): void {
-    const sid = AgentSession;
+    const sid = this.sessionId;
     const now = formatCronTime(this.clock.now());
     this.sql.exec(
       `UPDATE cron_job SET session_id = ?, user_id = '', chat_id = '', thread_id = 0, updated_at = ?
@@ -564,8 +569,8 @@ export class Store {
   }
 }
 
-export function openStore(sql: Sql, clock: Clock, maxJobs = 50): Store {
-  return new Store(sql, clock, maxJobs < 1 ? 50 : maxJobs);
+export function openStore(sql: Sql, clock: Clock, maxJobs = 50, sessionId = "agent"): Store {
+  return new Store(sql, clock, maxJobs < 1 ? 50 : maxJobs, sessionId);
 }
 
 function jobFromRow(row: SqlRow): Job {

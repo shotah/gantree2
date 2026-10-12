@@ -36,10 +36,10 @@ import { clipChars } from "./judgment";
 import { SELF_DISTILL_MIN_MESSAGES, SELF_DISTILL_PROMPT } from "./notes";
 
 const AIMS_USAGE = "usage: /aims [area | rubric | block <area> <from> <to>]";
-const TODO_USAGE = "usage: /todo [done <id|slug>] [prio <id|slug> [!!|!]]";
+const TODO_USAGE = "usage: /todo [done <id|name>] [prio <id|name> [!!|!]]";
 const TODO_LONG = 10;
 const PLANNER_USAGE = "usage: /planner (on | off | 07:10)";
-const AUTH_GUIDE = "https://github.com/shotah/ai-gantry/blob/main/docs/auth.md";
+const AUTH_GUIDE = "https://github.com/shotah/gantree2/blob/main/docs/mcp.md#keys";
 
 export type SlashEnv = {
   sessions: SessionStore;

@@ -160,7 +160,7 @@ export function AgentDashboard({
                 Looking only. Changes belong to an admin or this agent&apos;s operator.
               </p>
             )}
-        <StatusFold status={agent.status} />
+        <StatusFold slug={agent.slug} status={agent.status} client={client} />
         {spend}
         <PersonaFold
           slug={agent.slug}
@@ -207,7 +207,7 @@ export function AgentDashboard({
                 <p className="mt-1 text-xs text-dim">Type {agent.slug} to confirm.</p>
                 <div className="mt-3 flex flex-wrap items-end gap-2">
                   <div className="flex flex-col gap-1">
-                    <label htmlFor="confirm-slug" className={labelClass}>Type the slug to confirm</label>
+                    <label htmlFor="confirm-slug" className={labelClass}>Type the agent ID to confirm</label>
                     <input
                       id="confirm-slug"
                       value={confirm}

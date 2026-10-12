@@ -30,9 +30,10 @@ import { aimTools } from "@/brain/aims/tools";
 import { selfNoteTool } from "@/brain/selfnote/tools";
 import { graduateVoice } from "@/brain/selfnote/graduate";
 import { SelfNoteStore } from "@/brain/selfnote/store";
+import { adoptLegacySession } from "@/brain/session/adopt";
 import { LlmSummarizer } from "@/brain/session/summary";
 import { SessionStore } from "@/brain/session/store";
-import { agentSession } from "@/brain/session/types";
+import { roomSession } from "@/brain/session/types";
 import { EnableStore } from "@/brain/tools/enable";
 import { Registry } from "@/brain/tools/registry";
 import { monthlyReadLimit } from "@/brain/plugins/twitter/budget";
@@ -55,6 +56,8 @@ import { commandFields, finishAuth, runSlash, startAuth, type SlashEnv } from ".
 const REPLY_MEMORY = 200;
 
 export function createBrain(deps: BrainDeps): Brain {
+  const roomId = roomSession(deps.slug);
+  adoptLegacySession(deps.sql, roomId);
   const env = deps.env;
   const consolidateMin = Math.max(0, envInt(env, "MEMORY_CONSOLIDATE_MINUTES", 30));
   const maxIters = Math.max(1, envInt(env, "TOOL_MAX_ITERATIONS", MAX_TOOL_ITERS_DEFAULT));
@@ -74,18 +77,18 @@ export function createBrain(deps: BrainDeps): Brain {
   };
   const log = framingLogger(deps.log, fan, deps.clock);
 
-  const sessions = new SessionStore(deps.sql, deps.clock, log);
+  const sessions = new SessionStore(deps.sql, deps.clock, log, {}, roomId);
   const memory = new MemoryStore(deps.sql, deps.clock, log);
-  const here = new HereStore(deps.sql, deps.clock, log);
+  const here = new HereStore(deps.sql, deps.clock, log, roomId);
   let reloadPersona = (): void => {};
   const selfNote = new SelfNoteStore(deps.sql, deps.clock, log, {
     onChange: () => {
       reloadPersona();
     },
   });
-  const enable = new EnableStore(deps.sql, deps.clock);
-  const watch = new WatchStore(deps.sql, deps.clock, watchMax, log);
-  const cronStore = openStore(deps.sql, deps.clock);
+  const enable = new EnableStore(deps.sql, deps.clock, roomId);
+  const watch = new WatchStore(deps.sql, deps.clock, watchMax, log, roomId);
+  const cronStore = openStore(deps.sql, deps.clock, 50, roomId);
 
   const loc = { zone: deps.clock.zone || "America/Los_Angeles" };
   watch.setQuiet({
@@ -127,7 +130,7 @@ export function createBrain(deps: BrainDeps): Brain {
     zone: loc.zone,
   });
 
-  const delivery: Delivery = { sessionId: agentSession };
+  const delivery: Delivery = { sessionId: roomId };
   const aimMemory: AimMemory = {
     listAims: () => memory.listBySubjectPrefix(KIND_INSIGHT, SUBJECT_AIM_PREFIX, 0).map((e) => ({
       subject: e.subject,
@@ -246,8 +249,8 @@ export function createBrain(deps: BrainDeps): Brain {
   };
 
   try {
-    planner.ensureFor({ sessionId: agentSession });
-    examples.ensureFor({ sessionId: agentSession });
+    planner.ensureFor({ sessionId: roomId });
+    examples.ensureFor({ sessionId: roomId });
   } catch (err) {
     log.warn("planner ensure failed", { err: err instanceof Error ? err.message : String(err) });
   }
@@ -324,7 +327,7 @@ export function createBrain(deps: BrainDeps): Brain {
   function notePerf(emit: Emit | null, source: string, userId: string, stats: TurnStats): void {
     perf.append(deps.clock.now(), source, stats);
     if (!emit) return;
-    emitPerf(emit, perfInput(agentSession, source, userId, modelName, stats));
+    emitPerf(emit, perfInput(roomId, source, userId, modelName, stats));
   }
 
   function emitPushes(msg: PushMessage): void {
@@ -430,18 +433,18 @@ export function createBrain(deps: BrainDeps): Brain {
     const source = turnSource(text);
     if (source === SOURCE_USER || source === SOURCE_REACTION) {
       try {
-        await wait.onUserTurn(agentSession);
+        await wait.onUserTurn(roomId);
       } catch (err) {
         log.warn("wait clear failed", { err: err instanceof Error ? err.message : String(err) });
       }
     }
-    if (geo) here.remember(agentSession, geo, deps.clock.now());
-    delivery.sessionId = agentSession;
+    if (geo) here.remember(roomId, geo, deps.clock.now());
+    delivery.sessionId = roomId;
     delivery.userId = userId;
     const ac = new AbortController();
-    inflight.set(agentSession, ac);
+    inflight.set(roomId, ac);
     const turn: TurnIn = {
-      sessionId: agentSession,
+      sessionId: roomId,
       userId,
       text,
       images,
@@ -485,12 +488,12 @@ export function createBrain(deps: BrainDeps): Brain {
       publishBoards(emit, false);
       notePerf(emit, source, userId, done.stats);
     } finally {
-      if (inflight.get(agentSession) === ac) inflight.delete(agentSession);
+      if (inflight.get(roomId) === ac) inflight.delete(roomId);
     }
   }
 
   const onCron: JobHandler = async (turn: JobTurn) => {
-    delivery.sessionId = turn.sessionId.trim() || agentSession;
+    delivery.sessionId = turn.sessionId.trim() || roomId;
     delivery.userId = "";
     const ac = new AbortController();
     const sessionId = delivery.sessionId;
@@ -518,7 +521,7 @@ export function createBrain(deps: BrainDeps): Brain {
   };
 
   async function onWatch(text: string, sessionId: string, userId: string): Promise<{ text: string; photos: string[]; stats: TurnStats; source: string }> {
-    delivery.sessionId = sessionId.trim() || agentSession;
+    delivery.sessionId = sessionId.trim() || roomId;
     delivery.userId = userId;
     const ac = new AbortController();
     const source = turnSource(text);
@@ -559,9 +562,9 @@ export function createBrain(deps: BrainDeps): Brain {
         await runner.fireDue(now, onCron);
         await watch.pollDue(now, (name, args) => registry.callRaw(name, args, {
           userId: "",
-          sessionId: agentSession,
+          sessionId: roomId,
         }), async (wake) => {
-          const sessionId = wake.sessionId.trim() || agentSession;
+          const sessionId = wake.sessionId.trim() || roomId;
           const userId = wake.userId.trim();
           const pushed = await onWatch(wake.text, sessionId, userId);
           if (pushed.text.trim() !== "" || pushed.photos.length > 0) {
@@ -608,7 +611,7 @@ export function createBrain(deps: BrainDeps): Brain {
     if (frame.kind === "ack") return;
     const geo = geoOf(frame);
     if (frame.kind === "pin") {
-      if (geo) here.remember(agentSession, geo, deps.clock.now());
+      if (geo) here.remember(roomId, geo, deps.clock.now());
       return;
     }
     if (frame.kind === "react") {
@@ -616,7 +619,7 @@ export function createBrain(deps: BrainDeps): Brain {
       if (emoji === "") return;
       const target = lookupReply((frame.id ?? "").trim());
       const text = formatReaction(emoji.split(/\s+/u).filter((part) => part !== ""), target);
-      await enqueue(agentSession, async () => {
+      await enqueue(roomId, async () => {
         if (await triage(text, userId, emit)) return;
         await interactive(frame, emit, text, [], null);
       });
@@ -625,14 +628,14 @@ export function createBrain(deps: BrainDeps): Brain {
     const images = imageUrls(frame);
     const stripped = stripHarnessContext(frame.text ?? "");
     if (stripped === "" && images.length === 0) {
-      if (geo) here.remember(agentSession, geo, deps.clock.now());
+      if (geo) here.remember(roomId, geo, deps.clock.now());
       return;
     }
     const text = stripped === "" ? "[photo]" : stripped;
     const fields = commandFields(text);
     const cmd = fields[0] ?? "";
     if ((cmd === "/cancel" || cmd === "/stop") && fields.length === 1) {
-      const ac = inflight.get(agentSession);
+      const ac = inflight.get(roomId);
       const line = ac
         ? "cancelled — stopped the in-flight turn (tools that already finished are not undone)"
         : "nothing in progress to cancel";
@@ -640,8 +643,8 @@ export function createBrain(deps: BrainDeps): Brain {
       emitReply(emit, "reply", userId, line, [], nextId());
       return;
     }
-    await enqueue(agentSession, async () => {
-      const slash = await runSlash(slashEnv, agentSession, text);
+    await enqueue(roomId, async () => {
+      const slash = await runSlash(slashEnv, roomId, text);
       if (slash != null) {
         emitReply(emit, "reply", userId, slash, [], nextId());
         if (cmd === "/aims" || cmd === "/todo") publishBoards(emit, true);
@@ -655,9 +658,9 @@ export function createBrain(deps: BrainDeps): Brain {
   async function triage(text: string, userId: string, emit: Emit): Promise<boolean> {
     const parsed = parseReaction(text);
     if (!parsed || !allPositive(parsed.emojis)) return false;
-    if (sessions.talkState(agentSession).waitingForReply) return false;
+    if (sessions.talkState(roomId).waitingForReply) return false;
     await sessions.append(
-      agentSession,
+      roomId,
       { role: "user", content: text },
       { role: "assistant", content: "[silent]" },
     );

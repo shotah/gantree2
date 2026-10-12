@@ -18,15 +18,15 @@ Setup by place: [install.md](install.md). Open walks: [todo.md](todo.md).
 | **Operators** | to *touch* an agent — config, tools, recreate, users | a Google account on the list with role `admin` or `operator` |
 | **Members** | the agent to *answer* | a Google account on the list **and** on that agent's room list |
 
-Bob can operate Kit and never message her. Ada can message Kit from
-her phone and never see settings. Both sign in at the same `/login`.
+Bob can operate Ada and never message her. Sam can message Ada from
+a phone and never see settings. Both sign in at the same `/login`.
 There is no second door and no passphrase.
 
 ![Sign-in page with Continue with Google](../assets/docs/login.png)
 
 ![Users page with an admin row and a member row](../assets/docs/users.png)
 
-![Phone screen listing Ada and Kit](../assets/docs/chat.png)
+![Phone screen listing Ada and Sam](../assets/docs/chat.png)
 
 ```text
             Google sign-in  →  gantree_session {sub, email}
@@ -39,9 +39,9 @@ There is no second door and no passphrase.
          └───────────────────────────┼────────────────────────────┘
                                      │  role
          /users /settings  admin ────┤
-         /agents/<slug>    admin, or operator with <slug> in agents[]
-         /chat/<slug>      any role  ──┐
-                                       └─ and on Agent:<slug> room list
+         /agents/<id>      admin, or operator with <id> in agents[]
+         /chat/<id>        any role  ──┐
+                                       └─ and on that agent's room list
                                           (wire name PENDANT_ALLOWED_USERS)
 ```
 
@@ -100,7 +100,7 @@ frames are always `sub`.
 | Role | From | May |
 | --- | --- | --- |
 | `admin` | `GANTREE_ADMINS` (locked) or a Settings row | everything: `/users`, `/settings`, every agent, every chat the room list allows |
-| `operator` | Settings row with `agents[]` | `/agents/<slug>` for listed slugs; chat where the room list allows |
+| `operator` | Settings row with `agents[]` | `/agents/<agent id>` for listed ids; chat where the room list allows |
 | `member` | `GANTREE_ALLOW` (locked) or a Settings row | chat where the room list allows; `/api/auth/me` |
 
 Resolution is per request: collect every row that matches, take the
@@ -153,13 +153,13 @@ plain-text 401. The handler still requires the session cookie.
 
 ```json
 { "sub": "118212345678901234567", "email": "ada@example.com",
-  "role": "member", "agents": ["kit"] }
+  "role": "member", "agents": ["ada"] }
 ```
 
-`agents` for a member is the slugs whose room list has them (KV
-directory `sub:<sub>` / `email:<email>` → slugs, written by each Agent
+`agents` for a member is the agent ids whose room list has them (KV
+directory `sub:<sub>` / `email:<email>` → agent ids, written by each Agent
 DO when it stores an `allow` frame). For an operator it is their
-assignment. For an admin it is every slug. gantree-android and
+assignment. For an admin it is every agent id. gantree-android and
 gantree-ios read `agents` and fall back to `cranes`; the alias is
 still written until the Phase 4 wire-name drop. The only identity a stranger sees
 is their own.
@@ -168,7 +168,7 @@ is their own.
 
 gantree-android (`com.gantree.cab`) and gantree-ios (`com.gantree.helm`)
 call config → nonce → Google with that nonce → token → `/api/auth/me`
-→ `/ws/<slug>?role=phone` with the bearer. On 403 they store nothing
+→ `/ws/<agent id>?role=phone` with the bearer. On 403 they store nothing
 and show the sub; on socket close 4401 they drop the JWE, and on 4403
 they keep it. These three routes are public and do not read or set a
 cookie. Code: `lib/door/native.ts`.
@@ -212,17 +212,17 @@ opens wins; a cookie that does not falls through to the bearer.
 `/api/chat/{avatar,backdrop,theme}` is the room token, not a
 session.
 
-### Room admission (`/ws/<slug>`)
+### Room admission (`/ws/<agent id>`)
 
 | Check | Where | On miss |
 | --- | --- | --- |
 | phone: session opens (cookie, else the same JWE on `Authorization`) and the person is on the app list | handshake, every frame | `4401` |
 | phone: `sub` ∈ room list **or** (`email_verified` ∧ `email` ∈ room list) | handshake, every frame | `4403` |
 
-Room list = last `allow` frame stored on that slug's Agent DO. New
+Room list = last `allow` frame stored on that agent's Durable Object. New
 `allow` → re-check every phone socket; close the ones no longer on it.
-Admins are **not** exempt from the room list: operating Kit and
-talking to Kit are different grants.
+Admins are **not** exempt from the room list: operating Ada and
+talking to Ada are different grants.
 
 ### Frames (brain ↔ room)
 
@@ -246,8 +246,8 @@ Room → brain, `email` beside `user_id`. The phone kind is `inbound`:
 
 The DO admits the socket when `user_id` **or** a verified `email` is on
 the room list, then stamps `user_id` before the brain sees the frame.
-The brain keeps one session id, `gantry`. `pendant:<slug>:<sub>` is the
-alias until Phase 4.
+The brain keeps one session id, `agent`, a row label in that agent's
+database. `pendant:<agent id>:<sub>` is the alias until Phase 4.
 
 ---
 
@@ -284,28 +284,28 @@ dev user still has to be on a list.
 
 ### Add an operator
 
-`/users` → add `bob@example.com`, role `operator`, agents `kit`. Bob
-signs in; `/agents/kit` opens; `/agents/ada` is `401`; `/users` is
+`/users` → add `bob@example.com`, role `operator`, agents `ada`. Bob
+signs in; `/agents/ada` opens; `/agents/sam` is `401`; `/users` is
 `401`. No redeploy.
 
-### Add a human to Kit
+### Add a human to Ada
 
-1. `/agents/kit` → Users fold → tick Bob, or type an email for someone
+1. `/agents/ada` → Users fold → tick Bob, or type an email for someone
    who is not on the app list yet (settings adds them as `member` on
    the same save). Settings writes the room list. An env change drops
    the memoised brain and opens a new one.
 2. The brain publishes `allow`. The DO stores it and indexes the email
    in KV.
-3. Ada opens `/chat/kit` on her phone. `/api/auth/me` says
-   `agents: ["kit"]`. First frame carries `user_id` + `email`; Kit
+3. Sam opens `/chat/ada` on a phone. `/api/auth/me` says
+   `agents: ["ada"]`. First frame carries `user_id` + `email`; Ada
    matches the email and answers.
-4. Kit's `perf` frame carries `user_id`. Spend shows a raw `1182…` next
-   to Ada's email and offers to store it. Accept; the row becomes
+4. Ada's `perf` frame carries `user_id`. Spend shows a raw `1182…` next
+   to Sam's email and offers to store it. Accept; the row becomes
    `sub:email`.
 
 ### Yank
 
-1. Untick on Kit's Users fold. The shorter `allow` closes Ada's socket
+1. Untick on Ada's Users fold. The shorter `allow` closes Sam's socket
    `4403`.
 2. Remove from `/users` (or the env). Her next request anywhere is
    `401`; her cookie is worthless even though it has not expired.
@@ -341,7 +341,7 @@ list as the agent's own policy.
 
 | Change | Risk | Why it is acceptable |
 | --- | --- | --- |
-| The brain publishes `allow` | The room list is that agent's policy | Kit's list cannot touch Ada's slug. |
+| The brain publishes `allow` | The room list is that agent's policy | Ada's list cannot touch Sam's agent id. |
 | Session for any verified Google account | Strangers hold a cookie | It opens nothing: the gate re-checks the list on every request. Same `unauthorized` for every miss; the only id shown is your own. |
 | Email as alias | Someone else's Google account with that email? | Google verifies `email` on its own accounts. Exact, lowercased, `email_verified` required. Workspace `hd` is a later knob. |
 | Room list remembered | Yank is the next `allow` | Removing the person from `/users` is instant for everything else. |
@@ -361,7 +361,7 @@ MCP OAuth token doubling as a login, no role in the cookie.
 | Role in the cookie | Removal must be instant. The list is read every request. |
 | Cloudflare Access in front of the Worker | 403s WebSocket upgrades; a second identity system. |
 | Pairing codes in chat | Lists, not handshakes. |
-| Admins bypass the room list | Operating and talking are different grants. Kit's humans are Kit's list. |
+| Admins bypass the room list | Operating and talking are different grants. Ada's humans are Ada's list. |
 
 ## Fit gates
 
@@ -376,6 +376,6 @@ Fail one and the task is later, or wrong.
 5. **Fail closed.** No admins → `503`. Empty room list → nobody talks.
 6. **No enumeration.** Same miss for everyone; you only ever see your
    own id.
-7. **Isolation.** Adding a person to Kit does not touch Ada.
+7. **Isolation.** Adding a person to Ada does not touch Sam.
 8. **`allow` is a frame on the room.** Settings writes the list; the
    brain publishes it.

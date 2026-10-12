@@ -1,7 +1,7 @@
 /**
  * One turn's prompt: persona, SELF (already inside the persona), session
  * summary, history, memory hydration, then the human's words and the
- * `[harness]` clock. The stable prefix stays in front so a cache can keep it.
+ * `[agent]` clock. The stable prefix stays in front so a cache can keep it.
  */
 import type { Message, ProviderToolDef } from "@/brain/core/provider";
 import { footer } from "@/brain/session/store";

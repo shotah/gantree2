@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { type ToolDef } from "@/brain/core/tools";
+import { agentSession } from "@/brain/session/types";
 import {
   alwaysOn,
   BRIEF_IDLE_MS,
@@ -219,9 +220,37 @@ describe("EnableStore", () => {
       clock.now(),
     );
     const again = new EnableStore(sql, clock);
-    expect(again.list("s")[0]?.hold).toBe(HOLD_SHORT);
-    expect(sql.one<{ hold: string }>("SELECT hold FROM mcp_enable WHERE prefix = ?", "flights")?.hold).toBe("short");
-    expect(store.list("s")[0]?.hold).toBe(HOLD_SHORT);
+    expect(again.list("s")).toEqual([]);
+    expect(again.list(agentSession)[0]?.hold).toBe(HOLD_SHORT);
+    expect(sql.one<{ hold: string; session_id: string }>("SELECT hold, session_id FROM mcp_enable WHERE prefix = ?", "flights")).toEqual({
+      hold: "short",
+      session_id: agentSession,
+    });
+    expect(store.list(agentSession)[0]?.hold).toBe(HOLD_SHORT);
+  });
+
+  it("collapses leftover session ids onto the agent session", () => {
+    const sql = memSql();
+    const clock = testClock();
+    new EnableStore(sql, clock);
+    sql.exec(
+      "INSERT INTO mcp_enable (session_id, prefix, hold, source, last_used) VALUES ('gantry', 'flights', 'short', 'agent', ?)",
+      clock.now() - 1000,
+    );
+    sql.exec(
+      "INSERT INTO mcp_enable (session_id, prefix, hold, source, last_used) VALUES ('telegram:1', 'flights', 'brief', 'human', ?)",
+      clock.now(),
+    );
+    sql.exec(
+      "INSERT INTO mcp_enable (session_id, prefix, hold, source, last_used) VALUES ('telegram:1', 'maps', 'short', 'agent', ?)",
+      clock.now(),
+    );
+    const again = new EnableStore(sql, clock);
+    const rows = again.list(agentSession);
+    expect(rows.map((row) => row.prefix).sort()).toEqual(["flights", "maps"]);
+    expect(rows.find((row) => row.prefix === "flights")?.hold).toBe(HOLD_BRIEF);
+    expect(rows.find((row) => row.prefix === "flights")?.source).toBe(SOURCE_HUMAN);
+    expect(sql.exec("SELECT session_id FROM mcp_enable WHERE session_id != ?", agentSession)).toEqual([]);
   });
 
   it("rejects more than 8 prefixes and an empty session", () => {

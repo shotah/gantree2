@@ -35,7 +35,7 @@ export function VoiceToggle({
       type="button"
       aria-label={on ? "Voice on" : "Voice off"}
       aria-pressed={on}
-      title={speaking ? "Kit is speaking" : on ? "Hold to talk is on · tap to type" : "Tap to talk instead of type"}
+      title={speaking ? "The agent is speaking" : on ? "Hold to talk is on · tap to type" : "Tap to talk instead of type"}
       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg hover:bg-track ${
         on ? "bg-accent-soft text-mark" : "text-muted hover:text-fg"
       } ${speaking ? "animate-pulse text-ok" : ""}`}

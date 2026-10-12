@@ -5,11 +5,12 @@ import {
   emptyStatus,
   harnessKind,
   LOG_CAP,
-  noteConnected,
-  noteDisconnected,
+  noteBrainOpen,
   pageLog,
   parseLog,
   parseStatus,
+  stateFromPlugins,
+  statusLabel,
 } from "@/lib/agents/status";
 
 const now = 1_700_000_000_000;
@@ -25,14 +26,22 @@ describe("harness frames", () => {
   });
 
   it("folds status, perf, and log without touching phones' kinds", () => {
-    const status = noteConnected(emptyStatus(), now);
+    const status = noteBrainOpen(emptyStatus(), now);
     let state = { status, log: emptyLog() };
     state = pick(applyHarnessFrame(state, { kind: "status", published: [" maps ", 1, ""], skipped: [{ name: "strava", reason: "no_key" }, { name: "" }] }, now, "kit"));
+    expect(state.status.state).toBe("needs_keys");
+    expect(state.status.plugins).toEqual([
+      { name: "maps", state: "ready" },
+      { name: "strava", state: "skipped", reason: "no_key" },
+    ]);
     expect(state.status.published).toEqual(["maps"]);
     expect(state.status.skipped).toEqual([{ name: "strava", reason: "no_key" }]);
+    expect(applyHarnessFrame(state, { kind: "status", published: ["math"], skipped: [{ name: "maps", reason: "error" }] }, now, "kit").status.state).toBe("error");
+    expect(applyHarnessFrame(state, { kind: "status", published: ["math"], skipped: [{ name: "garmin", reason: "disabled" }] }, now, "kit").status.state).toBe("ready");
 
     const perf = applyHarnessFrame(state, { kind: "perf", outcome: "error", tokens: { prompt: 10, completion: 2 } }, now + 1, "kit");
     expect(perf.status.perf).toEqual({ turns: 1, prompt: 10, completion: 2, errors: 1 });
+    expect(perf.status.lastTurnAt).toBe(now + 1);
     expect(perf.status.lastTurn).toBe(now + 1);
     expect(perf.samples.map((row) => row.kind)).toEqual(["tokens_prompt", "tokens_completion", "turn"]);
     expect(applyHarnessFrame(state, { kind: "perf", tokens: { prompt: -1, completion: Number.NaN } }, now, null).samples).toEqual([]);
@@ -57,8 +66,8 @@ describe("harness frames", () => {
     expect(applyHarnessFrame(state, { kind: "reply" }, now, "kit").status).toBe(state.status);
   });
 
-  it("keeps the last error-level log line on status until the next connect", () => {
-    const state = { status: noteConnected(emptyStatus(), now), log: emptyLog() };
+  it("keeps the last error-level log line on status until the next brain open", () => {
+    const state = { status: noteBrainOpen(emptyStatus(), now), log: emptyLog() };
     const info = applyHarnessFrame(state, { kind: "log", level: "INFO", message: "gantry starting" }, now, "kit");
     expect(info.status.lastError).toBeNull();
     const died = applyHarnessFrame(
@@ -71,12 +80,10 @@ describe("harness frames", () => {
     const later = applyHarnessFrame(pick(died), { kind: "log", level: "warn", message: "retrying" }, now, "kit");
     expect(later.status.lastError).toEqual(died.status.lastError);
     expect(applyHarnessFrame(pick(died), { kind: "log", level: "error", message: "" }, now, "kit").status.lastError).toEqual(died.status.lastError);
-    const down = noteDisconnected(later.status, now + 1);
-    expect(down.lastError).toEqual(died.status.lastError);
-    expect(noteConnected(down, now + 2).lastError).toBeNull();
-    expect(parseStatus({ ...down, lastError: { message: 1 } })).toEqual(emptyStatus());
-    expect(parseStatus(down).lastError).toEqual(died.status.lastError);
-    const { lastError: _dropped, ...legacy } = down;
+    expect(noteBrainOpen(later.status, now + 2).lastError).toBeNull();
+    expect(parseStatus({ ...later.status, lastError: { message: 1 } })).toEqual(emptyStatus());
+    expect(parseStatus(later.status).lastError).toEqual(died.status.lastError);
+    const { lastError: _dropped, ...legacy } = later.status;
     expect(parseStatus(legacy).lastError).toBeNull();
   });
 
@@ -95,15 +102,37 @@ describe("harness frames", () => {
     expect(pageLog(log, 9_999).next).toBe(9_999);
   });
 
-  it("resets perf on the first connect and parses stored junk", () => {
-    const connected = noteConnected(emptyStatus(), now);
-    expect(noteConnected(connected, now + 5)).toBe(connected);
-    expect(noteDisconnected(connected, now + 9)).toMatchObject({ harness: "disconnected", since: now + 9, perf: connected.perf });
+  it("stamps a brain open and parses a stored row", () => {
+    const opened = noteBrainOpen({ ...emptyStatus(), perf: { turns: 3, prompt: 1, completion: 1, errors: 0 }, lastError: { message: "x", at: "t" } }, now);
+    expect(opened).toMatchObject({ since: now, lastError: null, perf: { turns: 3 } });
+    expect(noteBrainOpen(opened, now + 5).perf.turns).toBe(3);
     expect(parseStatus({ harness: "nope" })).toEqual(emptyStatus());
+    expect(stateFromPlugins([
+      { name: "a", state: "skipped", reason: "no_key" },
+      { name: "b", state: "skipped", reason: "error" },
+    ])).toBe("error");
+    expect(stateFromPlugins([{ name: "garmin", state: "skipped", reason: "disabled" }])).toBe("ready");
+    const legacy = parseStatus({
+      harness: "disconnected",
+      since: 4,
+      published: ["math"],
+      skipped: [{ name: "strava", reason: "no_key" }, { name: "garmin", reason: "disabled" }],
+      lastTurn: 9,
+      perf: { turns: 1, prompt: 2, completion: 3, errors: 0 },
+    });
+    expect(legacy.state).toBe("needs_keys");
+    expect(legacy.lastTurnAt).toBe(9);
+    expect(legacy.plugins).toEqual([
+      { name: "math", state: "ready" },
+      { name: "strava", state: "skipped", reason: "no_key" },
+      { name: "garmin", state: "skipped", reason: "disabled" },
+    ]);
+    expect(JSON.stringify(legacy)).not.toMatch(/connected|disconnected/);
     const stored = parseStatus({
-      ...connected,
+      ...opened,
+      state: "ready",
       published: ["maps", 1],
-      skipped: [{ name: "a", reason: "no_key" }, { name: 1 }],
+      plugins: [{ name: "maps", state: "ready" }, { name: 1 }, { name: "a", state: "skipped", reason: "no_key" }],
     });
     expect(stored.published).toEqual(["maps"]);
     expect(stored.skipped).toEqual([{ name: "a", reason: "no_key" }]);
@@ -112,6 +141,15 @@ describe("harness frames", () => {
       { seq: 4, at: "t", level: "info", message: "m", dropped: 2 },
     ]);
     expect(parseLog({ seq: -1, lines: [] })).toEqual(emptyLog());
+  });
+
+  it("names a booted brain running and an empty row not started", () => {
+    expect(statusLabel("ready")).toBe("running");
+    expect(statusLabel("needs_keys")).toBe("running");
+    expect(statusLabel("error")).toBe("not started");
+    expect(statusLabel("starting")).toBe("not started");
+    expect(statusLabel(null)).toBe("not started");
+    expect(statusLabel(undefined)).toBe("not started");
   });
 
   it("caps a runaway token total", () => {

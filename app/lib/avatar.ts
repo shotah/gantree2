@@ -10,9 +10,9 @@ const DOWNLOAD_EXT: Record<string, string> = {
   "image/svg+xml": "svg",
 };
 
-/** `kit-avatar.jpg` — the slug is already a safe token; an empty one is Kit. */
+/** `<id>-avatar.jpg`. An empty id downloads as `agent-avatar.jpg`. */
 export function avatarDownloadName(slug: string, type: string): string {
-  const base = slug.trim().toLowerCase() || "kit";
+  const base = slug.trim().toLowerCase() || "agent";
   const mime = type.split(";")[0]?.trim().toLowerCase() ?? "";
   return `${base}-avatar.${DOWNLOAD_EXT[mime] ?? "jpg"}`;
 }

@@ -33,7 +33,7 @@ export function catalog(): SlashCommand[] {
     cmd("off", "drop a prefix hold", true),
     cmd("planner", "daily planning session (on|off|HH:MM)", true),
     cmd("aims", "aim ledger (area | rubric | block)", true),
-    cmd("todo", "pocket list (done <id|slug>, prio <id|slug> [!!|!])", true),
+    cmd("todo", "pocket list (done <id|name>, prio <id|name> [!!|!])", true),
   ];
 }
 
@@ -46,5 +46,5 @@ export function helpText(): string {
 export function readyLine(): string {
   const parts = catalog().map((c) => `/${c.name}`);
   parts.push("/quit");
-  return `gantry stdio ready — ${parts.join(" ")}`;
+  return `ready — ${parts.join(" ")}`;
 }

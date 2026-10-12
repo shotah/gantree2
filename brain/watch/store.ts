@@ -1,6 +1,7 @@
 import { type Clock } from "@/brain/core/clock";
 import { type Logger, silentLogger } from "@/brain/core/log";
 import { migrate, type Migration, type Sql, type SqlValue } from "@/brain/core/sql";
+import { roomSession } from "@/brain/session/types";
 import { DEFAULT_MONTHLY_READS } from "@/brain/plugins/twitter/budget";
 import {
   BACKOFF_CAP_SEC,
@@ -60,9 +61,6 @@ export type WatchDelivery = {
   chatId?: string;
   threadId?: number;
 };
-
-/** One agent conversation. Mouth session ids collapse to this on every open. */
-export const AGENT_SESSION = "gantry";
 
 const WATCH_SELECT = `SELECT id, tool, args, label, interval_seconds, base_interval_seconds, next_poll_at,
   session_id, user_id, chat_id, thread_id, seen_ids,
@@ -142,8 +140,8 @@ type WatchRow = {
 
 /**
  * Watches in the agent SQLite. Constructing applies `watch.001`… and collapses
- * leftover mouth sessions onto `gantry` (that rewrite runs on every open, so
- * it is not a one-shot migration id).
+ * leftover mouth sessions onto the room session id (that rewrite runs on every
+ * open, so it is not a one-shot migration id).
  */
 export class WatchStore {
   readonly sql: Sql;
@@ -157,13 +155,21 @@ export class WatchStore {
   twitterReadLimit = DEFAULT_MONTHLY_READS;
   /** Combined wake text cap. */
   wakeMax = WATCH_WAKE_MAX_ITEMS;
+  private readonly sessionId: string;
 
-  constructor(sql: Sql | null, clock: Clock, maxWatches = DEFAULT_MAX_WATCHES, log: Logger = silentLogger) {
+  constructor(
+    sql: Sql | null,
+    clock: Clock,
+    maxWatches = DEFAULT_MAX_WATCHES,
+    log: Logger = silentLogger,
+    sessionId = "agent",
+  ) {
     if (sql === null || sql === undefined) throw new Error("watch: nil db");
     this.sql = sql;
     this.clock = clock;
     this.log = log;
     this.maxWatches = maxWatches < 1 ? DEFAULT_MAX_WATCHES : maxWatches;
+    this.sessionId = roomSession(sessionId);
     migrate(sql, watchMigrations);
     this.collapseSessions();
   }
@@ -550,8 +556,8 @@ export class WatchStore {
     this.sql.exec(
       `UPDATE watch SET session_id = ?, user_id = '', chat_id = '', thread_id = 0
         WHERE session_id != ? OR user_id != '' OR chat_id != '' OR thread_id != 0`,
-      AGENT_SESSION,
-      AGENT_SESSION,
+      this.sessionId,
+      this.sessionId,
     );
   }
 }

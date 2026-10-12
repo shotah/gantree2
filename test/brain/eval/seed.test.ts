@@ -22,7 +22,7 @@ function world(at: number) {
 describe("eval seed", () => {
   it("fills the shipped persona's name and city", () => {
     const text = loadEvalPersona();
-    expect(text).toContain("- **Name:** Kit");
+    expect(text).toContain("- **Name:** Ada");
     expect(text).toContain("- **Name:** Sam");
     expect(text).toContain("Seattle, Washington");
   });
@@ -65,7 +65,7 @@ describe("eval seed", () => {
     try {
       const fx = loadEvalFixture(join(fixtureDir, "14_reaction_waiting_thumbs_up.json"));
       await seedFixture(waiting.sql, waiting.clock, waiting.log, fx, defaultPersonaPath);
-      const sessions = new SessionStore(waiting.sql, waiting.clock, waiting.log);
+      const sessions = new SessionStore(waiting.sql, waiting.clock, waiting.log, {}, EVAL_SESSION);
       expect(sessions.messages(EVAL_SESSION).map((message) => message.role)).toEqual(["user", "assistant"]);
       expect(sessions.talkState(EVAL_SESSION).waitingForReply).toBe(true);
     } finally {

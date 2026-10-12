@@ -15,11 +15,11 @@ export function slugFromPath(pathname: string): string | null {
   return parseSlug(parts[1] ?? "");
 }
 
-/** Lock-screen title. Empty slug stays "Kit", the name the harness already uses. */
+/** Lock-screen title. An empty id stays "Agent". */
 export function displaySlug(slug: string): string {
   const s = slug.trim();
   if (!s) {
-    return "Kit";
+    return "Agent";
   }
   return s.charAt(0).toUpperCase() + s.slice(1);
 }

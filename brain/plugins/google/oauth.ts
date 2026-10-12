@@ -182,6 +182,17 @@ export async function authStart(ctx: PluginContext, redirectUri: string, state: 
 }
 
 export async function authFinish(ctx: PluginContext, redirectUri: string, code: string): Promise<void> {
+  try {
+    await finishGoogleAuth(ctx, redirectUri, code);
+  } catch (err) {
+    if (err instanceof AuthFailed) {
+      ctx.log.error(err.message);
+    }
+    throw err;
+  }
+}
+
+async function finishGoogleAuth(ctx: PluginContext, redirectUri: string, code: string): Promise<void> {
   const creds = clientCreds(ctx);
   if (!creds) {
     throw new AuthFailed(MISSING_CLIENT);
@@ -190,16 +201,15 @@ export async function authFinish(ctx: PluginContext, redirectUri: string, code: 
     throw new AuthFailed("OAuth token exchange: missing code");
   }
   const pending = loadPending(ctx);
-  let verifier = "";
-  if (pending) {
-    if (ctx.clock.now() > pending.expires_at) {
-      deletePending(ctx);
-      throw new AuthFailed("pending auth session expired; run 'google-mcp auth url' again");
-    }
-    if (pending.redirect_uri !== redirectUri) {
-      throw new AuthFailed("redirect_uri does not match the pending auth session");
-    }
-    verifier = pending.verifier;
+  if (!pending) {
+    throw new AuthFailed("no login in progress; click Connect again");
+  }
+  if (ctx.clock.now() > pending.expires_at) {
+    deletePending(ctx);
+    throw new AuthFailed("pending auth session expired; run 'google-mcp auth url' again");
+  }
+  if (pending.redirect_uri !== redirectUri) {
+    throw new AuthFailed("redirect_uri does not match the pending auth session");
   }
   const params: Record<string, string> = {
     client_id: creds.id,
@@ -208,8 +218,8 @@ export async function authFinish(ctx: PluginContext, redirectUri: string, code: 
     grant_type: "authorization_code",
     redirect_uri: redirectUri,
   };
-  if (verifier) {
-    params.code_verifier = verifier;
+  if (pending.verifier) {
+    params.code_verifier = pending.verifier;
   }
   const tok = await postToken(ctx, params, undefined);
   const email = await resolveAccountEmail(ctx, tok);

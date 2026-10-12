@@ -84,6 +84,10 @@ export function statusUrl(slug: string): string {
   return `${agentUrl(slug)}/status`;
 }
 
+export function restartUrl(slug: string): string {
+  return `${agentUrl(slug)}/restart`;
+}
+
 export function logUrl(slug: string, after?: number): string {
   const base = `${agentUrl(slug)}/log`;
   return after === undefined ? base : `${base}?after=${after}`;
@@ -180,12 +184,14 @@ function asConfig(body: unknown): AgentConfigView {
   return body as AgentConfigView;
 }
 
+const BRAIN_STATES = new Set(["ready", "needs_keys", "error", "starting"]);
+
 function asStatus(body: unknown): AgentStatus {
   if (
     !isRecord(body)
-    || (body.harness !== "connected" && body.harness !== "disconnected")
-    || !Array.isArray(body.published)
-    || !Array.isArray(body.skipped)
+    || typeof body.state !== "string"
+    || !BRAIN_STATES.has(body.state)
+    || !Array.isArray(body.plugins)
   ) {
     bad();
   }
@@ -316,6 +322,10 @@ export async function deletePersona(slug: string, client: ApiClient = api): Prom
 
 export async function getStatus(slug: string, client: ApiClient = api): Promise<AgentStatus> {
   return asStatus(await send(client, statusUrl(slug), { method: "GET" }));
+}
+
+export async function restartAgent(slug: string, client: ApiClient = api): Promise<AgentStatus> {
+  return asStatus(await send(client, restartUrl(slug), { method: "POST" }));
 }
 
 export async function getLog(slug: string, after?: number, client: ApiClient = api): Promise<LogPage> {

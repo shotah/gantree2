@@ -229,29 +229,30 @@ export function NewAgent({
           ? (
               <div className={panelClass}>
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="agent-slug" className={labelClass}>Slug</label>
+                  <label htmlFor="agent-slug" className={labelClass}>Agent ID</label>
                   <input
                     id="agent-slug"
                     value={slug}
                     disabled={made !== null}
                     autoComplete="off"
                     spellCheck={false}
-                    placeholder="kit"
+                    placeholder="ada"
                     onChange={(e) => setSlug(e.target.value)}
                     className={inputClass}
                   />
+                  <p className="text-xs text-dim">lowercase letters, digits, dashes — used in the chat URL</p>
                   {slug.length > 0 && !slugOk
                     ? <p className="text-xs text-danger">Use a letter, then lowercase letters, digits, or hyphens.</p>
                     : null}
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="agent-name" className={labelClass}>Display name</label>
+                  <label htmlFor="agent-name" className={labelClass}>Shown as</label>
                   <input
                     id="agent-name"
                     value={name}
                     disabled={made !== null}
                     autoComplete="off"
-                    placeholder="Kit"
+                    placeholder="Ada"
                     onChange={(e) => setName(e.target.value)}
                     className={inputClass}
                   />

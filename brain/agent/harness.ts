@@ -1,5 +1,5 @@
 /**
- * Per-turn `[harness]` stamps: hours, aims, todo, loops, wakes, surface,
+ * Per-turn `[agent]` stamps: hours, aims, todo, loops, wakes, surface,
  * input, and last contact. Hydration drops the rows already on those lines.
  */
 import { localParts } from "@/brain/core/clock";

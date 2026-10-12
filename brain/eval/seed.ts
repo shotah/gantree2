@@ -1,8 +1,8 @@
 /**
  * Fixture state on a fresh SQL database: persona text, SELF.md, memory
  * rows (backdated when `age_days` is set), the aim ledger, and session
- * history. The native brain has one session, `gantry`. History and the
- * wait flag are written there so `handleInbound` sees them.
+ * history. History and the wait flag are written on the eval slug (`eval`)
+ * so `handleInbound` sees them.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { PERSONA_TEMPLATE } from "@/app/components/agents/personaTemplate";
@@ -15,7 +15,7 @@ import { openStore } from "@/brain/cron/store";
 import { KIND_INSIGHT, MemoryStore } from "@/brain/memory";
 import { rfc3339 } from "@/brain/memory/time";
 import { filePersona } from "@/brain/persona";
-import { agentSession, roleAssistant, roleUser, SessionStore } from "@/brain/session";
+import { roleAssistant, roleUser, roomSession, SessionStore } from "@/brain/session";
 import { fileName as fileSelf, SelfNoteStore } from "@/brain/selfnote";
 import {
   defaultPersonaPath,
@@ -37,7 +37,8 @@ function snapshotKey(): string {
   return btoa(binary);
 }
 
-export const EVAL_SESSION = agentSession;
+/** Matches `slug: "eval"` in `createEvalBrain`. */
+export const EVAL_SESSION = roomSession("eval");
 
 export type Seeded = {
   persona: { name: string; text: string }[];
@@ -53,7 +54,7 @@ export type Seeded = {
 export function loadEvalPersona(path = defaultPersonaPath): string {
   const seed = readPersonaSeed(path);
   return seed
-    .replace("- **Name:** (pick one)", "- **Name:** Kit")
+    .replace("- **Name:** (pick one)", "- **Name:** Ada")
     .replace("- **Name:** Your Name", "- **Name:** Sam")
     .replace("- **Location:** City, Region", "- **Location:** Seattle, Washington");
 }
@@ -114,7 +115,7 @@ export async function seedFixture(sql: Sql, clock: Clock, log: Logger, fx: EvalF
     ledgerIds.push(event.id);
   }
 
-  const sessions = new SessionStore(sql, clock, log);
+  const sessions = new SessionStore(sql, clock, log, {}, EVAL_SESSION);
   if (fx.history.length > 0) {
     await sessions.append(EVAL_SESSION, ...fx.history.map((turn) => ({
       role: turn.role === "assistant" ? roleAssistant : roleUser,
@@ -125,7 +126,7 @@ export async function seedFixture(sql: Sql, clock: Clock, log: Logger, fx: EvalF
     sessions.armWait(EVAL_SESSION);
   }
 
-  openStore(sql, clock);
+  openStore(sql, clock, 50, EVAL_SESSION);
   return { persona, memoryIds, ledgerIds };
 }
 

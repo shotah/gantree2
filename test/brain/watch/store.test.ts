@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { fixedClock } from "@/brain/core/clock";
 import { makeLogger, memorySink } from "@/brain/core/log";
 import { nodeSql, type NodeDatabase, type Sql } from "@/brain/core/sql";
-import { AGENT_SESSION, WatchStore, type WatchDelivery } from "@/brain/watch";
+import { WatchStore, type WatchDelivery } from "@/brain/watch";
 
 const AT = Date.UTC(2026, 0, 1);
 
@@ -116,7 +116,7 @@ describe("WatchStore", () => {
     expect(watch.chatId).toBe("");
 
     const reopened = new WatchStore(sql, clock, 5);
-    expect(reopened.get(watch.id).sessionId).toBe(AGENT_SESSION);
+    expect(reopened.get(watch.id).sessionId).toBe("agent");
     expect(sql.exec<{ id: string }>("SELECT id FROM brain_migration").map((row) => row.id))
       .toEqual(["watch.001", "watch.002", "watch.003"]);
   });

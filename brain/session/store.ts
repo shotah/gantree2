@@ -1,17 +1,17 @@
 /**
  * SQLite conversation history. One agent database, many session ids, trimmed
  * to a message count and a chars/4 token estimate. Opening the store collapses
- * leftover mouth sessions into `gantry`, the same step harness `Open` runs.
+ * leftover mouth sessions onto the room session id.
  */
 import type { Clock } from "@/brain/core/clock";
 import type { Logger } from "@/brain/core/log";
 import { migrate, type Migration, type Sql } from "@/brain/core/sql";
 import {
-  agentSession,
   defaultMaxEstTokens,
   defaultMaxMessages,
   roleAssistant,
   roleUser,
+  roomSession,
   speakerAgent,
   speakerUser,
   type Message,
@@ -102,8 +102,7 @@ type TalkRow = {
   wait_set_at: string;
 };
 
-function collapseToAgent(sql: Sql, now: string): void {
-  const sid = agentSession;
+function collapseToAgent(sql: Sql, now: string, sid: string): void {
   sql.exec(
     `INSERT INTO session (id, summary, updated_at) VALUES (?, '', ?) ON CONFLICT(id) DO NOTHING`,
     sid,
@@ -154,12 +153,13 @@ export class SessionStore {
     private readonly clock: Clock,
     private readonly log: Logger,
     options: SessionOptions = {},
+    sessionId = "agent",
   ) {
     this.maxMessages = bound(options.maxMessages, defaultMaxMessages);
     this.maxEstTokens = bound(options.maxEstTokens, defaultMaxEstTokens);
     this.sql.exec("PRAGMA foreign_keys = ON");
     migrate(this.sql, sessionMigrations);
-    collapseToAgent(this.sql, rfc3339(this.clock.now()));
+    collapseToAgent(this.sql, rfc3339(this.clock.now()), roomSession(sessionId));
   }
 
   withSummarizer(sum: Summarizer | null): this {

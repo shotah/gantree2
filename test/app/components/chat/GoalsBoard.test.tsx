@@ -59,7 +59,7 @@ describe("GoalsSheet", () => {
     const onAsk = vi.fn<(command: string) => void>();
     const onClose = vi.fn();
     render(<GoalsSheet aims={SAMPLE_AIMS} onClose={onClose} onAsk={onAsk} />);
-    fireEvent.click(screen.getByRole("button", { name: "Ask Kit about training" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ask the agent about training" }));
     fireEvent.click(screen.getByRole("button", { name: "Full report" }));
     fireEvent.click(screen.getByRole("button", { name: "Rubric" }));
     expect(onAsk.mock.calls.map((c) => c[0])).toEqual(["/aims training", "/aims", "/aims rubric"]);

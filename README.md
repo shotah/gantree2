@@ -24,7 +24,7 @@ tools it may touch, and talk to it from the browser, the Android app, or
 the iPhone app. Fast to stand up, simple to run, yours to read. The
 brain is TypeScript inside the Agent Durable Object.
 
-The tree is the harness. The level bough is the hoist. The orange is what
+The tree is the agent. The level bough is the hoist. The orange is what
 it hands you.
 
 ## Why this one
@@ -53,8 +53,8 @@ it hands you.
 
 <table>
   <tr>
-    <td width="50%"><img src="assets/docs/agents.png" alt="Agents board: Kit and Ada, each with tools published, last turn, and Open chat / Manage buttons"></td>
-    <td width="50%"><img src="assets/docs/agents-kit.png" alt="Kit's dashboard: status fold with published and skipped tools, who can chat, and the log tail"></td>
+    <td width="50%"><img src="assets/docs/agents.png" alt="Agents board: Ada and Sam, each with tools published, last turn, and Open chat / Manage buttons"></td>
+    <td width="50%"><img src="assets/docs/agents-kit.png" alt="Ada's dashboard: status fold with published and skipped tools, who can chat, and the log tail"></td>
   </tr>
   <tr>
     <td align="center"><sub>Agents — every assistant on one board</sub></td>
@@ -64,7 +64,7 @@ it hands you.
 
 <table>
   <tr>
-    <td width="25%"><img src="assets/docs/chat-kit.png" alt="Phone chat with Kit, who is live and answering a question about a walk from the ferry building"></td>
+    <td width="25%"><img src="assets/docs/chat-kit.png" alt="Phone chat with Ada, who is live and answering a question about a walk from the ferry building"></td>
     <td width="25%"><img src="assets/docs/chat.png" alt="Phone picker listing the assistants this person may talk to"></td>
     <td width="50%"><img src="assets/docs/users.png" alt="Users page: who may enter, their role, which assistants they may talk to, and the audit fold"></td>
   </tr>
@@ -111,7 +111,7 @@ npm run dev                      # http://127.0.0.1:3000 — sign in, you land o
 ```
 
 Then **New agent**: a name, a persona (there is a template), the people
-who may talk to it. Open `/chat/<slug>`.
+who may talk to it. Open `/chat/<agent id>`.
 [install.md](docs/install.md) walks the Google client, Cloudflare, and
 home setups; [access.md](docs/access.md) is the people side.
 
@@ -178,7 +178,7 @@ Found a hole: [SECURITY.md](SECURITY.md). Useful to you:
 ## Layout
 
 ```
-app/              routes, thin: login · agents · agents/new · agents/[slug] · chat · chat/[slug] · users · settings · profile · api/**
+app/              routes, thin: login · agents · agents/new · agents/<agent id> · chat · chat/<agent id> · users · settings · profile · api/**
 app/components/   agents/ · chat/ · users/ · settings/ · shared/
 app/lib/          browser helpers: theme, prefs, sockets, push, spend
 lib/door/         allowlist · users · google · session · gate · landing      the door
@@ -187,18 +187,14 @@ lib/agents/       registry · config · status · tools                         
 lib/theme/        fifteen themes, contrast gate                              from pendant
 brain/            the agent: core · agent loop · room · plugins
 edge/             Durable Objects: Settings · Agent
-worker/           the Worker entry: Vinext + /ws/<slug>
+worker/           the Worker entry: Vinext + /ws/<agent id>
 scripts/          icons · seed · shot · badge · pages · eval
 test/             mirrors lib/, app/, edge/, brain/, scripts/
 ```
 
 ## Lineage
 
-gantree is the side-by-side successor to
-[gantree](https://github.com/shotah/gantree) (settings),
-[gantry-pendant](https://github.com/shotah/gantry-pendant) (chat), and
-[ai-gantry](https://github.com/shotah/ai-gantry) (the harness) — three
-repos folded into one product at one origin behind one door. Themes
-(**Boom**, **Paper**, **Ink**, and a
-dark/light pair per mood) came over from the pendant; every pair meets AA
+gantree is one product: settings, chat, and the agent, at one origin
+behind one door. Themes (**Boom**, **Paper**, **Ink**, and a
+dark/light pair per mood) came over from the phone chat; every pair meets AA
 on the surfaces we paint, and `test/theme/catalog.test.ts` holds the line.

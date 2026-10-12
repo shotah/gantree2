@@ -131,7 +131,7 @@ function sentAcks(ws: FakeSocket): Record<string, unknown>[] {
 async function connectSpike(opts: { voice?: boolean } = {}) {
   stubAuth(true, opts);
   stubSocket();
-  render(<PhoneShell />);
+  render(<PhoneShell slug="kit" />);
   expect(await screen.findByText("live")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "settings" }));
   fireEvent.change(screen.getByLabelText("Agent access secret"), { target: { value: "s" } });
@@ -222,7 +222,7 @@ describe("PhoneShell", () => {
     render(<PhoneShell />);
     expect(await screen.findByText(SAMPLE_LINES.threadKit)).toBeTruthy();
     expect(screen.getByText(SAMPLE_LINES.threadYou)).toBeTruthy();
-    expect(screen.getByText("Kit")).toBeTruthy();
+    expect(screen.getByText("Agent")).toBeTruthy();
     expect(screen.queryByText("dev")).toBeNull();
   });
 
@@ -281,6 +281,8 @@ describe("PhoneShell", () => {
     expect(screen.getByRole("link", { name: "Continue with Google" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Continue with Google" }).getAttribute("href")).toBe("/api/auth/google?next=%2F");
     expect(screen.queryByRole("button", { name: "Kit's photo" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "settings" }));
+    expect(screen.queryByRole("button", { name: "color theme" })).toBeNull();
     expect(screen.queryByText(/Add to Home Screen/)).toBeNull();
     expect(screen.queryByText(/Google didn't finish/)).toBeNull();
   });
@@ -354,7 +356,7 @@ describe("PhoneShell", () => {
 
   it("echoes a canned Kit reply in dev without a socket", async () => {
     stubAuth(true);
-    render(<PhoneShell />);
+    render(<PhoneShell slug="kit" />);
     expect(await screen.findByText("live")).toBeTruthy();
     const box = screen.getByPlaceholderText(/Message Kit/);
     fireEvent.change(box, { target: { value: "hello kit" } });
@@ -374,18 +376,18 @@ describe("PhoneShell", () => {
     stubAuth(true);
     render(<PhoneShell />);
     expect(await screen.findByText("live")).toBeTruthy();
-    expect(screen.getByText("Kit")).toBeTruthy();
+    expect(screen.getByText("Agent")).toBeTruthy();
     expect(screen.queryByLabelText("Agent name")).toBeNull();
     expect(screen.queryByRole("button", { name: "color theme" })).toBeNull();
     expect(screen.queryByLabelText("Font size")).toBeNull();
-    expect(screen.queryByRole("link", { name: "Open agent stand-in" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Open chat" })).toBeNull();
     expect(screen.queryByText(RELEASE)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "settings" }));
     expect(screen.getByRole("dialog", { name: "Settings" })).toBeTruthy();
     expect(screen.getByText(RELEASE)).toBeTruthy();
     expect(screen.getByText(/Cast, save and share/)).toBeTruthy();
     expect(screen.getByLabelText("Agent name")).toBeTruthy();
-    expect(screen.getByLabelText<HTMLInputElement>("Agent name").value).toBe("kit");
+    expect(screen.getByLabelText<HTMLInputElement>("Agent name").value).toBe("");
     expect(screen.getByLabelText("Agent access secret")).toBeTruthy();
     expect(screen.getByRole("button", { name: "color theme" })).toBeTruthy();
     expect((screen.getByLabelText("Font size") as unknown as HTMLSelectElement).value).toBe("sm");
@@ -393,7 +395,7 @@ describe("PhoneShell", () => {
     expect(screen.getByText("Access")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Enable location" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Enable microphone" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Open agent stand-in" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Open chat" }).getAttribute("href")).toBe("/chat");
     fireEvent.change(screen.getByLabelText("Agent name"), { target: { value: "Ada" } });
     expect(screen.getByLabelText<HTMLInputElement>("Agent name").value).toBe("ada");
     expect(screen.getByText("Ada")).toBeTruthy();
@@ -446,7 +448,7 @@ describe("PhoneShell", () => {
     expect(await screen.findByText("These go to the agent, not the chat model.")).toBeTruthy();
     expect(screen.getByRole("option", { name: /^\/new / })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "attach" }));
-    expect(screen.getByRole("button", { name: "harness commands" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "commands" })).toBeTruthy();
   });
 
   it("skips geolocation when GPS is toggled off", async () => {
@@ -1702,7 +1704,7 @@ describe("PhoneShell", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "goals (1 changed)" }));
     expect(screen.getByRole("dialog", { name: "Goals" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Ask Kit about training" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ask the agent about training" }));
     expect(screen.queryByRole("dialog", { name: "Goals" })).toBeNull();
     await waitFor(() => expect(sentTurns(ws).at(-1)).toMatchObject({ kind: "inbound", text: "/aims training" }));
 

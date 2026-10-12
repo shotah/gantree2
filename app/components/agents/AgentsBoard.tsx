@@ -12,6 +12,7 @@ import {
   type Session,
 } from "@/app/lib/agentsHttp";
 import { api } from "@/app/lib/api";
+import { statusLabel } from "@/lib/agents/status";
 import type { AgentCard } from "@/lib/agents/types";
 import { alertClass, boardMainClass, primaryClass, quietClass } from "./Fold";
 import { relativeTime, timeStamp } from "./relativeTime";
@@ -47,13 +48,20 @@ function Stat({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+function pillTone(label: "running" | "not started"): { chip: string; dot: string } {
+  if (label === "running") {
+    return { chip: "border-ok/40 bg-ok/15 text-ok", dot: "bg-ok" };
+  }
+  return { chip: "border-line bg-track text-dim", dot: "bg-faint" };
+}
+
 function AgentTile({ agent }: { agent: AgentCard }) {
   const published = agent.status ? agent.status.published.length : 0;
   const skipped = agent.status ? agent.status.skipped.length : 0;
-  const harness = agent.status ? agent.status.harness : "unknown";
+  const label = statusLabel(agent.status?.state);
+  const tone = pillTone(label);
   const nags = nagsFor(agent);
-  const lastTurn = agent.status ? agent.status.lastTurn : null;
-  const connected = harness === "connected";
+  const lastTurn = agent.status ? agent.status.lastTurnAt ?? agent.status.lastTurn : null;
   return (
     <article className={`${cardClass} flex h-full flex-col gap-4`}>
       <div className="flex items-start gap-3">
@@ -67,9 +75,9 @@ function AgentTile({ agent }: { agent: AgentCard }) {
           <h2 className="truncate text-lg font-semibold text-fg">{agent.name}</h2>
           <p className="truncate text-xs text-dim">{agent.slug}</p>
         </div>
-        <p className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${connected ? "border-ok/40 bg-ok/15 text-ok" : "border-line bg-track text-dim"}`}>
-          <span aria-hidden className={`inline-block h-1.5 w-1.5 rounded-full ${connected ? "bg-ok" : "bg-faint"}`} />
-          {harness}
+        <p className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${tone.chip}`}>
+          <span aria-hidden className={`inline-block h-1.5 w-1.5 rounded-full ${tone.dot}`} />
+          {label}
         </p>
       </div>
       {agent.tags.length > 0

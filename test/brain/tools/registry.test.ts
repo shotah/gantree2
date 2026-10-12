@@ -76,6 +76,37 @@ describe("publish", () => {
     expect(textOf(got)).toContain("do not invent google-search__*");
   });
 
+  it("logs a missing key or a disabled plugin at info and a load failure at error", async () => {
+    const boom: Plugin = {
+      name: "boom",
+      ready: () => Promise.resolve(null),
+      tools: () => {
+        throw new Error("tools exploded");
+      },
+    };
+    const { sink } = await start([
+      fakePlugin("strava", [], "no_key"),
+      fakePlugin("garmin", [], "disabled"),
+      fakePlugin("google", [], "no_oauth"),
+      fakePlugin("broken", [], () => Promise.reject(new Error("cannot spawn"))),
+      boom,
+      fakePlugin("math", [echoTool("ping")]),
+    ]);
+    const skips = sink.records.filter((row) => row.message === "plugin skipped").map((row) => ({
+      level: row.level,
+      plugin: row.fields?.plugin,
+      reason: row.fields?.reason,
+    }));
+    expect(skips).toEqual([
+      { level: "info", plugin: "strava", reason: "no_key" },
+      { level: "info", plugin: "garmin", reason: "disabled" },
+      { level: "error", plugin: "google", reason: "no_oauth" },
+      { level: "error", plugin: "broken", reason: "connect" },
+      { level: "error", plugin: "boom", reason: "connect" },
+    ]);
+    expect(sink.records.some((row) => row.message === "mcp server boot skipped")).toBe(false);
+  });
+
   it("skips a duplicate name and a tool-name collision without publishing a partial catalog", async () => {
     const { status, registry } = await start([
       fakePlugin("demo", [echoTool("a.b"), echoTool("a_b")]),

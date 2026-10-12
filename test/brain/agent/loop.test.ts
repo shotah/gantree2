@@ -25,7 +25,7 @@ describe("createBrain turns", () => {
     expect(frames[4]).toMatchObject({ kind: "todo", todo: [] });
     expect(frames[5]).toMatchObject({
       kind: "perf",
-      turn: "gantry",
+      turn: "ada",
       source: "user",
       outcome: "ok",
       user_id: "u1",

@@ -38,7 +38,7 @@ describe("face and backdrop", () => {
 
   it("titles an empty slug Kit", () => {
     expect(displaySlug("kit")).toBe("Kit");
-    expect(displaySlug("  ")).toBe("Kit");
+    expect(displaySlug("  ")).toBe("Agent");
     expect(displaySlug("ada")).toBe("Ada");
   });
 });

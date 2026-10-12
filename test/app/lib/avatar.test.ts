@@ -23,7 +23,7 @@ describe("avatarDownloadName", () => {
     expect(avatarDownloadName("kit", "image/webp")).toBe("kit-avatar.webp");
     expect(avatarDownloadName("kit", "image/gif")).toBe("kit-avatar.gif");
     expect(avatarDownloadName("kit", "image/svg+xml")).toBe("kit-avatar.svg");
-    expect(avatarDownloadName("", "")).toBe("kit-avatar.jpg");
+    expect(avatarDownloadName("", "")).toBe("agent-avatar.jpg");
   });
 });
 

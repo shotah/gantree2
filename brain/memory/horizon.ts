@@ -7,7 +7,7 @@ import {
   type Entry,
 } from "./types";
 
-/** Lines on `[harness]`. Five shown; the rest are counted, not dropped silently. */
+/** Lines on `[agent]`. Five shown; the rest are counted, not dropped silently. */
 export const HORIZON_MAX = 5;
 const HORIZON_CLIP = 72;
 /** An open loop untouched this long gets a resolve-or-forget cue. */

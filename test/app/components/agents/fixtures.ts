@@ -1,5 +1,6 @@
-import type { AgentCard, AgentConfigView, AgentStatus, ToolEntry } from "@/lib/agents/types";
 import type { Session } from "@/app/lib/agentsHttp";
+import { PACKAGE_VERSION } from "@/app/lib/release";
+import type { AgentCard, AgentConfigView, AgentStatus, ToolEntry } from "@/lib/agents/types";
 
 export function buttonOf(element: HTMLElement): HTMLButtonElement {
   if (!(element instanceof HTMLButtonElement)) {
@@ -44,11 +45,14 @@ export function json(status: number, body: unknown): Response {
 }
 
 export const STATUS: AgentStatus = {
-  harness: "connected",
+  state: "ready",
   since: 1_700_000_000_000,
+  version: PACKAGE_VERSION,
+  lastTurnAt: 1_700_000_000_000,
+  lastTurn: 1_700_000_000_000,
+  plugins: [{ name: "maps", state: "ready" }],
   published: ["maps"],
   skipped: [],
-  lastTurn: 1_700_000_000_000,
   lastError: null,
   perf: { turns: 2, prompt: 10, completion: 4, errors: 0 },
 };

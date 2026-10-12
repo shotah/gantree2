@@ -41,6 +41,7 @@ type Memo = { generation: string; brain: Brain };
 
 const open = new WeakMap<DurableObjectState, Memo>();
 
+/** Drop the memoised brain so the next open builds a new registry and plugin set. */
 export function dropRoomBrain(ctx: DurableObjectState): void {
   open.delete(ctx);
 }
@@ -128,7 +129,7 @@ function roomSink(foldLog: OpenRoomOpts["foldLog"]): LogSink {
     const frame: LogFrame = {
       kind: "log",
       level: record.level,
-      message: record.message,
+      message: messageWithFields(record.message, record.fields),
       at: new Date(record.at).toISOString(),
     };
     try {
@@ -140,4 +141,36 @@ function roomSink(foldLog: OpenRoomOpts["foldLog"]): LogSink {
       // console already has the line; the agents screen misses this one
     }
   };
+}
+
+/** Append field values the message does not already contain. */
+function messageWithFields(message: string, fields: Record<string, unknown> | undefined): string {
+  if (!fields) {
+    return message;
+  }
+  const extra: string[] = [];
+  for (const [key, value] of Object.entries(fields)) {
+    const text = fieldText(value);
+    if (!text || message.includes(text)) {
+      continue;
+    }
+    extra.push(`${key}=${text}`);
+  }
+  if (extra.length === 0) {
+    return message;
+  }
+  return `${message} ${extra.join(" ")}`;
+}
+
+function fieldText(value: unknown): string | null {
+  if (typeof value === "string") {
+    return value.length > 0 ? value : null;
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+  if (typeof value === "boolean") {
+    return String(value);
+  }
+  return null;
 }

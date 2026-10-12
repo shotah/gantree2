@@ -12,7 +12,7 @@ export const DI_CLIENT_IDS = [
   "GARMIN_CONNECT_MOBILE_ANDROID_DI",
   "GARMIN_CONNECT_MOBILE_IOS_DI",
 ];
-export const AUTH_GUIDE_URL = "https://github.com/shotah/ai-gantry/blob/main/docs/auth.md";
+export const AUTH_GUIDE_URL = "https://github.com/shotah/gantree2/blob/main/docs/mcp.md#keys";
 export const MFA_TTL_MS = 10 * 60_000;
 
 export function serviceUrl(domain: string): string {

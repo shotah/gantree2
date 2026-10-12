@@ -1,5 +1,4 @@
 import { chipClass } from "@/app/components/shared/PageHeader";
-import { ThemeSelect } from "@/app/components/shared/ThemeSelect";
 import { TreeMark } from "@/app/components/shared/TreeMark";
 import { loginError, loginHref } from "@/app/lib/login";
 import { devDoorFor } from "./devDoor";
@@ -37,9 +36,6 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
   return (
     <main className="relative mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center px-5 py-16">
-      <div className="absolute right-4 top-4 z-20 w-40">
-        <ThemeSelect align="end" />
-      </div>
       <section className="relative overflow-hidden rounded-2xl border border-line bg-gradient-to-br from-accent-soft via-panel to-panel px-6 py-8 shadow-[0_1px_0_0_var(--line)_inset]">
         <span aria-hidden className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-accent/20 blur-3xl" />
         <span aria-hidden className="pointer-events-none absolute -bottom-16 left-6 h-40 w-40 rounded-full bg-info/15 blur-3xl" />

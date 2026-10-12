@@ -18,6 +18,7 @@ import { GET as readConfig } from "@/app/api/agents/[slug]/config/route";
 import { GET as readSelf, PUT as writeSelf } from "@/app/api/agents/[slug]/self/route";
 import { DELETE as removePersona, GET as readPersona, PUT as writePersona } from "@/app/api/agents/[slug]/persona/route";
 import { GET as readStatus } from "@/app/api/agents/[slug]/status/route";
+import { POST as restartAgent } from "@/app/api/agents/[slug]/restart/route";
 import { GET as readLog } from "@/app/api/agents/[slug]/log/route";
 import { GET as readUsers } from "@/app/api/agents/[slug]/users/route";
 import { GET as readBearer } from "@/app/api/agents/[slug]/bearer/route";
@@ -65,13 +66,16 @@ describe("agent routes", () => {
             if (op === "allow") {
               return Response.json({ users: [] });
             }
-            if (op === "status") {
+            if (op === "status" || op === "restart") {
               return Response.json({
-                harness: "disconnected",
+                state: "starting",
                 since: null,
+                version: "0.0.0",
+                lastTurnAt: null,
+                lastTurn: null,
+                plugins: [],
                 published: [],
                 skipped: [],
-                lastTurn: null,
                 lastError: null,
                 perf: { turns: 0, prompt: 0, completion: 0, errors: 0 },
               });
@@ -95,6 +99,7 @@ describe("agent routes", () => {
     expect((await writePersona(admin("/api/agents/kit/persona", "PUT", JSON.stringify({ name: "PERSONA.md", text: "Be brief." })), slug)).status).toBe(200);
     expect((await removePersona(admin("/api/agents/kit/persona", "DELETE", JSON.stringify({ name: "PERSONA.md" })), slug)).status).toBe(200);
     expect((await readStatus(admin("/api/agents/kit/status"), slug)).status).toBe(200);
+    expect((await restartAgent(admin("/api/agents/kit/restart", "POST"), slug)).status).toBe(200);
     expect((await readLog(admin("/api/agents/kit/log"), slug)).status).toBe(200);
     expect((await readUsers(admin("/api/agents/kit/users"), slug)).status).toBe(200);
     expect((await readSamples(admin("/api/samples"))).status).toBe(200);

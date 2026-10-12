@@ -142,7 +142,7 @@ describe("Compose", () => {
     expect(onPhoto).not.toHaveBeenCalled();
   });
 
-  it("lists harness commands from a supplied catalog", () => {
+  it("lists commands from a supplied catalog", () => {
     const onSend = vi.fn();
     const catalog = [
       { name: "new", hint: "reset this session" },
@@ -151,9 +151,9 @@ describe("Compose", () => {
       { name: "toolstats", hint: "per-tool call ledger" },
     ];
     render(<Compose onSend={onSend} commands catalog={catalog} placeholder="Message Kit" />);
-    expect(screen.queryByRole("listbox", { name: "Harness commands" })).toBeNull();
+    expect(screen.queryByRole("listbox", { name: "Commands" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "attach" }));
-    fireEvent.click(screen.getByRole("button", { name: "harness commands" }));
+    fireEvent.click(screen.getByRole("button", { name: "commands" }));
     expect(screen.getByText("These go to the agent, not the chat model.")).toBeTruthy();
     expect(screen.getByRole("option", { name: /^\/new / })).toBeTruthy();
     fireEvent.change(screen.getByPlaceholderText("Message Kit"), { target: { value: "/to" } });
@@ -163,7 +163,7 @@ describe("Compose", () => {
     fireEvent.click(screen.getByRole("option", { name: /^\/tools / }));
     expect(onSend).not.toHaveBeenCalled();
     expect(screen.getByPlaceholderText<HTMLTextAreaElement>("Message Kit").value).toBe("/tools");
-    expect(screen.queryByRole("listbox", { name: "Harness commands" })).toBeNull();
+    expect(screen.queryByRole("listbox", { name: "Commands" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     expect(onSend).toHaveBeenCalledWith("/tools");
   });
@@ -181,17 +181,17 @@ describe("Compose", () => {
     fireEvent.keyDown(box, { key: "Enter" });
     expect(onSend).not.toHaveBeenCalled();
     expect((box as HTMLTextAreaElement).value).toBe("/tools");
-    expect(screen.queryByRole("listbox", { name: "Harness commands" })).toBeNull();
+    expect(screen.queryByRole("listbox", { name: "Commands" })).toBeNull();
     fireEvent.keyDown(box, { key: "Enter" });
     expect(onSend).toHaveBeenCalledExactlyOnceWith("/tools");
 
     onSend.mockClear();
     fireEvent.change(box, { target: { value: "/to" } });
-    expect(screen.getByRole("listbox", { name: "Harness commands" })).toBeTruthy();
+    expect(screen.getByRole("listbox", { name: "Commands" })).toBeTruthy();
     fireEvent.keyDown(box, { key: "Enter" });
     expect(onSend).not.toHaveBeenCalled();
     expect((box as HTMLTextAreaElement).value).toBe("/tools");
-    expect(screen.queryByRole("listbox", { name: "Harness commands" })).toBeNull();
+    expect(screen.queryByRole("listbox", { name: "Commands" })).toBeNull();
 
     fireEvent.change(box, { target: { value: "/tool" } });
     fireEvent.change(box, { target: { value: "/tools" } });
@@ -199,13 +199,13 @@ describe("Compose", () => {
     fireEvent.keyDown(box, { key: "Enter" });
     expect(onSend).not.toHaveBeenCalled();
     expect((box as HTMLTextAreaElement).value).toBe("/toolstats");
-    expect(screen.queryByRole("listbox", { name: "Harness commands" })).toBeNull();
+    expect(screen.queryByRole("listbox", { name: "Commands" })).toBeNull();
 
     fireEvent.change(box, { target: { value: "/brief" } });
     fireEvent.keyDown(box, { key: "Enter" });
     expect(onSend).not.toHaveBeenCalled();
     expect((box as HTMLTextAreaElement).value).toBe("/brief ");
-    expect(screen.queryByRole("listbox", { name: "Harness commands" })).toBeNull();
+    expect(screen.queryByRole("listbox", { name: "Commands" })).toBeNull();
   });
 
   it("inserts a trailing space for arg commands and Enter picks the highlight", () => {

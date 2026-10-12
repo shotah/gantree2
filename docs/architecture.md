@@ -11,7 +11,7 @@ and [brain.md](brain.md) win.
 Vocabulary: **settings** (what operators see), **chat** (the PWA a
 member talks through), **agents** (one Durable Object each), **brain**
 (the TypeScript loop inside that object), **users** (one list, three
-roles). Wire names are `CHAT_*`, `agents`, `chat:<slug>:<sub>`.
+roles). Wire names are `CHAT_*`, `agents`, `chat:<agent id>:<sub>`.
 `PENDANT_*`, `CHANNEL=pendant`, and `cranes` are aliases until the
 Phase 4 wire-name drop and are marked where they appear.
 
@@ -40,14 +40,14 @@ flowchart LR
     subgraph routes["Routes"]
       direction LR
       L["/login<br/>/api/auth/*"]
-      S["/  /agents/:slug<br/>/users  /settings"]
-      CH["/chat/:slug"]
-      WS["/ws/:slug"]
+      S["/  /agents/:id<br/>/users  /settings"]
+      CH["/chat/:id"]
+      WS["/ws/:id"]
     end
     subgraph dos["Durable Objects"]
       direction LR
       SDO[("Settings DO<br/>users · audit · samples<br/>SQLite")]
-      ADO[("Agent:slug DO<br/>room · config · alarm<br/>SQLite brain")]
+      ADO[("Agent DO<br/>one per agent id<br/>SQLite brain")]
     end
     KV[("KV directory<br/>sub / email → slugs")]
   end
@@ -97,14 +97,14 @@ The first open copies `config.persona` into `PERSONA.md` once, and
 only when the table is empty and the text is non-blank. After that
 the row is the text.
 Operators edit them on the dashboard folds and at
-`GET` / `PUT` / `DELETE /api/agents/:slug/persona` and
-`GET` / `PUT /api/agents/:slug/self`.
+`GET` / `PUT` / `DELETE /api/agents/<agent id>/persona` and
+`GET` / `PUT /api/agents/<agent id>/self`.
 
 OAuth for Google, Google Health, and Strava finishes at
 `GET /api/auth/catch?state&code`. `/auth <plugin>` and the Tools-fold
-Connect button (`POST /api/agents/:slug/auth/start`) return the
+Connect button (`POST /api/agents/<agent id>/auth/start`) return the
 provider URL with `state` sealed as an `oauth-catch` JWE
-(`{ slug, plugin }`). The catch requires the `gantree_session` cookie
+(agent id and plugin). The catch requires the `gantree_session` cookie
 and an admin or a member of that room, calls `authFinish`, and posts
 `<plugin> connected` into the room. Register exactly
 `https://gantree2.bldhosting.com/api/auth/catch` and
@@ -137,6 +137,32 @@ Object class is JavaScript, and a turn is waiting on the model and on
 
 Behavioral eval is Vitest: `brain/eval`, `npm run eval`. Setup:
 [eval_setup.md](eval_setup.md).
+
+## One agent, one Durable Object
+
+Each agent is one Durable Object, looked up by that agent's id.
+`agentStub` in `lib/chat/location.ts` is the only Agent lookup:
+`env.AGENT.idFromName(<agent id>)`, then `get`. Chat, the agents
+HTTP API, avatars, membership, and the OAuth catch all go through
+it. `app/api` does not name an object itself.
+
+The Settings object is the one shared name, `settings`, on purpose.
+`lib/door/runtime.ts`, `lib/agents/http.ts`, and the sample write in
+`edge/agent.do.ts` use `getByName("settings")`, or
+`idFromName("settings")` when `getByName` is missing. That object
+holds users, audit, samples, and the agent directory.
+
+`ctx.storage.sql` is that object's own SQLite. Two agents do not
+share a database, so they do not share sessions, memory, cron,
+watches, tokens, or pins. The conversation id in those tables is
+that agent's id. An empty id is the label `agent`. Either string
+is a row label inside one object, not a key that reaches another
+agent. Opening the session, message, watch, cron, preference,
+enable, and location stores rewrites the old label `gantry`, and
+any other leftover mouth id, onto that conversation id.
+
+KV maps a person to the agent ids they may open. It does not hold
+the brain.
 
 ## 2. Request path — the door
 
@@ -191,11 +217,11 @@ sequenceDiagram
   participant T as Google<br/>oauth2.googleapis.com
   participant S as Settings DO<br/>(UserStore)
 
-  U->>W: GET /agents/kit (no cookie)
-  W-->>U: 302 /login?next=/agents/kit
+  U->>W: GET /agents/ada (no cookie)
+  W-->>U: 302 /login?next=/agents/ada
   U->>W: GET /login
   W-->>U: page: "Continue with Google"
-  U->>W: GET /api/auth/google?next=/agents/kit
+  U->>W: GET /api/auth/google?next=/agents/ada
   Note over W: state, nonce, code_verifier<br/>sealed in gantree_oauth (JWE, 10 min)
   W-->>U: 302 accounts.google.com/o/oauth2/v2/auth<br/>Set-Cookie: gantree_oauth
   U->>G: authorize (openid email profile, S256 challenge)
@@ -210,7 +236,7 @@ sequenceDiagram
   W->>W: resolveUser(env floor ∪ rows, {sub, email, email_verified})
   alt on a list
     Note over W: gantree_session = JWE {sub, email}<br/>7-day hard expiry, HttpOnly Secure Lax
-    W-->>U: 302 /agents/kit<br/>Set-Cookie: gantree_session · clear gantree_oauth
+    W-->>U: 302 /agents/ada<br/>Set-Cookie: gantree_session · clear gantree_oauth
   else not on any list
     W-->>U: 302 /login?error=not_allowed<br/>clear gantree_oauth · no session
   end
@@ -249,7 +275,7 @@ sequenceDiagram
     W-->>P: 200 {token, sub, email, exp}
     P->>W: GET /api/auth/me<br/>Authorization: Bearer token
     W-->>P: {sub, email, role, agents, cranes}
-    P->>A: wss /ws/kit?role=phone<br/>Authorization: Bearer token
+    P->>A: wss /ws/ada?role=phone<br/>Authorization: Bearer token
   else not on any list
     W-->>P: 403 {error: not_allowed, sub, email}<br/>no session
   end
@@ -262,14 +288,14 @@ sequenceDiagram
   autonumber
   actor M as Member (PWA)
   participant MW as middleware
-  participant A as Agent:kit DO
+  participant A as Agent:ada DO
   participant B as brain<br/>createBrain
 
   Note over A,B: first use opens the brain, announces status and cmds, arms nextAlarm
-  M->>MW: GET /chat/kit (gantree_session)
+  M->>MW: GET /chat/ada (gantree_session)
   MW->>MW: gate → pass (member)
   MW-->>M: PWA shell
-  M->>A: wss /ws/kit (cookie)
+  M->>A: wss /ws/ada (cookie)
   A->>A: open cookie · sub/email on the room list?
   alt on the room list
     A-->>M: joined · theme · backlog
@@ -307,8 +333,8 @@ stateDiagram-v2
 sequenceDiagram
   autonumber
   actor O as Operator
-  participant W as Worker /agents/kit
-  participant A as Agent:kit DO
+  participant W as Worker /agents/ada
+  participant A as Agent:ada DO
   participant B as brain
 
   O->>W: open the agent
@@ -337,7 +363,7 @@ flowchart LR
   subgraph store["Settings DO · users"]
     ROWS["rows: entry · role · agents[] "]
   end
-  subgraph agent["Agent:kit DO"]
+  subgraph agent["Agent:ada DO"]
     ROOM["room list<br/>(last allow frame)"]
   end
 
@@ -345,8 +371,8 @@ flowchart LR
   store --> RES
   RES["resolveUser(who)"] --> ROLE{{"admin · operator(agents) · member · none"}}
   ROLE -- "/users /settings" --> ADMIN[admin only]
-  ROLE -- "/agents/:slug" --> OP["admin, or operator with slug in agents[]"]
-  ROLE -- "/chat/:slug" --> CHAT["any role, and on the room list"]
+  ROLE -- "/agents/:id" --> OP["admin, or operator with that id in agents[]"]
+  ROLE -- "/chat/:id" --> CHAT["any role, and on the room list"]
   ROOM --> CHAT
 ```
 
@@ -391,7 +417,7 @@ flowchart TB
   subgraph app["app/ — thin shells"]
     LAYOUT[layout.tsx<br/>themeCss · THEME_BOOT]
     PAGES["login/ · page.tsx<br/>agents/ · chat/ · users/"]
-    API["api/auth/*/route.ts<br/>api/agents/:slug/{persona,self}"]
+    API["api/auth/*/route.ts<br/>api/agents/:id/{persona,self}"]
     ALIB["app/lib<br/>theme · prefs · login"]
     COMP["app/components<br/>agents · chat · users"]
   end
@@ -471,7 +497,7 @@ If a task fails one of these, it is later, or it is wrong.
    one language. No `gantree` CLI until `npm` scripts are genuinely
    not enough.
 7. **Isolation.** One human list per agent, one DO. Retire a tryout =
-   delete its DO. Adding a person to Kit does not touch Ada.
+   delete its DO. Adding a person to Ada does not touch Sam.
 8. **Env change retargets.** A changed env or persona drops the
    memoised brain and opens a new one. A restart that keeps a ghost
    allowlist is the thing the UI nags.
@@ -508,7 +534,7 @@ If a task fails one of these, it is later, or it is wrong.
 - ESLint + `@stylistic` is the style. No Prettier. Do not disable
   `no-explicit-any`; type it or delete the dead write.
 - Nothing new is written with the originals' wire names. `CHAT_*`,
-  `CHANNEL=chat`, `agents`, `chat:<slug>:<sub>`, plugin `chat` are the
+  `CHANNEL=chat`, `agents`, `chat:<agent id>:<sub>`, plugin `chat` are the
   names ([todo.md](todo_done.md#0-decide)). `PENDANT_*`,
   `CHANNEL=pendant`, `cranes` beside `agents` on `/api/auth/me` are
   accepted as aliases so cab and helm keep working until the Phase 4
@@ -524,7 +550,7 @@ List: [todo.md](todo.md#later).
 
 **Hosted (decided 2026-10-10):** the same Worker sold as a door you
 do not deploy — one household per account, every key the customer's,
-Settings / Agent DOs named by household instead of by bare slug. Plan
+Settings / Agent DOs named by household instead of by bare agent id. Plan
 in [todo.md](todo.md#hosted-phase-5--the-paid-door), numbers in
 [monetize.md](monetize.md).
 

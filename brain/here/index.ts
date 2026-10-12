@@ -6,6 +6,7 @@
 import { localParts, type Clock } from "@/brain/core/clock";
 import type { Logger } from "@/brain/core/log";
 import { migrate, type Migration, type Sql } from "@/brain/core/sql";
+import { agentSession, roomSession } from "@/brain/session/types";
 
 export const hereMigrations: Migration[] = [
   {
@@ -112,6 +113,19 @@ export function formatPin(pin: Pin, nowMs: number, tzName: string, zone = "UTC")
   return line;
 }
 
+/** The newest pin survives. Then its label is the room session id. */
+function collapseSession(sql: Sql, sid: string): void {
+  sql.exec(
+    `DELETE FROM here_pin
+     WHERE rowid IN (
+       SELECT a.rowid FROM here_pin AS a
+       JOIN here_pin AS b
+         ON a.at < b.at OR (a.at = b.at AND a.rowid > b.rowid)
+     )`,
+  );
+  sql.exec("UPDATE here_pin SET session_id = ? WHERE session_id != ?", sid, sid);
+}
+
 type PinRow = {
   lat: number;
   lon: number;
@@ -125,8 +139,10 @@ export class HereStore {
     private readonly sql: Sql,
     private readonly clock: Clock,
     private readonly log: Logger,
+    sessionId = agentSession,
   ) {
     migrate(this.sql, hereMigrations);
+    collapseSession(this.sql, roomSession(sessionId));
   }
 
   /** Stores this-send GPS. A null geo or a zero `at` is ignored. */

@@ -120,11 +120,16 @@ export function applyConfigPatch(config: AgentConfig, patch: unknown, now: numbe
         }
         continue;
       }
-      if (typeof value !== "string" || value.length > ENV_VALUE_MAX || hasControl(value)) {
+      if (typeof value !== "string") {
         return { ok: false, error: "bad_config" };
       }
-      if (env[key] !== value) {
-        env[key] = value;
+      // A copied secret often includes a trailing newline.
+      const trimmed = value.trim();
+      if (!trimmed || trimmed.length > ENV_VALUE_MAX || hasControl(trimmed)) {
+        return { ok: false, error: "bad_config" };
+      }
+      if (env[key] !== trimmed) {
+        env[key] = trimmed;
         changed = true;
       }
     }

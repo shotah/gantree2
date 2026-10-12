@@ -1,4 +1,4 @@
-import { AgentSession, KindDaily, KindDailyPlanner, KindExamplesPing, KindOnce, KindPreference, SilentToken, SubjectHours, ToolList, ToolSchedule } from "@/brain/cron/constants";
+import { KindDaily, KindDailyPlanner, KindExamplesPing, KindOnce, KindPreference, SilentToken, SubjectHours, ToolList, ToolSchedule } from "@/brain/cron/constants";
 import { isDailyPlannerTurn } from "@/brain/cron/planner";
 import { DefaultDailyPlannerPrompt } from "@/brain/cron/prompts";
 import { Runner } from "@/brain/cron/runner";
@@ -253,7 +253,7 @@ describe("runner", () => {
     const got = again.get(job.id);
     expect(got.enabled).toBe(true);
     expect(got.kind).toBe(KindDaily);
-    expect(got.sessionId).toBe(AgentSession);
+    expect(got.sessionId).toBe("agent");
     expect(got.nextRunAt).toBeLessThanOrEqual(clock.now());
 
     const pushes: PushMessage[] = [];
@@ -271,7 +271,7 @@ describe("runner", () => {
       return "here's your morning summary";
     });
     expect(text).toContain("morning summary");
-    expect(sessionId).toBe(AgentSession);
+    expect(sessionId).toBe("agent");
     expect(pushes).toEqual([{
       text: "here's your morning summary",
       photos: [],
@@ -294,7 +294,7 @@ describe("runner", () => {
     const got = again.get(job.id);
     expect(got.enabled).toBe(true);
     expect(got.kind).toBe(KindDailyPlanner);
-    expect(got.sessionId).toBe(AgentSession);
+    expect(got.sessionId).toBe("agent");
 
     const pushes: PushMessage[] = [];
     let text = "";
@@ -311,7 +311,7 @@ describe("runner", () => {
       return "aim check-in";
     });
     expect(isDailyPlannerTurn(text)).toBe(true);
-    expect(sessionId).toBe(AgentSession);
+    expect(sessionId).toBe("agent");
     expect(pushes).toHaveLength(1);
     expect(pushes[0]?.text).toBe("aim check-in");
     expect(pushes[0]?.photos).toEqual([]);

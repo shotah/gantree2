@@ -67,7 +67,7 @@ export const PROFILE_DESCRIPTION = "Get Google Health identity / profile (displa
   + "Useful to confirm which account is connected.";
 
 export const ACCOUNT_DESCRIPTION = "Check Google Health auth / token status without running a data query when possible. "
-  + "If unauthenticated, tell the human to run google-health-mcp auth or gantry auth ghealth.";
+  + "If unauthenticated, tell the human to type /auth google-health in chat.";
 
 export const sleepGetSchema = objectSchema({
   date: str("One wake-up day YYYY-MM-DD. Omit for last night. Ignored when after_date or before_date is set."),

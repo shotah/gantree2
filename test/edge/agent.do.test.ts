@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MAX_CHARS } from "@/brain/persona";
 import { maxChars } from "@/brain/selfnote/stamp";
 import { CONFIG_STORE_KEY } from "@/lib/agents/config";
+import { STATUS_STORE_KEY } from "@/lib/agents/status";
 import { openOAuthCatch, sessionKey } from "@/lib/door/session";
 import { HELD_DRAFT_TTL_MS } from "@/lib/chat/draft";
 import type { WireFrame } from "@/lib/chat/frame";
@@ -1050,7 +1051,11 @@ describe("Agent harness ops", () => {
 
     const status = await box.fetch(new Request("https://agent/status", { headers: { "X-Chat-Op": "status" } }));
     expect(await status.json()).toMatchObject({
-      harness: "connected",
+      state: "needs_keys",
+      plugins: [
+        { name: "maps", state: "ready" },
+        { name: "strava", state: "skipped", reason: "no_key" },
+      ],
       published: ["maps"],
       skipped: [{ name: "strava", reason: "no_key" }],
       perf: { turns: 1, prompt: 11, completion: 4, errors: 1 },
@@ -1105,7 +1110,7 @@ describe("Agent harness ops", () => {
     expect(body).not.toContain("house-key");
   });
 
-  it("does not reset perf when a second crane socket opens, and stays connected when the last one closes", async () => {
+  it("does not reset perf when another crane socket opens, and a closed socket leaves the brain status", async () => {
     installPairs();
     const { state, box, crane } = room();
     crane.close();
@@ -1119,14 +1124,15 @@ describe("Agent harness ops", () => {
     if (!first) {
       throw new Error("missing crane");
     }
+    await box.webSocketMessage(first as unknown as WebSocket, JSON.stringify({ kind: "status", published: ["math"], skipped: [] }));
     await box.webSocketMessage(first as unknown as WebSocket, JSON.stringify({ kind: "perf", tokens: { prompt: 1, completion: 1 }, outcome: "ok" }));
     expect((await open()).status).toBe(101);
     const mid = await box.fetch(new Request("https://agent/status", { headers: { "X-Chat-Op": "status" } }));
-    expect((await mid.json<{ perf: { turns: number } }>()).perf.turns).toBe(1);
+    expect(await mid.json()).toMatchObject({ state: "ready", perf: { turns: 1 } });
     first.close();
     await box.webSocketClose(first as unknown as WebSocket);
     const still = await box.fetch(new Request("https://agent/status", { headers: { "X-Chat-Op": "status" } }));
-    expect((await still.json<{ harness: string }>()).harness).toBe("connected");
+    expect(await still.json()).toMatchObject({ state: "ready", perf: { turns: 1 } });
     for (const socket of state.getWebSockets("role:crane")) {
       if (socket.readyState === OPEN) {
         socket.close();
@@ -1134,7 +1140,7 @@ describe("Agent harness ops", () => {
       }
     }
     const down = await box.fetch(new Request("https://agent/status", { headers: { "X-Chat-Op": "status" } }));
-    expect((await down.json<{ harness: string }>()).harness).toBe("connected");
+    expect(await down.json()).toMatchObject({ state: "ready", perf: { turns: 1 } });
   });
 
   it("refuses a phone status frame and answers config and log errors", async () => {
@@ -1275,7 +1281,11 @@ describe("Agent native runtime", () => {
 
     const status = await native.box.fetch(new Request("https://agent/status", { headers: { "X-Chat-Op": "status" } }));
     expect(await status.json()).toMatchObject({
-      harness: "connected",
+      state: "needs_keys",
+      plugins: [
+        { name: "math", state: "ready" },
+        { name: "strava", state: "skipped", reason: "no_key" },
+      ],
       published: ["math"],
       skipped: [{ name: "strava", reason: "no_key" }],
     });
@@ -1283,7 +1293,7 @@ describe("Agent native runtime", () => {
     expect(roomMock.brain.announce).toHaveBeenCalledTimes(1);
   });
 
-  it("sets the next alarm from alarm() and keeps the harness connected", async () => {
+  it("sets the next alarm from alarm()", async () => {
     roomMock.brain.alarm.mockImplementation(async (emit) => {
       emit({ kind: "push", user_id: "1182", id: "wake", text: "ping" });
       return 9_000_000_000_000;
@@ -1298,7 +1308,63 @@ describe("Agent native runtime", () => {
     ]);
     expect(state.storage.alarmAt).toBe(9_000_000_000_000);
     const status = await box.fetch(new Request("https://agent/status", { headers: { "X-Chat-Op": "status" } }));
-    expect(await status.json()).toMatchObject({ harness: "connected" });
+    const body = await status.json<{ state: string; since: number | null }>();
+    expect(body.state).toBe("starting");
+    expect(body.since).toEqual(expect.any(Number));
+  });
+
+  it("drops the brain on restart and opens a new one", async () => {
+    roomMock.brain.announce.mockImplementation(async (emit) => {
+      emit({ kind: "status", published: ["math"], skipped: [{ name: "garmin", reason: "disabled" }] });
+    });
+    const { state, box } = room();
+    await state.storage.put("slug", "kit");
+    await state.storage.put(CONFIG_STORE_KEY, nativeConfig());
+
+    const denied = await box.fetch(new Request("https://agent/restart", {
+      method: "GET",
+      headers: { "X-Chat-Op": "restart" },
+    }));
+    expect(denied.status).toBe(405);
+
+    const first = await box.fetch(new Request("https://agent/status", { headers: { "X-Chat-Op": "status" } }));
+    expect(await first.json()).toMatchObject({
+      state: "ready",
+      plugins: [
+        { name: "math", state: "ready" },
+        { name: "garmin", state: "skipped", reason: "disabled" },
+      ],
+    });
+    expect(roomMock.dropRoomBrain).not.toHaveBeenCalled();
+    expect(roomMock.openRoomBrain).toHaveBeenCalledTimes(1);
+
+    const cur = await state.storage.get<Record<string, unknown>>(STATUS_STORE_KEY);
+    if (!cur) {
+      throw new Error("missing status");
+    }
+    await state.storage.put(STATUS_STORE_KEY, {
+      ...cur,
+      lastError: { message: "old boot", at: "2026-10-12T03:25:01.549Z" },
+    });
+    await state.storage.put("chat.keep", "stay");
+
+    const restarted = await box.fetch(new Request("https://agent/restart", {
+      method: "POST",
+      headers: { "X-Chat-Op": "restart" },
+    }));
+    expect(restarted.status).toBe(200);
+    expect(await restarted.json()).toMatchObject({
+      state: "ready",
+      lastError: null,
+      plugins: [
+        { name: "math", state: "ready" },
+        { name: "garmin", state: "skipped", reason: "disabled" },
+      ],
+    });
+    expect(await state.storage.get("chat.keep")).toBe("stay");
+    expect(roomMock.dropRoomBrain).toHaveBeenCalledTimes(1);
+    expect(roomMock.openRoomBrain).toHaveBeenCalledTimes(2);
+    expect(roomMock.brain.announce).toHaveBeenCalledTimes(2);
   });
 
   it("rebuilds the brain when grants, env, or persona change", async () => {
@@ -1355,6 +1421,34 @@ describe("Agent native runtime", () => {
     expect(roomMock.brain.authFinish).toHaveBeenCalledWith("google", "https://g.test/api/auth/catch", "abc");
     expect(mouth.frames().some((frame) => frame.kind === "reply" && frame.user_id === user && frame.text === "google connected")).toBe(true);
     expect(other.frames().some((frame) => frame.text === "google connected")).toBe(false);
+  });
+
+  it("returns the auth failure reason and hides a secret", async () => {
+    const { state, box } = room();
+    await state.storage.put(CONFIG_STORE_KEY, nativeConfig());
+    const body = {
+      plugin: "google",
+      code: "abc",
+      redirectUri: "https://g.test/api/auth/catch",
+      userId: "118212345678901234567",
+    };
+    roomMock.brain.authFinish.mockRejectedValueOnce(new Error("OAuth token exchange: invalid_client"));
+    const shown = await box.fetch(new Request("https://agent/auth", {
+      method: "POST",
+      headers: { "X-Chat-Op": "auth", "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }));
+    expect(shown.status).toBe(502);
+    expect(await shown.json()).toEqual({ error: "auth_failed", message: "OAuth token exchange: invalid_client" });
+
+    roomMock.brain.authFinish.mockRejectedValueOnce(new Error("bad client_secret=sekrit"));
+    const hidden = await box.fetch(new Request("https://agent/auth", {
+      method: "POST",
+      headers: { "X-Chat-Op": "auth", "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }));
+    expect(hidden.status).toBe(502);
+    expect(await hidden.json()).toEqual({ error: "auth_failed", message: "auth failed" });
   });
 
   it("starts a sealed catch redirect for native oauth plugins", async () => {

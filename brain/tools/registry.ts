@@ -204,14 +204,14 @@ export class Registry {
       if (skip) {
         skippedFrame.push({ name, reason: skip.reason });
         skipped.push({ name, reason: skip.reason, note: skip.note });
-        this.ctx.log.error("mcp server boot skipped", { server: name, reason: skip.reason });
+        logSkip(this.ctx.log, name, skip.reason);
         continue;
       }
       const loaded = loadTools(plugin, this.ctx, tools);
       if (!Array.isArray(loaded)) {
         skippedFrame.push({ name, reason: loaded.reason });
         skipped.push({ name, reason: loaded.reason, note: loaded.note });
-        this.ctx.log.error("mcp server boot skipped", { server: name, reason: loaded.reason });
+        logSkip(this.ctx.log, name, loaded.reason);
         continue;
       }
       for (const live of loaded) {
@@ -539,6 +539,16 @@ export class Registry {
       throw new Error("registry.publish() has not been called");
     }
   }
+}
+
+/** A missing key or a plugin that is off is expected. A load failure stays an error. */
+function logSkip(log: PluginContext["log"], name: string, reason: string): void {
+  const fields = { plugin: name, reason };
+  if (reason === "no_key" || reason === "disabled") {
+    log.info("plugin skipped", fields);
+    return;
+  }
+  log.error("plugin skipped", fields);
 }
 
 async function readyOf(plugin: Plugin, ctx: PluginContext): Promise<SkippedServer | null> {

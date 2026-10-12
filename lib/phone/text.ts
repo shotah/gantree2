@@ -1,6 +1,6 @@
 /** Mirror ai-gantry `stripHarnessContext`: drop pasted clock / hydration from mouth text. */
 
-const HARNESS_PREFIXES = ["[harness]", "[location", "[current time]", "[hours]", "[memory]"] as const;
+const HARNESS_PREFIXES = ["[agent]", "[harness]", "[location", "[current time]", "[hours]", "[memory]"] as const;
 
 export function harnessTagLine(line: string): boolean {
   const t = line.trim();

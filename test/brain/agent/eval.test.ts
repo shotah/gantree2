@@ -139,7 +139,7 @@ describe("eval fixtures", () => {
     expect(next).toBeLessThanOrEqual(now + 140 * 60_000);
     const waiting = sql.one<{ waiting_for_reply: number }>(
       "SELECT waiting_for_reply FROM session WHERE id = ?",
-      "gantry",
+      "ada",
     );
     expect(waiting?.waiting_for_reply).toBe(1);
   });

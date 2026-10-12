@@ -18,7 +18,7 @@ export const TOOL_CANCEL = "watch_cancel";
 /** Slowest-safe interval for a tool, in seconds. `0` means no floor. */
 export type IntervalFloor = (tool: string) => number;
 
-const ADD_DESCRIPTION = "Subscribe to an MCP fetch tool. The harness polls it on an interval "
+const ADD_DESCRIPTION = "Subscribe to an MCP fetch tool. The agent polls it on an interval "
   + "and wakes the agent only when new item ids appear. Quiet polls never call the model. "
   + "The first poll seeds the cursor (no flood of old items). "
   + "tool must be a prefixed MCP name (e.g. feeds__items_list). "

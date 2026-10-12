@@ -4,12 +4,12 @@ import { fixedClock } from "@/brain/core/clock";
 import { makeLogger, memorySink, silentLogger } from "@/brain/core/log";
 import { nodeSql, type NodeDatabase, type Sql } from "@/brain/core/sql";
 import {
-  agentSession,
   defaultMaxEstTokens,
   defaultMaxMessages,
   estTokens,
   roleAssistant,
   roleUser,
+  roomSession,
   SessionStore,
 } from "@/brain/session";
 
@@ -101,7 +101,7 @@ describe("SessionStore", () => {
     );
     const again = open(20, 100_000, nodeSql(db)).store;
     expect(again.messages("telegram:1:2")).toEqual([]);
-    const msgs = again.messages(agentSession);
+    const msgs = again.messages(roomSession(""));
     expect(msgs.map((m) => m.content)).toEqual(["hi", "hey"]);
   });
 

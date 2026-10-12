@@ -6,8 +6,14 @@ export const roleAssistant = "assistant";
 export const speakerUser = "user";
 export const speakerAgent = "agent";
 
-/** The one conversation id the harness collapsed every mouth into. */
-export const agentSession = "gantry";
+/** One conversation id per agent database. An empty slug is `agent`. */
+export function roomSession(slug: string): string {
+  const id = slug.trim();
+  return id === "" ? "agent" : id;
+}
+
+/** Empty-slug id. The live conversation id is `roomSession(slug)`. */
+export const agentSession = roomSession("");
 
 /** Trailing history messages that stay verbatim when fillers are stripped. */
 export const keepRecentUnstripped = 40;

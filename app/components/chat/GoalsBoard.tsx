@@ -177,7 +177,7 @@ function AimCard({ row, onAsk }: { row: AimRow; onAsk: (command: string) => void
         className="self-start rounded-lg border border-edge px-2 py-1 text-xs text-fg hover:bg-track"
         onClick={() => onAsk(`/aims ${row.area}`)}
       >
-        Ask Kit about {row.area}
+        Ask the agent about {row.area}
       </button>
     </li>
   );
@@ -260,7 +260,7 @@ export function GoalsSheet({
               )
             : null}
           <p className="mt-3 text-[11px] leading-snug text-dim">
-            Scores are Kit&apos;s read on each day, −3 to +3, against the aim. Argue with one in the thread.
+            Scores are the agent&apos;s read on each day, −3 to +3, against the aim. Argue with one in the thread.
           </p>
           <div className="mt-2 flex gap-2">
             <button

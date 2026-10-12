@@ -224,7 +224,7 @@ export function TasksSheet({
             </button>
           </form>
           <p className="mt-3 text-[11px] leading-snug text-dim">
-            Ticking one tells Kit it&apos;s done. Kit keeps the list; only you close a task.
+            Ticking one tells the agent it&apos;s done. The agent keeps the list; only you close a task.
           </p>
           <div className="mt-2 flex gap-2">
             <button

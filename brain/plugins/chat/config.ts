@@ -131,7 +131,7 @@ export function themeCatalogKey(cfg: ServerConfig): string {
 }
 
 export function errNeedMailbox(): string {
-  return `${envChatMailboxURL} is required (wss://…/ws/<slug>). ${nextThemeList}`;
+  return `${envChatMailboxURL} is required (wss://…/ws/<agent id>). ${nextThemeList}`;
 }
 
 export function errNeedBearer(): string {
@@ -139,7 +139,7 @@ export function errNeedBearer(): string {
 }
 
 export function errBadMailbox(): string {
-  return `${envChatMailboxURL} must be ws(s) or http(s) with /ws/<slug>. ${nextThemeList}`;
+  return `${envChatMailboxURL} must be ws(s) or http(s) with /ws/<agent id>. ${nextThemeList}`;
 }
 
 export function errNeedImageDir(): string {

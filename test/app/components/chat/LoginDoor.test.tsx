@@ -51,7 +51,7 @@ describe("LoginDoor", () => {
     expect(screen.getByText("Agents you run")).toBeTruthy();
     expect(screen.getByText("Eleven tools")).toBeTruthy();
     expect(screen.getByText("On Cloudflare or at home")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "color theme" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "color theme" })).toBeNull();
     expect(link.className.split(/\s+/)).toEqual(expect.arrayContaining([
       "w-full",
       "rounded-xl",

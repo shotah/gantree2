@@ -29,7 +29,7 @@ const COPY: Record<string, string> = {
   locked: "That person is set in the environment and stays locked.",
   bad_entry: "Use an email or sub:email.",
   bad_role: "Role must be admin, operator, or member.",
-  bad_agents: "Agent slugs use lowercase letters, digits, and hyphens.",
+  bad_agents: "Agent names use lowercase letters, digits, and hyphens.",
   not_found: "That person is not on the stored list.",
   settings_unavailable: "User storage is not configured.",
   bad_json: "That request was not valid JSON.",
@@ -378,7 +378,7 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                               value={agents}
                               autoComplete="off"
                               spellCheck={false}
-                              placeholder="kit, ada"
+                              placeholder="ada, bob"
                               onChange={(e) => setAgents(e.target.value)}
                               className={fieldClass}
                             />

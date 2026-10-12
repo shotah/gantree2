@@ -4,6 +4,7 @@ import { fixedClock } from "@/brain/core/clock";
 import { silentLogger } from "@/brain/core/log";
 import { nodeSql, type NodeDatabase } from "@/brain/core/sql";
 import { formatPin, HereStore } from "@/brain/here";
+import { agentSession } from "@/brain/session/types";
 
 describe("here", () => {
   it("remembers a pin and formats the prompt line", () => {
@@ -32,5 +33,25 @@ describe("here", () => {
     expect(store.get("s")).toBeNull();
     expect(formatPin({ lat: 1, lon: 2, label: "", accuracyM: 0, at: 0 }, 5, "UTC")).toBe("");
     expect(store.format("s")).toBe("");
+  });
+
+  it("collapses leftover pins onto the agent session, keeping the newest", () => {
+    const at = Date.parse("2026-08-17T16:22:00.000Z");
+    const clock = fixedClock(at);
+    const sql = nodeSql(new DatabaseSync(":memory:") as unknown as NodeDatabase);
+    const store = new HereStore(sql, clock, silentLogger);
+    store.set("gantry", { lat: 1, lon: 2, label: "old", accuracyM: 0, at: at - 1000 });
+    store.set("telegram:1", { lat: 3, lon: 4, label: "new", accuracyM: 8, at });
+    const again = new HereStore(sql, clock, silentLogger);
+    expect(again.get("gantry")).toBeNull();
+    expect(again.get("telegram:1")).toBeNull();
+    expect(again.get(agentSession)).toEqual({
+      lat: 3,
+      lon: 4,
+      label: "new",
+      accuracyM: 8,
+      at,
+    });
+    expect(store.get(agentSession)?.label).toBe("new");
   });
 });

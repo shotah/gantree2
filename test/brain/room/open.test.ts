@@ -130,7 +130,11 @@ describe("openRoomBrain", () => {
     expect(typeof deps.provider.complete).toBe("function");
 
     deps.log.info("booted");
-    expect(logs).toContainEqual(expect.objectContaining({ kind: "log", level: "info", message: "booted" }));
+    expect(logs).toContainEqual(expect.objectContaining({ kind: "log", level: "info", message: "booted slug=kit" }));
+    deps.log.info("mcp server connected", { server: "maps", tools_published: 2 });
+    expect(logs.at(-1)?.message).toBe("mcp server connected slug=kit server=maps tools_published=2");
+    deps.log.info("maps skipped: no_key", { server: "maps", reason: "no_key" });
+    expect(logs.at(-1)?.message).toBe("maps skipped: no_key slug=kit");
     expect(spy).toHaveBeenCalled();
     spy.mockRestore();
 

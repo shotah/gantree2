@@ -159,7 +159,7 @@ function sendClientFrame(ws: WebSocket, frame: ClientFrame): void {
 }
 
 export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; slug?: string }) {
-  const [slug, setSlug] = useState(() => (routeSlug ? parseSlug(routeSlug) ?? "kit" : "kit"));
+  const [slug, setSlug] = useState(() => (routeSlug ? parseSlug(routeSlug) ?? "" : ""));
   const [slugTouched, setSlugTouched] = useState(false);
   const [secret, setSecret] = useState("");
   const [bearer, setBearer] = useState("");
@@ -1237,7 +1237,7 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
   }
 
   const title = useMemo(
-    () => waitingForAgent || mailboxGap ? "gantree" : displaySlug(roomSlug),
+    () => waitingForAgent || mailboxGap || !roomSlug ? "Agent" : displaySlug(roomSlug),
     [waitingForAgent, mailboxGap, roomSlug],
   );
   const hideSecrets = painting;
@@ -1290,7 +1290,7 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
         <KitAvatar {...faceProps} size="lg" editable={false} />
         <p className="text-sm text-body">
           {agents.length
-            ? `Not on ${displaySlug(roomSlug) || "that agent"} yet`
+            ? `Not on ${roomSlug ? displaySlug(roomSlug) : "that agent"} yet`
             : "Not on any agent yet — give this to an admin"}
         </p>
         {me?.email
@@ -1312,7 +1312,7 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
           <input
             className="w-full rounded border border-edge bg-canvas px-1.5 py-1 text-sm text-fg"
             value={slugTouched ? slug : ""}
-            placeholder="the agent slug"
+            placeholder="agent name"
             spellCheck={false}
             autoCapitalize="none"
             autoCorrect="off"
@@ -1324,7 +1324,7 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
           />
         </label>
         <p className="max-w-xs text-xs text-dim">
-          The picker fills in after the agent dials. If you know the slug, type it.
+          The picker fills in after the agent dials. If you know the agent name, type it.
         </p>
       </main>
     );
@@ -1345,7 +1345,7 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
                 <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
                   <KitAvatar {...faceProps} size="lg" editable={false} />
                   <p className="text-chat text-dim">
-                    Nothing yet. Type below — or / for harness commands.
+                    Nothing yet. Type below — or / for commands.
                   </p>
                 </div>
               )}
@@ -1474,7 +1474,7 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
                       <input
                         className="w-full rounded border border-edge bg-canvas px-1.5 py-1 text-sm text-fg"
                         value={slug}
-                        placeholder="the agent slug"
+                        placeholder="agent name"
                         spellCheck={false}
                         autoCapitalize="none"
                         autoCorrect="off"
@@ -1514,26 +1514,32 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
                     </label>
                   )
                 : null}
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-muted">Theme</span>
-                <ThemeSelect
-                  onHumanPick={phone ? pickHumanTheme : undefined}
-                  roomTheme={phone ? roomTheme : null}
-                  followTheme={phone ? followTheme : false}
-                  agentName={displaySlug(roomSlug)}
-                />
-              </div>
-              {phone
-                ? (
-                    <div className="flex flex-col gap-1">
-                      <label className="flex items-center gap-2 text-xs text-muted">
-                        <input type="checkbox" checked={agentStyle} onChange={toggleAgentStyle} />
-                        {`Let ${title} style the chat`}
-                      </label>
-                      <p className="text-[11px] text-dim">{`${title} picks the color theme and can paint a wallpaper behind the thread. Off keeps your theme on a plain canvas.`}</p>
-                    </div>
-                  )
-                : null}
+              {needGoogle
+                ? null
+                : (
+                    <>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-muted">Theme</span>
+                        <ThemeSelect
+                          onHumanPick={phone ? pickHumanTheme : undefined}
+                          roomTheme={phone ? roomTheme : null}
+                          followTheme={phone ? followTheme : false}
+                          agentName={roomSlug ? displaySlug(roomSlug) : "Agent"}
+                        />
+                      </div>
+                      {phone
+                        ? (
+                            <div className="flex flex-col gap-1">
+                              <label className="flex items-center gap-2 text-xs text-muted">
+                                <input type="checkbox" checked={agentStyle} onChange={toggleAgentStyle} />
+                                {`Let ${title} style the chat`}
+                              </label>
+                              <p className="text-[11px] text-dim">{`${title} picks the color theme and can paint a wallpaper behind the thread. Off keeps your theme on a plain canvas.`}</p>
+                            </div>
+                          )
+                        : null}
+                    </>
+                  )}
               <FontSelect />
               {phone && cfg?.voice
                 ? (
@@ -1573,7 +1579,7 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line pt-2">
                       {cfg?.dev
                         ? phone
-                          ? <a className="text-xs text-dim underline" href="/chat/kit">Open agent stand-in</a>
+                          ? <a className="text-xs text-dim underline" href="/chat">Open chat</a>
                           : <a className="text-xs text-dim underline" href="/">Open phone</a>
                         : null}
                       {cfg?.google && phone && !cfg.gap

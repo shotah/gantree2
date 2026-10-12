@@ -7,9 +7,6 @@ export const KindExamples = "examples";
 export const KindExamplesPing = "examples_ping";
 export const KindFollowUp = "followup";
 
-/** The one agent conversation. Mouths route push; jobs do not store a destination. */
-export const AgentSession = "gantry";
-
 export const ToolSchedule = "cron_schedule";
 export const ToolList = "cron_list";
 export const ToolCancel = "cron_cancel";

@@ -121,7 +121,7 @@ import {
   applyHarnessFrame,
   harnessKind,
   LOG_STORE_KEY,
-  noteConnected,
+  noteBrainOpen,
   pageLog,
   parseLog,
   parseStatus,
@@ -208,6 +208,9 @@ export class Agent extends DurableObject<AgentEnv> {
     if (request.headers.get("X-Chat-Op") === "status") {
       return this.statusHttp(request);
     }
+    if (request.headers.get("X-Chat-Op") === "restart") {
+      return this.restartHttp(request);
+    }
     if (request.headers.get("X-Chat-Op") === "log") {
       return this.logHttp(request);
     }
@@ -253,7 +256,6 @@ export class Agent extends DurableObject<AgentEnv> {
       emailVerified: parseEmailVerified(verified),
     }));
     if (role === "crane") {
-      await this.noteHarnessOpen();
       await this.sendConfig(pair[1]);
     }
     await this.flush(pair[1], role, userId);
@@ -1125,6 +1127,16 @@ export class Agent extends DurableObject<AgentEnv> {
     if (request.method !== "GET") {
       return new Response("method", { status: 405 });
     }
+    await this.ensureBrain();
+    return Response.json(await this.loadStatus());
+  }
+
+  private async restartHttp(request: Request): Promise<Response> {
+    if (request.method !== "POST") {
+      return new Response("method", { status: 405 });
+    }
+    this.forgetBrain();
+    await this.ensureBrain();
     return Response.json(await this.loadStatus());
   }
 
@@ -1166,13 +1178,31 @@ export class Agent extends DurableObject<AgentEnv> {
     }
   }
 
-  private async noteHarnessOpen(): Promise<void> {
+  /** Open the in-process brain so status reflects the registry boot, not an empty row. */
+  private async ensureBrain(): Promise<void> {
+    try {
+      await this.nativeBrain();
+    } catch (err) {
+      await this.markBrainError(err);
+    }
+  }
+
+  private async markBrainError(err: unknown): Promise<void> {
+    const cur = await this.loadStatus();
+    const message = err instanceof Error && err.message ? err.message : "brain failed";
+    await this.ctx.storage.put(STATUS_STORE_KEY, {
+      ...cur,
+      state: "error",
+      since: cur.since ?? Date.now(),
+      version: cur.version,
+      lastError: { message: message.slice(0, 500), at: new Date().toISOString() },
+    });
+  }
+
+  private async stampBrainOpen(): Promise<void> {
     try {
       const cur = await this.loadStatus();
-      const next = noteConnected(cur, Date.now());
-      if (next !== cur) {
-        await this.ctx.storage.put(STATUS_STORE_KEY, next);
-      }
+      await this.ctx.storage.put(STATUS_STORE_KEY, noteBrainOpen(cur, Date.now()));
     } catch {
       // presence is advisory
     }
@@ -1240,7 +1270,7 @@ export class Agent extends DurableObject<AgentEnv> {
     const fresh = brain !== this.brain;
     this.brain = brain;
     if (fresh) {
-      await this.noteHarnessOpen();
+      await this.stampBrainOpen();
       await this.withEmit((emit) => brain.announce(emit));
       await this.armAlarm(brain.nextAlarm());
     }
@@ -1451,8 +1481,8 @@ export class Agent extends DurableObject<AgentEnv> {
     const brain = await this.nativeBrain();
     try {
       await brain.authFinish(plugin, redirectUri, code);
-    } catch {
-      return Response.json({ error: "auth_failed" }, { status: 502 });
+    } catch (err) {
+      return Response.json({ error: "auth_failed", message: authFailureMessage(err) }, { status: 502 });
     }
     if (userId && userId.length <= 128) {
       this.enqueueCrane(JSON.stringify({
@@ -1507,8 +1537,8 @@ export class Agent extends DurableObject<AgentEnv> {
         return Response.json({ error: "no_login" }, { status: 404 });
       }
       return Response.json({ url: started.url });
-    } catch {
-      return Response.json({ error: "auth_failed" }, { status: 502 });
+    } catch (err) {
+      return Response.json({ error: "auth_failed", message: authFailureMessage(err) }, { status: 502 });
     }
   }
 
@@ -1589,6 +1619,18 @@ export class Agent extends DurableObject<AgentEnv> {
       // ignore a bad stored origin
     }
   }
+}
+
+const AUTH_SECRET = /client_secret|code_verifier|access_token|refresh_token|ya29\.|1\/\//;
+
+/** One line for the catch page. Secrets and token material become a generic failure. */
+function authFailureMessage(err: unknown): string {
+  const raw = err instanceof Error ? err.message : "";
+  const line = raw.replace(/\s+/g, " ").trim();
+  if (!line || AUTH_SECRET.test(line)) {
+    return "auth failed";
+  }
+  return line.slice(0, 240);
 }
 
 function sampleSink(env: AgentEnv): { addSample(input: SampleInput): Promise<unknown> } | null {

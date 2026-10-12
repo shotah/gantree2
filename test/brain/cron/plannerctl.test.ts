@@ -1,5 +1,5 @@
 import { localParts } from "@/brain/core/clock";
-import { AgentSession, KindDailyPlanner, PlannerOff } from "@/brain/cron/constants";
+import { KindDailyPlanner, PlannerOff } from "@/brain/cron/constants";
 import { PlannerService } from "@/brain/cron/planner";
 import { DefaultDailyPlannerPrompt } from "@/brain/cron/prompts";
 import { parsePlannerSchedule } from "@/brain/cron/schedule";
@@ -10,7 +10,7 @@ describe("planner service", () => {
   it("inherits the operator clock and opts out", () => {
     const { store } = openCron();
     const svc = new PlannerService({ store, zone: "UTC", at: "07:10" });
-    const delivery = { sessionId: AgentSession };
+    const delivery = { sessionId: "agent" };
     expect(svc.resolvedAt(delivery.sessionId)).toBe("07:10");
     svc.setAt(delivery.sessionId, "9:30am");
     const ensured = svc.ensureFor(delivery);
@@ -27,7 +27,7 @@ describe("planner service", () => {
   it("keeps a single daily planner job", () => {
     const { store, clock } = openCron();
     const parsed = parsePlannerSchedule("07:10", "UTC", clock.now());
-    const delivery = { sessionId: AgentSession };
+    const delivery = { sessionId: "agent" };
     const first = store.ensureDailyPlanner(DefaultDailyPlannerPrompt, parsed, delivery);
     expect(first.created).toBe(true);
     const second = store.ensureDailyPlanner(DefaultDailyPlannerPrompt, parsed, delivery);
@@ -41,7 +41,7 @@ describe("planner service", () => {
   it("keeps a clock moved during the run", () => {
     const { store, clock } = openCron();
     const past = clock.now() - 60_000;
-    const delivery = { sessionId: AgentSession };
+    const delivery = { sessionId: "agent" };
     const job = store.schedule(DefaultDailyPlannerPrompt, {
       kind: KindDailyPlanner,
       expr: "07:10",

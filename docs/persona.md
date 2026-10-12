@@ -22,8 +22,8 @@ copies `config.persona` into `PERSONA.md` once, and only when
 run again once any row exists. Saving the persona fold writes the row.
 A `PATCH` of `config.persona` also writes `PERSONA.md` when the string
 changes. The dashboard folds and the HTTP routes are the edit path:
-`GET` / `PUT` / `DELETE /api/agents/:slug/persona` and
-`GET` / `PUT /api/agents/:slug/self`. Other `*.md` names can be stored;
+`GET` / `PUT` / `DELETE /api/agents/<agent id>/persona` and
+`GET` / `PUT /api/agents/<agent id>/self`. Other `*.md` names can be stored;
 the assembler uses `PERSONA.md` and `SELF.md`. If `PERSONA.md` is
 absent, leftover `SOUL.md` / `RULES.md` / `USER.md` / `TOOLS.md` are
 folded into it. [architecture.md](architecture.md).
@@ -66,7 +66,7 @@ is the same overspill as putting MCP recipes in `PERSONA.md`.
 | Calendar / Tasks (MCP) | No | Dated to-dos with a real due date. |
 
 **Not all SQL.** Hydration is still lossy for arbitrary facts. Live `aim/`,
-`todo/`, and `waiting/` / `follow/` rows are also stamped on `[harness]`
+`todo/`, and `waiting/` / `follow/` rows are also stamped on `[agent]`
 every turn (cap 5 each), so the tracker does not depend on this week's
 chat query.
 A north-star sentence in `SELF.md` is the always-on personality layer.
@@ -112,7 +112,7 @@ never “yes boss.”
 “how’s the long goal going?” → recall `aim/` then live tools. Never invent
 progress.
 “[cron] Daily planner” → one session. `[aims]` / `[hours]` / `[wakes]` are already in
-`[harness]`; calendar, mail, and Garmin in ONE response, then today’s crons.
+`[agent]`; calendar, mail, and Garmin in ONE response, then today’s crons.
 Sick or vacation → `[silent]`. Real empty calendar → one question: what do
 they want on it. A clock time she commits (scoop at 2) → `cron_schedule`.
 Hours unknown: ask sleep/work once. `[silent]` if nothing useful.
@@ -166,7 +166,7 @@ to keep in lockstep.
 
 **Inject user** (admin) then patches **About you** from the signed-in
 user's profile — name, email, timezone, location, languages, notes, chat
-ids. **Identity** (the agent's name from the slug) stays. The inject
+ids. **Identity** (the agent's name, from the agent id) stays. The inject
 code lands with the settings screens ([todo.md](todo.md) §4). Do not
 rename About you labels without updating that inject. Recreate never
 overwrites an existing `PERSONA.md`.
@@ -178,7 +178,7 @@ When you change the seed, that file is the change.
 ## `SELF.md`
 
 Agent-written, append-only mid-chat, merge on `/new`. You prune it.
-The operator fold is `GET` / `PUT /api/agents/:slug/self` (an empty
+The operator fold is `GET` / `PUT /api/agents/<agent id>/self` (an empty
 body is refused).
 
 Keep **3–5 north-star sentences** (how you show up for months). Move mileage,

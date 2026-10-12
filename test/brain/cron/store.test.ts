@@ -1,4 +1,4 @@
-import { AgentSession, KindDaily, KindDailyPlanner, KindEvery, KindOnce } from "@/brain/cron/constants";
+import { KindDaily, KindDailyPlanner, KindEvery, KindOnce } from "@/brain/cron/constants";
 import { DefaultDailyPlannerPrompt } from "@/brain/cron/prompts";
 import { parsePlannerSchedule } from "@/brain/cron/schedule";
 import { formatCronTime } from "@/brain/cron/time";
@@ -97,7 +97,7 @@ describe("store", () => {
     expect(job.chatId).toBe("");
     const again = reopen(sql, clock, 10);
     const got = again.get(job.id);
-    expect(got.sessionId).toBe(AgentSession);
+    expect(got.sessionId).toBe("agent");
     expect(got.userId).toBe("");
     expect(got.chatId).toBe("");
     expect(got.threadId).toBe(0);

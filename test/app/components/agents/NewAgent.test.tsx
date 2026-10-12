@@ -42,16 +42,16 @@ async function reachTools(home = false, tools = [MAPS, CAST]) {
   const go = vi.fn();
   const { client, calls } = toolsClient(tools);
   render(<NewAgent home={home} client={client} go={go} />);
-  fireEvent.change(screen.getByLabelText("Slug"), { target: { value: "Kit" } });
+  fireEvent.change(screen.getByLabelText("Agent ID"), { target: { value: "Kit" } });
   expect(screen.getByText("Use a letter, then lowercase letters, digits, or hyphens.")).toBeTruthy();
   expect((buttonOf(screen.getByRole("button", { name: "Next" }))).disabled).toBe(true);
-  fireEvent.change(screen.getByLabelText("Slug"), { target: { value: "kit" } });
-  fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Kit" } });
+  fireEvent.change(screen.getByLabelText("Agent ID"), { target: { value: "kit" } });
+  fireEvent.change(screen.getByLabelText("Shown as"), { target: { value: "Kit" } });
   fireEvent.change(screen.getByLabelText("Tags"), { target: { value: "home, home, travel" } });
   fireEvent.click(screen.getByRole("button", { name: "Next" }));
   expect(areaOf(await screen.findByLabelText("Persona")).value).toContain("Personal assistant");
   fireEvent.click(screen.getByRole("button", { name: "Back" }));
-  expect(screen.getByLabelText("Slug")).toBeTruthy();
+  expect(screen.getByLabelText("Agent ID")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Next" }));
   fireEvent.click(screen.getByRole("button", { name: "Next" }));
   fireEvent.change(screen.getByLabelText("LLM_BASE_URL"), { target: { value: "https://llm.example/v1" } });
@@ -81,9 +81,9 @@ describe("NewAgent", () => {
     expect(within(rail).getByText("1").className).toContain("bg-accent");
     expect(within(rail).getByText("1").getAttribute("aria-current")).toBe("step");
     expect(within(rail).getByText("4").className).toContain("bg-track");
-    expect(screen.getByLabelText("Slug").parentElement?.parentElement?.className).toContain("bg-panel/90");
-    fireEvent.change(screen.getByLabelText("Slug"), { target: { value: "kit" } });
-    fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Kit" } });
+    expect(screen.getByLabelText("Agent ID").parentElement?.parentElement?.className).toContain("bg-panel/90");
+    fireEvent.change(screen.getByLabelText("Agent ID"), { target: { value: "kit" } });
+    fireEvent.change(screen.getByLabelText("Shown as"), { target: { value: "Kit" } });
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     const moved = screen.getByRole("list", { name: "Steps" });
     expect(within(moved).getByText("1").className).toContain("bg-ok/20");
@@ -123,8 +123,8 @@ describe("NewAgent", () => {
     const go = vi.fn();
     const { client, calls } = toolsClient([MAPS], false, ["LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL"]);
     render(<NewAgent client={client} go={go} />);
-    fireEvent.change(screen.getByLabelText("Slug"), { target: { value: "kit" } });
-    fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Kit" } });
+    fireEvent.change(screen.getByLabelText("Agent ID"), { target: { value: "kit" } });
+    fireEvent.change(screen.getByLabelText("Shown as"), { target: { value: "Kit" } });
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     fireEvent.click(await screen.findByRole("button", { name: "Next" }));
     expect((await screen.findByRole("note")).textContent).toContain("House keys on the server: LLM_BASE_URL, LLM_API_KEY, LLM_MODEL.");
@@ -141,8 +141,8 @@ describe("NewAgent", () => {
 
   it("still needs every LLM key typed when the house covers only some", async () => {
     render(<NewAgent client={toolsClient([MAPS], false, ["LLM_BASE_URL"]).client} go={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText("Slug"), { target: { value: "kit" } });
-    fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Kit" } });
+    fireEvent.change(screen.getByLabelText("Agent ID"), { target: { value: "kit" } });
+    fireEvent.change(screen.getByLabelText("Shown as"), { target: { value: "Kit" } });
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     fireEvent.click(await screen.findByRole("button", { name: "Next" }));
     await screen.findByRole("note");
@@ -168,8 +168,8 @@ describe("NewAgent", () => {
     const go = vi.fn();
     const { client, calls } = toolsClient([MAPS], true);
     render(<NewAgent client={client} go={go} />);
-    fireEvent.change(screen.getByLabelText("Slug"), { target: { value: "kit" } });
-    fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Kit" } });
+    fireEvent.change(screen.getByLabelText("Agent ID"), { target: { value: "kit" } });
+    fireEvent.change(screen.getByLabelText("Shown as"), { target: { value: "Kit" } });
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     fireEvent.change(screen.getByLabelText("LLM_BASE_URL"), { target: { value: "https://llm.example/v1" } });
@@ -183,7 +183,7 @@ describe("NewAgent", () => {
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
-    expect((inputOf(screen.getByLabelText("Slug"))).disabled).toBe(true);
+    expect((inputOf(screen.getByLabelText("Agent ID"))).disabled).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
@@ -206,8 +206,8 @@ describe("NewAgent", () => {
       return json(500, { error: "nope" });
     });
     const { rerender } = render(<NewAgent client={broken} go={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText("Slug"), { target: { value: "kit" } });
-    fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Kit" } });
+    fireEvent.change(screen.getByLabelText("Agent ID"), { target: { value: "kit" } });
+    fireEvent.change(screen.getByLabelText("Shown as"), { target: { value: "Kit" } });
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     fireEvent.change(screen.getByLabelText("LLM_BASE_URL"), { target: { value: "https://llm.example/v1" } });
@@ -229,8 +229,8 @@ describe("NewAgent", () => {
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
-    fireEvent.change(screen.getByLabelText("Slug"), { target: { value: "kit" } });
-    fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Kit" } });
+    fireEvent.change(screen.getByLabelText("Agent ID"), { target: { value: "kit" } });
+    fireEvent.change(screen.getByLabelText("Shown as"), { target: { value: "Kit" } });
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     fireEvent.change(screen.getByLabelText("LLM_BASE_URL"), { target: { value: "https://llm.example/v1" } });
@@ -248,8 +248,8 @@ describe("NewAgent", () => {
     Object.defineProperty(window, "location", { configurable: true, value: { assign, replace: vi.fn() } });
     const { client } = toolsClient([MAPS]);
     render(<NewAgent client={client} />);
-    fireEvent.change(screen.getByLabelText("Slug"), { target: { value: "kit" } });
-    fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Kit" } });
+    fireEvent.change(screen.getByLabelText("Agent ID"), { target: { value: "kit" } });
+    fireEvent.change(screen.getByLabelText("Shown as"), { target: { value: "Kit" } });
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     fireEvent.change(screen.getByLabelText("LLM_BASE_URL"), { target: { value: "https://llm.example/v1" } });

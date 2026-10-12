@@ -15,8 +15,8 @@ describe("NewAgentPage", () => {
     expect(metadata.title).toBe("New agent — gantree");
     vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(json(200, { tools: [MAPS, CAST] }))));
     render(await NewAgentPage({ searchParams: Promise.resolve({ home: "1" }) }));
-    fireEvent.change(screen.getByLabelText("Slug"), { target: { value: "kit" } });
-    fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Kit" } });
+    fireEvent.change(screen.getByLabelText("Agent ID"), { target: { value: "kit" } });
+    fireEvent.change(screen.getByLabelText("Shown as"), { target: { value: "Kit" } });
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     fireEvent.change(screen.getByLabelText("LLM_BASE_URL"), { target: { value: "https://llm.example/v1" } });

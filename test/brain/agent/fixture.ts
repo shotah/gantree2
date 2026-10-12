@@ -91,7 +91,7 @@ export function testDeps(extra: {
       ...extra.env,
     },
     persona: extra.persona ?? [],
-    slug: "gantry",
+    slug: "ada",
   };
 }
 

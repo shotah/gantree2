@@ -127,7 +127,7 @@ function AttachChip({
                 ? (
                     <button
                       type="button"
-                      aria-label="harness commands"
+                      aria-label="commands"
                       className="w-full rounded-lg px-2 py-1.5 text-left text-xs text-body hover:bg-track disabled:opacity-40"
                       disabled={disabled}
                       onClick={() => pick(onCommands)}
@@ -424,7 +424,7 @@ export function Compose({
             <div
               id={listId}
               role="listbox"
-              aria-label="Harness commands"
+              aria-label="Commands"
               className="absolute inset-x-3 bottom-full z-20 mb-1 max-h-64 overflow-y-auto rounded-xl border border-accent-line bg-panel shadow-lg"
             >
               <div className="border-b border-line px-3 py-2">

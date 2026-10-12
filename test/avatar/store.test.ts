@@ -34,7 +34,7 @@ describe("face notice", () => {
 describe("displaySlug", () => {
   it("title-cases the crane slug", () => {
     expect(displaySlug("kit")).toBe("Kit");
-    expect(displaySlug("")).toBe("Kit");
+    expect(displaySlug("")).toBe("Agent");
     expect(displaySlug(" ada")).toBe("Ada");
   });
 });

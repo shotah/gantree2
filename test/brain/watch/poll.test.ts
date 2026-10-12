@@ -7,7 +7,6 @@ import { textResult } from "@/brain/core/tools";
 import { asleepAt } from "@/brain/cron/hours";
 import { consumeRead } from "@/brain/plugins/twitter/budget";
 import {
-  AGENT_SESSION,
   TOOL_ADD,
   TOOL_LIST,
   WAKE_PREFIX,
@@ -202,14 +201,14 @@ describe("pollDue", () => {
     const got = reopened.get(watch.id);
     expect(got.enabled).toBe(true);
     expect(got.tool).toBe("feeds__items_list");
-    expect(got.sessionId).toBe(AGENT_SESSION);
+    expect(got.sessionId).toBe("agent");
     reopened.forceDueForTest(watch.id);
     const { onNewItems, wakes } = wakesOf();
     const fetchTool = scripted([`{"items":[{"id":"a"},{"id":"b","title":"fresh"}]}`]);
     await reopened.pollDue(clock.now(), fetchTool.callTool, onNewItems);
     expect(wakes).toHaveLength(1);
     expect(wakes[0]?.text).toContain("id=b");
-    expect(wakes[0]?.sessionId).toBe(AGENT_SESSION);
+    expect(wakes[0]?.sessionId).toBe("agent");
     expect(wakes[0]?.userId).toBe("");
   });
 

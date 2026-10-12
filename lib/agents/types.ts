@@ -12,6 +12,7 @@
  *   GET    /api/agents/:slug/config         → AgentConfigView             canRun
  *   PATCH  /api/agents/:slug/config  AgentConfigPatch → AgentConfigView   canRun
  *   GET    /api/agents/:slug/status         → AgentStatus                 canRun
+ *   POST   /api/agents/:slug/restart        → AgentStatus                 canRun
  *   GET    /api/agents/:slug/log?after=N    → LogPage                     canRun
  *   GET    /api/agents/:slug/users          → { users: RoomUser[] }       canRun (Agent DO `allow`)
  *   PUT    /api/agents/:slug/users  { users: RoomUser[] } → same          canRun
@@ -49,19 +50,40 @@ export type AgentCreate = {
   tags?: string[];
 };
 
-/** Cached on the Agent DO from the brain's `status`, `perf`, and `log` frames. */
+/** What the in-process brain is doing. The Agent DO computes this; a socket does not. */
+export type BrainState = "ready" | "needs_keys" | "error" | "starting";
+
+/** One plugin from the registry boot. `reason` is set when `state` is `skipped`. */
+export type PluginStatus = {
+  name: string;
+  state: "ready" | "skipped";
+  /** `no_key`, `no_oauth`, `disabled`, `error`, and the other registry skip codes. */
+  reason?: string;
+};
+
+/**
+ * Brain status the Agent DO computes from the registry boot, plus the
+ * `perf` / `log` counters. `published`, `skipped`, and `lastTurn` mirror
+ * `plugins` and `lastTurnAt` so older readers keep working.
+ */
 export type AgentStatus = {
-  harness: "connected" | "disconnected";
-  /** ms epoch of the last brain connect. */
+  state: BrainState;
+  /** ms epoch of the last brain open. */
   since: number | null;
-  /** From the last `status` frame. */
-  published: string[];
-  skipped: { name: string; reason: string }[];
+  /** `PACKAGE_VERSION` of the isolate that answered. */
+  version: string;
   /** ms epoch of the last `perf` frame. */
+  lastTurnAt: number | null;
+  /** Same instant as `lastTurnAt`. */
   lastTurn: number | null;
-  /** Last error-level `log` line since the brain connected. */
+  plugins: PluginStatus[];
+  /** Ready plugin names, registry order. The Tools fold reads this. */
+  published: string[];
+  /** Skipped plugins. The Tools fold reads this. */
+  skipped: { name: string; reason: string }[];
+  /** Last error-level `log` line. Cleared when the brain opens. */
   lastError: { message: string; at: string } | null;
-  /** Rolling since the brain connected. */
+  /** Rolling totals. They survive a restart; a fresh isolate keeps the stored row. */
   perf: { turns: number; prompt: number; completion: number; errors: number };
 };
 

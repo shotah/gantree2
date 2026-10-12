@@ -290,7 +290,7 @@ function harnessNote(clock: string): string {
     if (words.length > 0 && words[words.length - 1] === t.word) continue;
     words.push(t.word);
   }
-  return `[harness] Not user text — ${joinAnd(words)} for this turn.`;
+  return `[agent] Not user text — ${joinAnd(words)} for this turn.`;
 }
 
 function joinAnd(words: readonly string[]): string {
@@ -301,7 +301,7 @@ function joinAnd(words: readonly string[]): string {
 }
 
 function harnessTagLine(line: string): boolean {
-  if (line.startsWith("[harness]") || line.startsWith("[memory]")) return true;
+  if (line.startsWith("[agent]") || line.startsWith("[harness]") || line.startsWith("[memory]")) return true;
   return HARNESS_TAGS.some((t) => line.startsWith(t.tag));
 }
 

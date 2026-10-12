@@ -157,4 +157,73 @@ describe("oauth catch", () => {
     expect(await missing.text()).toBe("missing code");
     expect(seen).toEqual([]);
   });
+
+  it("returns the DO failure message as one line and never the code", async () => {
+    const key = await sessionKey(SECRET);
+    const state = await sealOAuthCatch(key, { slug: "kit", plugin: "google" });
+    const code = "auth/code";
+    const encoded = encodeURIComponent(code);
+    const { env, seen } = envFor(() => Response.json({
+      error: "auth_failed",
+      message: `exchange failed\n${code}\n${encoded}\r\nclick Connect again`,
+    }, { status: 502 }));
+    const res = await catchOAuth(
+      await authed(`https://g.test/api/auth/catch?state=${encodeURIComponent(state)}&code=${encoded}`, ADMIN),
+      env,
+    );
+    expect(res.status).toBe(502);
+    expect(res.headers.get("content-type")).toContain("text/plain");
+    const body = await res.text();
+    expect(body).toBe("exchange failed click Connect again");
+    expect(body).not.toContain(code);
+    expect(body).not.toContain(encoded);
+    expect(body.includes("\n")).toBe(false);
+    const req = seen[0];
+    if (!req) {
+      throw new Error("missing auth call");
+    }
+    expect(await req.json()).toMatchObject({ code });
+  });
+
+  it("caps a long failure message at 240 characters", async () => {
+    const key = await sessionKey(SECRET);
+    const state = await sealOAuthCatch(key, { slug: "kit", plugin: "google" });
+    const { env } = envFor(() => Response.json({
+      error: "auth_failed",
+      message: "m".repeat(250),
+    }, { status: 400 }));
+    const res = await catchOAuth(
+      await authed(`https://g.test/api/auth/catch?state=${encodeURIComponent(state)}&code=abc`, ADMIN),
+      env,
+    );
+    expect(res.status).toBe(502);
+    const body = await res.text();
+    expect(body).toBe("m".repeat(240));
+    expect(body).not.toContain("abc");
+  });
+
+  it("says could not connect when the DO sends no message", async () => {
+    const key = await sessionKey(SECRET);
+    const state = await sealOAuthCatch(key, { slug: "kit", plugin: "google" });
+    const url = `https://g.test/api/auth/catch?state=${encodeURIComponent(state)}&code=abc`;
+    const cases = [
+      () => Response.json({ error: "auth_failed" }, { status: 502 }),
+      () => new Response("nope", { status: 502 }),
+      () => Response.json({ message: "" }, { status: 502 }),
+      () => Response.json({ message: "   \n" }, { status: 502 }),
+      () => Response.json({ message: "abc" }, { status: 502 }),
+    ];
+    for (const handler of cases) {
+      const { env } = envFor(handler);
+      const res = await catchOAuth(await authed(url, ADMIN), env);
+      expect(res.status).toBe(502);
+      expect(await res.text()).toBe("could not connect");
+    }
+    const { env: down } = envFor(() => {
+      throw new Error("down abc");
+    });
+    const thrown = await catchOAuth(await authed(url, ADMIN), down);
+    expect(thrown.status).toBe(502);
+    expect(await thrown.text()).toBe("could not connect");
+  });
 });

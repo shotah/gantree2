@@ -100,7 +100,7 @@ with no path.
 | garmin | `GARMIN_PASSWORD` | yes |
 | garmin | `GARMIN_TOOL_TIER` | no — `core` (default), `extended`, or `complete` |
 
-Open `http://127.0.0.1:3000/chat/<slug>` after you create the agent.
+Open `http://127.0.0.1:3000/chat/<agent id>` after you create the agent.
 Blank keys on a new agent use the house `LLM_*` from `.dev.vars`. The
 browser only ever sees the key names (`GET /api/tools` → `house`).
 In production, set them with `wrangler secret put` and new agents need

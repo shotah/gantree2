@@ -35,7 +35,7 @@ export const coreScopes = [
   "https://www.googleapis.com/auth/googlehealth.profile.readonly",
 ];
 
-const authRequired = "google health auth required — run google-health-mcp auth (or gantry auth ghealth)";
+const authRequired = "google health auth required — type /auth google-health in chat";
 
 export type HealthClient = {
   clientId: string;
@@ -97,7 +97,7 @@ async function ensureAccessToken(client: HealthClient): Promise<string> {
   }
   const refresh = token.refreshToken?.trim() ?? "";
   if (refresh === "") {
-    throw new Error("google health access token expired and no refresh_token — run google-health-mcp auth");
+    throw new Error("google health access token expired and no refresh_token — type /auth google-health in chat");
   }
   if (client.clientId === "" || client.clientSecret === "") {
     throw new Error("GOOGLE_HEALTH_CLIENT_ID/SECRET required to refresh tokens");

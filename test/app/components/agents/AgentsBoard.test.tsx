@@ -42,16 +42,24 @@ describe("nagsFor", () => {
 describe("AgentsBoard", () => {
   it("lists agents with chat, manage, and a nag", async () => {
     const now = Date.now();
-    const kit = card({ tags: ["home"], status: { ...STATUS, lastTurn: now - 10_000 } });
+    const kit = card({ tags: ["home"], status: { ...STATUS, lastTurnAt: now - 10_000, lastTurn: now - 10_000 } });
     const ada = card({
       slug: "ada",
       name: "Ada",
       tags: [],
-      status: { ...STATUS, harness: "disconnected", published: [], skipped: [{ name: "maps", reason: "no key" }], lastTurn: null },
+      status: {
+        ...STATUS,
+        state: "needs_keys",
+        published: [],
+        skipped: [{ name: "maps", reason: "no key" }],
+        plugins: [{ name: "maps", state: "skipped", reason: "no key" }],
+        lastTurnAt: null,
+        lastTurn: null,
+      },
     });
     render(<AgentsBoard client={boardClient("admin", [kit, ada])} />);
     const kitCard = await screen.findByRole("listitem", { name: "Kit" });
-    expect(within(kitCard).getByText("connected")).toBeTruthy();
+    expect(within(kitCard).getByText("running")).toBeTruthy();
     expect(within(kitCard).getByText("home")).toBeTruthy();
     expect(within(kitCard).getByText("1 published · 0 skipped")).toBeTruthy();
     expect(within(kitCard).getByText("10s ago")).toBeTruthy();
@@ -60,7 +68,7 @@ describe("AgentsBoard", () => {
     expect(within(kitCard).getByRole("link", { name: "Manage" }).getAttribute("href")).toBe("/agents/kit");
 
     const adaCard = screen.getByRole("listitem", { name: "Ada" });
-    expect(within(adaCard).getByText("disconnected")).toBeTruthy();
+    expect(within(adaCard).getByText("running")).toBeTruthy();
     expect(within(adaCard).getByText("1 tool skipped")).toBeTruthy();
     expect(within(adaCard).getByText("—")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Users" }).getAttribute("href")).toBe("/users");
@@ -73,8 +81,8 @@ describe("AgentsBoard", () => {
     const avatar = kitCard.querySelector(".from-accent");
     expect(avatar?.textContent).toBe("K");
     expect(avatar?.className).toContain("to-mark");
-    expect(within(kitCard).getByText("connected").closest("p")?.className).toContain("bg-ok/15");
-    expect(within(adaCard).getByText("disconnected").closest("p")?.className).toContain("bg-track");
+    expect(within(kitCard).getByText("running").closest("p")?.className).toContain("bg-ok/15");
+    expect(within(adaCard).getByText("running").closest("p")?.className).toContain("bg-ok/15");
     expect(within(kitCard).getByText("home").className).toContain("bg-accent-soft");
     expect(within(kitCard).getByText("Tools").className).toContain("uppercase");
     expect(within(adaCard).getByText("1 tool skipped").className).toContain("bg-danger-soft");

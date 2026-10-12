@@ -11,6 +11,7 @@ import {
   getAgentLog,
   getAgents,
   getAgentStatus,
+  postAgentRestart,
   getAgentUsers,
   getSamples,
   patchAgentConfig,
@@ -80,8 +81,8 @@ function world() {
           if (op === "bearer") {
             return Response.json({ bearer });
           }
-          if (op === "status") {
-            return Response.json({ ...emptyStatus(), harness: "connected", since: 50 });
+          if (op === "status" || op === "restart") {
+            return Response.json({ ...emptyStatus(), state: "ready", since: 50 });
           }
           if (op === "config") {
             return Response.json({ envKeys: ["A"], mcp: "toml", persona: "", updatedAt: 1, recreate: false });
@@ -119,9 +120,9 @@ describe("agents http", () => {
     await agents.create({ slug: "ada", name: "Ada" }, ADA);
     const all = await getAgents(asRole("admin", "/api/agents"), env);
     expect(all.status).toBe(200);
-    const body = await all.json<{ agents: { slug: string; canMutate: boolean; status: { harness: string } }[] }>();
+    const body = await all.json<{ agents: { slug: string; canMutate: boolean; status: { state: string } }[] }>();
     expect(body.agents.map((row) => row.slug)).toEqual(["ada", "kit"]);
-    expect(body.agents.every((row) => row.canMutate && row.status.harness === "connected")).toBe(true);
+    expect(body.agents.every((row) => row.canMutate && row.status.state === "ready")).toBe(true);
 
     const mine = await getAgents(asRole("operator", "/api/agents", ["kit"]), env);
     expect((await mine.json<{ agents: { slug: string; canMutate: boolean }[] }>()).agents).toEqual([
@@ -390,5 +391,18 @@ describe("agents http", () => {
     api.listSamples = () => Promise.reject(new Error("down"));
     expect((await getSamples(asRole("admin", "/api/samples"), env)).status).toBe(503);
     expect((await getSamples(asRole("admin", "/api/samples?since=9007199254740993"), env)).status).toBe(400);
+  });
+
+  it("restarts for an admin or the operator who runs the agent", async () => {
+    const { env, agents, calls } = world();
+    await agents.create({ slug: "kit", name: "Kit" }, ADA);
+    expect((await postAgentRestart(new Request("https://g.test/api/agents/kit/restart", { method: "POST" }), env, "kit")).status).toBe(401);
+    expect((await postAgentRestart(asRole("member", "/api/agents/kit/restart", [], "POST"), env, "kit")).status).toBe(403);
+    expect((await postAgentRestart(asRole("operator", "/api/agents/ada/restart", ["kit"], "POST"), env, "ada")).status).toBe(403);
+    expect((await postAgentRestart(asRole("admin", "/api/agents/nope/restart", [], "POST"), env, "Bad_Slug")).status).toBe(400);
+    const ok = await postAgentRestart(asRole("operator", "/api/agents/kit/restart", ["kit"], "POST"), env, "kit");
+    expect(ok.status).toBe(200);
+    expect(calls.at(-1)).toMatchObject({ method: "POST", op: "restart" });
+    expect((await postAgentRestart(asRole("admin", "/api/agents/kit/restart", [], "POST"), env, "kit")).status).toBe(200);
   });
 });
