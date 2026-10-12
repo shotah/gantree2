@@ -391,7 +391,7 @@ then arms the alarm again.</p>
   RES[&quot;resolveUser(who)&quot;] --&gt; ROLE{{&quot;admin · operator(agents) · member · none&quot;}}
   ROLE -- &quot;/users /settings&quot; --&gt; ADMIN[admin only]
   ROLE -- &quot;/agents/:id&quot; --&gt; OP[&quot;admin, or operator with that id in agents[]&quot;]
-  ROLE -- &quot;/chat/:id&quot; --&gt; CHAT[&quot;any role, and on the room list&quot;]
+  ROLE -- &quot;/chat/:id&quot; --&gt; CHAT[&quot;any role; floor env or room list&quot;]
   ROOM --&gt; CHAT</pre>
 <p>Seeding, by place:</p>
 <table>
@@ -496,8 +496,9 @@ Settings is one more actor. Nothing is shared except the KV directory.</p>
 <p>If a task fails one of these, it is later, or it is wrong.</p>
 <ol>
 <li><strong>One door.</strong> Google signs you in; one list says whether; a role
-says what; each agent&#39;s room list says who it talks to. Role is
-computed every request, never read from the cookie. No second
+says what; each agent&#39;s room list says who it talks to, except
+<code>GANTREE_ADMINS</code> and <code>GANTREE_ALLOW</code> may chat with every agent.
+Role is computed every request, never read from the cookie. No second
 login. <a href="access.html">access.md</a>.</li>
 <li><strong>The Agent DO is truth.</strong> <code>config.env</code>, the room list, and the
 bearer live on the DO. Persona rows, <code>SELF.md</code>, sessions, memory,
