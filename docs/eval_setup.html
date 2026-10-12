@@ -42,13 +42,13 @@
 <blockquote>
 <p>Why it exists: the persona seed is a behavior contract, and a rule
 that holds two runs in three is a rule the seed is not carrying.
-Fixtures: <code>brain/eval/fixtures/</code> (same JSON the Go harness used).</p>
+Fixtures: <code>harness/eval/fixtures/</code> (same JSON the Go harness used).</p>
 </blockquote>
 <p>Three values, one file locally and repository secrets in CI. The eval
 replays each fixture against a live model with the shipped persona seed.
 Tool results stay canned. Where a fixture sets <code>tools_from</code>, the runner
-reads that plugin&#39;s in-process catalog (<code>brain/plugins</code>) filtered by
-<code>brain/eval/fixtures/mcp.toml</code>; it does not call the tool.</p>
+reads that plugin&#39;s in-process catalog (<code>harness/plugins</code>) filtered by
+<code>harness/eval/fixtures/mcp.toml</code>; it does not call the tool.</p>
 <table>
 <thead>
 <tr>
@@ -88,7 +88,7 @@ LLM_MODEL=gemini-3.8-flash</code></pre>
 <li><p>Run it:</p>
 <pre><code class="language-sh">npm run eval</code></pre>
 <p>That loads <code>.dev.vars</code> and runs Vitest with <code>vitest.eval.config.ts</code>
-(<code>test/brain/eval/**</code>). The live test is <code>TestEval_Live</code>&#39;s successor.
+(<code>test/harness/eval/**</code>). The live test is <code>TestEval_Live</code>&#39;s successor.
 A turn is slow on a Flash-class model; thirty fixtures × 3 runs can
 take the better part of an hour. The Vitest timeout is 120 minutes.</p>
 <p>Without the three values the live test skips and the process still
@@ -284,7 +284,7 @@ know when&quot; is a loss, and the completion fixtures are there to fail it.
 Likewise <code>LLM_REASONING_EFFORT</code>: lower is cheaper because the model
 plans less; that is the trade this product does not make.</p>
 <h2 id="5-adding-a-fixture">5. Adding a fixture</h2>
-<p>Copy the nearest file under <code>brain/eval/fixtures/</code> and edit. The JSON
+<p>Copy the nearest file under <code>harness/eval/fixtures/</code> and edit. The JSON
 shape is the Go fixture format; field names stay snake_case.</p>
 <table>
 <thead>
@@ -346,8 +346,8 @@ shape is the Go fixture format; field names stay snake_case.</p>
 <p>A hand-written <code>params</code> block is the eval&#39;s guess at a plugin&#39;s
 interface, and the guess drifts. <code>tools_from: [&quot;rentals&quot;]</code> publishes the
 server&#39;s real catalog instead: the runner reads
-<code>brain/eval/fixtures/mcp.toml</code> and asks the in-process plugin
-(<code>brain/plugins/flights</code>, <code>rentals</code>, <code>google</code>) for names, descriptions,
+<code>harness/eval/fixtures/mcp.toml</code> and asks the in-process plugin
+(<code>harness/plugins/flights</code>, <code>rentals</code>, <code>google</code>) for names, descriptions,
 and input schemas. Google is filtered to the <code>tools</code> allowlist in that
 file (<code>calendar_list_events</code>, <code>calendar_create_events</code>). Nothing is
 called: results stay canned, so a placeholder key never reaches a vendor.</p>

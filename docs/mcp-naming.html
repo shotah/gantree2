@@ -40,11 +40,11 @@
   <main id="content" class="wrap">
     <article class="prose"><h1 id="mcp-tool-naming">MCP tool naming</h1>
 <p>Canonical contract for every plugin. Modules live under
-<code>brain/plugins/&lt;name&gt;/</code> and <code>brain/tools/names.ts</code> prefixes
+<code>harness/plugins/&lt;name&gt;/</code> and <code>harness/tools/names.ts</code> prefixes
 <code>{plugin}__{tool}</code>. This page is what goes on the right of the
 <code>__</code>. Plugins do not get a local dialect.</p>
 <p>Tools take a set and return a list. The rule is
-<code>.cursor/rules/brain-plugins-plural.mdc</code>. A tool that is one thing
+<code>.cursor/rules/harness-plugins-plural.mdc</code>. A tool that is one thing
 sets <code>single</code> and says why.</p>
 <p><strong>Why it matters:</strong> small models and the host&#39;s closest-match repair
 pick tools by <strong>name tokens + description</strong>. Synonyms and double
@@ -65,7 +65,7 @@ the eval that fails a fixture when a plugin renames a tool
 </thead>
 <tbody><tr>
 <td>Plugin id</td>
-<td>directory name under <code>brain/plugins/</code></td>
+<td>directory name under <code>harness/plugins/</code></td>
 <td><code>strava</code>, <code>google</code>, <code>garmin</code></td>
 </tr>
 <tr>
@@ -236,7 +236,7 @@ perfect.</p>
 <li><p><strong>Tests lock names</strong>
 Every plugin asserts each registered tool matches <code>^[a-z]+_[a-z]+</code>
 and does <strong>not</strong> start with the plugin id string. That test lives
-under <code>test/brain/plugins/</code>.</p>
+under <code>test/harness/plugins/</code>.</p>
 </li>
 </ol>
 <hr>

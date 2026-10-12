@@ -42,7 +42,7 @@
 <p>What can go wrong, what we chose, and what we did not. One page, so a
 reviewer can disagree with a line instead of a feeling.</p>
 <p>Code: <code>lib/door/</code> (the door), <code>edge/agent.do.ts</code> + <code>lib/chat/</code> (the
-room), <code>brain/</code> (the agent).
+room), <code>harness/</code> (the agent).
 People and roles: <a href="access.html">access.md</a>.
 Shape: <a href="architecture.html">architecture.md</a>. Reporting a hole:
 <a href="https://github.com/shotah/gantree2/blob/main/SECURITY.md"><code>SECURITY.md</code></a> at the repo root.</p>
@@ -79,7 +79,7 @@ Shape: <a href="architecture.html">architecture.md</a>. Reporting a hole:
 <tr>
 <td>Model and tool keys (<code>LLM_API_KEY</code>, <code>GOOGLE_MAPS_API_KEY</code>, …)</td>
 <td>Agent DO <code>config.env</code>, in plaintext. House <code>LLM_*</code> on the Worker</td>
-<td>Admins write. The brain reads</td>
+<td>Admins write. The harness reads</td>
 </tr>
 <tr>
 <td>OAuth refresh tokens for tools (Google Workspace, Strava, Google Health, Garmin)</td>
@@ -87,7 +87,7 @@ Shape: <a href="architecture.html">architecture.md</a>. Reporting a hole:
 <td>The plugin, for the call</td>
 </tr>
 <tr>
-<td>The brain</td>
+<td>The harness</td>
 <td>DO SQLite (<code>persona_file</code>, <code>selfnote</code>, sessions, memory, cron)</td>
 <td>That agent only</td>
 </tr>
@@ -341,7 +341,7 @@ recomputed every request and is not stored in the cookie.</p>
 </tr>
 </tbody></table>
 <p>OAuth tokens are ciphertext in that DO&#39;s SQLite (<code>oauth_token</code>),
-AES-256-GCM under <code>snapshot.key</code> (<code>AesTokenStore</code> in <code>brain/tools</code>).
+AES-256-GCM under <code>snapshot.key</code> (<code>AesTokenStore</code> in <code>harness/tools</code>).
 The plugin sees plaintext for the call. The key stays on the DO. A bug
 in a plugin is that agent&#39;s env and tokens, not another agent&#39;s.</p>
 <hr>
@@ -742,7 +742,7 @@ again, nothing else breaks.</li>
 </ol>
 <p>Tests: <code>test/door/*</code> (gate, session, allowlist, Google flow, bounces),
 <code>test/chat/*</code> (caps, rate, slug, admission), <code>test/edge/*</code> (DO glue),
-<code>test/brain/*</code> (the agent).</p>
+<code>test/harness/*</code> (the agent).</p>
 </article>
   </main>
   <footer class="foot">

@@ -42,12 +42,13 @@
 <p>How tools are named for the model, how a prefix is turned on, and how
 the host recovers from a bad name.</p>
 <p>On this product the twelve plugins are in-process modules under
-<code>brain/plugins</code>. There is no stdio transport and no child process.
-<code>brain/tools</code> is the registry: <code>{plugin}__{tool}</code>, <code>mcp_enable</code>,
+<code>harness/plugins</code>. There is no stdio transport and no child process.
+<code>harness/tools</code> is the registry: <code>{plugin}__{tool}</code>, <code>mcp_enable</code>,
 truncation, and the skip list. Builtins (memory, cron, watch,
 <code>self_note</code>, <code>web_search</code>, aims) have no prefix and never idle-drop.
 The shapes stay MCP-shaped so the Tools grid and eval fixtures do not
-change. Pictures: <a href="architecture.html">architecture.md</a>.</p>
+change. Pictures: <a href="architecture.html">architecture.md</a>. Pasteable live
+checks for a person in chat: <a href="live-check.html">live-check.md</a>.</p>
 <p>A plugin <code>ready()</code> returns <code>null</code> or a skip: <code>no_key</code>, <code>no_oauth</code>,
 <code>disabled</code>, <code>error</code>. That list is the <code>status</code> frame. <code>GARMIN_TOOL_TIER</code>
 and <code>GOOGLE_TOOL_PRESET</code> narrow those two catalogs before publish.
@@ -153,18 +154,18 @@ truncates tool results. The JSON summary stays, and chat puts
 <code>images: [{ url }]</code> on the room reply (same shape as inbound). Grant
 prefix <code>image</code>. Image bytes that another tool must read go to the Agent DO
 sqlite table <code>image_output</code> under the <code>IMAGE_OUTPUT_DIR</code> directory string
-(the native brain fills <code>/images</code> when that var is blank); chat
+(the native harness fills <code>/images</code> when that var is blank); chat
 <code>avatar_update</code> / <code>backdrop_update</code> take
 <code>source_path</code>.</p>
 <p><strong>Why the prefix?</strong> OpenAI-safe characters, no collisions across plugins, and
 obvious provenance in logs and collapsed history markers. The prefix is
-the plugin name (<code>brain/tools/names.ts</code>).</p>
+the plugin name (<code>harness/tools/names.ts</code>).</p>
 <p><code>/tools</code> and <code>/status</code> show <code>schema_est_tokens</code>. A plugin that cannot
 serve is skipped (<code>no_key</code>, <code>no_oauth</code>, <code>disabled</code>, <code>error</code>) and the
 agent continues. Calling a skipped prefix returns
 <code>tool error [&lt;reason&gt;]: … is skipped — do not invent &lt;name&gt;__* names</code>.
 The <code>status</code> frame: <a href="contract.html">contract.md</a>.</p>
-<p>Plugins are modules under <code>brain/plugins/&lt;name&gt;/</code>
+<p>Plugins are modules under <code>harness/plugins/&lt;name&gt;/</code>
 (<a href="custom-mcp.html">custom-mcp.md</a>). The <code>chat</code> plugin is the face,
 wallpaper, and mood. <a href="mcp-naming.html">mcp-naming.md</a> still lists that
 row as <code>pendant</code> until Phase 4.</p>
@@ -285,7 +286,7 @@ just a different guess.</p>
 still need a retry with the suggested name (or a smaller published tool surface)</li>
 <li>Wrong arguments (e.g. passing a time range as <code>event_id</code>) — MCP/API errors</li>
 <li>Think-only turns with no tool call — agent nudge / stall path in
-<code>brain/agent</code></li>
+<code>harness/agent</code></li>
 <li>A model that neither calls nor prints anything callable — still a nudge, then
 the turn answers with whatever prose it has</li>
 </ul>
@@ -435,7 +436,7 @@ plugin should set an interval the plan can afford (a 15-minute poll is
 <hr>
 <h2 id="related">Related</h2>
 <ul>
-<li><a href="architecture.html">architecture.md</a> — the brain</li>
+<li><a href="architecture.html">architecture.md</a> — the harness</li>
 <li><a href="custom-mcp.html">custom-mcp.md</a> — adding a plugin module</li>
 <li><a href="persona.html">persona.md</a> — <code>PERSONA.md</code> is not the tool catalog</li>
 <li><a href="cron.html#event-watches">cron.md</a> — poller + <code>feeds</code> / <code>twitter</code></li>

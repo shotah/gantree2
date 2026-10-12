@@ -39,14 +39,14 @@
   </header>
   <main id="content" class="wrap">
     <article class="prose"><h1 id="custom-plugins">Custom plugins</h1>
-<p>A plugin is a module under <code>brain/plugins/&lt;name&gt;/</code> that exports a
+<p>A plugin is a module under <code>harness/plugins/&lt;name&gt;/</code> that exports a
 <code>Plugin</code>: <code>name</code>, <code>ready</code>, <code>tools</code>, and <code>call</code> on each tool. It is
 compiled into the Worker. Add it to <code>allPlugins</code> in
-<code>brain/plugins/index.ts</code>. There is no process to spawn, no image to
+<code>harness/plugins/index.ts</code>. There is no process to spawn, no image to
 rebuild, and no <code>/mcp/add?url=</code> route.</p>
 <p>Tool names follow <a href="mcp-naming.html">mcp-naming.md</a>. The host prefixes
-<code>{plugin}__{tool}</code> (<code>brain/tools/names.ts</code>). Plural inputs and list
-outputs are <code>.cursor/rules/brain-plugins-plural.mdc</code>. A tool that is
+<code>{plugin}__{tool}</code> (<code>harness/tools/names.ts</code>). Plural inputs and list
+outputs are <code>.cursor/rules/harness-plugins-plural.mdc</code>. A tool that is
 inherently one thing sets <code>single</code> on its <code>ToolDef</code> and says why.</p>
 <p><code>ready()</code> returns <code>null</code> when the plugin can serve, or a skip:
 <code>no_key</code>, <code>no_oauth</code>, <code>disabled</code>, <code>error</code>. That list is the <code>status</code>
@@ -55,11 +55,11 @@ catalogs before publish.</p>
 <p>Grants from the Tools fold reach the registry directly. A plugin left
 off the grant list is not in the catalog. <code>ready()</code> still skips a
 granted plugin that has no key or no token.</p>
-<p>Copy a sibling under <code>brain/plugins/</code> rather than starting from an
+<p>Copy a sibling under <code>harness/plugins/</code> rather than starting from an
 empty module. <code>chat</code> is the room. <code>math</code> is the smallest plugin with
 no secret. <code>maps</code> is one API key. <code>google</code> is the OAuth shape
 (<a href="auth.html">auth.md</a>).</p>
-<p>Tests live under <code>test/brain/plugins/</code> and mirror the module.</p>
+<p>Tests live under <code>test/harness/plugins/</code> and mirror the module.</p>
 </article>
   </main>
   <footer class="foot">

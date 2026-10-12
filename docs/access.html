@@ -97,7 +97,7 @@ check at request time.</strong></p>
 <li>The app list (env floor ∪ Settings DO rows) says whether you may be
 here at all, and with what role.</li>
 <li>The agent&#39;s room list says whether that agent will talk to you. It
-lives on the Agent DO. Settings edits it. The brain publishes it as
+lives on the Agent DO. Settings edits it. The harness publishes it as
 an <code>allow</code> frame. Nothing else does. Admins may chat with every
 inventoried agent even when that list is empty. Operators and members
 need assignment as in the roles table; <code>GANTREE_ALLOW</code> only lets
@@ -191,7 +191,7 @@ them. Empty <code>GANTREE_ADMINS</code> → every gated route is <code>503</code
 set. Code: <code>lib/door/users.ts</code>.</p>
 <p><strong>Turn off and destroy (admin only).</strong> Turn off sets the inventory row
 to disabled, drops the Agent Durable Object alarm, and forgets the
-in-memory brain; chat and schedules return <code>409</code> <code>off</code> while the object
+in-memory harness; chat and schedules return <code>409</code> <code>off</code> while the object
 and its stored chat, keys, and memory stay. Turn on re-enables the row
 without wiping anything. Destroy is a second confirm on the agent
 dashboard: it clears directory entries and operator assignments,
@@ -391,19 +391,19 @@ session.</p>
 <code>allow</code> → re-check every phone socket; close the ones no longer on it.
 Admins are <strong>not</strong> exempt from the room list: operating Ada and
 talking to Ada are different grants.</p>
-<h3 id="frames-brain-room">Frames (brain ↔ room)</h3>
-<p>The brain emits these inside the DO. The DO fans the phone-facing kinds.</p>
-<p>Brain → room, right after <code>cmds</code>, and again when the allow list changes:</p>
+<h3 id="frames-harness-room">Frames (harness ↔ room)</h3>
+<p>The harness emits these inside the DO. The DO fans the phone-facing kinds.</p>
+<p>Harness → room, right after <code>cmds</code>, and again when the allow list changes:</p>
 <pre><code class="language-json">{ &quot;kind&quot;: &quot;allow&quot;, &quot;users&quot;: [
   { &quot;sub&quot;: &quot;118212345678901234567&quot;, &quot;email&quot;: &quot;ada@example.com&quot; },
   { &quot;email&quot;: &quot;bob@example.com&quot; }
 ] }</code></pre>
-<p>Room → brain, <code>email</code> beside <code>user_id</code>. The phone kind is <code>inbound</code>:</p>
+<p>Room → harness, <code>email</code> beside <code>user_id</code>. The phone kind is <code>inbound</code>:</p>
 <pre><code class="language-json">{ &quot;kind&quot;: &quot;inbound&quot;, &quot;user_id&quot;: &quot;118212345678901234567&quot;,
   &quot;email&quot;: &quot;ada@example.com&quot;, &quot;text&quot;: &quot;…&quot; }</code></pre>
 <p>The DO admits the socket when <code>user_id</code> <strong>or</strong> a verified <code>email</code> is on
-the room list, then stamps <code>user_id</code> before the brain sees the frame.
-The brain keeps one session id, <code>agent</code>, a row label in that agent&#39;s
+the room list, then stamps <code>user_id</code> before the harness sees the frame.
+The harness keeps one session id, <code>agent</code>, a row label in that agent&#39;s
 database. <code>pendant:&lt;agent id&gt;:&lt;sub&gt;</code> is the alias until Phase 4.</p>
 <hr>
 <h2 id="seeding-where-the-first-people-come-from">Seeding — where the first people come from</h2>
@@ -458,8 +458,8 @@ signs in; <code>/agents/ada</code> opens; <code>/agents/sam</code> is <code>401<
 <li><code>/agents/ada</code> → Users fold → tick Bob, or type an email for someone
 who is not on the app list yet (settings adds them as <code>member</code> on
 the same save). Settings writes the room list. An env change drops
-the memoised brain and opens a new one.</li>
-<li>The brain publishes <code>allow</code>. The DO stores it and indexes the email
+the memoised harness and opens a new one.</li>
+<li>The harness publishes <code>allow</code>. The DO stores it and indexes the email
 in KV.</li>
 <li>Sam opens <code>/chat/ada</code> on a phone. <code>/api/auth/me</code> says
 <code>agents: [&quot;ada&quot;]</code>. First frame carries <code>user_id</code> + <code>email</code>; Ada
@@ -522,7 +522,7 @@ list as the agent&#39;s own policy.</p>
 </tr>
 </thead>
 <tbody><tr>
-<td>The brain publishes <code>allow</code></td>
+<td>The harness publishes <code>allow</code></td>
 <td>The room list is that agent&#39;s policy</td>
 <td>Ada&#39;s list cannot touch Sam&#39;s agent id.</td>
 </tr>
@@ -600,7 +600,7 @@ rows; the room list on the Agent DO. No fourth copy.</li>
 own id.</li>
 <li><strong>Isolation.</strong> Adding a person to Ada does not touch Sam.</li>
 <li><strong><code>allow</code> is a frame on the room.</strong> Settings writes the list; the
-brain publishes it.</li>
+harness publishes it.</li>
 </ol>
 </article>
   </main>

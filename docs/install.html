@@ -39,7 +39,7 @@
   </header>
   <main id="content" class="wrap">
     <article class="prose"><h1 id="install-local-cloudflare-or-home">Install — local, Cloudflare, or home</h1>
-<p>Same Worker, same <code>wrangler.jsonc</code>, three places it runs. The brain is
+<p>Same Worker, same <code>wrangler.jsonc</code>, three places it runs. The harness is
 the Agent Durable Object and opens no listen port. The same Worker is
 the Vinext app and serves the HTTP API, including the mailbox at
 <code>/ws/&lt;slug&gt;</code>.</p>
@@ -138,28 +138,28 @@ in <code>.dev.vars</code> fakes a session on loopback only. The sub is 10–32 d
 It still has to be in <code>GANTREE_ADMINS</code> or <code>GANTREE_ALLOW</code>. Details:
 <a href="access.html#dev-without-google">access.md</a>.</p>
 <p><code>npm run dev</code> is Vite on <code>127.0.0.1:3000</code>. It serves the Durable Objects
-and the brain. Screenshots in this repo were taken against <code>npm run dev</code>.
+and the harness. Screenshots in this repo were taken against <code>npm run dev</code>.
 <code>npm run build &amp;&amp; npm run start</code> is the built Worker under Miniflare
 (<code>dist/server/wrangler.json</code>); use it when you want the production
 bundle, not to get Durable Objects.</p>
 <h3 id="chat-with-a-real-agent-locally">Chat with a real agent locally</h3>
 <p>With house <code>LLM_BASE_URL</code>, <code>LLM_API_KEY</code>, and <code>LLM_MODEL</code> in <code>.dev.vars</code>,
-run <code>npm run agent</code>. It starts Vite (Worker, Durable Objects, native brain)
+run <code>npm run agent</code>. It starts Vite (Worker, Durable Objects, native harness)
 unless something healthy is already on port 3000, ensures a local agent
 (default slug <code>kit</code>), and restarts the Agent Durable Object so
 <code>nativeBrain</code> opens with those house keys and, when agent config leaves them
 blank, fills <code>CHAT_MAILBOX_URL</code> (<code>ws(s)://&lt;origin&gt;/ws/&lt;slug&gt;</code>) and
 <code>CHAT_BEARER</code> (the room bearer) so <code>chat__avatar_update</code> can set the face.
 <code>PUBLIC_ORIGIN</code> is that origin when it is set. When <code>IMAGE_OUTPUT_DIR</code> is
-blank, the same brain uses <code>/images</code>. Those bytes live in the Agent DO
+blank, the same harness uses <code>/images</code>. Those bytes live in the Agent DO
 sqlite table <code>image_output</code>, which is the handoff <code>photo_generate</code> gives
 to <code>chat__avatar_update</code> and <code>chat__backdrop_update</code>. Chat at
 <code>http://127.0.0.1:3000/chat/kit</code> (or <code>--slug ada</code>). Set
 <code>GANTREE_DEV_USER</code> and list that identity in <code>GANTREE_ADMINS</code> so loopback
 API calls can create the agent without a browser session. The script
 also puts that user on the agent room, which is what opens the chat
-socket. The brain is the Agent Durable Object that deploy ships.</p>
-<p>House keys the brain reads from <code>.dev.vars</code> (and, in production, from
+socket. The harness is the Agent Durable Object that deploy ships.</p>
+<p>House keys the harness reads from <code>.dev.vars</code> (and, in production, from
 Worker secrets): <code>LLM_BASE_URL</code>, <code>LLM_API_KEY</code>, <code>LLM_MODEL</code>, and
 optionally <code>BRAVE_SEARCH_API_KEY</code>. An agent&#39;s own <code>config.env</code> wins
 when the same name is set on both. Other keys live on the agent. Feeds
@@ -168,7 +168,7 @@ which defaults to <code>gantree/&lt;version&gt; (+https://gantree2.bldhosting.co
 The Keys fold suggests every row below. Register the catch URIs in
 <a href="auth.html">auth.md</a>. <code>CRON_TZ</code>, <code>DAILY_PLANNER_AT</code>,
 <code>MEMORY_CONSOLIDATE_MINUTES</code>, <code>DYNAMIC_TOOLS</code>, <code>MCP_ENABLE_FORCE</code>, and
-<code>PUBLIC_ORIGIN</code> are brain knobs. <code>PUBLIC_ORIGIN</code> is the catch host,
+<code>PUBLIC_ORIGIN</code> are harness knobs. <code>PUBLIC_ORIGIN</code> is the catch host,
 with no path.</p>
 <table>
 <thead>

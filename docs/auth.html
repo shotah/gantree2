@@ -77,7 +77,7 @@ not <code>google</code>, <code>google-health</code>, or <code>strava</code> is <
 HTML login redirect. The handler still requires the <code>gantree_session</code>
 cookie. The caller is an admin, or a member of that agent&#39;s room.
 <code>state</code> is the same JWE. The Worker posts <code>{ plugin, code, redirectUri, userId }</code> to that agent&#39;s DO (<code>X-Chat-Op: auth</code>). The
-brain runs <code>authFinish</code> and the DO enqueues
+harness runs <code>authFinish</code> and the DO enqueues
 <code>{ kind: reply, text: &quot;&lt;plugin&gt; connected&quot; }</code>.</p>
 <p>Success body: <code>Connected &lt;plugin&gt;. Go back to chat.</code></p>
 <p>Misses: <code>login not configured</code> (503, no <code>SESSION_SECRET</code>), <code>bad state</code>

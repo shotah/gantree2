@@ -42,22 +42,22 @@
 <p>How gantree is put together: the pictures, then the choices that stay
 true as it grows. The reasoning behind the shape is in
 <a href="proposal.html">proposal.md</a> (the morning&#39;s plan) and
-<a href="brain.html">brain.md</a> (the runtime that was built). Who may do what is
+<a href="harness.html">harness.md</a> (the runtime that was built). Who may do what is
 in <a href="access.html">access.md</a>; where it runs is in <a href="install.html">install.md</a>.
 When this file and the proposal disagree about the runtime, this file
-and <a href="brain.html">brain.md</a> win.</p>
+and <a href="harness.html">harness.md</a> win.</p>
 <p>Vocabulary: <strong>settings</strong> (what operators see), <strong>chat</strong> (the PWA a
-member talks through), <strong>agents</strong> (one Durable Object each), <strong>brain</strong>
+member talks through), <strong>agents</strong> (one Durable Object each), <strong>harness</strong>
 (the TypeScript loop inside that object), <strong>users</strong> (one list, three
 roles). Wire names are <code>CHAT_*</code>, <code>agents</code>, <code>chat:&lt;agent id&gt;:&lt;sub&gt;</code>.
 <code>PENDANT_*</code>, <code>CHANNEL=pendant</code>, and <code>cranes</code> are aliases until the
 Phase 4 wire-name drop and are marked where they appear.</p>
 <h2 id="1-the-product">1. The product</h2>
-<p>One Worker, one manifest, two places it runs. The brain is the Agent
+<p>One Worker, one manifest, two places it runs. The harness is the Agent
 Durable Object: no second process, no image, and no socket between the
-brain and the room. <code>edge/agent.do.ts</code> builds it with <code>openRoomBrain</code>
-(<code>brain/room</code>) and <code>createBrain</code> (<code>brain/agent</code>). The contract is
-<code>brain/core</code>: <code>Sql</code> on <code>ctx.storage.sql</code>, <code>Clock</code>, <code>Logger</code>,
+harness and the room. <code>edge/agent.do.ts</code> builds it with <code>openRoomBrain</code>
+(<code>harness/room</code>) and <code>createBrain</code> (<code>harness/agent</code>). The contract is
+<code>harness/core</code>: <code>Sql</code> on <code>ctx.storage.sql</code>, <code>Clock</code>, <code>Logger</code>,
 <code>ChatProvider</code> (<code>openai</code> at major 7, against <code>LLM_BASE_URL</code>,
 <code>LLM_API_KEY</code>, <code>LLM_MODEL</code>), and <code>Plugin</code> / <code>Tool</code>.</p>
 <pre class="mermaid">flowchart LR
@@ -81,7 +81,7 @@ brain and the room. <code>edge/agent.do.ts</code> builds it with <code>openRoomB
     subgraph dos[&quot;Durable Objects&quot;]
       direction LR
       SDO[(&quot;Settings DO&lt;br/&gt;users · audit · samples&lt;br/&gt;SQLite&quot;)]
-      ADO[(&quot;Agent DO&lt;br/&gt;one per agent id&lt;br/&gt;SQLite brain&quot;)]
+      ADO[(&quot;Agent DO&lt;br/&gt;one per agent id&lt;br/&gt;SQLite harness&quot;)]
     end
     KV[(&quot;KV directory&lt;br/&gt;sub / email → slugs&quot;)]
   end
@@ -102,13 +102,13 @@ brain and the room. <code>edge/agent.do.ts</code> builds it with <code>openRoomB
 
   classDef store fill:#171d22,stroke:#3a4550,color:#f4f0ea
   class SDO,ADO,KV store</pre>
-<p>The twelve tools are in-process modules under <code>brain/plugins</code>, not
+<p>The twelve tools are in-process modules under <code>harness/plugins</code>, not
 child processes: <code>chat</code>, <code>feeds</code>, <code>flights</code>, <code>garmin</code>, <code>google</code>,
 <code>google-health</code>, <code>image</code>, <code>maps</code>, <code>math</code>, <code>rentals</code>, <code>strava</code>,
 <code>twitter</code>. The model sees <code>{plugin}__{tool}</code> (<code>google__calendar_list_events</code>).
 Schemas stay off until <code>mcp_enable</code>; a brief hold drops after 6 hours
 idle, a short hold after 27. Plugin tools take a set and return a list
-(<code>.cursor/rules/brain-plugins-plural.mdc</code>). <code>GARMIN_TOOL_TIER</code>
+(<code>.cursor/rules/harness-plugins-plural.mdc</code>). <code>GARMIN_TOOL_TIER</code>
 (<code>core</code>, <code>extended</code>, <code>complete</code>; empty stays <code>core</code>) and
 <code>GOOGLE_TOOL_PRESET</code> (<code>lean</code>, <code>everyday</code>, <code>all</code>; empty stays
 <code>everyday</code>) narrow those two catalogs. A plugin that cannot serve is
@@ -116,7 +116,7 @@ skipped, not spawned: <code>no_key</code>, <code>no_oauth</code>, <code>disabled
 on the <code>status</code> frame.</p>
 <p>Cron, watches, and memory consolidation share the Agent DO alarm.
 <code>nextAlarm()</code> is the soonest due instant; <code>alarm()</code> calls
-<code>brain.alarm()</code>, which runs due work and returns the next wake. Cost
+<code>harness.alarm()</code>, which runs due work and returns the next wake. Cost
 between fires is zero.</p>
 <p>Phone-facing frames are <code>reply</code>, <code>draft</code>, <code>typing</code>, <code>react</code>, <code>cmds</code>,
 <code>aims</code>, <code>todo</code>, <code>allow</code>, and <code>push</code>. <code>status</code>, <code>perf</code>, and <code>log</code> stay
@@ -161,7 +161,7 @@ the Durable Objects, and the KV directory.</p>
 <td>celld</td>
 </tr>
 <tr>
-<td>Brain</td>
+<td>Harness</td>
 <td>Agent Durable Object</td>
 <td>the same class under celld</td>
 </tr>
@@ -171,10 +171,10 @@ the Durable Objects, and the KV directory.</p>
 <td><code>celld deploy</code></td>
 </tr>
 </tbody></table>
-<p>The brain is TypeScript because the isolate is JavaScript, the Durable
+<p>The harness is TypeScript because the isolate is JavaScript, the Durable
 Object class is JavaScript, and a turn is waiting on the model and on
-<code>fetch</code>. Why Go-in-WASM lost is <a href="brain.html">brain.md</a>.</p>
-<p>Behavioral eval is Vitest: <code>brain/eval</code>, <code>npm run eval</code>. Setup:
+<code>fetch</code>. Why Go-in-WASM lost is <a href="harness.html">harness.md</a>.</p>
+<p>Behavioral eval is Vitest: <code>harness/eval</code>, <code>npm run eval</code>. Setup:
 <a href="eval_setup.html">eval_setup.md</a>.</p>
 <h2 id="one-agent-one-durable-object">One agent, one Durable Object</h2>
 <p>Each agent is one Durable Object, looked up by that agent&#39;s id.
@@ -196,7 +196,7 @@ agent. Opening the session, message, watch, cron, preference,
 enable, and location stores rewrites the old label <code>gantry</code>, and
 any other leftover mouth id, onto that conversation id.</p>
 <p>KV maps a person to the agent ids they may open. It does not hold
-the brain.</p>
+the harness.</p>
 <h2 id="2-request-path-the-door">2. Request path — the door</h2>
 <p>Every non-public request passes <code>lib/door/gate.ts</code>. It is pure:
 request + env + store in, decision out. <code>lib/door/http.ts</code> turns the
@@ -287,11 +287,11 @@ path, so the mailbox authenticates on its own.</p>
 <p>Every miss (<code>expired</code>, <code>state</code>, <code>exchange</code>, <code>token</code>, <code>not_allowed</code>)
 bounces to <code>/login?error=</code> and never sets a session. The only identity
 a stranger ever sees is their own.</p>
-<h2 id="4-chat-phone-to-the-brain-through-the-agent-do">4. Chat — phone to the brain through the Agent DO</h2>
+<h2 id="4-chat-phone-to-the-harness-through-the-agent-do">4. Chat — phone to the harness through the Agent DO</h2>
 <p>The Agent DO is the room. A phone joins with the session — the cookie,
 or the same JWE on <code>Authorization</code> — plus that agent&#39;s own list. There
 is no second socket. The DO hands <code>inbound</code> and <code>react</code> to
-<code>brain.handleInbound</code> and fans the frames the brain emits.</p>
+<code>harness.handleInbound</code> and fans the frames the harness emits.</p>
 <p>Native sign-in (<a href="access.html#phones-native-sign-in">access.md</a>):</p>
 <pre class="mermaid">sequenceDiagram
   autonumber
@@ -322,9 +322,9 @@ is no second socket. The DO hands <code>inbound</code> and <code>react</code> to
   actor M as Member (PWA)
   participant MW as middleware
   participant A as Agent:ada DO
-  participant B as brain&lt;br/&gt;createBrain
+  participant B as harness&lt;br/&gt;createBrain
 
-  Note over A,B: first use opens the brain, announces status and cmds, arms nextAlarm
+  Note over A,B: first use opens the harness, announces status and cmds, arms nextAlarm
   M-&gt;&gt;MW: GET /chat/ada (gantree_session)
   MW-&gt;&gt;MW: gate → pass (member)
   MW--&gt;&gt;M: PWA shell
@@ -344,24 +344,24 @@ is no second socket. The DO hands <code>inbound</code> and <code>react</code> to
   B-&gt;&gt;A: perf {turn, tokens}
   A-&gt;&gt;A: append to Settings samples
   Note over A: status, perf, log stay on the DO — never fanned to phones</pre>
-<h2 id="5-agent-lifecycle-the-do-is-the-brain">5. Agent lifecycle — the DO is the brain</h2>
+<h2 id="5-agent-lifecycle-the-do-is-the-harness">5. Agent lifecycle — the DO is the harness</h2>
 <pre class="mermaid">stateDiagram-v2
   [*] --&gt; Idle
   Idle --&gt; Turn : phone inbound or react
   Turn --&gt; Idle : frames fanned · nextAlarm armed
   Idle --&gt; Due : Durable Object alarm
   Due --&gt; Idle : cron · watch · consolidation · arm next
-  Idle --&gt; Idle : env or persona change drops the brain
+  Idle --&gt; Idle : env or persona change drops the harness
 
   note right of Idle
-    SQLite in the DO is the brain.
+    SQLite in the DO is the harness.
   end note</pre>
 <pre class="mermaid">sequenceDiagram
   autonumber
   actor O as Operator
   participant W as Worker /agents/ada
   participant A as Agent:ada DO
-  participant B as brain
+  participant B as harness
 
   O-&gt;&gt;W: open the agent
   A-&gt;&gt;B: openRoomBrain · createBrain
@@ -370,10 +370,10 @@ is no second socket. The DO hands <code>inbound</code> and <code>react</code> to
 
   O-&gt;&gt;W: phone inbound, or the alarm fires
   W-&gt;&gt;A: frame, or alarm()
-  A-&gt;&gt;B: handleInbound, or brain.alarm()
+  A-&gt;&gt;B: handleInbound, or harness.alarm()
   B-&gt;&gt;A: reply · push · boards
   A-&gt;&gt;A: setAlarm(next wake)</pre>
-<p>An env or persona change drops the memoised brain and opens a new one,
+<p>An env or persona change drops the memoised harness and opens a new one,
 then arms the alarm again.</p>
 <h2 id="6-users-one-list-three-roles">6. Users — one list, three roles</h2>
 <pre class="mermaid">flowchart LR
@@ -429,7 +429,7 @@ then arms the alarm again.</p>
   end
   subgraph ev[&quot;eval.yml — tag, or by hand&quot;]
     direction LR
-    EV[&quot;npm run eval&lt;br/&gt;Vitest · brain/eval&quot;]
+    EV[&quot;npm run eval&lt;br/&gt;Vitest · harness/eval&quot;]
   end
   subgraph dep[&quot;deploy-cloudflare.yml — after ci on main&quot;]
     direction LR
@@ -457,7 +457,7 @@ Live eval setup is <a href="eval_setup.html">eval_setup.md</a>.</p>
     SESSION --&gt; HTTP
     RT[&quot;runtime&lt;br/&gt;(cloudflare:workers only here)&quot;]
   end
-  subgraph brain[&quot;brain/ — the agent&quot;]
+  subgraph harness[&quot;harness/ — the agent&quot;]
     CORE[core&lt;br/&gt;Sql · Clock · Logger · Provider]
     LOOP[agent&lt;br/&gt;createBrain]
     ROOM[room&lt;br/&gt;openRoomBrain · catch]
@@ -478,21 +478,21 @@ Live eval setup is <a href="eval_setup.html">eval_setup.md</a>.</p>
   RT -.-&gt; ADO
   ADO --&gt; ROOM
   LAYOUT --&gt; ALIB
-  TEST[&quot;test/ mirrors every folder&quot;] -.-&gt; door &amp; brain &amp; edge</pre>
-<p>The coverage badge counts <code>lib/**</code>, <code>edge/**</code>, <code>app/lib/**</code>. Brain
-suites live under <code>test/brain/</code> and run with <code>npm test</code>; they are not
+  TEST[&quot;test/ mirrors every folder&quot;] -.-&gt; door &amp; harness &amp; edge</pre>
+<p>The coverage badge counts <code>lib/**</code>, <code>edge/**</code>, <code>app/lib/**</code>. Harness
+suites live under <code>test/harness/</code> and run with <code>npm test</code>; they are not
 in that badge&#39;s include. <code>lib/door/runtime.ts</code> is the one excluded
 file: it imports <code>cloudflare:workers</code> and has nothing to assert.</p>
 <h2 id="9-why-this-shape">9. Why this shape</h2>
 <p><strong>One Worker, not three repos.</strong> Settings and chat are one Vinext app
 on Workers, and state is Durable Objects.</p>
-<p><strong>Why the brain is the Agent DO.</strong> The agent is always available and
+<p><strong>Why the harness is the Agent DO.</strong> The agent is always available and
 is not billed while idle. The DO wakes in milliseconds, costs nothing
 between alarms, and keeps SQLite that outlives the invocation. The
 loop, the plugins, and the clock run in that object. The record is
-<a href="brain.html">brain.md</a>.</p>
+<a href="harness.html">harness.md</a>.</p>
 <p><strong>Why Durable Objects, not D1.</strong> One actor per agent is the natural
-unit: its config, its room, its bearer, its alarm, and its brain.
+unit: its config, its room, its bearer, its alarm, and its harness.
 Settings is one more actor. Nothing is shared except the KV directory.</p>
 <h2 id="10-choices-that-stay-true">10. Choices that stay true</h2>
 <p>If a task fails one of these, it is later, or it is wrong.</p>
@@ -506,7 +506,7 @@ login. <a href="access.html">access.md</a>.</li>
 bearer live on the DO. Persona rows, <code>SELF.md</code>, sessions, memory,
 cron, watches, and OAuth tokens live in that DO&#39;s SQLite. Settings
 edits them through the DO. No file on a host, no second inventory.</li>
-<li><strong>The brain does not listen.</strong> A turn is a method call inside the
+<li><strong>The harness does not listen.</strong> A turn is a method call inside the
 DO. Frames fan out to the phones on the room. No <code>/metrics</code> port,
 no scrape, no hook. <code>status</code>, <code>perf</code>, and <code>log</code> stay on the DO.
 The Vinext Worker is the HTTP API (<a href="openapi.yaml">openapi.yaml</a>).</li>
@@ -516,17 +516,17 @@ shells.</li>
 <li><strong>One manifest, two targets.</strong> Anything that deploys to Cloudflare
 deploys under celld. celld stops on a key it does not model; that
 is the check.</li>
-<li><strong>TypeScript is the product.</strong> The Worker, the DO, and the brain are
+<li><strong>TypeScript is the product.</strong> The Worker, the DO, and the harness are
 one language. No <code>gantree</code> CLI until <code>npm</code> scripts are genuinely
 not enough.</li>
 <li><strong>Isolation.</strong> One human list per agent, one DO. Retire a tryout =
 delete its DO. Adding a person to Ada does not touch Sam.</li>
 <li><strong>Env change retargets.</strong> A changed env or persona drops the
-memoised brain and opens a new one. A restart that keeps a ghost
+memoised harness and opens a new one. A restart that keeps a ghost
 allowlist is the thing the UI nags.</li>
 <li><strong>Not chat.</strong> Settings never sits in a chat turn. Chat is a PWA on
 the same origin, not a feature of the settings screens.</li>
-<li><strong>Plugins are modules.</strong> The twelve live under <code>brain/plugins</code> and
+<li><strong>Plugins are modules.</strong> The twelve live under <code>harness/plugins</code> and
 load with the Worker. <code>ready()</code> publishes or skips. Grants from
 the Tools fold reach the registry directly: a plugin left off the
 list is not in the catalog. Per-session schemas are <code>mcp_enable</code>.
@@ -539,14 +539,14 @@ completions, Vinext for the app, wrangler and celld for deploy. Do
 not invent a Docker client, a JWT parser, or a theme engine.</li>
 <li><strong>Coverage is a badge, not a hope.</strong> One number on the README.
 The Vitest floor is <code>vitest.config.ts</code> (<code>lib/**</code>, <code>edge/**</code>,
-<code>app/lib/**</code>). Brain suites run with <code>npm test</code> and are not in
+<code>app/lib/**</code>). Harness suites run with <code>npm test</code> and are not in
 that include.</li>
 </ol>
 <h2 id="11-repo-rules">11. Repo rules</h2>
 <ul>
 <li>Tests live under <code>test/</code> and mirror the module they cover
 (<code>lib/door/gate.ts</code> → <code>test/door/gate.test.ts</code>,
-<code>brain/core/sql.ts</code> → <code>test/brain/core/sql.test.ts</code>). Never beside
+<code>harness/core/sql.ts</code> → <code>test/harness/core/sql.test.ts</code>). Never beside
 source.</li>
 <li>Import with <code>@/</code>. Import leaf modules, not barrels.</li>
 <li>UI folders match screens (<code>shared</code>, <code>agents</code>, <code>chat</code>, <code>users</code>,
@@ -575,7 +575,7 @@ Settings / Agent DOs named by household instead of by bare agent id. Plan
 in <a href="todo.html#hosted-phase-5--the-paid-door">todo.md</a>, numbers in
 <a href="monetize.html">monetize.md</a>.</p>
 <p><strong>Not the product:</strong> Kubernetes, Cloud Run / Lambda, a shared family
-brain, pairing the agent through settings, reselling LLM tokens, a
+harness, pairing the agent through settings, reselling LLM tokens, a
 shared Google client for the tools, orgs and invite links beyond one
 household per account, a second login, Cloudflare Access in front of
 the Worker, anything that makes a turn slower so a dashboard looks
