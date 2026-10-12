@@ -257,7 +257,7 @@ is in the cookie: no role, no agents, no name. Code: <code>lib/door/session.ts</
 </tr>
 </tbody></table>
 <p>Public: <code>/login</code>, <code>/api/auth/google</code>, <code>/api/auth/callback/google</code>,
-<code>/api/auth/catch</code>, <code>/api/auth/config</code>, <code>/api/auth/nonce</code>, <code>/api/auth/token</code>,
+<code>/api/auth/catch</code>, <code>/api/health</code>, <code>/api/auth/config</code>, <code>/api/auth/nonce</code>, <code>/api/auth/token</code>,
 <code>/manifest.webmanifest</code>, <code>/sw.js</code>, <code>/icon.svg</code>, <code>/favicon.ico</code>,
 <code>/robots.txt</code>, <code>/_vinext/*</code>, <code>/_next/*</code>, <code>/assets/*</code>, <code>/.well-known/*</code>.
 Code: <code>lib/door/gate.ts</code>, <code>lib/door/http.ts</code>, <code>middleware.ts</code>. A cookie
@@ -544,8 +544,10 @@ list as the agent&#39;s own policy.</p>
 <td>The ID token is the proof of identity and is itself short-lived; the session minted is identical; no state to exhaust.</td>
 </tr>
 </tbody></table>
-<p>What stays: no inbound port, no Cloudflare API token in settings, no
-MCP OAuth token doubling as a login, no role in the cookie.</p>
+<p>What stays: the harness opens no listen port; the Worker&#39;s HTTP API is
+the door plus the routes in <a href="openapi.yaml">openapi.yaml</a>; no Cloudflare
+API token in settings; no MCP OAuth token doubling as a login; no role
+in the cookie.</p>
 <hr>
 <h2 id="not-this">Not this</h2>
 <table>

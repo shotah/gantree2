@@ -203,6 +203,108 @@ defense; the allowlist makes a correct password useless anyway.</p>
 </tbody></table>
 <p>Three named roles, one field. Not a permission matrix.</p>
 <hr>
+<h2 id="the-http-api">The HTTP API</h2>
+<p>The harness opens no listen port and has no webhook. A turn is a method
+call inside the Agent Durable Object. The Vinext Worker is the inbound
+HTTP API. Cloudflare fronts it. The route catalog is
+<a href="openapi.yaml">openapi.yaml</a>.</p>
+<p>Worker code answers <code>GET /ws/{slug}</code> in <code>worker/index.ts</code> before
+Vinext middleware runs, so the room bearer is not refused for lacking a
+session cookie. Every other path passes <code>lib/door/gate.ts</code> in
+<code>middleware.ts</code> first.</p>
+<p>Internal DO fetches use <code>https://agent/...</code> with <code>X-Chat-Op</code>. That
+header is Worker-to-DO glue. It is not an internet route.</p>
+<table>
+<thead>
+<tr>
+<th>Mechanism</th>
+<th>Where it applies</th>
+<th>Check</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Public paths</strong></td>
+<td>Exact list in <code>PUBLIC_EXACT</code> plus prefixes <code>/_vinext/</code>, <code>/.well-known/</code>, <code>/_next/</code>, <code>/assets/</code></td>
+<td>No session</td>
+</tr>
+<tr>
+<td><strong>Session cookie</strong> <code>gantree_session</code></td>
+<td>Non-public pages and <code>/api/*</code> except room-bearer bypass</td>
+<td>JWE; cookie wins when it opens</td>
+</tr>
+<tr>
+<td><strong>Session bearer</strong></td>
+<td>Same JWE on <code>Authorization: Bearer</code> when the cookie does not open</td>
+<td>Cab and Helm; same gate read as the cookie</td>
+</tr>
+<tr>
+<td><strong>Room bearer</strong></td>
+<td><code>GET</code>, <code>POST</code>, <code>DELETE</code> on <code>/api/chat/avatar</code>, <code>/api/chat/backdrop</code>, <code>/api/chat/theme</code> when <code>Authorization: Bearer</code> is present</td>
+<td>Gate treats the header as public; <code>admitRoom</code> checks <code>AGENT_BEARERS</code> or the DO row. A mismatch is 401 and does not fall through to the session</td>
+</tr>
+<tr>
+<td><strong>Native Google proof</strong></td>
+<td><code>GET /api/auth/config</code>, <code>GET /api/auth/nonce</code>, <code>POST /api/auth/token</code></td>
+<td>Public at the gate; proof is ID token plus server nonce — <a href="access.html#phones-native-sign-in">access.md</a></td>
+</tr>
+<tr>
+<td><strong>Catch cookie only</strong></td>
+<td><code>GET /api/auth/catch</code> is public at the gate; the handler opens the session from <code>gantree_session</code> via <code>readCookie</code></td>
+<td>Admin or room membership, then code exchange</td>
+</tr>
+<tr>
+<td><strong>Mailbox socket</strong></td>
+<td><code>GET /ws/{slug}?role=phone</code>, <code>crane</code>, or <code>agent</code></td>
+<td>Phone: session cookie or session bearer, then room list. Crane or agent: room bearer in <code>Authorization</code>. Origin must match (<code>upgradeOriginOk</code>) or 403. OIDC mode ignores query <code>bearer</code></td>
+</tr>
+<tr>
+<td><strong>Spike</strong></td>
+<td>Loopback only when <code>GOOGLE_CLIENT_ID</code> is unset and <code>CHAT_SECRET</code> is set</td>
+<td>Query <code>secret</code>; a non-loopback host with only the spike secret is config failure (503). Production with Google configured does not use spike</td>
+</tr>
+<tr>
+<td><strong>No admins</strong></td>
+<td>Every non-public path</td>
+<td>503 until <code>GANTREE_ADMINS</code> parses</td>
+</tr>
+</tbody></table>
+<p>After the gate, handlers trust <code>x-gantree-*</code> headers the middleware sets.
+Client copies of those names are stripped first.</p>
+<table>
+<thead>
+<tr>
+<th>Path family</th>
+<th>Who may call</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>/api/users</code></td>
+<td><strong>admin</strong></td>
+</tr>
+<tr>
+<td><code>/api/agents</code>, <code>/api/samples</code></td>
+<td><strong>admin</strong> sees all; <strong>operator</strong> only assigned slugs (<code>canRunAgent</code>); <strong>member</strong> is 403</td>
+</tr>
+<tr>
+<td><code>POST</code> and <code>DELETE /api/agents</code></td>
+<td><strong>admin</strong></td>
+</tr>
+<tr>
+<td><code>GET /api/tools</code>, <code>GET /api/auth/me</code></td>
+<td>Any signed-in role</td>
+</tr>
+<tr>
+<td><code>GET /api/agents/{slug}/bearer</code></td>
+<td><strong>admin</strong>, and only when <code>GANTREE_DEV_USER</code> is honored (set and loopback host); every other host is 404</td>
+</tr>
+<tr>
+<td>Chat HTTP (session): push, TTS, and other <code>/api/chat/*</code> not in the room-bearer trio</td>
+<td>Session from the gate, then the agent room list (<code>admitRoom</code> / <code>readChatUser</code>). Env floor <code>GANTREE_ADMINS</code> ∪ <code>GANTREE_ALLOW</code> matches the socket rule in <a href="access.html#room-admission-wsagent-id">access.md</a></td>
+</tr>
+</tbody></table>
+<p>Principal headers carry <code>sub</code>, email, role, and assigned agents. Role is
+recomputed every request and is not stored in the cookie.</p>
+<hr>
 <h2 id="the-room-agent-durable-object">The room (Agent Durable Object)</h2>
 <table>
 <thead>
@@ -238,8 +340,6 @@ defense; the allowlist makes a correct password useless anyway.</p>
 <td>They keep what their phone already cached</td>
 </tr>
 </tbody></table>
-<p>The brain is the DO. It does not listen. There is no port to scan and
-no webhook URL to guess.</p>
 <p>OAuth tokens are ciphertext in that DO&#39;s SQLite (<code>oauth_token</code>),
 AES-256-GCM under <code>snapshot.key</code> (<code>AesTokenStore</code> in <code>brain/tools</code>).
 The plugin sees plaintext for the call. The key stays on the DO. A bug
@@ -248,8 +348,9 @@ in a plugin is that agent&#39;s env and tokens, not another agent&#39;s.</p>
 <h2 id="oauth-for-tools-google-workspace-strava-google-health">OAuth for tools (Google Workspace, Strava, Google Health, …)</h2>
 <p><code>/auth &lt;plugin&gt;</code> and the Tools-fold Connect button return the provider
 URL with <code>state</code> sealed as an <code>oauth-catch</code> JWE. <code>GET /api/auth/catch</code>
-requires the <code>gantree_session</code> cookie and an admin or a member of that
-room, posts the code to the DO, and <code>authFinish</code> stores ciphertext in
+requires the <code>gantree_session</code> cookie (<code>readCookie</code>; the handler does
+not read <code>Authorization</code>) and an admin or a member of that room, posts
+the code to the DO, and <code>authFinish</code> stores ciphertext in
 <code>oauth_token</code>. The room gets <code>&lt;plugin&gt; connected</code>. The code is not
 written to the log. Detail: <a href="auth.html">auth.md</a>.</p>
 <p>Register exactly, no trailing slash:</p>
@@ -572,7 +673,7 @@ Settings DO and are readable by admins only. Not a SIEM.</p>
 <td>6</td>
 <td>Room bearer leaked</td>
 <td>Low</td>
-<td>Someone fetches that agent&#39;s face, wallpaper, or theme</td>
+<td>Someone fetches that agent&#39;s face, wallpaper, or theme on <code>/api/chat/avatar</code>, <code>/api/chat/backdrop</code>, or <code>/api/chat/theme</code></td>
 <td>Bearer is per agent. It is not a phone session</td>
 <td>No</td>
 </tr>

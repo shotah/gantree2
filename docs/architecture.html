@@ -202,7 +202,7 @@ the brain.</p>
 request + env + store in, decision out. <code>lib/door/http.ts</code> turns the
 decision into a <code>Response</code>; <code>middleware.ts</code> is one line.</p>
 <pre class="mermaid">flowchart TD
-  R([request]) --&gt; PUB{public path?&lt;br/&gt;/login /api/auth/google&lt;br/&gt;/api/auth/callback/google&lt;br/&gt;/api/auth/catch&lt;br/&gt;/api/auth/config · nonce · token&lt;br/&gt;assets · manifest · sw.js&lt;br/&gt;/_vinext /.well-known}
+  R([request]) --&gt; PUB{public path?&lt;br/&gt;/login /api/auth/google&lt;br/&gt;/api/auth/callback/google&lt;br/&gt;/api/auth/catch /api/health&lt;br/&gt;/api/auth/config · nonce · token&lt;br/&gt;assets · manifest · sw.js&lt;br/&gt;/_vinext /.well-known}
   PUB -- yes --&gt; PASS([pass through])
   PUB -- no --&gt; ADM{GANTREE_ADMINS&lt;br/&gt;parses to ≥1 entry?}
   ADM -- no --&gt; E503([503 no admins])
@@ -225,6 +225,8 @@ the room token (<code>isAgentRoomRequest</code>) and is let through before eithe
 of those reads. <code>/api/auth/catch</code> is on the public list so a missing
 cookie is a plain-text 401, not an HTML login redirect. The handler
 still requires that cookie.</p>
+<p><code>GET /ws/&lt;slug&gt;</code> is handled in <code>worker/index.ts</code> before this middleware
+path, so the mailbox authenticates on its own.</p>
 <p>Role, every request, never from the cookie:</p>
 <table>
 <thead>
@@ -506,7 +508,8 @@ cron, watches, and OAuth tokens live in that DO&#39;s SQLite. Settings
 edits them through the DO. No file on a host, no second inventory.</li>
 <li><strong>The brain does not listen.</strong> A turn is a method call inside the
 DO. Frames fan out to the phones on the room. No <code>/metrics</code> port,
-no scrape, no hook. <code>status</code>, <code>perf</code>, and <code>log</code> stay on the DO.</li>
+no scrape, no hook. <code>status</code>, <code>perf</code>, and <code>log</code> stay on the DO.
+The Vinext Worker is the HTTP API (<a href="openapi.yaml">openapi.yaml</a>).</li>
 <li><strong>One mutation path.</strong> Route handlers call <code>lib/door</code> and the DO
 stubs. Never storage from a React Server Component. Pages stay thin
 shells.</li>

@@ -40,7 +40,9 @@
   <main id="content" class="wrap">
     <article class="prose"><h1 id="install-local-cloudflare-or-home">Install — local, Cloudflare, or home</h1>
 <p>Same Worker, same <code>wrangler.jsonc</code>, three places it runs. The brain is
-the Agent Durable Object. It opens no inbound ports.</p>
+the Agent Durable Object and opens no listen port. The same Worker is
+the Vinext app and serves the HTTP API, including the mailbox at
+<code>/ws/&lt;slug&gt;</code>.</p>
 <table>
 <thead>
 <tr>
