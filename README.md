@@ -168,7 +168,7 @@ Same files under [`docs/`](docs/):
 
 | Running it | The assistant | The rules |
 | --- | --- | --- |
-| [install](docs/install.md) · [access](docs/access.md) · [security](docs/security.md) · [troubleshooting](docs/troubleshooting.md) — door, keys, and the failures | [persona](docs/persona.md) · [channels](docs/channels.md) · [cron](docs/cron.md) · [reactions](docs/reactions.md) · [planner-siblings](docs/planner-siblings.md) · [connecting accounts](docs/auth.md) — what one assistant does | [architecture](docs/architecture.md) · [runtime](docs/runtime.md) · [brain](docs/brain.md) · [contract](docs/contract.md) · [mcp](docs/mcp.md) · [custom-mcp](docs/custom-mcp.md) · [mcp-naming](docs/mcp-naming.md) · [evals](docs/eval_setup.md) · [evaluation fable](docs/evaluation_fable.md) — the brain and the rules |
+| [install](docs/install.md) · [access](docs/access.md) · [security](docs/security.md) · [openapi](docs/openapi.yaml) · [troubleshooting](docs/troubleshooting.md) — door, keys, and the failures | [persona](docs/persona.md) · [channels](docs/channels.md) · [cron](docs/cron.md) · [reactions](docs/reactions.md) · [planner-siblings](docs/planner-siblings.md) · [connecting accounts](docs/auth.md) — what one assistant does | [architecture](docs/architecture.md) · [runtime](docs/runtime.md) · [brain](docs/brain.md) · [contract](docs/contract.md) · [mcp](docs/mcp.md) · [custom-mcp](docs/custom-mcp.md) · [mcp-naming](docs/mcp-naming.md) · [evals](docs/eval_setup.md) · [evaluation fable](docs/evaluation_fable.md) — the brain and the rules |
 
 Plan and backlog: [proposal](docs/proposal.md) · [todo](docs/todo.md) ·
 [done](docs/todo_done.md). Contributing: [CONTRIBUTING.md](CONTRIBUTING.md).

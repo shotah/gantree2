@@ -1,7 +1,9 @@
 # Install — local, Cloudflare, or home
 
 Same Worker, same `wrangler.jsonc`, three places it runs. The brain is
-the Agent Durable Object. It opens no inbound ports.
+the Agent Durable Object and opens no listen port. The same Worker is
+the Vinext app and serves the HTTP API, including the mailbox at
+`/ws/<slug>`.
 
 | Place | Command | State | Reach it at |
 | --- | --- | --- | --- |

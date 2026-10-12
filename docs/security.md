@@ -78,6 +78,50 @@ Three named roles, one field. Not a permission matrix.
 
 ---
 
+## The HTTP API
+
+The harness opens no listen port and has no webhook. A turn is a method
+call inside the Agent Durable Object. The Vinext Worker is the inbound
+HTTP API. Cloudflare fronts it. The route catalog is
+[openapi.yaml](openapi.yaml).
+
+Worker code answers `GET /ws/{slug}` in `worker/index.ts` before
+Vinext middleware runs, so the room bearer is not refused for lacking a
+session cookie. Every other path passes `lib/door/gate.ts` in
+`middleware.ts` first.
+
+Internal DO fetches use `https://agent/...` with `X-Chat-Op`. That
+header is Worker-to-DO glue. It is not an internet route.
+
+| Mechanism | Where it applies | Check |
+| --- | --- | --- |
+| **Public paths** | Exact list in `PUBLIC_EXACT` plus prefixes `/_vinext/`, `/.well-known/`, `/_next/`, `/assets/` | No session |
+| **Session cookie** `gantree_session` | Non-public pages and `/api/*` except room-bearer bypass | JWE; cookie wins when it opens |
+| **Session bearer** | Same JWE on `Authorization: Bearer` when the cookie does not open | Cab and Helm; same gate read as the cookie |
+| **Room bearer** | `GET`, `POST`, `DELETE` on `/api/chat/avatar`, `/api/chat/backdrop`, `/api/chat/theme` when `Authorization: Bearer` is present | Gate treats the header as public; `admitRoom` checks `AGENT_BEARERS` or the DO row. A mismatch is 401 and does not fall through to the session |
+| **Native Google proof** | `GET /api/auth/config`, `GET /api/auth/nonce`, `POST /api/auth/token` | Public at the gate; proof is ID token plus server nonce — [access.md](access.md#phones-native-sign-in) |
+| **Catch cookie only** | `GET /api/auth/catch` is public at the gate; the handler opens the session from `gantree_session` via `readCookie` | Admin or room membership, then code exchange |
+| **Mailbox socket** | `GET /ws/{slug}?role=phone`, `crane`, or `agent` | Phone: session cookie or session bearer, then room list. Crane or agent: room bearer in `Authorization`. Origin must match (`upgradeOriginOk`) or 403. OIDC mode ignores query `bearer` |
+| **Spike** | Loopback only when `GOOGLE_CLIENT_ID` is unset and `CHAT_SECRET` is set | Query `secret`; a non-loopback host with only the spike secret is config failure (503). Production with Google configured does not use spike |
+| **No admins** | Every non-public path | 503 until `GANTREE_ADMINS` parses |
+
+After the gate, handlers trust `x-gantree-*` headers the middleware sets.
+Client copies of those names are stripped first.
+
+| Path family | Who may call |
+| --- | --- |
+| `/api/users` | **admin** |
+| `/api/agents`, `/api/samples` | **admin** sees all; **operator** only assigned slugs (`canRunAgent`); **member** is 403 |
+| `POST` and `DELETE /api/agents` | **admin** |
+| `GET /api/tools`, `GET /api/auth/me` | Any signed-in role |
+| `GET /api/agents/{slug}/bearer` | **admin**, and only when `GANTREE_DEV_USER` is honored (set and loopback host); every other host is 404 |
+| Chat HTTP (session): push, TTS, and other `/api/chat/*` not in the room-bearer trio | Session from the gate, then the agent room list (`admitRoom` / `readChatUser`). Env floor `GANTREE_ADMINS` ∪ `GANTREE_ALLOW` matches the socket rule in [access.md](access.md#room-admission-wsagent-id) |
+
+Principal headers carry `sub`, email, role, and assigned agents. Role is
+recomputed every request and is not stored in the cookie.
+
+---
+
 ## The room (Agent Durable Object)
 
 | Choice | Why | Risk accepted |
@@ -87,9 +131,6 @@ Three named roles, one field. Not a permission matrix.
 | Payload caps, per-socket rate limit, slug validation (`lib/chat/caps.ts`, `rate.ts`, `slug.ts`) | A member cannot fill storage or flood the room | Slow phone drops oldest and says so |
 | Backlog bounded; avatar and backdrop are blobs on the DO | Storage is per agent | — |
 | Theme and typing notices are broadcast; **text is only sent to sockets on the room list** | A dropped member stops seeing new turns immediately | They keep what their phone already cached |
-
-The brain is the DO. It does not listen. There is no port to scan and
-no webhook URL to guess.
 
 OAuth tokens are ciphertext in that DO's SQLite (`oauth_token`),
 AES-256-GCM under `snapshot.key` (`AesTokenStore` in `brain/tools`).
@@ -102,8 +143,9 @@ in a plugin is that agent's env and tokens, not another agent's.
 
 `/auth <plugin>` and the Tools-fold Connect button return the provider
 URL with `state` sealed as an `oauth-catch` JWE. `GET /api/auth/catch`
-requires the `gantree_session` cookie and an admin or a member of that
-room, posts the code to the DO, and `authFinish` stores ciphertext in
+requires the `gantree_session` cookie (`readCookie`; the handler does
+not read `Authorization`) and an admin or a member of that room, posts
+the code to the DO, and `authFinish` stores ciphertext in
 `oauth_token`. The room gets `<plugin> connected`. The code is not
 written to the log. Detail: [auth.md](auth.md).
 
@@ -252,7 +294,7 @@ Settings DO and are readable by admins only. Not a SIEM.
 | 3 | Admin adds the wrong email | Medium | Stranger with that address can sign in | Allowlist is exact-match; audit row; `/users` shows last sign-in | Confirm-scary on add — §2 todo |
 | 4 | OAuth refresh tokens | Low | That agent's tool tokens, if `snapshot.key` is also taken | Ciphertext in the Agent DO (`oauth_token`), AES-256-GCM. The DO decrypts for the plugin | No |
 | 5 | Malicious or vulnerable npm dependency in a plugin | Low–Medium | Keys of that agent | `package-lock.json`, `npm ci` | Review dependency diffs |
-| 6 | Room bearer leaked | Low | Someone fetches that agent's face, wallpaper, or theme | Bearer is per agent. It is not a phone session | No |
+| 6 | Room bearer leaked | Low | Someone fetches that agent's face, wallpaper, or theme on `/api/chat/avatar`, `/api/chat/backdrop`, or `/api/chat/theme` | Bearer is per agent. It is not a phone session | No |
 | 7 | OAuth code used outside the room | Low | Code is one-time and useless without the plugin's client secret | Catch requires the session cookie and admin or room membership | No |
 | 8 | `GANTREE_DEV_USER` set in production | Low | None unless the host is loopback | Loopback check on the request URL | No |
 | 9 | Prompt injection via a tool result (email, web page) makes the agent call a destructive tool | Medium | Whatever the granted tools can do | Grants are per agent and explicit; destructive tools are not granted by default; the eval suite includes injection fixtures | Per-tool confirm in chat — later |

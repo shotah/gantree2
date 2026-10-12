@@ -143,7 +143,7 @@ Authorization Code + PKCE (`S256`), scopes `openid email profile`,
 | on a list | through, `x-gantree-sub/email/role/agents` set | same |
 
 Public: `/login`, `/api/auth/google`, `/api/auth/callback/google`,
-`/api/auth/catch`, `/api/auth/config`, `/api/auth/nonce`, `/api/auth/token`,
+`/api/auth/catch`, `/api/health`, `/api/auth/config`, `/api/auth/nonce`, `/api/auth/token`,
 `/manifest.webmanifest`, `/sw.js`, `/icon.svg`, `/favicon.ico`,
 `/robots.txt`, `/_vinext/*`, `/_next/*`, `/assets/*`, `/.well-known/*`.
 Code: `lib/door/gate.ts`, `lib/door/http.ts`, `middleware.ts`. A cookie
@@ -352,8 +352,10 @@ list as the agent's own policy.
 | One IdP | Google outage blocks new logins | Sessions are 7 days; the originals' passphrase door is the escape hatch until Phase 4, after which an admin's live session is. |
 | Stateless nonce | Replay of a (nonce, id_token) pair within 10 minutes | The ID token is the proof of identity and is itself short-lived; the session minted is identical; no state to exhaust. |
 
-What stays: no inbound port, no Cloudflare API token in settings, no
-MCP OAuth token doubling as a login, no role in the cookie.
+What stays: the harness opens no listen port; the Worker's HTTP API is
+the door plus the routes in [openapi.yaml](openapi.yaml); no Cloudflare
+API token in settings; no MCP OAuth token doubling as a login; no role
+in the cookie.
 
 ---
 

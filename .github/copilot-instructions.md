@@ -3,8 +3,9 @@
 TypeScript Cloudflare Worker. Vinext in `app/`. The brain is in-process
 TypeScript in the Agent Durable Object. Node 22. npm.
 
-The Go harness is gone. Leave it gone. The Worker has no inbound port
-except the one Cloudflare already fronts.
+The Go harness is gone. Leave it gone. The harness opens no listen port.
+The Vinext Worker is the HTTP API ([docs/openapi.yaml](docs/openapi.yaml)),
+and Cloudflare fronts that Worker.
 
 ## Commands
 

@@ -172,7 +172,7 @@ decision into a `Response`; `middleware.ts` is one line.
 
 ```mermaid
 flowchart TD
-  R([request]) --> PUB{public path?<br/>/login /api/auth/google<br/>/api/auth/callback/google<br/>/api/auth/catch<br/>/api/auth/config · nonce · token<br/>assets · manifest · sw.js<br/>/_vinext /.well-known}
+  R([request]) --> PUB{public path?<br/>/login /api/auth/google<br/>/api/auth/callback/google<br/>/api/auth/catch /api/health<br/>/api/auth/config · nonce · token<br/>assets · manifest · sw.js<br/>/_vinext /.well-known}
   PUB -- yes --> PASS([pass through])
   PUB -- no --> ADM{GANTREE_ADMINS<br/>parses to ≥1 entry?}
   ADM -- no --> E503([503 no admins])
@@ -197,6 +197,9 @@ the room token (`isAgentRoomRequest`) and is let through before either
 of those reads. `/api/auth/catch` is on the public list so a missing
 cookie is a plain-text 401, not an HTML login redirect. The handler
 still requires that cookie.
+
+`GET /ws/<slug>` is handled in `worker/index.ts` before this middleware
+path, so the mailbox authenticates on its own.
 
 Role, every request, never from the cookie:
 
@@ -488,6 +491,7 @@ If a task fails one of these, it is later, or it is wrong.
 3. **The brain does not listen.** A turn is a method call inside the
    DO. Frames fan out to the phones on the room. No `/metrics` port,
    no scrape, no hook. `status`, `perf`, and `log` stay on the DO.
+   The Vinext Worker is the HTTP API ([openapi.yaml](openapi.yaml)).
 4. **One mutation path.** Route handlers call `lib/door` and the DO
    stubs. Never storage from a React Server Component. Pages stay thin
    shells.

@@ -147,6 +147,7 @@ tail, not a second contract.
 
 ## Not this contract
 
-- No listen port, `/metrics`, or scrape endpoint
+- The brain has no listen port, `/metrics`, or scrape endpoint. The
+  Worker HTTP API is a different surface ([openapi.yaml](openapi.yaml)).
 - No slug inside the brain
 - No settings write path on model rounds or tool fan-out
