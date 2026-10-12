@@ -2,7 +2,7 @@
 openapi: 3.1.0
 info:
   title: gantree
-  version: 0.2.27
+  version: 0.2.28
   description: |-
     This document is the HTTP API of the Vinext Worker.
     The harness inside the Agent Durable Object opens no listen port. A turn is a method call inside that object.

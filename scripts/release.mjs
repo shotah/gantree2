@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Cut a release: bump semver, commit package.json, annotated tag (v* plus a
- * floating `latest`), push. The tag starts release.yml (GitHub Release with
+ * Cut a release: bump semver, refresh docs/openapi.yaml to that version,
+ * commit both, annotated tag (v* plus a floating `latest`), push. The tag
+ * starts release.yml (GitHub Release with
  * generated notes); the push to main runs ci.yml, and deploy-cloudflare.yml
  * ships the Worker once ci is green.
  *
@@ -74,8 +75,9 @@ if (!args.allowDirty) {
 }
 
 npmLive(["version", versionWithoutV(next), "--no-git-tag-version"]);
-gitLive(["add", "package.json", "package-lock.json"]);
-const staged = git(["status", "--porcelain", "package.json", "package-lock.json"]);
+npmLive(["run", "openapi"]);
+gitLive(["add", "package.json", "package-lock.json", "docs/openapi.yaml"]);
+const staged = git(["status", "--porcelain", "package.json", "package-lock.json", "docs/openapi.yaml"]);
 if (staged) {
   gitLive(["commit", "-m", `chore: release ${next}`]);
   console.log("Committed package.json version.");
