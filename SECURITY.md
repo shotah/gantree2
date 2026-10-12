@@ -3,7 +3,8 @@
 ## Reporting
 
 Report a hole in private. On this repository use **Security → Report a
-vulnerability**. A public issue is the wrong place.
+vulnerability**. A public issue is the wrong place. The private report
+form is https://github.com/shotah/gantree2/security/advisories/new.
 
 Include the path or frame, what you sent, what came back, and the
 commit you tested. A proof of concept against your own deployment is
