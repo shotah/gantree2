@@ -16,7 +16,7 @@ Setup by place: [install.md](install.md). Open walks: [todo.md](todo.md).
 | Who | Wants | Needs |
 | --- | --- | --- |
 | **Operators** | to *touch* an agent — config, tools, recreate, users | a Google account on the list with role `admin` or `operator` |
-| **Members** | the agent to *answer* | a Google account on the list **and** on that agent's room list |
+| **Members** | the agent to *answer* | a Google account on the list; chat also needs the room list unless they are in `GANTREE_ADMINS` or `GANTREE_ALLOW` |
 
 Bob can operate Ada and never message her. Sam can message Ada from
 a phone and never see settings. Both sign in at the same `/login`.
@@ -41,8 +41,10 @@ There is no second door and no passphrase.
          /users /settings  admin ────┤
          /agents/<id>      admin, or operator with <id> in agents[]
          /chat/<id>        any role  ──┐
-                                       └─ and on that agent's room list
-                                          (wire name PENDANT_ALLOWED_USERS)
+                                       └─ on that agent's room list, or on
+                                          GANTREE_ADMINS / GANTREE_ALLOW
+                                          (operators and other Settings-only
+                                          people still need a room row)
 ```
 
 ---
@@ -57,7 +59,9 @@ check at request time.**
   here at all, and with what role.
 - The agent's room list says whether that agent will talk to you. It
   lives on the Agent DO. Settings edits it. The brain publishes it as
-  an `allow` frame. Nothing else does.
+  an `allow` frame. Nothing else does. People in `GANTREE_ADMINS` or
+  `GANTREE_ALLOW` may chat with every agent even when that list is empty;
+  everyone else still needs a row on it.
 - A cookie only proves who. Removing a person from a list ends their
   access on the next request, not at cookie expiry.
 
@@ -99,9 +103,9 @@ frames are always `sub`.
 
 | Role | From | May |
 | --- | --- | --- |
-| `admin` | `GANTREE_ADMINS` (locked) or a Settings row | everything: `/users`, `/settings`, every agent, every chat the room list allows |
+| `admin` | `GANTREE_ADMINS` (locked) or a Settings row | `/users`, `/settings`, every agent. An identity in `GANTREE_ADMINS` may chat with every agent; a Settings-only admin still needs that agent's room list. |
 | `operator` | Settings row with `agents[]` | `/agents/<agent id>` for listed ids; chat where the room list allows |
-| `member` | `GANTREE_ALLOW` (locked) or a Settings row | chat where the room list allows; `/api/auth/me` |
+| `member` | `GANTREE_ALLOW` (locked) or a Settings row | An identity in `GANTREE_ALLOW` may chat with every agent; a Settings-only member still needs that agent's room list. `/api/auth/me` |
 
 Resolution is per request: collect every row that matches, take the
 highest role, union the operators' `agents[]`. Env rows are **locked**:

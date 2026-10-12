@@ -3,7 +3,7 @@ import type { ChatAuthEnv } from "./env";
 import type { RoomUser } from "./allow";
 import type { Role } from "./frame";
 import { type AuthMode, resolveAuthMode } from "./mode";
-import { roomAllows } from "./room";
+import { phoneAdmitted } from "./floor";
 import { secretEqual } from "./secret";
 import { readChatSession } from "./session";
 
@@ -134,11 +134,11 @@ async function oidcHandshake(input: HandshakeInput, now: number): Promise<Handsh
     if (!session) {
       return { ok: false, error: "unauthorized" };
     }
-    if (!roomAllows(input.roomList, {
+    if (!phoneAdmitted(input.roomList, {
       sub: session.sub,
       email: session.email,
       emailVerified: session.emailVerified,
-    }, input.env.ALLOWED_SUBS)) {
+    }, input.env)) {
       return { ok: false, error: "forbidden" };
     }
     return {

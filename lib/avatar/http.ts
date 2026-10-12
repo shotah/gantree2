@@ -6,7 +6,7 @@ import { blobEtag, blobResponse, etagMatches } from "@/lib/chat/blob";
 import { headerSaysTooLarge } from "@/lib/chat/caps";
 import { configError, forbidden, unauthorized } from "@/lib/chat/deny";
 import { agentStub, type AgentBinding } from "@/lib/chat/location";
-import { roomAllows } from "@/lib/chat/room";
+import { phoneAdmitted } from "@/lib/chat/floor";
 import { bearerToken } from "@/lib/chat/session";
 import { parseSlug } from "@/lib/chat/slug";
 import { fromStub } from "@/lib/chat/slugRoute";
@@ -195,11 +195,11 @@ export async function admitRoom(
     return { response: configError() };
   }
   const list = await fetchRoomUsers(stub);
-  const allowed = roomAllows(list, {
+  const allowed = phoneAdmitted(list, {
     sub: who.user.sub,
     email: who.user.email ?? undefined,
     emailVerified: Boolean(who.user.email),
-  }, env.ALLOWED_SUBS);
+  }, env);
   if (!allowed) {
     return { response: forbidden() };
   }

@@ -69,6 +69,29 @@ describe("socketAuth", () => {
     })).toBe(true);
   });
 
+  it("admits floor env on an empty room and still rejects strangers", () => {
+    expect(socketMessageAllowed({
+      role: "phone",
+      userId: ada,
+      email: "ada@example.com",
+      emailVerified: true,
+      roomUsers: [],
+      gantreeAdmins: "ada@example.com",
+      enforce: true,
+      now: 1_000,
+    })).toBe(true);
+    expect(socketMessageAllowed({
+      role: "phone",
+      userId: ada,
+      email: "ada@example.com",
+      emailVerified: true,
+      roomUsers: [],
+      gantreeAllow: "other@example.com",
+      enforce: true,
+      now: 1_000,
+    })).toBe(false);
+  });
+
   it("admits a verified email on the room list and closes a removed socket", () => {
     const room = [{ email: "ada@example.com" }];
     expect(socketMessageAllowed({

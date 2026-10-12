@@ -68,16 +68,41 @@ describe("handleAvatar", () => {
   });
 
   it("forbids a room that does not list the person", async () => {
+    const env = {
+      ...room((req) => {
+        if (req.headers.get("X-Chat-Op") === "allow") {
+          return Response.json({ users: [{ sub: "someone-else", email: "nope@example.com", role: "owner" }] });
+        }
+        return new Response(null, { status: 500 });
+      }),
+      GANTREE_ADMINS: "other@example.com",
+    } as RoomEnv;
+    const member = memoryStore([{
+      entry: { sub: SUB, email: "ada@example.com" },
+      role: "member",
+      agents: [],
+      locked: false,
+    }]);
+    const res = await handleAvatar(new Request("https://chat.test/api/chat/avatar?slug=kit", {
+      headers: { cookie: await cookie() },
+    }), env, member);
+    expect(res.status).toBe(403);
+  });
+
+  it("admits a deployment admin when the room lists someone else", async () => {
     const env = room((req) => {
       if (req.headers.get("X-Chat-Op") === "allow") {
         return Response.json({ users: [{ sub: "someone-else", email: "nope@example.com", role: "owner" }] });
       }
-      return new Response(null, { status: 500 });
+      return new Response(new Uint8Array([0xff, 0xd8, 0xff]), {
+        headers: { "Content-Type": "image/jpeg", "X-Chat-Rev": "7" },
+      });
     });
     const res = await handleAvatar(new Request("https://chat.test/api/chat/avatar?slug=kit", {
       headers: { cookie: await cookie() },
     }), env, store);
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("X-Chat-Rev")).toBe("7");
   });
 
   it("admits the harness with the bearer stored on the room, header only", async () => {

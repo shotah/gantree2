@@ -1,4 +1,4 @@
-import { roomAllows } from "@/lib/chat/room";
+import { phoneAdmitted, type PhoneAdmitEnv } from "@/lib/chat/floor";
 import type { RoomUser } from "@/lib/chat/allow";
 import { parseSlug } from "@/lib/chat/slug";
 import { decodeBase64Url } from "./vapid";
@@ -171,11 +171,11 @@ export function dropPush(items: StoredPush[], userId: string, endpoint: string):
 export function prunePushForRoom(
   items: StoredPush[],
   roomUsers: readonly RoomUser[],
-  extraSubs?: string,
+  env?: PhoneAdmitEnv,
 ): StoredPush[] {
-  return items.filter((p) => roomAllows(roomUsers, {
+  return items.filter((p) => phoneAdmitted(roomUsers, {
     sub: p.userId,
     email: p.email,
     emailVerified: p.emailVerified,
-  }, extraSubs));
+  }, env ?? {}));
 }

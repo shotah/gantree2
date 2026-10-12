@@ -372,7 +372,7 @@ flowchart LR
   RES["resolveUser(who)"] --> ROLE{{"admin · operator(agents) · member · none"}}
   ROLE -- "/users /settings" --> ADMIN[admin only]
   ROLE -- "/agents/:id" --> OP["admin, or operator with that id in agents[]"]
-  ROLE -- "/chat/:id" --> CHAT["any role, and on the room list"]
+  ROLE -- "/chat/:id" --> CHAT["any role; floor env or room list"]
   ROOM --> CHAT
 ```
 
@@ -477,8 +477,9 @@ Settings is one more actor. Nothing is shared except the KV directory.
 If a task fails one of these, it is later, or it is wrong.
 
 1. **One door.** Google signs you in; one list says whether; a role
-   says what; each agent's room list says who it talks to. Role is
-   computed every request, never read from the cookie. No second
+   says what; each agent's room list says who it talks to, except
+   `GANTREE_ADMINS` and `GANTREE_ALLOW` may chat with every agent.
+   Role is computed every request, never read from the cookie. No second
    login. [access.md](access.md).
 2. **The Agent DO is truth.** `config.env`, the room list, and the
    bearer live on the DO. Persona rows, `SELF.md`, sessions, memory,

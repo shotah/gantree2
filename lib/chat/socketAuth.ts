@@ -1,4 +1,5 @@
-import { roomAllows, type RoomSession } from "./room";
+import { phoneAdmitted } from "./floor";
+import type { RoomSession } from "./room";
 import type { RoomUser } from "./allow";
 import type { Role } from "./frame";
 
@@ -25,6 +26,8 @@ export type SocketAuthInput = {
   emailVerified?: boolean;
   expMs?: number;
   allowedSubs?: string;
+  gantreeAdmins?: string;
+  gantreeAllow?: string;
   roomUsers?: RoomUser[];
   /** Google is on — empty room + no extra admits nobody. Spike skips. */
   enforce?: boolean;
@@ -43,7 +46,7 @@ function phoneSession(input: SocketAuthInput): RoomSession | null {
 }
 
 /**
- * Phone sockets re-check the room list (and optional static extra) on
+ * Phone sockets re-check floor env, room list, and optional static extra on
  * every frame when Google is on. Spike and crane skip. Does not log sub.
  */
 export function socketMessageAllowed(input: SocketAuthInput): boolean {
@@ -54,7 +57,11 @@ export function socketMessageAllowed(input: SocketAuthInput): boolean {
     return true;
   }
   const session = phoneSession(input);
-  if (!session || !roomAllows(input.roomUsers, session, input.allowedSubs)) {
+  if (!session || !phoneAdmitted(input.roomUsers, session, {
+    ALLOWED_SUBS: input.allowedSubs,
+    GANTREE_ADMINS: input.gantreeAdmins,
+    GANTREE_ALLOW: input.gantreeAllow,
+  })) {
     return false;
   }
   if (input.expMs != null && input.expMs > 0 && input.now > input.expMs) {

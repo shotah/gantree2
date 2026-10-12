@@ -306,6 +306,8 @@ export class Agent extends DurableObject<AgentEnv> {
       emailVerified: meta.emailVerified,
       expMs: meta.expMs,
       allowedSubs: this.env.ALLOWED_SUBS,
+      gantreeAdmins: this.env.GANTREE_ADMINS,
+      gantreeAllow: this.env.GANTREE_ALLOW,
       roomUsers,
       enforce: this.enforce(),
       now,
@@ -706,6 +708,8 @@ export class Agent extends DurableObject<AgentEnv> {
         emailVerified: phone.emailVerified,
         expMs: phone.expMs,
         allowedSubs: this.env.ALLOWED_SUBS,
+        gantreeAdmins: this.env.GANTREE_ADMINS,
+        gantreeAllow: this.env.GANTREE_ALLOW,
         roomUsers: users,
         enforce: this.enforce(),
         now,
@@ -1056,7 +1060,7 @@ export class Agent extends DurableObject<AgentEnv> {
 
   private async prunePush(users: RoomUser[]): Promise<void> {
     const all = await this.loadPushAll();
-    const keep = prunePushForRoom(all, users, this.env.ALLOWED_SUBS);
+    const keep = prunePushForRoom(all, users, this.env);
     const keepKeys = new Set(keep.map((row) => pushStoreKey(row.userId, row.subscription.endpoint)));
     for (const row of all) {
       const key = pushStoreKey(row.userId, row.subscription.endpoint);

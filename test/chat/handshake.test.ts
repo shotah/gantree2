@@ -354,6 +354,42 @@ describe("handshake room list", () => {
     });
     expect(refused).toEqual({ ok: false, error: "forbidden" });
   });
+
+  it("admits GANTREE_ADMINS on an empty room list", async () => {
+    const ok = await handshake({
+      env: { ...env, GANTREE_ADMINS: "ada@example.com" },
+      slug: "kit",
+      role: "phone",
+      cookieHeader: await cookie({ sub: ada, email: "ada@example.com" }),
+      roomList: [],
+      now,
+    });
+    expect(ok.ok && ok.principal.kind === "phone" && ok.principal.sub).toBe(ada);
+  });
+
+  it("admits GANTREE_ALLOW by sub on an empty room list", async () => {
+    const ok = await handshake({
+      env: { ...env, GANTREE_ALLOW: ada },
+      slug: "kit",
+      role: "phone",
+      cookieHeader: await cookie({ sub: ada, email: null }),
+      roomList: [],
+      now,
+    });
+    expect(ok.ok && ok.principal.kind === "phone" && ok.principal.sub).toBe(ada);
+  });
+
+  it("still forbids a stranger on an empty room when floor env is set", async () => {
+    const refused = await handshake({
+      env: { ...env, GANTREE_ADMINS: "boss@example.com", GANTREE_ALLOW: "member@example.com" },
+      slug: "kit",
+      role: "phone",
+      cookieHeader: await cookie({ sub: ada, email: "ada@example.com" }),
+      roomList: [],
+      now,
+    });
+    expect(refused).toEqual({ ok: false, error: "forbidden" });
+  });
 });
 
 describe("handshakePhone", () => {

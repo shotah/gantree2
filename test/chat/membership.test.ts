@@ -32,4 +32,17 @@ describe("roomsFor", () => {
   it("works with no directory at all", async () => {
     expect(await roomsFor({})({ ...ada, agents: [] })).toEqual([]);
   });
+
+  it("unions household agents for a floor match when Settings lists them", async () => {
+    const env = {
+      GANTREE_ADMINS: "ada@example.com",
+      DIRECTORY: kvOf({}),
+      SETTINGS: {
+        getByName: () => ({
+          listAgents: async () => [{ slug: "kit", name: "Kit", status: "idle" as const, createdAt: 0, updatedAt: 0 }],
+        }),
+      },
+    };
+    expect(await roomsFor(env)(ada)).toEqual(["kit"]);
+  });
 });

@@ -105,7 +105,7 @@ import {
 } from "./handshake";
 import { agentStub } from "./location";
 import { resolveAuthMode } from "./mode";
-import { roomAllows } from "./room";
+import { phoneAdmitted } from "./floor";
 import { slugFromPath } from "./slug";
 import { stampAgentHeaders, upgradeOriginOk } from "./upgrade";
 
@@ -207,7 +207,7 @@ async function devPhone(
     email: dev.email ?? undefined,
     emailVerified: Boolean(dev.email),
   };
-  if (!roomAllows(roomList, session, env.ALLOWED_SUBS)) {
+  if (!phoneAdmitted(roomList, session, env)) {
     return { ok: false, error: "forbidden" };
   }
   return {
