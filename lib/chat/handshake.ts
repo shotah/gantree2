@@ -32,7 +32,7 @@ export type HandshakeInput = {
   querySecret?: string | null;
   queryBearer?: string | null;
   now?: number;
-  roomList?: RoomUser[];
+  roomList?: readonly RoomUser[];
   /** Bearer stored on the Agent DO, used when `AGENT_BEARERS` has no row for this slug. */
   roomBearer?: string | null;
   host?: string;

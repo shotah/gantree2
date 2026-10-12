@@ -31,6 +31,8 @@ export type AgentsHttpEnv = AgentsEnv & {
   LOCATION_HINT?: string;
   /** Read by `getAgentBearer` only: the bearer route exists where the gate honours this. */
   GANTREE_DEV_USER?: string;
+  /** Static extra subs. Member control of an agent uses the same room check as chat. */
+  ALLOWED_SUBS?: string;
 };
 
 const SETTINGS_NAME = "settings";

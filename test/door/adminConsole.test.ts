@@ -49,8 +49,8 @@ describe("admin console paths", () => {
     const store = memoryStore([{ entry: { sub: "1182", email: "op@example.com" }, role: "operator", agents: ["kit"], locked: false }]);
     expect(await sessionReq("/api/agents/kit", "1182", "op@example.com", store, "DELETE")).toBeNull();
     expect(await sessionReq("/api/agents/kit/enabled", "1182", "op@example.com", store, "POST")).toBeNull();
-    expect((await sessionReq("/api/agents", "1182", "op@example.com", store)).status).toBe(403);
-    expect((await sessionReq("/api/agents/kit/config", "1182", "op@example.com", store)).status).toBe(403);
+    expect((await sessionReq("/api/agents", "1182", "op@example.com", store))?.status).toBe(403);
+    expect((await sessionReq("/api/agents/kit/config", "1182", "op@example.com", store))?.status).toBe(403);
   });
 
   it("403s members and operators on console APIs", async () => {

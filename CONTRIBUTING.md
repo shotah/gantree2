@@ -26,7 +26,7 @@ npm run test:coverage
 npm run build
 ```
 
-The pre-commit hook runs `npm test` and `npm run lint` in parallel via Lefthook.
+The pre-commit hook runs `npm test`, `npm run lint`, and `npm run typecheck` in parallel via Lefthook.
 
 `npm run eval` when the change touches `brain/agent` or `brain/plugins`.
 That run needs `LLM_*`. See [docs/eval_setup.md](docs/eval_setup.md).

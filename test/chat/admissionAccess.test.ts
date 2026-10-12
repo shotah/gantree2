@@ -40,7 +40,7 @@ describe("assignment and inventory", () => {
     const env = {
       GOOGLE_CLIENT_ID: "id",
       SESSION_SECRET: SECRET,
-      AGENT: { idFromName, get: () => stub },
+      AGENT: { idFromName, get: () => stub } as unknown as DurableObjectNamespace,
       SETTINGS: settingsInventory(["kit", "ada"]),
     };
     const store = memoryStore([{
