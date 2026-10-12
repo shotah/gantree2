@@ -27,7 +27,7 @@ describe("fan web push", () => {
       tag: "chat",
     });
     expect(pushPayload({ images: [{ url: "data:image/jpeg;base64,aa" }] }, "  ")).toEqual({
-      title: "Kit",
+      title: "Agent",
       body: "Photo",
       tag: "chat",
     });

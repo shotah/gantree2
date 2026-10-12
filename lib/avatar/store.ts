@@ -36,7 +36,7 @@ export function faceRevFromUnknown(raw: unknown): number | null {
 export function displaySlug(slug: string): string {
   const s = slug.trim();
   if (!s) {
-    return "Kit";
+    return "Agent";
   }
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
