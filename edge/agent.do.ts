@@ -601,6 +601,20 @@ export class Agent extends DurableObject<AgentEnv> {
     return new Response("method", { status: 405 });
   }
 
+  private async serveOwnChat(request: Request): Promise<Response> {
+    const segment = new URL(request.url).pathname.split("/").filter((part) => part.length > 0).pop() ?? "";
+    if (segment === "avatar") {
+      return this.blobHttp(request, FACE_BLOB);
+    }
+    if (segment === "backdrop") {
+      return this.blobHttp(request, BACKDROP_BLOB);
+    }
+    if (segment === "theme") {
+      return this.themeHttp(request);
+    }
+    return new Response(null, { status: 404 });
+  }
+
   /** Every socket in the room, crane included — it ignores frames with no `user_id`. */
   private announce(body: string): void {
     fanOut(this.ctx.getWebSockets(), body);
@@ -1262,6 +1276,24 @@ export class Agent extends DurableObject<AgentEnv> {
   private async nativeBrain(): Promise<Brain> {
     const slug = parseStoredSlug(await this.ctx.storage.get<string>(SLUG_STORE_KEY)) ?? "";
     await this.loadSeenOrigin();
+    const catchUrl = oauthCatchRedirect(this.env, this.publicOrigin);
+    let origin = "";
+    if (catchUrl) {
+      try {
+        origin = new URL(catchUrl).origin;
+      } catch {
+        origin = "";
+      }
+    }
+    const storedBearer = await this.ctx.storage.get<string>(BEARER_STORE_KEY);
+    const roomBearer = typeof storedBearer === "string" && storedBearer.trim() ? storedBearer : "";
+    const chat = origin && roomBearer && slug
+      ? {
+          origin,
+          bearer: roomBearer,
+          serve: (req: Request) => this.serveOwnChat(req),
+        }
+      : undefined;
     const brain = await openRoomBrain(this.ctx, this.env, {
       slug,
       foldLog: (frame) => {
@@ -1271,6 +1303,7 @@ export class Agent extends DurableObject<AgentEnv> {
         redirectUri: () => oauthCatchRedirect(this.env, this.publicOrigin),
         sealState: (plugin) => this.sealForSlash(plugin),
       },
+      ...(chat ? { chat } : {}),
     });
     const fresh = brain !== this.brain;
     this.brain = brain;

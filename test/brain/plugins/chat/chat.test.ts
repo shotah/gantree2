@@ -413,6 +413,14 @@ describe("chat plugin", () => {
     expect(result.isError).toBeUndefined();
     const sum = JSON.parse(textOf(result)) as { rev: number; path: string; edge: number };
     expect(sum.rev).toBe(9);
+
+    const chatRev = pluginCtx({
+      env: { ...chatEnv, IMAGE_OUTPUT_DIR: dir },
+      fetch: async () => responseBytes(jpeg, 200, { "x-chat-rev": "11", "content-type": "image/jpeg" }),
+    });
+    const fromChatRev = await callTool(chatPlugin, chatRev, "avatar_get", {});
+    const chatRevSum = JSON.parse(textOf(fromChatRev)) as { rev: number };
+    expect(chatRevSum.rev).toBe(11);
     expect(sum.edge).toBe(1280);
     expect(sum.path.startsWith(`${dir}/`)).toBe(true);
     expect(result.content[1]).toMatchObject({ type: "image", mimeType: "image/jpeg" });

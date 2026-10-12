@@ -21,6 +21,7 @@ import { AesTokenStore, mintTokenKey, TOKEN_KEY_STORE_KEY, tokenKeyOk } from "@/
 import { canonicalEnv, CONFIG_STORE_KEY, frameEnv, parseConfig } from "@/lib/agents/config";
 import { houseEnv, type HouseEnv } from "@/lib/agents/house";
 import { parseStoredSlug, SLUG_STORE_KEY } from "@/lib/chat/allow";
+import { chatLoopbackFetch, withChatMailbox } from "@/brain/room/mailbox";
 
 export type { CatchEnv } from "./catch";
 export { catchOAuth } from "./catch";
@@ -36,6 +37,7 @@ export type OpenRoomOpts = {
   foldLog: (frame: LogFrame) => void | Promise<void>;
   /** Native catch. Slash reads it off the same sql object passed to `createBrain`. */
   auth?: RoomAuth;
+  chat?: { origin: string; bearer: string; serve: (req: Request) => Promise<Response> };
 };
 
 type Memo = { generation: string; brain: Brain };
@@ -52,7 +54,16 @@ export async function openRoomBrain(ctx: DurableObjectState, env: HouseEnv, opts
   const stored = parseStoredSlug(await ctx.storage.get(SLUG_STORE_KEY));
   const slug = opts.slug ?? stored ?? "";
   const tokenKey = await ensureTokenKey(ctx);
-  const map = frameEnv(config, houseEnv(env));
+  let map = frameEnv(config, houseEnv(env));
+  const chat = opts.chat;
+  const chatAttach = Boolean(chat && slug && chat.origin.trim() && chat.bearer.trim());
+  if (chat && chatAttach) {
+    map = withChatMailbox(map, {
+      origin: chat.origin,
+      slug,
+      bearer: chat.bearer,
+    });
+  }
   const store = await openPersonaStore(ctx, opts);
   const parts = personaParts(store);
   const personaText = parts.find((part) => part.name === filePersona)?.text ?? "";
@@ -67,7 +78,15 @@ export async function openRoomBrain(ctx: DurableObjectState, env: HouseEnv, opts
   if (opts.auth) {
     bindRoomAuth(sql, opts.auth);
   }
-  const fetch = bindWorkerFetch();
+  const fetch = chat && chatAttach
+    ? chatLoopbackFetch(bindWorkerFetch(), {
+        origin: chat.origin,
+        slug,
+        bearer: chat.bearer,
+        apiPrefix: map.CHAT_API_PREFIX,
+        serve: chat.serve,
+      })
+    : bindWorkerFetch();
   const brain = createBrain({
     sql,
     clock,

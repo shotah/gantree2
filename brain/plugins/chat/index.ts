@@ -147,7 +147,8 @@ export const chatPlugin: Plugin = {
             const got = await pendantRequest(cfg, ctx.fetch, "GET", blobURL(cfg, "avatar"), undefined, "", call.signal);
             if (got.status === 404) return errorResult(`no face yet. ${nextAvatarUpdate}`);
             if (got.status >= 400) return errorResult(workerError(got.body, got.status));
-            const revRaw = Number.parseInt(got.header("x-pendant-rev").trim(), 10);
+            const revHeader = got.header("x-chat-rev").trim() || got.header("x-pendant-rev").trim();
+            const revRaw = Number.parseInt(revHeader, 10);
             const rev = Number.isNaN(revRaw) ? 0 : revRaw;
             const filePath = writeOutputFile(ctx.sql, ctx.clock, (ctx.env.IMAGE_OUTPUT_DIR ?? "").trim(), got.body, ".jpg");
             return imageResult(blobJSON(rev, got.body.byteLength, avatarEdge, filePath), got.body);

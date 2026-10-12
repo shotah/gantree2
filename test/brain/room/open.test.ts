@@ -244,4 +244,42 @@ describe("openRoomBrain", () => {
     expect(vi.mocked(createBrain)).toHaveBeenCalledTimes(3);
     expect(await depsOf().plugins.find((plugin) => plugin.name === "math")?.ready({} as never)).toBe("disabled");
   });
+
+  it("fills chat env and loopbacks avatar uploads to serve", async () => {
+    const rows = new Map<string, unknown>();
+    rows.set("slug", "kit");
+    rows.set(CONFIG_STORE_KEY, { env: {}, mcp: "", persona: "", runtime: "native", updatedAt: 1 });
+    const ctx = ctxFor(rows) as unknown as DurableObjectState;
+    const serve = vi.fn(async () => Response.json({ ok: true, rev: 1 }));
+    const origin = "https://gantree2.bldhosting.com";
+    const bearer = "room-bearer-secret";
+    const chatOpts = {
+      slug: "kit",
+      foldLog: () => undefined,
+      chat: { origin, bearer, serve },
+    };
+    const house = { LLM_API_KEY: "house-key" };
+    await openRoomBrain(ctx, house, chatOpts);
+    const deps = depsOf();
+    expect(deps.env.CHAT_MAILBOX_URL).toBe("wss://gantree2.bldhosting.com/ws/kit");
+    expect(deps.env.CHAT_BEARER).toBe(bearer);
+    const res = await deps.fetch(`${origin}/api/chat/avatar?slug=kit`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${bearer}` },
+      body: "jpeg-bytes",
+    });
+    expect(serve).toHaveBeenCalledTimes(1);
+    expect(await res.json()).toEqual({ ok: true, rev: 1 });
+
+    rows.set(CONFIG_STORE_KEY, {
+      env: { CHAT_MAILBOX_URL: "wss://kept.test/ws/kit" },
+      mcp: "",
+      persona: "",
+      runtime: "native",
+      updatedAt: 2,
+    });
+    dropRoomBrain(ctx);
+    await openRoomBrain(ctx, house, chatOpts);
+    expect(depsOf().env.CHAT_MAILBOX_URL).toBe("wss://kept.test/ws/kit");
+  });
 });
