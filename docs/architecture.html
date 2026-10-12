@@ -427,7 +427,7 @@ then arms the alarm again.</p>
     T[test:coverage&lt;br/&gt;thresholds] --&gt; LNT[lint] --&gt; TC[typecheck] --&gt; BLD[vite build]
     BLD -- main --&gt; BADGE[badge.mjs vitest] --&gt; PUB1[publish-pages.sh&lt;br/&gt;badges/coverage.svg]
   end
-  subgraph ev[&quot;eval.yml — tag, or by hand&quot;]
+  subgraph ev[&quot;eval.yml — by hand, or release --eval&quot;]
     direction LR
     EV[&quot;npm run eval&lt;br/&gt;Vitest · harness/eval&quot;]
   end

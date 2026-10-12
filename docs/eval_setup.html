@@ -142,17 +142,15 @@ gh secret set LLM_MODEL --body 'gemini-3.8-flash'</code></pre>
 (default 3) and <code>only</code> (a fixture name, blank = all). By hand:</p>
 <pre><code class="language-sh">gh workflow run eval.yml -f runs=5 -f only=scoop_at_2</code></pre>
 </li>
-<li><p><strong><code>release.yml</code></strong> — on a <code>v*</code> tag it calls <code>eval.yml</code>
-(<code>workflow_call</code>) and the release job <code>needs</code> that run. Eval fails →
-the GitHub Release is not created. Fix the fixture or the seed, then
-re-run the failed job (or push the next tag). A skipped eval (missing
-secrets) still lets the release through.</p>
+<li><p><strong><code>release.yml</code></strong> — does not call <code>eval.yml</code> unless the tag was cut
+with <code>npm run release -- --eval</code> (<code>eval: force</code> in the tag message).
+It does not <code>needs</code> the eval job.</p>
 </li>
 </ul>
 <p>Without any of the three secrets the eval job skips and stays green, so
-a fork with no key still releases. <code>ci.yml</code> and <code>harness.yml</code> do not
-call the eval — the free goldens and the coverage floors are the PR
-gate; this is the release gate.</p>
+a fork with no key still releases. <code>ci.yml</code> does not call the eval.
+The free goldens and the coverage floors are the PR gate. The live
+eval is the hand run, or the release you cut with <code>--eval</code>.</p>
 <h2 id="3-reading-a-failure">3. Reading a failure</h2>
 <p>Every failed run prints what the model did, then the reply:</p>
 <pre><code class="language-text">run 2/3 FAIL: expected tool cron_schedule; waiting_for_reply=false, want true
