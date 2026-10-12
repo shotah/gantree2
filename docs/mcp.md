@@ -237,6 +237,41 @@ plugin that has no key or no token: `no_key`, `no_oauth`, `disabled`,
 `error`. `GARMIN_TOOL_TIER` and `GOOGLE_TOOL_PRESET` narrow those two
 catalogs before publish.
 
+### Keys
+
+Required keys are what `ready()` treats as `no_key`. Optional keys
+have a default. Feeds publish with no key; `FEEDS_USER_AGENT` only
+overrides the User-Agent, which defaults to
+`gantree/<version> (+https://gantree2.bldhosting.com)`. The same list
+is what the Keys fold suggests. A house key may come from the Worker
+instead of the agent.
+
+Garmin has no redirect login. Set `GARMIN_EMAIL` and `GARMIN_PASSWORD`,
+then type `/auth garmin` in chat. When MFA is required, paste the code
+as `/auth garmin <code>`.
+
+| Plugin | Key | Required |
+| --- | --- | --- |
+| house | `LLM_BASE_URL` | yes, house or agent |
+| house | `LLM_API_KEY` | yes, house or agent |
+| house | `LLM_MODEL` | yes, house or agent |
+| house | `BRAVE_SEARCH_API_KEY` | no |
+| feeds | `FEEDS_USER_AGENT` | no |
+| twitter | `X_BEARER_TOKEN` | yes |
+| strava | `STRAVA_CLIENT_ID` | yes |
+| strava | `STRAVA_CLIENT_SECRET` | yes |
+| maps | `GOOGLE_MAPS_API_KEY` | yes |
+| flights | `SERPAPI_API_KEY` | yes |
+| rentals | `RENTCAST_API_KEY` | yes |
+| google-health | `GOOGLE_HEALTH_CLIENT_ID` | yes |
+| google-health | `GOOGLE_HEALTH_CLIENT_SECRET` | yes |
+| google | `GOOGLE_OAUTH_CLIENT_ID` | yes |
+| google | `GOOGLE_OAUTH_CLIENT_SECRET` | yes |
+| google | `GOOGLE_TOOL_PRESET` | no — `everyday` (default), `lean`, or `all` |
+| garmin | `GARMIN_EMAIL` | yes |
+| garmin | `GARMIN_PASSWORD` | yes |
+| garmin | `GARMIN_TOOL_TIER` | no — `core` (default), `extended`, or `complete` |
+
 ### Prefix enable
 
 By default MCP schemas stay **off** until the agent calls `mcp_enable`

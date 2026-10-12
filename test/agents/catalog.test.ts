@@ -21,6 +21,7 @@ describe("toolCatalog", () => {
       "GOOGLE_OAUTH_CLIENT_ID",
       "GOOGLE_OAUTH_CLIENT_SECRET",
     ]);
+    expect(tools.find((tool) => tool.id === "feeds")?.needs).toEqual([]);
     expect(tools.find((tool) => tool.id === "image")?.needs).toEqual([]);
     expect(tools.find((tool) => tool.id === "math")?.needs).toEqual([]);
     expect(tools.find((tool) => tool.id === "chat")?.needs).toEqual([]);

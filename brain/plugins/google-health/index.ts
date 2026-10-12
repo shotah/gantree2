@@ -40,6 +40,8 @@ import {
 import { addDays, civilString, DAY_CAP, expandInclusive, parseCivilDate, resolveHealthDays, todayCivil, weightPeriodDays } from "@/brain/plugins/google-health/civil";
 import { goJSON } from "@/brain/plugins/google-health/wire";
 
+export { keys } from "./keys";
+
 function argString(args: Record<string, unknown>, key: string): string {
   const value = args[key];
   return typeof value === "string" ? value : "";

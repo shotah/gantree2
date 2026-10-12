@@ -30,6 +30,8 @@ import {
   type LinkFields,
 } from "./link.ts";
 
+export { keys } from "./keys";
+
 const linkDescription = "Turn one or more Google Maps share or short URLs (maps.app.goo.gl, goo.gl/maps, g.co/maps) into canonical maps URLs plus place name, coordinates, or directions endpoints. Pass every link in urls (max 8). No API key. Already-long google.com/maps URLs are parsed without a fetch. Not a geocoder — use place_resolve for an address. A single url is also accepted. Returns a list.";
 const placeDescription = "Look up one or more places by name, address, or Maps share URL. Pass every lookup in queries or places (max 8). Returns place_id, coordinates, rating, a few reviews, and a Maps URL for each. Use for “what is this pin” and “tell me about X”. For “sushi near Ballard” use place_search. Needs GOOGLE_MAPS_API_KEY. A single query is also accepted. Returns a list.";
 const searchDescription = "Find a few places for each query, optionally near a location. Pass every search in queries (max 8). Use for “sushi restaurants near Ballard”, “coffee by the gym”, and “recommend a few spots”. Returns name, rating, address, and a Maps URL for each. Not a city-wide dump — default 5, max 8 hits per query. Needs GOOGLE_MAPS_API_KEY and Places API. For known pins use place_resolve. A single query is also accepted. Returns a list.";

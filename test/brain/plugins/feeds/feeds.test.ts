@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { PACKAGE_VERSION } from "@/app/lib/release";
 import {
   fetchFeed,
   feedsPlugin,
@@ -14,7 +15,7 @@ import {
   youtubeChannelCandidate,
   youtubeFromHTML,
 } from "@/brain/plugins/feeds/index";
-import { httpGet, userAgentFrom, validateURL, type Got } from "@/brain/plugins/feeds/http";
+import { defaultUserAgent, httpGet, userAgentFrom, validateURL, type Got } from "@/brain/plugins/feeds/http";
 import { firstNonEmpty, looksLikeHTML, parseFeedDocument, parseFeedTitle, stripTags, truncateRunes } from "@/brain/plugins/feeds/parse";
 import { callTool, pluginCtx, textOf, textResponse } from "../helpers";
 
@@ -206,7 +207,9 @@ describe("feeds http", () => {
 
   it("reads FEEDS_USER_AGENT and falls back, and honors a canceled call", async () => {
     expect(userAgentFrom({ FEEDS_USER_AGENT: "nws-contact/1 (me@example.com)" })).toBe("nws-contact/1 (me@example.com)");
-    expect(userAgentFrom({ FEEDS_USER_AGENT: "  " })).toContain("feeds-mcp");
+    expect(defaultUserAgent).toBe(`gantree/${PACKAGE_VERSION} (+https://gantree2.bldhosting.com)`);
+    expect(userAgentFrom({ FEEDS_USER_AGENT: "  " })).toBe(defaultUserAgent);
+    expect(userAgentFrom({})).toBe(defaultUserAgent);
     const signal = AbortSignal.abort();
     await expect(httpGet({
       url: "https://example.com/rss.xml",
@@ -344,10 +347,10 @@ describe("feeds resolve", () => {
 describe("feeds plugin", () => {
   const env = { FEEDS_USER_AGENT: "feeds-test/1" };
 
-  it("requires the user agent and publishes both tools", async () => {
+  it("publishes both tools with no key", async () => {
     expect(feedsPlugin.name).toBe("feeds");
-    expect(await feedsPlugin.ready(pluginCtx())).toBe("no_key");
-    expect(await feedsPlugin.ready(pluginCtx({ env: { FEEDS_USER_AGENT: "  " } }))).toBe("no_key");
+    expect(await feedsPlugin.ready(pluginCtx())).toBeNull();
+    expect(await feedsPlugin.ready(pluginCtx({ env: { FEEDS_USER_AGENT: "  " } }))).toBeNull();
     expect(await feedsPlugin.ready(pluginCtx({ env }))).toBeNull();
     const tools = feedsPlugin.tools(pluginCtx({ env }));
     expect(tools.map((t) => t.name)).toEqual(["items_list", "source_resolve"]);

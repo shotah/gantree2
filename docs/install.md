@@ -69,16 +69,36 @@ bundle, not to get Durable Objects.
 House keys the brain reads from `.dev.vars` (and, in production, from
 Worker secrets): `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, and
 optionally `BRAVE_SEARCH_API_KEY`. An agent's own `config.env` wins
-when the same name is set on both. Plugin keys (`GOOGLE_MAPS_API_KEY`,
-`GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`,
-`STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET`, `GARMIN_EMAIL` /
-`GARMIN_PASSWORD`, `X_BEARER_TOKEN`, `FEEDS_USER_AGENT`, and the rest
-each plugin's `ready()` checks) live on the agent. `GARMIN_TOOL_TIER`
-and `GOOGLE_TOOL_PRESET` narrow those catalogs. Register the catch
-URIs in [auth.md](auth.md). `CRON_TZ`, `DAILY_PLANNER_AT`,
+when the same name is set on both. Other keys live on the agent. Feeds
+publish with no key; `FEEDS_USER_AGENT` only overrides the User-Agent,
+which defaults to `gantree/<version> (+https://gantree2.bldhosting.com)`.
+The Keys fold suggests every row below. Register the catch URIs in
+[auth.md](auth.md). `CRON_TZ`, `DAILY_PLANNER_AT`,
 `MEMORY_CONSOLIDATE_MINUTES`, `DYNAMIC_TOOLS`, `MCP_ENABLE_FORCE`, and
 `PUBLIC_ORIGIN` are brain knobs. `PUBLIC_ORIGIN` is the catch host,
 with no path.
+
+| Plugin | Key | Required |
+| --- | --- | --- |
+| house | `LLM_BASE_URL` | yes, house or agent |
+| house | `LLM_API_KEY` | yes, house or agent |
+| house | `LLM_MODEL` | yes, house or agent |
+| house | `BRAVE_SEARCH_API_KEY` | no |
+| feeds | `FEEDS_USER_AGENT` | no |
+| twitter | `X_BEARER_TOKEN` | yes |
+| strava | `STRAVA_CLIENT_ID` | yes |
+| strava | `STRAVA_CLIENT_SECRET` | yes |
+| maps | `GOOGLE_MAPS_API_KEY` | yes |
+| flights | `SERPAPI_API_KEY` | yes |
+| rentals | `RENTCAST_API_KEY` | yes |
+| google-health | `GOOGLE_HEALTH_CLIENT_ID` | yes |
+| google-health | `GOOGLE_HEALTH_CLIENT_SECRET` | yes |
+| google | `GOOGLE_OAUTH_CLIENT_ID` | yes |
+| google | `GOOGLE_OAUTH_CLIENT_SECRET` | yes |
+| google | `GOOGLE_TOOL_PRESET` | no — `everyday` (default), `lean`, or `all` |
+| garmin | `GARMIN_EMAIL` | yes |
+| garmin | `GARMIN_PASSWORD` | yes |
+| garmin | `GARMIN_TOOL_TIER` | no — `core` (default), `extended`, or `complete` |
 
 Open `http://127.0.0.1:3000/chat/<slug>` after you create the agent.
 Blank keys on a new agent use the house `LLM_*` from `.dev.vars`. The

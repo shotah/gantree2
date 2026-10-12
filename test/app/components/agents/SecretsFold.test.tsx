@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { SecretsFold, cleanSecretKey } from "@/app/components/agents/SecretsFold";
 import type { ApiClient } from "@/app/lib/agentsHttp";
 import type { AgentConfigView } from "@/lib/agents/types";
-import { config, json, textBody } from "./fixtures";
+import { config, inputOf, json, textBody } from "./fixtures";
 
 afterEach(() => {
   cleanup();
@@ -83,9 +83,76 @@ describe("SecretsFold", () => {
 
   it("names the house keys the server supplies, without a remove button", () => {
     render(<SecretsFold slug="kit" config={config({ recreate: true, envKeys: [], house: ["LLM_MODEL", "LLM_API_KEY"] })} canMutate client={vi.fn()} onConfig={vi.fn()} />);
-    expect(screen.getByRole("note").textContent).toContain("From the server: LLM_MODEL, LLM_API_KEY.");
+    const notes = screen.getAllByRole("note").map((note) => note.textContent ?? "");
+    expect(notes.some((text) => text.includes("LLM_MODEL") && text.includes("from house"))).toBe(true);
+    expect(notes.some((text) => text.includes("LLM_API_KEY") && text.includes("from house"))).toBe(true);
     expect(screen.queryByRole("button", { name: "Remove LLM_MODEL" })).toBeNull();
-    expect(screen.getByText("No keys yet.")).toBeTruthy();
+    expect(screen.queryByText("No keys yet.")).toBeNull();
+  });
+
+  it("offers known keys that are not set and not from the house, and puts a deleted key back", async () => {
+    function Harness({ client }: { client: ApiClient }) {
+      const [view, setView] = useState(config({
+        recreate: true,
+        envKeys: ["X_BEARER_TOKEN"],
+        house: ["BRAVE_SEARCH_API_KEY", "LLM_API_KEY"],
+      }));
+      return (
+        <SecretsFold
+          slug="kit"
+          config={view}
+          canMutate
+          client={client}
+          onConfig={setView}
+        />
+      );
+    }
+    const client: ApiClient = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      await Promise.resolve();
+      const body = JSON.parse(textBody(init?.body)) as { env: Record<string, string | null> };
+      const key = Object.keys(body.env)[0] ?? "";
+      const envKeys = body.env[key] === null ? [] : ["X_BEARER_TOKEN"];
+      return json(200, config({
+        envKeys,
+        house: ["BRAVE_SEARCH_API_KEY", "LLM_API_KEY"],
+        recreate: true,
+      }));
+    });
+    render(<Harness client={client} />);
+    const select = screen.getByLabelText("Known keys");
+    const labels = [...select.querySelectorAll("optgroup")].map((group) => group.getAttribute("label"));
+    expect(labels[0]).toBe("house");
+    expect(labels).not.toContain("twitter");
+    const offered = [...select.querySelectorAll("option")].map((option) => option.value);
+    expect(offered).not.toContain("X_BEARER_TOKEN");
+    expect(offered).not.toContain("BRAVE_SEARCH_API_KEY");
+    expect(offered).not.toContain("LLM_API_KEY");
+    expect(offered).toContain("LLM_BASE_URL");
+    expect(offered).toContain("FEEDS_USER_AGENT");
+    const datalist = [...(document.getElementById("known-keys")?.querySelectorAll("option") ?? [])].map((option) => option.getAttribute("value"));
+    expect(datalist[0]).toBe("LLM_BASE_URL");
+    expect(datalist).not.toContain("X_BEARER_TOKEN");
+    expect(datalist).not.toContain("LLM_API_KEY");
+
+    const about = screen.getByRole("button", { name: "About X_BEARER_TOKEN" });
+    expect(about.getAttribute("title")).toContain("AAAA...");
+    fireEvent.focus(about);
+    expect(screen.getByText(/App-only bearer/)).toBeTruthy();
+
+    fireEvent.change(select, { target: { value: "LLM_BASE_URL" } });
+    const key = inputOf(screen.getByLabelText("Key"));
+    expect(key.value).toBe("LLM_BASE_URL");
+    fireEvent.focus(key);
+    expect(screen.getByText(/Example: https:\/\/generativelanguage\.googleapis\.com/)).toBeTruthy();
+
+    fireEvent.change(key, { target: { value: "CUSTOM_KEY" } });
+    expect(inputOf(screen.getByLabelText("Key")).value).toBe("CUSTOM_KEY");
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove X_BEARER_TOKEN" }));
+    await vi.waitFor(() => {
+      const next = [...screen.getByLabelText("Known keys").querySelectorAll("option")].map((option) => option.value);
+      expect(next).toContain("X_BEARER_TOKEN");
+    });
   });
 
   it("reports a failed write", async () => {

@@ -12,6 +12,8 @@ import { weightTools } from "./weight";
 import { wellnessTools } from "./wellness";
 import { GarminError } from "./json";
 
+export { keys } from "./keys";
+
 async function storeToken(ctx: PluginContext, token: {
   accessToken: string;
   refreshToken: string;

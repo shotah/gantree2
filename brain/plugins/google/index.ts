@@ -14,6 +14,7 @@ import { sheetsTools } from "@/brain/plugins/google/sheets";
 import { slidesTools } from "@/brain/plugins/google/slides";
 import { tasksTools } from "@/brain/plugins/google/tasks";
 import { CLIENT_ID_ENV, CLIENT_SECRET_ENV, authFinish, authStart } from "@/brain/plugins/google/oauth";
+export { keys } from "./keys";
 
 /**
  * Google Workspace plugin. Owns the shared `"google"` OAuth token

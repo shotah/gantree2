@@ -77,6 +77,7 @@ export function AgentDashboard({
   const [role, setRole] = useState<Role | null>(null);
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
+  const [keyPick, setKeyPick] = useState<{ name: string; n: number } | null>(null);
 
   const load = useCallback(async () => {
     setPhase("loading");
@@ -179,6 +180,7 @@ export function AgentDashboard({
           canMutate={agent.canMutate}
           client={client}
           onConfig={setConfig}
+          pick={keyPick}
         />
         <ToolsFold
           slug={agent.slug}
@@ -188,6 +190,7 @@ export function AgentDashboard({
           status={agent.status}
           client={client}
           onConfig={setConfig}
+          onPickKey={(name) => setKeyPick((prev) => ({ name, n: (prev?.n ?? 0) + 1 }))}
         />
         <UsersFold
           slug={agent.slug}

@@ -29,6 +29,8 @@ import {
 import { usageJSON } from "@/brain/plugins/rentals/usage";
 import { goJSON, queryEscape, sortedRecord } from "@/brain/plugins/rentals/wire";
 
+export { keys } from "./keys";
+
 function argString(args: Record<string, unknown>, key: string): string {
   const value = args[key];
   return typeof value === "string" ? value : "";

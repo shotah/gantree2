@@ -56,6 +56,17 @@ export function envPatchFor(tool: ToolEntry, drafts: Readonly<Record<string, str
 export const KEY_PLACEHOLDER_SET = "set — paste to replace";
 export const KEY_PLACEHOLDER_MISSING = "paste the key";
 
+/** Under Connect: the same login the chat slash command starts. */
+export function connectChatHint(id: string): string {
+  return `or type /auth ${id} in chat`;
+}
+
+/**
+ * Garmin's login is email, password, then `/auth garmin`. MFA is pasted as
+ * `/auth garmin <code>` (see `mfaInstruction` in the garmin plugin).
+ */
+export const GARMIN_AUTH_HINT = "Set GARMIN_EMAIL and GARMIN_PASSWORD in Keys, then type /auth garmin in chat to sign in (MFA prompt follows)";
+
 /** Published means connected. `no_oauth` means not connected. Anything else is not an oauth verdict. */
 export function oauthLine(status: AgentStatus | null | undefined, id: string): "connected" | "not connected" | null {
   if (!status) {
@@ -148,6 +159,7 @@ export function ToolsFold({
   client = api,
   onConfig,
   status = null,
+  onPickKey,
 }: {
   slug: string;
   config: AgentConfigView;
@@ -156,6 +168,8 @@ export function ToolsFold({
   client?: ApiClient;
   onConfig: (config: AgentConfigView) => void;
   status?: AgentStatus | null;
+  /** Opens Keys with this name filled in. */
+  onPickKey?: (name: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [grants, setGrants] = useState<Grant[]>(() => grantsFromToml(config.mcp));
@@ -215,22 +229,15 @@ export function ToolsFold({
     }
   }
 
-  const notes = missingNeeds(grants, tools, config.envKeys);
-
   return (
     <Fold title="Tools" open={open} onOpen={setOpen} hint={`${grants.length} on`}>
       {error ? <p role="alert" className={`${alertClass} mb-3`}>{agentsMessage(error)}</p> : null}
-      {notes.length > 0
-        ? (
-            <ul aria-label="Missing keys" className="mb-3 space-y-1">
-              {notes.map((note) => <li key={note} className="text-xs text-danger">{note}</li>)}
-            </ul>
-          )
-        : null}
       <ul className="space-y-2">
         {tools.map((tool) => {
           const on = grants.some((grant) => grant.name === tool.id);
           const line = tool.oauth ? oauthLine(status, tool.id) : null;
+          const have = new Set(config.envKeys);
+          const missing = on ? tool.needs.filter((key) => !have.has(key)) : [];
           return (
             <li key={tool.id} className="rounded-xl border border-line bg-canvas/40 px-3 py-2">
               <label className="flex items-center gap-2 text-sm text-fg">
@@ -245,13 +252,30 @@ export function ToolsFold({
               <p className="mt-1 text-xs text-dim">{tool.binary}</p>
               {tool.homeOnly ? <p className="text-xs text-dim">Home</p> : null}
               {line ? <p className="text-xs text-dim">{line}</p> : null}
+              {tool.id === "garmin"
+                ? <p className="mt-1 text-xs text-dim">{GARMIN_AUTH_HINT}</p>
+                : null}
               {tool.oauth && canMutate
                 ? (
-                    <button type="button" disabled={busy} onClick={() => void connect(tool)} className={`${quietClass} mt-2`}>
-                      Connect {tool.id}
-                    </button>
+                    <>
+                      <button type="button" disabled={busy} onClick={() => void connect(tool)} className={`${quietClass} mt-2`}>
+                        Connect {tool.id}
+                      </button>
+                      <p className="mt-1 text-xs text-dim">{connectChatHint(tool.id)}</p>
+                    </>
                   )
                 : null}
+              {missing.map((key) => (
+                <p key={key} className="mt-1">
+                  <button
+                    type="button"
+                    className="text-left text-xs text-danger underline decoration-danger/40 underline-offset-2"
+                    onClick={() => onPickKey?.(key)}
+                  >
+                    {`${tool.id} needs ${key}`}
+                  </button>
+                </p>
+              ))}
               {on && tool.needs.length > 0
                 ? (
                     <KeyFields

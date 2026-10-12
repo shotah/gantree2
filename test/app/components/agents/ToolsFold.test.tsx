@@ -4,8 +4,10 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  connectChatHint,
   draftId,
   envPatchFor,
+  GARMIN_AUTH_HINT,
   grantFor,
   KEY_PLACEHOLDER_MISSING,
   KEY_PLACEHOLDER_SET,
@@ -46,13 +48,14 @@ describe("tool grants", () => {
 
 const GARMIN: ToolEntry = { id: "garmin", binary: "garmin-bin", needs: [], oauth: false, homeOnly: false };
 
-function Harness({ client, tools, start, canMutate = true, seen, status = null }: {
+function Harness({ client, tools, start, canMutate = true, seen, status = null, onPickKey }: {
   client: ApiClient;
   tools: ToolEntry[];
   start: AgentConfigView;
   canMutate?: boolean;
   seen?: AgentConfigView[];
   status?: AgentStatus | null;
+  onPickKey?: (name: string) => void;
 }) {
   const [view, setView] = useState(start);
   return (
@@ -63,6 +66,7 @@ function Harness({ client, tools, start, canMutate = true, seen, status = null }
       canMutate={canMutate}
       status={status}
       client={client}
+      onPickKey={onPickKey}
       onConfig={(next) => {
         seen?.push(next);
         setView(next);
@@ -178,6 +182,8 @@ describe("ToolsFold", () => {
     fireEvent.click(screen.getByRole("button", { name: "Tools" }));
     expect(screen.getByText("not connected")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Connect garmin" })).toBeNull();
+    expect(screen.getByText(GARMIN_AUTH_HINT)).toBeTruthy();
+    expect(screen.getByText(connectChatHint("google"))).toBeTruthy();
     expect(screen.queryByText("Sign in from chat before this publishes.")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Connect google" }));
     await vi.waitFor(() => expect(open).toHaveBeenCalledWith(
@@ -186,5 +192,14 @@ describe("ToolsFold", () => {
       "noopener,noreferrer",
     ));
     open.mockRestore();
+  });
+
+  it("links a missing catalog key so Keys can preselect it", () => {
+    const picked: string[] = [];
+    const start = config({ mcp: tomlFromGrants([grantFor(MAPS)], ""), envKeys: [] });
+    render(<Harness client={vi.fn()} tools={[MAPS]} start={start} onPickKey={(name) => picked.push(name)} />);
+    fireEvent.click(screen.getByRole("button", { name: "Tools" }));
+    fireEvent.click(screen.getByRole("button", { name: "maps needs MAPS_KEY" }));
+    expect(picked).toEqual(["MAPS_KEY"]);
   });
 });
