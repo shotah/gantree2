@@ -3,6 +3,7 @@ export const OPENAPI_BASE = {
   openapi: "3.1.0",
   info: {
     title: "gantree",
+    // Spec cut. Not the package release; a version bump must not rewrite this.
     version: "0.2.26",
     description: "This document is the HTTP API of the Vinext Worker.\nThe harness inside the Agent Durable Object opens no listen port. A turn is a method call inside that object.\nThe Worker answers these routes. The mailbox is `GET /ws/{slug}` (WebSocket upgrade), answered in `worker/index.ts` before Vinext middleware.\nThe harness also calls `GET` and `POST` `/api/chat/avatar`, and the backdrop and theme routes, with the room bearer.\n",
   },

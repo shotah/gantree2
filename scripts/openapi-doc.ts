@@ -2,12 +2,7 @@
  * OpenAPI 3.1 document (source). Patches the imported base snapshot; `openapi.ts` stringifies it.
  */
 
-import { readFileSync } from "node:fs";
 import { OPENAPI_BASE } from "./openapi-base.ts";
-
-const pkg = JSON.parse(
-  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
-) as { version: string };
 
 const GATE_503_ERROR = `{ error: "no admins: set GANTREE_ADMINS" }`;
 
@@ -168,7 +163,6 @@ function patchInfo(doc: JsonObj): void {
   if (!isObj(info)) {
     return;
   }
-  info.version = pkg.version;
   info.description = INFO_DESCRIPTION;
 }
 
