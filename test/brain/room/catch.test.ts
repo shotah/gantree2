@@ -38,6 +38,10 @@ async function authed(url: string, sub: string): Promise<Request> {
   return new Request(url, { headers: { cookie: await cookieFor(sub) } });
 }
 
+function expectHtml(res: Response): void {
+  expect(res.headers.get("content-type")).toContain("text/html");
+}
+
 describe("oauth catch", () => {
   it("finishes the code on the agent's DO and tells the human to go back", async () => {
     const key = await sessionKey(SECRET);
@@ -46,8 +50,12 @@ describe("oauth catch", () => {
     const { env, seen } = envFor(() => Response.json({ ok: true }));
     const res = await catchOAuth(await authed(`https://g.test/api/auth/catch?state=${encodeURIComponent(state)}&code=abc`, ADMIN), env);
     expect(res.status).toBe(200);
-    expect(res.headers.get("content-type")).toContain("text/plain");
-    expect(await res.text()).toBe("Connected google. Go back to chat.");
+    expectHtml(res);
+    const body = await res.text();
+    expect(body).toContain('data-result="ok"');
+    expect(body).toContain("Google connected");
+    expect(body).toContain('stroke="var(--ok)"');
+    expect(body).not.toContain("abc");
     expect(seen).toHaveLength(1);
     const req = seen[0];
     if (!req) {
@@ -92,7 +100,10 @@ describe("oauth catch", () => {
     });
     const anon = await catchOAuth(new Request(url), env);
     expect(anon.status).toBe(401);
-    expect(await anon.text()).toBe("unauthorized");
+    expectHtml(anon);
+    const anonBody = await anon.text();
+    expect(anonBody).toContain('data-result="fail"');
+    expect(anonBody).toContain("unauthorized");
     const junk = await catchOAuth(new Request(url, { headers: { cookie: `${SESSION_COOKIE}=nope` } }), env);
     expect(junk.status).toBe(401);
     expect(seen).toEqual([]);
@@ -108,7 +119,10 @@ describe("oauth catch", () => {
     });
     const member = await catchOAuth(await authed(url, MEMBER), blocked);
     expect(member.status).toBe(403);
-    expect(await member.text()).toBe("forbidden");
+    expectHtml(member);
+    const forbiddenBody = await member.text();
+    expect(forbiddenBody).toContain('data-result="fail"');
+    expect(forbiddenBody).toContain("forbidden");
     expect(blockedSeen.map((req) => req.headers.get("X-Chat-Op"))).toEqual(["allow"]);
 
     const operatorStore = memoryStore([{
@@ -124,7 +138,9 @@ describe("oauth catch", () => {
 
     const allowed = await catchOAuth(await authed(url, MEMBER), env);
     expect(allowed.status).toBe(200);
-    expect(await allowed.text()).toBe("Connected google. Go back to chat.");
+    const okBody = await allowed.text();
+    expect(okBody).toContain('data-result="ok"');
+    expect(okBody).toContain("Google connected");
     const auth = seen.at(-1);
     if (!auth) {
       throw new Error("missing auth call");
@@ -147,14 +163,19 @@ describe("oauth catch", () => {
     for (const url of cases) {
       const res = await catchOAuth(await authed(url, ADMIN), env);
       expect(res.status).toBe(400);
-      expect(await res.text()).toBe("bad state");
+      expectHtml(res);
+      const body = await res.text();
+      expect(body).toContain('data-result="fail"');
+      expect(body).toContain("bad state");
     }
     const missing = await catchOAuth(
       await authed(`https://g.test/api/auth/catch?state=${encodeURIComponent(await sealOAuthCatch(key, { slug: "kit", plugin: "garmin" }))}`, ADMIN),
       env,
     );
     expect(missing.status).toBe(400);
-    expect(await missing.text()).toBe("missing code");
+    const missingBody = await missing.text();
+    expect(missingBody).toContain('data-result="fail"');
+    expect(missingBody).toContain("missing code");
     expect(seen).toEqual([]);
   });
 
@@ -172,12 +193,12 @@ describe("oauth catch", () => {
       env,
     );
     expect(res.status).toBe(502);
-    expect(res.headers.get("content-type")).toContain("text/plain");
+    expectHtml(res);
     const body = await res.text();
-    expect(body).toBe("exchange failed click Connect again");
+    expect(body).toContain('data-result="fail"');
+    expect(body).toContain("exchange failed click Connect again");
     expect(body).not.toContain(code);
     expect(body).not.toContain(encoded);
-    expect(body.includes("\n")).toBe(false);
     const req = seen[0];
     if (!req) {
       throw new Error("missing auth call");
@@ -198,7 +219,7 @@ describe("oauth catch", () => {
     );
     expect(res.status).toBe(502);
     const body = await res.text();
-    expect(body).toBe("m".repeat(240));
+    expect(body).toContain("m".repeat(240));
     expect(body).not.toContain("abc");
   });
 
@@ -217,13 +238,15 @@ describe("oauth catch", () => {
       const { env } = envFor(handler);
       const res = await catchOAuth(await authed(url, ADMIN), env);
       expect(res.status).toBe(502);
-      expect(await res.text()).toBe("could not connect");
+      const body = await res.text();
+      expect(body).toContain('data-result="fail"');
+      expect(body).toContain("could not connect");
     }
     const { env: down } = envFor(() => {
       throw new Error("down abc");
     });
     const thrown = await catchOAuth(await authed(url, ADMIN), down);
     expect(thrown.status).toBe(502);
-    expect(await thrown.text()).toBe("could not connect");
+    expect(await thrown.text()).toContain("could not connect");
   });
 });

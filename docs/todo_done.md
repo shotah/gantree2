@@ -723,6 +723,9 @@ Decision and the package map: [brain.md](brain.md). Landed
 The bug list that had piled up on the open page in
 [todo.md](todo.md).
 
+- [x] **easy** OAuth catch landing page (2026-10-12). After plugin
+      OAuth, `/api/auth/catch` shows a dark card with a green check
+      or red X and a Close button instead of plain text.
 - [x] **easy** Unique agent name and id (2026-10-12). Slug and
       display name, case-insensitive. The new-agent wizard checks
       before step 2; the server answers 409 `exists` or
