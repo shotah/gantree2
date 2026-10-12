@@ -294,6 +294,120 @@ off the list is not in the catalog. <code>ready()</code> still skips a granted
 plugin that has no key or no token: <code>no_key</code>, <code>no_oauth</code>, <code>disabled</code>,
 <code>error</code>. <code>GARMIN_TOOL_TIER</code> and <code>GOOGLE_TOOL_PRESET</code> narrow those two
 catalogs before publish.</p>
+<h3 id="keys">Keys</h3>
+<p>Required keys are what <code>ready()</code> treats as <code>no_key</code>. Optional keys
+have a default. Feeds publish with no key; <code>FEEDS_USER_AGENT</code> only
+overrides the User-Agent, which defaults to
+<code>gantree/&lt;version&gt; (+https://gantree2.bldhosting.com)</code>. The same list
+is what the Keys fold suggests. A house key may come from the Worker
+instead of the agent.</p>
+<p>Garmin has no redirect login. Set <code>GARMIN_EMAIL</code> and <code>GARMIN_PASSWORD</code>,
+then type <code>/auth garmin</code> in chat. When MFA is required, paste the code
+as <code>/auth garmin &lt;code&gt;</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Plugin</th>
+<th>Key</th>
+<th>Required</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>house</td>
+<td><code>LLM_BASE_URL</code></td>
+<td>yes, house or agent</td>
+</tr>
+<tr>
+<td>house</td>
+<td><code>LLM_API_KEY</code></td>
+<td>yes, house or agent</td>
+</tr>
+<tr>
+<td>house</td>
+<td><code>LLM_MODEL</code></td>
+<td>yes, house or agent</td>
+</tr>
+<tr>
+<td>house</td>
+<td><code>BRAVE_SEARCH_API_KEY</code></td>
+<td>no</td>
+</tr>
+<tr>
+<td>feeds</td>
+<td><code>FEEDS_USER_AGENT</code></td>
+<td>no</td>
+</tr>
+<tr>
+<td>twitter</td>
+<td><code>X_BEARER_TOKEN</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>strava</td>
+<td><code>STRAVA_CLIENT_ID</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>strava</td>
+<td><code>STRAVA_CLIENT_SECRET</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>maps</td>
+<td><code>GOOGLE_MAPS_API_KEY</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>flights</td>
+<td><code>SERPAPI_API_KEY</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>rentals</td>
+<td><code>RENTCAST_API_KEY</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>google-health</td>
+<td><code>GOOGLE_HEALTH_CLIENT_ID</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>google-health</td>
+<td><code>GOOGLE_HEALTH_CLIENT_SECRET</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>google</td>
+<td><code>GOOGLE_OAUTH_CLIENT_ID</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>google</td>
+<td><code>GOOGLE_OAUTH_CLIENT_SECRET</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>google</td>
+<td><code>GOOGLE_TOOL_PRESET</code></td>
+<td>no — <code>everyday</code> (default), <code>lean</code>, or <code>all</code></td>
+</tr>
+<tr>
+<td>garmin</td>
+<td><code>GARMIN_EMAIL</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>garmin</td>
+<td><code>GARMIN_PASSWORD</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>garmin</td>
+<td><code>GARMIN_TOOL_TIER</code></td>
+<td>no — <code>core</code> (default), <code>extended</code>, or <code>complete</code></td>
+</tr>
+</tbody></table>
 <h3 id="prefix-enable">Prefix enable</h3>
 <p>By default MCP schemas stay <strong>off</strong> until the agent calls <code>mcp_enable</code>
 (list of prefixes, next model call in the same turn). The prompt lists

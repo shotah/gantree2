@@ -143,16 +143,118 @@ bundle, not to get Durable Objects.</p>
 <p>House keys the brain reads from <code>.dev.vars</code> (and, in production, from
 Worker secrets): <code>LLM_BASE_URL</code>, <code>LLM_API_KEY</code>, <code>LLM_MODEL</code>, and
 optionally <code>BRAVE_SEARCH_API_KEY</code>. An agent&#39;s own <code>config.env</code> wins
-when the same name is set on both. Plugin keys (<code>GOOGLE_MAPS_API_KEY</code>,
-<code>GOOGLE_OAUTH_CLIENT_ID</code> / <code>GOOGLE_OAUTH_CLIENT_SECRET</code>,
-<code>STRAVA_CLIENT_ID</code> / <code>STRAVA_CLIENT_SECRET</code>, <code>GARMIN_EMAIL</code> /
-<code>GARMIN_PASSWORD</code>, <code>X_BEARER_TOKEN</code>, <code>FEEDS_USER_AGENT</code>, and the rest
-each plugin&#39;s <code>ready()</code> checks) live on the agent. <code>GARMIN_TOOL_TIER</code>
-and <code>GOOGLE_TOOL_PRESET</code> narrow those catalogs. Register the catch
-URIs in <a href="auth.html">auth.md</a>. <code>CRON_TZ</code>, <code>DAILY_PLANNER_AT</code>,
+when the same name is set on both. Other keys live on the agent. Feeds
+publish with no key; <code>FEEDS_USER_AGENT</code> only overrides the User-Agent,
+which defaults to <code>gantree/&lt;version&gt; (+https://gantree2.bldhosting.com)</code>.
+The Keys fold suggests every row below. Register the catch URIs in
+<a href="auth.html">auth.md</a>. <code>CRON_TZ</code>, <code>DAILY_PLANNER_AT</code>,
 <code>MEMORY_CONSOLIDATE_MINUTES</code>, <code>DYNAMIC_TOOLS</code>, <code>MCP_ENABLE_FORCE</code>, and
 <code>PUBLIC_ORIGIN</code> are brain knobs. <code>PUBLIC_ORIGIN</code> is the catch host,
 with no path.</p>
+<table>
+<thead>
+<tr>
+<th>Plugin</th>
+<th>Key</th>
+<th>Required</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>house</td>
+<td><code>LLM_BASE_URL</code></td>
+<td>yes, house or agent</td>
+</tr>
+<tr>
+<td>house</td>
+<td><code>LLM_API_KEY</code></td>
+<td>yes, house or agent</td>
+</tr>
+<tr>
+<td>house</td>
+<td><code>LLM_MODEL</code></td>
+<td>yes, house or agent</td>
+</tr>
+<tr>
+<td>house</td>
+<td><code>BRAVE_SEARCH_API_KEY</code></td>
+<td>no</td>
+</tr>
+<tr>
+<td>feeds</td>
+<td><code>FEEDS_USER_AGENT</code></td>
+<td>no</td>
+</tr>
+<tr>
+<td>twitter</td>
+<td><code>X_BEARER_TOKEN</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>strava</td>
+<td><code>STRAVA_CLIENT_ID</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>strava</td>
+<td><code>STRAVA_CLIENT_SECRET</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>maps</td>
+<td><code>GOOGLE_MAPS_API_KEY</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>flights</td>
+<td><code>SERPAPI_API_KEY</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>rentals</td>
+<td><code>RENTCAST_API_KEY</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>google-health</td>
+<td><code>GOOGLE_HEALTH_CLIENT_ID</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>google-health</td>
+<td><code>GOOGLE_HEALTH_CLIENT_SECRET</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>google</td>
+<td><code>GOOGLE_OAUTH_CLIENT_ID</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>google</td>
+<td><code>GOOGLE_OAUTH_CLIENT_SECRET</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>google</td>
+<td><code>GOOGLE_TOOL_PRESET</code></td>
+<td>no — <code>everyday</code> (default), <code>lean</code>, or <code>all</code></td>
+</tr>
+<tr>
+<td>garmin</td>
+<td><code>GARMIN_EMAIL</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>garmin</td>
+<td><code>GARMIN_PASSWORD</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>garmin</td>
+<td><code>GARMIN_TOOL_TIER</code></td>
+<td>no — <code>core</code> (default), <code>extended</code>, or <code>complete</code></td>
+</tr>
+</tbody></table>
 <p>Open <code>http://127.0.0.1:3000/chat/&lt;slug&gt;</code> after you create the agent.
 Blank keys on a new agent use the house <code>LLM_*</code> from <code>.dev.vars</code>. The
 browser only ever sees the key names (<code>GET /api/tools</code> → <code>house</code>).
