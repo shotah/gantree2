@@ -1356,6 +1356,28 @@ describe("Agent native runtime", () => {
     expect(body.since).toEqual(expect.any(Number));
   });
 
+  it("re-arms from nextAlarm when harness.alarm() rejects", async () => {
+    const nextAt = 9_000_000_000_000;
+    roomMock.harness.nextAlarm.mockReturnValue(nextAt);
+    roomMock.harness.alarm.mockRejectedValue(new Error("alarm failed"));
+    const { state, box } = room();
+    await state.storage.put("slug", "kit");
+    await state.storage.put(CONFIG_STORE_KEY, nativeConfig());
+    await expect(box.alarm()).rejects.toThrow("alarm failed");
+    expect(state.storage.alarmAt).toBe(nextAt);
+  });
+
+  it("clears the storage alarm when harness.alarm() rejects and nextAlarm is null", async () => {
+    roomMock.harness.nextAlarm.mockReturnValue(null);
+    roomMock.harness.alarm.mockRejectedValue(new Error("alarm failed"));
+    const { state, box } = room();
+    await state.storage.put("slug", "kit");
+    await state.storage.put(CONFIG_STORE_KEY, nativeConfig());
+    await state.storage.setAlarm(4_200_000_000_000);
+    await expect(box.alarm()).rejects.toThrow("alarm failed");
+    expect(state.storage.alarmAt).toBeNull();
+  });
+
   it("drops the harness on restart and opens a new one", async () => {
     roomMock.harness.announce.mockImplementation(async (emit) => {
       emit({ kind: "status", published: ["math"], skipped: [{ name: "garmin", reason: "disabled" }] });

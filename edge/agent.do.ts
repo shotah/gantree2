@@ -293,10 +293,15 @@ export class Agent extends DurableObject<AgentEnv> {
   async alarm(): Promise<void> {
     const harness = await this.nativeBrain();
     let next: number | null = null;
-    await this.withEmit(async (emit) => {
-      next = await harness.alarm(emit);
-    });
-    await this.armAlarm(next);
+    try {
+      await this.withEmit(async (emit) => {
+        next = await harness.alarm(emit);
+      });
+      await this.armAlarm(next);
+    } catch (err) {
+      await this.armAlarm(harness.nextAlarm());
+      throw err;
+    }
   }
 
   /**

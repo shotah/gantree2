@@ -765,7 +765,8 @@ function personaParts(parts: readonly { name: string; text: string }[]): Persona
 function consolidateAt(consolidator: Consolidator, minutes: number, now: number): number | null {
   if (minutes <= 0) return null;
   const last = consolidator.lastStatus().at;
-  if (last === 0) return now;
+  // Never-run is in-memory only; defer to the first interval so cron/watch can own the alarm.
+  if (last === 0) return now + minutes * 60_000;
   return last + minutes * 60_000;
 }
 
