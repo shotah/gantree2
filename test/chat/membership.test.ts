@@ -41,7 +41,7 @@ describe("roomsFor", () => {
         getByName: () => ({
           listAgents: async () => [{ slug: "kit", name: "Kit", status: "idle" as const, createdAt: 0, updatedAt: 0 }],
         }),
-      },
+      } as unknown as DurableObjectNamespace,
     };
     expect(await roomsFor(env)(ada)).toEqual(["kit"]);
   });
