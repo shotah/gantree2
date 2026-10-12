@@ -140,6 +140,17 @@ and the brain. Screenshots in this repo were taken against <code>npm run dev</co
 <code>npm run build &amp;&amp; npm run start</code> is the built Worker under Miniflare
 (<code>dist/server/wrangler.json</code>); use it when you want the production
 bundle, not to get Durable Objects.</p>
+<h3 id="chat-with-a-real-agent-locally">Chat with a real agent locally</h3>
+<p>With house <code>LLM_BASE_URL</code>, <code>LLM_API_KEY</code>, and <code>LLM_MODEL</code> in <code>.dev.vars</code>,
+run <code>npm run agent</code>. It starts Vite (Worker, Durable Objects, native brain)
+unless something healthy is already on port 3000, ensures a local agent
+(default slug <code>kit</code>), and restarts the Agent Durable Object so
+<code>nativeBrain</code> opens with those house keys. Chat at
+<code>http://127.0.0.1:3000/chat/kit</code> (or <code>--slug ada</code>). Set
+<code>GANTREE_DEV_USER</code> and list that identity in <code>GANTREE_ADMINS</code> so loopback
+API calls can create the agent without a browser session. The script
+also puts that user on the agent room, which is what opens the chat
+socket. The brain is the Agent Durable Object that deploy ships.</p>
 <p>House keys the brain reads from <code>.dev.vars</code> (and, in production, from
 Worker secrets): <code>LLM_BASE_URL</code>, <code>LLM_API_KEY</code>, <code>LLM_MODEL</code>, and
 optionally <code>BRAVE_SEARCH_API_KEY</code>. An agent&#39;s own <code>config.env</code> wins
