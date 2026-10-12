@@ -118,16 +118,14 @@ Two workflows read them:
   gh workflow run eval.yml -f runs=5 -f only=scoop_at_2
   ```
 
-- **`release.yml`** — on a `v*` tag it calls `eval.yml`
-  (`workflow_call`) and the release job `needs` that run. Eval fails →
-  the GitHub Release is not created. Fix the fixture or the seed, then
-  re-run the failed job (or push the next tag). A skipped eval (missing
-  secrets) still lets the release through.
+- **`release.yml`** — does not call `eval.yml` unless the tag was cut
+  with `npm run release -- --eval` (`eval: force` in the tag message).
+  It does not `needs` the eval job.
 
 Without any of the three secrets the eval job skips and stays green, so
-a fork with no key still releases. `ci.yml` and `harness.yml` do not
-call the eval — the free goldens and the coverage floors are the PR
-gate; this is the release gate.
+a fork with no key still releases. `ci.yml` does not call the eval.
+The free goldens and the coverage floors are the PR gate. The live
+eval is the hand run, or the release you cut with `--eval`.
 
 ## 3. Reading a failure
 

@@ -123,6 +123,7 @@ function pluginsIn(loaded: unknown): Plugin[] {
 }
 
 describe("plugin tools are plural", () => {
+  // Imports every plugin. Under the full suite that misses the 5s default.
   it("accepts a set or says why the tool is one item", async () => {
     const ctx = pluralCtx();
     const offenders: string[] = [];
@@ -172,5 +173,5 @@ describe("plugin tools are plural", () => {
     if (offenders.length > 0) {
       expect.fail(`tools that are neither plural nor single:\n${offenders.join("\n")}`);
     }
-  });
+  }, 20_000);
 });

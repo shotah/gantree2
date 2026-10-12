@@ -50,10 +50,12 @@ export function versionWithoutV(tag) {
 }
 
 export function parseArgs(argv) {
-  const out = { bump: "patch", version: "", dryRun: false, skipPush: false, allowDirty: false, help: false };
+  const out = { bump: "patch", version: "", dryRun: false, skipPush: false, allowDirty: false, help: false, eval: false };
   for (const a of argv) {
     if (a === "--dry-run") {
       out.dryRun = true;
+    } else if (a === "--eval") {
+      out.eval = true;
     } else if (a === "--skip-push") {
       out.skipPush = true;
     } else if (a === "--allow-dirty") {

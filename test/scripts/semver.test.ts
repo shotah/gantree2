@@ -26,7 +26,7 @@ describe("nextVersion", () => {
 
 describe("release args", () => {
   it("parses every flag and strips the v", () => {
-    expect(parseArgs([])).toEqual({ bump: "patch", version: "", dryRun: false, skipPush: false, allowDirty: false, help: false });
+    expect(parseArgs([])).toEqual({ bump: "patch", version: "", dryRun: false, skipPush: false, allowDirty: false, help: false, eval: false });
     expect(parseArgs(["--bump=minor", "--dry-run", "--skip-push", "--allow-dirty", "--version=v2.0.0"])).toEqual({
       bump: "minor",
       version: "v2.0.0",
@@ -34,7 +34,9 @@ describe("release args", () => {
       skipPush: true,
       allowDirty: true,
       help: false,
+      eval: false,
     });
+    expect(parseArgs(["--eval"]).eval).toBe(true);
     expect(parseArgs(["-h"]).help).toBe(true);
     expect(() => parseArgs(["--nope"])).toThrow(/unknown arg --nope/);
     expect(versionWithoutV("v0.2.1")).toBe("0.2.1");

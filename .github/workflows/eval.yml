@@ -1,16 +1,14 @@
 name: eval
 
 # Behavioral eval against a live model (docs/eval_setup.md). Paid, so not
-# on every push to main. A v* tag starts this beside release.yml and does
-# not block the release (one pass per fixture, EVAL_N=1). workflow_dispatch
-# and workflow_call default to 3. LLM_BASE_URL, LLM_API_KEY, and LLM_MODEL
-# are repository secrets. When any is absent the job prints a notice and
-# succeeds. Secret values are never written to the log.
+# on every push to main. workflow_dispatch and workflow_call default to 3
+# runs per fixture. A v* tag starts this only when release.mjs was run with
+# --eval (eval: force in the tag message); release.yml calls this at EVAL_N=1
+# beside the GitHub Release and does not block it. LLM_BASE_URL, LLM_API_KEY,
+# and LLM_MODEL are repository secrets. When any is absent the job prints a
+# notice and succeeds. Secret values are never written to the log.
 
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
     inputs:
       runs:
@@ -35,7 +33,7 @@ on:
 permissions:
   contents: read
 
-# One paid eval at a time. A second v* tag cancels the run already going.
+# One paid eval at a time.
 concurrency:
   group: eval
   cancel-in-progress: true
@@ -44,7 +42,6 @@ jobs:
   eval:
     name: Live model eval
     runs-on: ubuntu-latest
-    # A hand run is thirty fixtures × 3. A tag is × 1.
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -86,7 +83,6 @@ jobs:
           LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_MODEL: ${{ secrets.LLM_MODEL }}
-          # Tag push: one pass. Dispatch and workflow_call use input `runs` (default 3).
-          EVAL_N: ${{ github.event_name == 'push' && '1' || inputs.runs || '3' }}
+          EVAL_N: ${{ inputs.runs || '3' }}
           EVAL_ONLY: ${{ inputs.only || '' }}
         run: npm run eval

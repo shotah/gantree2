@@ -768,3 +768,15 @@ The bug list that had piled up on the open page in
       (2026-10-12). `agentStub` is the only Agent lookup. The name
       is the inventory slug, never the display name. No
       `newUniqueId`.
+
+## Harness leftovers — 2026-10-12
+
+- [x] **easy** Actions run 38172210169 (v0.2.18) failed on live eval
+      (`test/brain/eval`; three fixture failures). Superseded by the
+      passing v0.2.31 run 38312868354. Do not re-run 38172210169.
+- [x] **easy** Dropped six harness leftovers: process RSS (`selfRSSMB`,
+      VmRSS), coalesce settle, spinup notice, reaction debounce,
+      typing refresh every 4s, draft throttle 250ms — container or Go
+      loop timers, not the Worker shape.
+- [x] **easy** `[room]` stamp: restore, not drop. The writer is still
+      open in [todo.md](todo.md).

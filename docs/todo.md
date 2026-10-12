@@ -5,7 +5,7 @@ The plan is [proposal.md](proposal.md); the pictures are
 [todo_done.md](todo_done.md) (same section numbers, so "§5" means the
 same thing in both). This is what is left, in the order to do it.
 
-**State today (2026-10-11):** every screen, the door, the chat PWA,
+**State today (2026-10-12):** every screen, the door, the chat PWA,
 the agent registry, the mark, the docs site on
 `github.bldhosting.com`, release tooling. The Workers-native harness
 is the only runtime ([todo_done.md](todo_done.md) §10). The runtime
@@ -15,14 +15,14 @@ class named Harness was deleted in migration v3 and stays deleted.
 The catalog is `toolCatalog()` from `harness/plugins`. `npm run agent`
 starts (or reuses) Vite and opens browser chat on the native Agent DO with house
 `LLM_*` from `.dev.vars`. Live eval is 30/30. `package.json` is
-0.2.18, deployed from `main` `c3fa813`; local `package.json` is
-0.2.30.
+0.2.32.
 `GET https://gantree2.bldhosting.com/api/health` returns
-`{"ok":true,"version":"0.2.18"}`. Tag eval for v0.2.18 is in
-progress. Kit files tasks and goals from chat. Phones can sign in
-without a browser (`/api/auth/{config,nonce,token}`). **Not yet
-done:** the provider-console redirects, Bob's walk, the §4 native
-walk, a stranger's README walk, and the one-week soak.
+`{"ok":true,"version":"0.2.32"}`. Live eval for v0.2.31 passed:
+https://github.com/shotah/gantree2/actions/runs/38312868354. Kit files
+tasks and goals from chat. Phones can sign in without a browser
+(`/api/auth/{config,nonce,token}`). **Not yet done:** the
+provider-console redirects, Bob's walk, the §4 native walk, a
+stranger's README walk, and the one-week soak.
 
 Legend: `[ ]` open · **owner** needs a human with a console · **gated**
 waits on the note in the line · tags are `easy` / `medium` / `hard`
@@ -69,31 +69,20 @@ from the repo.
 What has landed is in [todo_done.md](todo_done.md) §10.
 88 tools are ported; the catalog has 139.
 
-- [ ] **easy** Look up Actions run 38172210169 (v0.2.18) and record
-      pass or the failing step in this list.
-- [ ] **easy** If run 38172210169 failed, fix the fixture or the
-      harness and re-run.
-- [ ] **easy** Weekly: `npm audit` for `braces`. No release after
-      3.0.3. Not a lockfile edit. Do not claim a bump is safe.
-- [ ] **easy** Weekly: `npm audit` for `fflate`. satori pins 0.7.3.
-      0.7.5+ and 0.8.3 fix the advisory. Not a lockfile edit. Do not
-      claim a bump is safe.
-- [ ] **easy** Process RSS on the log (`selfRSSMB`, VmRSS; the feeds
-      plugin is the RSS reader and has landed). Decide restore or
-      drop. Do not implement it.
-- [ ] **easy** Coalesce settle. Decide restore or drop. Do not
-      implement it.
-- [ ] **easy** Spinup notice. Decide restore or drop. Do not
-      implement it.
-- [ ] **easy** Reaction debounce. Decide restore or drop. Do not
-      implement it.
-- [ ] **easy** Typing refresh every 4s. Decide restore or drop. Do
-      not implement it.
-- [ ] **easy** Draft throttle 250ms. Decide restore or drop. Do not
-      implement it.
-- [ ] **easy** The `[room]` stamp (theme, wallpaper, face). Judgment
-      strips a `[room]` line if one appears. Nothing writes the
-      stamp. Decide restore or drop. Do not implement it.
+- [ ] **easy** Weekly: `npm audit` for `braces`. Checked 2026-10-12:
+      high stack exhaustion, range `*`. No fixed release. npm's fix is
+      a vinext downgrade to 0.2.1. Do not take it. Not a lockfile
+      edit. Do not claim a bump is safe.
+- [ ] **easy** Weekly: `npm audit` for `fflate`. Checked 2026-10-12:
+      moderate, range 0.7.0–0.7.4 (ZIP64 loop). 0.7.5 and 0.8.3 fix
+      it. satori still pins 0.7.3. npm's fix is the same vinext
+      downgrade. Do not take it. Not a lockfile edit. Do not claim a
+      bump is safe.
+- [ ] **easy** Write the `[room]` stamp (theme, wallpaper, face, each
+      with an age) into the harness stamp when chat tools are in the
+      catalog. The daily planner prompt already tells the model to
+      redress a stale `[room]`; judgment already knows the tag.
+      Nothing writes the line yet.
 - [ ] **medium** Google Drive past 9. Next slice: one Drive tool.
       The rest waits.
 - [ ] **medium** Google Docs past 15. Next slice: one Docs tool.
@@ -266,6 +255,11 @@ Decided. These stay out.
   for the codes.
 - A passphrase or magic-link door.
 - Anything that makes a turn slower so a dashboard looks nicer.
+- Process RSS and a spinup notice. Those measured a container. Hosted
+  is a Worker. Home is celld.
+- Coalesce settle, a reaction debounce, a typing refresh, and a draft
+  throttle. Those were timers in the Go loop. They would hold a turn
+  back.
 
 ## Future — not now, not never
 

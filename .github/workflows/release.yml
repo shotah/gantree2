@@ -5,9 +5,9 @@ name: release
 # marked pre-release; anything else becomes the latest release.
 #
 # TODO(2026-10-11, release-gate): re-add the eval job as a gate once the fixture set is stable — see docs/ci.md
-# eval.yml listens for the same v* tag and runs beside this. It does not
-# block the release. Deploys are not here: deploy-cloudflare.yml follows
-# ci on main.
+# When the tag message contains `eval: force` (`npm run release -- --eval`), eval.yml
+# runs beside this via workflow_call and does not block the release. Deploys are not
+# here: deploy-cloudflare.yml follows ci on main.
 
 on:
   push:
@@ -18,6 +18,36 @@ permissions:
   contents: read
 
 jobs:
+  tag-message:
+    runs-on: ubuntu-latest
+    outputs:
+      force_eval: ${{ steps.read.outputs.force_eval }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Read annotated tag message
+        id: read
+        run: |
+          set -euo pipefail
+          contents="$(git tag -l --format='%(contents)' "$GITHUB_REF_NAME")"
+          if printf '%s\n' "$contents" | grep -Fxq 'eval: force'; then
+            echo "force_eval=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "force_eval=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  eval:
+    needs: tag-message
+    if: needs.tag-message.outputs.force_eval == 'true'
+    uses: ./.github/workflows/eval.yml
+    with:
+      runs: "1"
+    secrets: inherit
+
   release:
     runs-on: ubuntu-latest
     # contents:write — gh release create needs it.

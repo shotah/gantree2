@@ -23,7 +23,7 @@ process.chdir(root);
 
 const args = parseArgs(process.argv.slice(2));
 if (args.help) {
-  console.log("npm run release [-- --bump=patch|minor|major] [-- --version=vX.Y.Z] [-- --dry-run] [-- --skip-push] [-- --allow-dirty]");
+  console.log("npm run release [-- --bump=patch|minor|major] [-- --version=vX.Y.Z] [-- --dry-run] [-- --skip-push] [-- --allow-dirty] [-- --eval]");
   process.exit(0);
 }
 
@@ -60,6 +60,7 @@ const next = nextVersion(current, args.bump, args.version);
 console.log(`Current tag: ${current || "(none)"}`);
 console.log(`Next tag:    ${next}`);
 console.log("Also tag:    latest (moves to same commit)");
+console.log(`Eval:        ${args.eval ? "force" : "skip"}`);
 
 if (args.dryRun) {
   console.log("Dry run — no commit, tag, or push.");
@@ -88,7 +89,8 @@ if (staged) {
   console.log("package.json already at", next);
 }
 
-gitLive(["tag", "-a", next, "-m", `Release ${next}`]);
+const versionTagMessage = args.eval ? `Release ${next}\n\neval: force` : `Release ${next}`;
+gitLive(["tag", "-a", next, "-m", versionTagMessage]);
 console.log("Created tag", next);
 gitLive(["tag", "-fa", "latest", "-m", `Release ${next} (latest)`]);
 console.log("Moved tag latest →", next);
@@ -101,4 +103,5 @@ if (args.skipPush) {
 gitLive(["push", "origin", "HEAD"]);
 gitLive(["push", "origin", next]);
 gitLive(["push", "--force", "origin", "refs/tags/latest"]);
-console.log(`Pushed HEAD, ${next}, and latest — GitHub Release, ci, and the Cloudflare deploy should start.`);
+const evalNote = args.eval ? " (live eval forced on tag)" : "";
+console.log(`Pushed HEAD, ${next}, and latest${evalNote} — GitHub Release, ci, and the Cloudflare deploy should start.`);

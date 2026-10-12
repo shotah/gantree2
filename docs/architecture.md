@@ -396,7 +396,7 @@ flowchart LR
     T[test:coverage<br/>thresholds] --> LNT[lint] --> TC[typecheck] --> BLD[vite build]
     BLD -- main --> BADGE[badge.mjs vitest] --> PUB1[publish-pages.sh<br/>badges/coverage.svg]
   end
-  subgraph ev["eval.yml — tag, or by hand"]
+  subgraph ev["eval.yml — by hand, or release --eval"]
     direction LR
     EV["npm run eval<br/>Vitest · harness/eval"]
   end

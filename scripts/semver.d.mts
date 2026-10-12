@@ -5,6 +5,8 @@ export type ReleaseArgs = {
   skipPush: boolean;
   allowDirty: boolean;
   help: boolean;
+  /** `npm run release -- --eval` writes `eval: force` on the version tag. */
+  eval: boolean;
 };
 
 export function nextVersion(current: string, bump: string, explicit?: string): string;
