@@ -82,3 +82,12 @@ describe("daily planner prompt", () => {
     expect(isDailyPlannerTurn(`${JobUserPrefix}Fetch Garmin sleep`)).toBe(false);
   });
 });
+
+describe("JobUserPrefix", () => {
+  it("sends the job prompt and limits [silent]", () => {
+    expect(JobUserPrefix).toContain("The job prompt is the message to send");
+    expect(JobUserPrefix).toContain("do not reply [silent] for a reminder");
+    expect(JobUserPrefix).toMatch(/\[silent\] only when the prompt itself says \[silent\]/);
+    expect(JobUserPrefix).toMatch(/all-clear.*work-only/s);
+  });
+});

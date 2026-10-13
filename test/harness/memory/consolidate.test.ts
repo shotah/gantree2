@@ -90,6 +90,16 @@ describe("consolidator", () => {
     expect(store.listUnconsolidatedEpisodes(20)).toEqual([]);
   });
 
+  it("persists last_run across a new Consolidator on the same store", async () => {
+    const { store, clock } = openMemory();
+    store.store(KIND_EPISODE, "ada", "persist last_at");
+    const c1 = new Consolidator(store, scripted("[]"), clock, silentLogger, { batchSize: 10 });
+    await c1.pass();
+    expect(c1.lastStatus().at).toBe(clock.now());
+    const c2 = new Consolidator(store, scripted("[]"), clock, silentLogger, { batchSize: 10 });
+    expect(c2.lastStatus().at).toBe(clock.now());
+  });
+
   it("returns immediately when the interval is disabled", async () => {
     const { store, clock } = openMemory();
     const c = new Consolidator(store, scripted("[]"), clock, silentLogger, { intervalMs: 0 });

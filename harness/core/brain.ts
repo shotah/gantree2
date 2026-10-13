@@ -26,6 +26,8 @@ export type BrainDeps = {
   slug: string;
   /** Inventory display name when the room knows it; otherwise derive from slug. */
   name?: string;
+  /** Re-arm the DO alarm after the harness clock changes (boot and after inbound turns). */
+  onClock?: (at: number | null) => void | Promise<void>;
 };
 
 export type Brain = {

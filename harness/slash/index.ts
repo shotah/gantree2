@@ -32,6 +32,7 @@ export function catalog(): SlashCommand[] {
     cmd("short", "hold a prefix ~27h", true),
     cmd("off", "drop a prefix hold", true),
     cmd("planner", "daily planning session (on|off|HH:MM)", true),
+    cmd("cron", "scheduled jobs"),
     cmd("aims", "aim ledger (area | rubric | block)", true),
     cmd("todo", "pocket list (done <id|name>, prio <id|name> [!!|!])", true),
   ];

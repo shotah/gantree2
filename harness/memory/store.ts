@@ -292,6 +292,42 @@ export class MemoryStore implements MemoryBackend {
     ).map(scan);
   }
 
+  /** Epoch ms of the last consolidation pass; `0` when no row. */
+  consolidationAt(): number {
+    const rows = this.sql.exec("SELECT last_at FROM memory_consolidate WHERE id = 1 LIMIT 1");
+    const at = rows[0]?.last_at;
+    if (typeof at === "number" && Number.isFinite(at)) return Math.trunc(at);
+    if (typeof at === "bigint") return Number(at);
+    return 0;
+  }
+
+  setConsolidationAt(at: number): void {
+    const ms = Math.trunc(at);
+    this.sql.exec(
+      "INSERT INTO memory_consolidate (id, last_at) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET last_at = excluded.last_at",
+      ms,
+    );
+  }
+
+  /** Whether any episode still needs consolidation (same filter as `listUnconsolidatedEpisodes`). */
+  hasUnconsolidatedEpisodes(): boolean {
+    try {
+      const rows = this.sql.exec(
+        `SELECT 1 FROM memory
+         WHERE kind = ? AND consolidated = 0 AND superseded_by IS NULL
+           AND consolidate_attempts < ?
+           AND (expires_at IS NULL OR expires_at > ?)
+         LIMIT 1`,
+        KIND_EPISODE,
+        MAX_CONSOLIDATE_ATTEMPTS,
+        this.nowStamp(),
+      );
+      return rows.length > 0;
+    } catch {
+      return true;
+    }
+  }
+
   markConsolidated(ids: readonly number[]): void {
     for (const id of ids) {
       this.sql.exec(

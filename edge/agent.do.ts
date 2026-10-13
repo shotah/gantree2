@@ -138,6 +138,10 @@ const RATE_KEY = "rate";
 /** Alarms at or before now are dropped; schedule at least this far ahead. */
 const ALARM_MIN_LEAD_MS = 1000;
 
+const ALARM_FAIL_KEY = "alarm-fail";
+const ALARM_FAIL_BASE_MS = 2000;
+const ALARM_FAIL_MAX_MS = 15 * 60 * 1000;
+
 /** One JPEG per slug, served over HTTP and announced on every socket when it changes. */
 type StoredJpeg = StoredAvatar | StoredBackdrop;
 type BlobSpec = {
@@ -180,6 +184,8 @@ export class Agent extends DurableObject<AgentEnv> {
   private harness: Brain | null = null;
   /** Serialises harness `emit` frames onto the crane path. */
   private craneChain: Promise<void> = Promise.resolve();
+  /** Serialises storage alarm writes so a newer time cannot be overwritten by an older one. */
+  private alarmChain: Promise<void> = Promise.resolve();
   /** Last public origin this DO saw (phone upgrade or auth start). `PUBLIC_ORIGIN` still wins. */
   private publicOrigin: string | null = null;
 
@@ -299,16 +305,27 @@ export class Agent extends DurableObject<AgentEnv> {
   }
 
   async alarm(): Promise<void> {
-    const harness = await this.nativeBrain();
-    let next: number | null = null;
+    let harness: Brain | null = null;
     try {
+      harness = await this.nativeBrain();
+      const brain = harness;
+      let next: number | null = null;
       await this.withEmit(async (emit) => {
-        next = await harness.alarm(emit);
+        next = await brain.alarm(emit);
       });
+      await this.ctx.storage.delete(ALARM_FAIL_KEY);
       await this.armAlarm(next);
     } catch (err) {
-      await this.armAlarm(harness.nextAlarm());
-      throw err;
+      console.error("agent alarm failed", err);
+      let at: number | null = null;
+      if (harness) {
+        try {
+          at = harness.nextAlarm();
+        } catch {
+          // nextAlarm failed; armFailed uses delay-only scheduling
+        }
+      }
+      await this.armFailed(at);
     }
   }
 
@@ -1505,6 +1522,7 @@ export class Agent extends DurableObject<AgentEnv> {
         redirectUri: () => oauthCatchRedirect(this.env, this.publicOrigin),
         sealState: (plugin) => this.sealForSlash(plugin),
       },
+      onClock: (at) => this.armAlarm(at),
       ...(chat ? { chat } : {}),
     });
     const fresh = harness !== this.harness;
@@ -1558,12 +1576,28 @@ export class Agent extends DurableObject<AgentEnv> {
   }
 
   private async armAlarm(at: number | null): Promise<void> {
-    if (at == null) {
-      await this.ctx.storage.deleteAlarm();
-      return;
-    }
-    const floor = Date.now() + ALARM_MIN_LEAD_MS;
-    await this.ctx.storage.setAlarm(at < floor ? floor : at);
+    const job = this.alarmChain
+      .then(() => undefined, () => undefined)
+      .then(async () => {
+        if (at == null) {
+          await this.ctx.storage.deleteAlarm();
+          return;
+        }
+        const floor = Date.now() + ALARM_MIN_LEAD_MS;
+        await this.ctx.storage.setAlarm(at < floor ? floor : at);
+      });
+    this.alarmChain = job.then(() => undefined, () => undefined);
+    await job;
+  }
+
+  private async armFailed(requested: number | null): Promise<void> {
+    const cur = (await this.ctx.storage.get<number>(ALARM_FAIL_KEY)) ?? 0;
+    const n = cur + 1;
+    await this.ctx.storage.put(ALARM_FAIL_KEY, n);
+    const exponent = Math.min(n - 1, 10);
+    const delay = Math.min(ALARM_FAIL_BASE_MS * 2 ** exponent, ALARM_FAIL_MAX_MS);
+    const at = requested != null ? Math.max(requested, Date.now() + delay) : Date.now() + delay;
+    await this.armAlarm(at);
   }
 
   private async personaHttp(request: Request): Promise<Response> {

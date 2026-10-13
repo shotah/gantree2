@@ -50,6 +50,15 @@ export const memoryMigrations: Migration[] = [
       END`,
     ],
   },
+  {
+    id: "memory.003",
+    up: [
+      `CREATE TABLE IF NOT EXISTS memory_consolidate (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        last_at INTEGER NOT NULL
+      )`,
+    ],
+  },
 ];
 
 /**

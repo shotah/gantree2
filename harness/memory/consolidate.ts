@@ -49,6 +49,11 @@ export class Consolidator {
     this.intervalMs = options.intervalMs ?? 0;
     this.batchSize = options.batchSize ?? 0;
     this.zone = options.zone ?? clock.zone;
+    try {
+      this.lastRunAt = this.store.consolidationAt();
+    } catch {
+      this.lastRunAt = 0;
+    }
   }
 
   /** One bounded pass. Failures are logged and kept on `lastStatus`. */
@@ -59,6 +64,11 @@ export class Consolidator {
     } finally {
       this.lastRunAt = this.clock.now();
       this.lastError = passErr;
+      try {
+        this.store.setConsolidationAt(this.lastRunAt);
+      } catch (err) {
+        this.log.warn("memory consolidate persist last_at failed", { err: errorText(err) });
+      }
     }
   }
 

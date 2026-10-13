@@ -41,6 +41,8 @@ export type OpenRoomOpts = {
   /** Native catch. Slash reads it off the same sql object passed to `createBrain`. */
   auth?: RoomAuth;
   chat?: { origin: string; bearer: string; serve: (req: Request) => Promise<Response> };
+  /** Passed to `createBrain`; arms the DO alarm when cron/watch/consolidation due changes. */
+  onClock?: (at: number | null) => void | Promise<void>;
 };
 
 type Memo = { generation: string; harness: Brain };
@@ -103,6 +105,7 @@ export async function openRoomBrain(ctx: DurableObjectState, env: HouseEnv, opts
     persona: parts,
     slug,
     ...((opts.name ?? "").trim() !== "" ? { name: (opts.name ?? "").trim() } : {}),
+    ...(opts.onClock ? { onClock: opts.onClock } : {}),
   });
   open.set(ctx, { generation, harness });
   return harness;

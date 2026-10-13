@@ -90,7 +90,9 @@ export function createBrain(deps: BrainDeps): Brain {
   });
   const enable = new EnableStore(deps.sql, deps.clock, roomId);
   const watch = new WatchStore(deps.sql, deps.clock, watchMax, log, roomId);
-  const cronStore = openStore(deps.sql, deps.clock, 50, roomId);
+  const cronOn = isCronEnabled(env);
+  const cronMaxJobs = envInt(env, "CRON_MAX_JOBS", 50);
+  const cronStore = openStore(deps.sql, deps.clock, cronMaxJobs, roomId);
 
   const loc = { zone: deps.clock.zone || "America/Los_Angeles" };
   watch.setQuiet({
@@ -159,7 +161,7 @@ export function createBrain(deps: BrainDeps): Brain {
       selfNoteTool(selfNote),
       ...watchTools(watch),
       web.tool(),
-      ...cronTools.toCoreTools(delivery),
+      ...(cronOn ? cronTools.toCoreTools(delivery) : []),
     ],
     enable,
     forcePrefixes: force,
@@ -249,11 +251,22 @@ export function createBrain(deps: BrainDeps): Brain {
     formatPerf: () => perf.format(deps.clock.now(), loc.zone),
     formatToolStats: () => toolStats.format(deps.clock.now() - startedAt),
     redirectUri,
+    cronList: () => {
+      const body = cronTools.listText();
+      if (!cronOn) return `cron off (CRON_ENABLED)\n${body}`;
+      return body;
+    },
   };
 
+  async function rearmClock(): Promise<void> {
+    if (deps.onClock) await deps.onClock(nextWake());
+  }
+
   try {
-    planner.ensureFor({ sessionId: roomId });
-    examples.ensureFor({ sessionId: roomId });
+    if (cronOn) {
+      planner.ensureFor({ sessionId: roomId });
+      examples.ensureFor({ sessionId: roomId });
+    }
   } catch (err) {
     log.warn("planner ensure failed", { err: err instanceof Error ? err.message : String(err) });
   }
@@ -274,11 +287,22 @@ export function createBrain(deps: BrainDeps): Brain {
     talk,
   });
   runner.boot();
+  void rearmClock().catch((err) => {
+    log.warn("clock rearm failed", { err: err instanceof Error ? err.message : String(err) });
+  });
 
   function publishOnce(): Promise<void> {
-    published ??= registry.publish().then((frame) => {
-      statusFrame = { published: frame.published, skipped: frame.skipped };
-    });
+    if (published == null) {
+      published = registry
+        .publish()
+        .then((frame) => {
+          statusFrame = { published: frame.published, skipped: frame.skipped };
+        })
+        .catch((err) => {
+          published = null;
+          throw err;
+        });
+    }
     return published;
   }
 
@@ -542,7 +566,8 @@ export function createBrain(deps: BrainDeps): Brain {
   }
 
   function nextWake(): number | null {
-    return earliest(cronStore.nextDue(), watch.nextDue(), consolidateAt(consolidator, consolidateMin, deps.clock.now()));
+    const cronDue = cronOn ? cronStore.nextDue() : null;
+    return earliest(cronDue, watch.nextDue(), consolidateAt(consolidator, memory, consolidateMin, deps.clock.now()));
   }
 
   return {
@@ -555,6 +580,7 @@ export function createBrain(deps: BrainDeps): Brain {
       } finally {
         emitDepth -= 1;
         if (emitDepth === 0) currentEmit = null;
+        await rearmClock();
       }
     },
     async alarm(emit) {
@@ -562,7 +588,7 @@ export function createBrain(deps: BrainDeps): Brain {
       currentEmit = emit;
       try {
         const now = deps.clock.now();
-        await runner.fireDue(now, onCron);
+        if (cronOn) await runner.fireDue(now, onCron);
         await watch.pollDue(now, (name, args) => registry.callRaw(name, args, {
           userId: "",
           sessionId: roomId,
@@ -762,12 +788,25 @@ function personaParts(parts: readonly { name: string; text: string }[]): Persona
   return [{ name: filePersona, text }];
 }
 
-function consolidateAt(consolidator: Consolidator, minutes: number, now: number): number | null {
+function consolidateAt(consolidator: Consolidator, memory: MemoryStore, minutes: number, now: number): number | null {
   if (minutes <= 0) return null;
   const last = consolidator.lastStatus().at;
-  // Never-run is in-memory only; defer to the first interval so cron/watch can own the alarm.
-  if (last === 0) return now + minutes * 60_000;
-  return last + minutes * 60_000;
+  const interval = minutes * 60_000;
+  // Defer the first interval so a due cron/watch can own the alarm.
+  if (last === 0) return now + interval;
+  try {
+    if (!memory.hasUnconsolidatedEpisodes()) return null;
+  } catch {
+    return last + interval;
+  }
+  return last + interval;
+}
+
+function isCronEnabled(env: Readonly<Record<string, string>>): boolean {
+  const raw = (env.CRON_ENABLED ?? "").trim().toLowerCase();
+  if (raw === "") return true;
+  if (raw === "0" || raw === "false" || raw === "off") return false;
+  return true;
 }
 
 function earliest(...times: (number | null)[]): number | null {

@@ -1,5 +1,8 @@
 # Cron, daily planner, and watches
 
+Where the row is stored and what wakes it:
+[cron_architecture.md](cron_architecture.md).
+
 Proactive jobs are **long-horizon work**: they live in SQLite and fire
 inside the agent loop (tools allowed), then **push** on the chat room.
 Jobs do not store a destination. A reminder next Tuesday is planning; a
@@ -44,15 +47,17 @@ planner when the day needs no human-facing message.
 
 | Env | Default | Meaning |
 | --- | --- | --- |
-| `CRON_ENABLED` | `true` | Master switch |
+| `CRON_ENABLED` | `true` | Master switch (read). Empty or unset is on; only `0`, `false`, or `off` (case-insensitive) turns cron off |
 | `CRON_TZ` | `America/Los_Angeles` | IANA timezone for clock times (Pacific — SJ / SF / SEA / LA) |
-| `CRON_MAX_JOBS` | `50` | Cap on enabled jobs |
+| `CRON_MAX_JOBS` | `50` | Cap on enabled jobs (read). Passed to the cron store; values below `1` fall back to `50` |
 | `MEMORY_CONSOLIDATE_MINUTES` | `30` | Consolidation period. `0` turns that pass off |
 | `DAILY_PLANNER_AT` | `07:10` | One planning session a day, local clock (`CRON_TZ`). `/planner 09:30` overrides it for this agent. `0` or `/planner off` disables it |
 | `EXAMPLES_QTY` | `1-2` | **On by default** capability-example pings. Empty or `0` = no proactive pings. `/examples` on-demand still works |
 | `EXAMPLES_START_HOUR` | `6` | Local window start for examples pings |
 | `EXAMPLES_END_HOUR` | `21` | Local window end (exclusive) |
 | `EXAMPLES_SKIP_RECENT_MINUTES` | `60` | Skip/defer if the human messaged within this many minutes |
+
+When cron is off, existing rows stay in SQLite but do not fire, do not arm the clock, and cron tools are not registered; `/cron` still lists them.
 
 ## Builtin tools
 

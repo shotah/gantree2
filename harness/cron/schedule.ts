@@ -98,7 +98,8 @@ export function dailyAt(hour: number, minute: number, zone: string, now: number)
 }
 
 function parseClock(when: string): { hour: number; minute: number; second: number } | null {
-  const hms = /^(\d{1,2}):(\d{2}):(\d{2})$/.exec(when);
+  const trimmed = when.trim();
+  const hms = /^(\d{1,2}):(\d{2}):(\d{2})$/.exec(trimmed);
   if (hms?.[1] && hms[2] && hms[3]) {
     const hour = Number(hms[1]);
     const minute = Number(hms[2]);
@@ -106,23 +107,12 @@ function parseClock(when: string): { hour: number; minute: number; second: numbe
     if (hour > 23 || minute > 59 || second > 59) return null;
     return { hour, minute, second };
   }
-  const ampm = /^(\d{1,2}):(\d{2})([AaPp][Mm])$/.exec(when);
-  if (ampm?.[1] && ampm[2] && ampm[3]) {
-    let hour = Number(ampm[1]);
-    const minute = Number(ampm[2]);
-    if (hour < 1 || hour > 12 || minute > 59) return null;
-    if (ampm[3].toLowerCase() === "pm" && hour < 12) hour += 12;
-    if (ampm[3].toLowerCase() === "am" && hour === 12) hour = 0;
+  try {
+    const { hour, minute } = parsePlannerAt(trimmed);
     return { hour, minute, second: 0 };
+  } catch {
+    return null;
   }
-  const hm = /^(\d{1,2}):(\d{2})$/.exec(when);
-  if (hm?.[1] && hm[2]) {
-    const hour = Number(hm[1]);
-    const minute = Number(hm[2]);
-    if (hour > 23 || minute > 59) return null;
-    return { hour, minute, second: 0 };
-  }
-  return null;
 }
 
 function parseAbsolute(when: string, zone: string, now: number): number | null {

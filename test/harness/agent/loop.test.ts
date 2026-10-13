@@ -97,6 +97,34 @@ describe("createBrain turns", () => {
     expect(help && "text" in help ? help.text : "").toContain("reset this session");
   });
 
+  it("answers /cron with a scheduled job id after cron_schedule", async () => {
+    const provider = new Scripted([
+      scriptResult({
+        content: "",
+        toolCalls: [{
+          id: "c1",
+          name: "cron_schedule",
+          arguments: JSON.stringify({
+            prompt: "Ping",
+            when: "in 1h",
+            repeat: "once",
+          }),
+        }],
+      }),
+      scriptResult({ content: "Scheduled.", toolCalls: [] }),
+    ]);
+    const harness = createBrain(testDeps({ provider, env: { EXAMPLES_QTY: "0", DAILY_PLANNER_AT: "0" } }));
+    const { emit, frames } = collect();
+    await harness.handleInbound({ ...USER, text: "Remind me in an hour." }, emit);
+    frames.length = 0;
+    await harness.handleInbound({ ...USER, id: "m2", text: "/cron" }, emit);
+    expect(provider.requests).toHaveLength(2);
+    const cron = frames.find((frame) => frame.kind === "reply");
+    const text = cron && "text" in cron ? cron.text : "";
+    expect(text).toMatch(/id=\d+/);
+    expect(text).toContain("kind=once");
+  });
+
   it("records an all-positive reaction without a model call", async () => {
     const provider = new Scripted([
       scriptResult({ content: "noted", toolCalls: [] }),

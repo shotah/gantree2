@@ -119,7 +119,11 @@ export class Store {
     return this.sql.exec(q, ...args).map(jobFromRow);
   }
 
-  /** Clears `running=1` left by a crash so due jobs can be claimed again. */
+  /**
+   * Clears every `running=1` row. A Durable Object runs at most one `alarm()` at
+   * a time and only that path calls `fireDue`, so any claim here is from a
+   * crashed wake — not a live in-flight job.
+   */
   clearStaleRunning(): number {
     this.sql.exec(
       "UPDATE cron_job SET running = 0, updated_at = ? WHERE running = 1",

@@ -4,6 +4,8 @@ import { atZone } from "@/harness/cron/time";
 import { KindDaily, KindEvery, KindOnce } from "@/harness/cron/constants";
 import { describe, expect, it } from "vitest";
 
+const LA = "America/Los_Angeles";
+
 describe("parseSchedule", () => {
   it("parses relative, daily, and every", () => {
     const now = Date.UTC(2026, 6, 22, 12, 0, 0);
@@ -18,6 +20,45 @@ describe("parseSchedule", () => {
 
     const every = parseSchedule("every:1h", "", "UTC", now);
     expect(every.kind).toBe(KindEvery);
+  });
+
+  it("parses same-day wall clocks including 4pm and 4:00 PM", () => {
+    const now = atZone(2026, 9, 12, 15, 0, 0, LA);
+    const expectFourPm = (when: string) => {
+      const parsed = parseSchedule(when, "once", LA, now);
+      expect(parsed.kind).toBe(KindOnce);
+      const parts = localParts(parsed.nextRun, LA);
+      expect(parts.year).toBe(2026);
+      expect(parts.month).toBe(9);
+      expect(parts.day).toBe(12);
+      expect(parts.hour).toBe(16);
+      expect(parts.minute).toBe(0);
+    };
+    expectFourPm("4pm");
+    expectFourPm("4:00 PM");
+    expectFourPm("16:00");
+  });
+
+  it("rolls a passed wall clock to tomorrow", () => {
+    const now = atZone(2026, 9, 12, 16, 30, 0, LA);
+    const parsed = parseSchedule("4pm", "once", LA, now);
+    const parts = localParts(parsed.nextRun, LA);
+    expect(parts.day).toBe(13);
+    expect(parts.hour).toBe(16);
+  });
+
+  it("parses 12am as midnight", () => {
+    const now = atZone(2026, 9, 12, 15, 0, 0, LA);
+    const parsed = parseSchedule("12am", "once", LA, now);
+    const parts = localParts(parsed.nextRun, LA);
+    expect(parts.day).toBe(13);
+    expect(parts.hour).toBe(0);
+    expect(parts.minute).toBe(0);
+  });
+
+  it("rejects unparseable when strings", () => {
+    const now = atZone(2026, 9, 12, 15, 0, 0, LA);
+    expect(() => parseSchedule("tomorrow", "once", LA, now)).toThrow(/cannot parse when/);
   });
 });
 

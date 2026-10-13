@@ -39,6 +39,7 @@ const AIMS_USAGE = "usage: /aims [area | rubric | block <area> <from> <to>]";
 const TODO_USAGE = "usage: /todo [done <id|name>] [prio <id|name> [!!|!]]";
 const TODO_LONG = 10;
 const PLANNER_USAGE = "usage: /planner (on | off | 07:10)";
+const CRON_USAGE = "usage: /cron";
 const AUTH_GUIDE = "https://github.com/shotah/gantree2/blob/main/docs/mcp.md#keys";
 
 export type SlashEnv = {
@@ -66,6 +67,7 @@ export type SlashEnv = {
   formatPerf: () => string;
   formatToolStats: () => string;
   redirectUri: string;
+  cronList: () => string;
 };
 
 export function commandFields(text: string): string[] {
@@ -92,6 +94,10 @@ export async function runSlash(env: SlashEnv, sessionId: string, text: string): 
   if (cmd === "/aims") return aimsCmd(env, fields.slice(1));
   if (cmd === "/todo") return todoCmd(env, fields.slice(1));
   if (cmd === "/planner") return plannerCmd(env, sessionId, (fields[1] ?? "").toLowerCase());
+  if (cmd === "/cron") {
+    if (fields.length !== 1) return CRON_USAGE;
+    return env.cronList();
+  }
   if (fields.length !== 1) return null;
   switch (cmd) {
     case "/new":

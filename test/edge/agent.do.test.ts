@@ -1313,6 +1313,8 @@ describe("Agent native runtime", () => {
     });
     expect(native.state.storage.alarmAt).toBe(4_200_000_000_000);
     expect(roomMock.harness.announce).toHaveBeenCalledTimes(1);
+    const openOpts = (roomMock.openRoomBrain.mock.calls as unknown as [unknown, unknown, { onClock?: unknown }][])[0]?.[2];
+    expect(typeof openOpts?.onClock).toBe("function");
   });
 
   it("floors a past nextAlarm when arming after inbound", async () => {
@@ -1363,19 +1365,103 @@ describe("Agent native runtime", () => {
     const { state, box } = room();
     await state.storage.put("slug", "kit");
     await state.storage.put(CONFIG_STORE_KEY, nativeConfig());
-    await expect(box.alarm()).rejects.toThrow("alarm failed");
+    await expect(box.alarm()).resolves.toBeUndefined();
     expect(state.storage.alarmAt).toBe(nextAt);
+    expect(state.storage.rows.get("alarm-fail")).toBe(1);
   });
 
-  it("clears the storage alarm when harness.alarm() rejects and nextAlarm is null", async () => {
+  it("schedules backoff when harness.alarm() rejects and nextAlarm is null", async () => {
+    const t0 = Date.now();
     roomMock.harness.nextAlarm.mockReturnValue(null);
     roomMock.harness.alarm.mockRejectedValue(new Error("alarm failed"));
     const { state, box } = room();
     await state.storage.put("slug", "kit");
     await state.storage.put(CONFIG_STORE_KEY, nativeConfig());
     await state.storage.setAlarm(4_200_000_000_000);
-    await expect(box.alarm()).rejects.toThrow("alarm failed");
-    expect(state.storage.alarmAt).toBeNull();
+    await expect(box.alarm()).resolves.toBeUndefined();
+    const alarmAt = state.storage.alarmAt;
+    expect(alarmAt).not.toBeNull();
+    if (alarmAt === null) {
+      return;
+    }
+    expect(alarmAt).toBeGreaterThanOrEqual(t0 + 2000);
+    expect(alarmAt).toBeLessThanOrEqual(t0 + 2500);
+    expect(state.storage.rows.get("alarm-fail")).toBe(1);
+  });
+
+  it("uses about 4s backoff on a second consecutive alarm failure", async () => {
+    const t0 = Date.now();
+    roomMock.harness.nextAlarm.mockReturnValue(null);
+    roomMock.harness.alarm.mockRejectedValue(new Error("alarm failed"));
+    const { state, box } = room();
+    await state.storage.put("slug", "kit");
+    await state.storage.put(CONFIG_STORE_KEY, nativeConfig());
+    await state.storage.put("alarm-fail", 1);
+    await expect(box.alarm()).resolves.toBeUndefined();
+    expect(state.storage.rows.get("alarm-fail")).toBe(2);
+    const alarmAt = state.storage.alarmAt;
+    expect(alarmAt).not.toBeNull();
+    if (alarmAt === null) {
+      return;
+    }
+    expect(alarmAt).toBeGreaterThanOrEqual(t0 + 4000);
+    expect(alarmAt).toBeLessThanOrEqual(t0 + 4500);
+  });
+
+  it("deletes alarm-fail and arms success time after a failure then success", async () => {
+    roomMock.harness.alarm.mockImplementationOnce(async () => {
+      throw new Error("alarm failed");
+    });
+    roomMock.harness.alarm.mockImplementationOnce(async (emit) => {
+      emit({ kind: "push", user_id: "1182", id: "wake", text: "ping" });
+      return 9_000_000_000_000;
+    });
+    roomMock.harness.nextAlarm.mockReturnValue(null);
+    const { state, box } = room();
+    await state.storage.put("slug", "kit");
+    await state.storage.put(CONFIG_STORE_KEY, nativeConfig());
+    await box.alarm();
+    expect(state.storage.rows.get("alarm-fail")).toBe(1);
+    await box.alarm();
+    expect(state.storage.rows.has("alarm-fail")).toBe(false);
+    expect(state.storage.alarmAt).toBe(9_000_000_000_000);
+  });
+
+  it("resolves alarm() and schedules backoff when openRoomBrain rejects", async () => {
+    const t0 = Date.now();
+    roomMock.openRoomBrain.mockRejectedValueOnce(new Error("open failed"));
+    const { state, box } = room();
+    await state.storage.put("slug", "kit");
+    await state.storage.put(CONFIG_STORE_KEY, nativeConfig());
+    await expect(box.alarm()).resolves.toBeUndefined();
+    const alarmAt = state.storage.alarmAt;
+    expect(alarmAt).not.toBeNull();
+    if (alarmAt === null) {
+      return;
+    }
+    expect(alarmAt).toBeGreaterThanOrEqual(t0 + 2000);
+    expect(alarmAt).toBeLessThanOrEqual(t0 + 2500);
+    expect(state.storage.rows.get("alarm-fail")).toBe(1);
+  });
+
+  it("caps backoff at 15 minutes when alarm-fail count is high", async () => {
+    const t0 = Date.now();
+    const capMs = 15 * 60 * 1000;
+    roomMock.harness.nextAlarm.mockReturnValue(null);
+    roomMock.harness.alarm.mockRejectedValue(new Error("alarm failed"));
+    const { state, box } = room();
+    await state.storage.put("slug", "kit");
+    await state.storage.put(CONFIG_STORE_KEY, nativeConfig());
+    await state.storage.put("alarm-fail", 20);
+    await expect(box.alarm()).resolves.toBeUndefined();
+    expect(state.storage.rows.get("alarm-fail")).toBe(21);
+    const alarmAt = state.storage.alarmAt;
+    expect(alarmAt).not.toBeNull();
+    if (alarmAt === null) {
+      return;
+    }
+    expect(alarmAt).toBeGreaterThanOrEqual(t0 + capMs);
+    expect(alarmAt).toBeLessThanOrEqual(t0 + capMs + 500);
   });
 
   it("drops the harness on restart and opens a new one", async () => {

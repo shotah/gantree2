@@ -23,7 +23,7 @@ describe("schema", () => {
     const { sql, clock } = openMemory();
     new MemoryStore(sql, clock, silentLogger);
     expect(sql.exec("SELECT id FROM brain_migration WHERE id LIKE 'memory.%' ORDER BY id").map((r) => r.id))
-      .toEqual(["memory.001", "memory.002"]);
+      .toEqual(["memory.001", "memory.002", "memory.003"]);
     expect(sql.exec("PRAGMA table_info(memory)").map((r) => (typeof r.name === "string" ? r.name : ""))).toEqual([
       "id",
       "kind",

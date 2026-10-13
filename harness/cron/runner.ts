@@ -52,8 +52,9 @@ export type RunnerOptions = {
 /**
  * Fires due jobs when the Durable Object's alarm rings.
  * There is no ticker: after every mutation call `nextDue()` and `setAlarm`.
- * `fireDue` also clears `running=1` left by a crashed wake — the next alarm
- * is the only chance to see that row again.
+ * At the start of `fireDue`, `clearStaleRunning` drops any `running=1` claim:
+ * the DO runs at most one `alarm()` at a time and only that handler calls
+ * `fireDue`, so a live claim cannot exist when the next alarm starts.
  */
 export class Runner {
   constructor(private readonly opts: RunnerOptions = {}) {}

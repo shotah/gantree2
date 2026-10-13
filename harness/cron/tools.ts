@@ -16,7 +16,7 @@ const scheduleSchema: JsonSchema = {
     },
     when: {
       type: "string",
-      description: "e.g. \"17:00\", \"in 2h\", RFC3339, or \"09:30\" with repeat=planner",
+      description: "e.g. a same-day clock \"16:00\", \"4pm\", or \"4:00 PM\", \"in 2h\", RFC3339, or \"09:30\" with repeat=planner",
     },
     repeat: {
       type: "string",
@@ -46,7 +46,7 @@ export function cronToolDefs(): ToolDef[] {
   return [
     {
       name: ToolSchedule,
-      description: "Schedule a proactive agent turn (reminder or digest). Fires later, runs tools, and pushes the reply on this channel. Work-only jobs can reply [silent] to skip the push (all-clear / no need to ping). when: RFC3339, \"15:04\", or \"in 30m\". repeat: once|daily|every:1h|planner. repeat=planner moves the once-a-day planning session to when (a clock time like 09:30) and persists it. The planner body is fixed; prompt is ignored for that repeat. Pin follow-through with memory_id from memory_store (and/or memory_subject) so the wake loads that row.",
+      description: "Schedule a proactive agent turn (reminder or digest). Fires later, runs tools, and pushes the reply on this channel. Work-only jobs can reply [silent] to skip the push (all-clear / no need to ping). when: a clock the human named today (\"16:00\", \"4pm\", \"4:00 PM\"), \"in 30m\", or RFC3339 — default repeat once; prompt is the sentence to say when it fires. Nothing is scheduled until this tool succeeds. repeat: once|daily|every:1h|planner. repeat=planner moves the once-a-day planning session to when (a clock time like 09:30) and persists it. The planner body is fixed; prompt is ignored for that repeat. Pin follow-through with memory_id from memory_store (and/or memory_subject) so the wake loads that row.",
       inputSchema: scheduleSchema,
     },
     {
@@ -144,10 +144,15 @@ export class CronTools {
     return `scheduled id=${job.id} kind=${job.kind} next_run=${formatRfc3339(job.nextRunAt)} tz=${job.timezone} memory_id=${job.memoryId} subject=${JSON.stringify(job.memorySubject)}`;
   }
 
-  private list(): string {
+  /** Same text as the `cron_list` tool. */
+  listText(): string {
     const jobs = this.opts.store.list(true);
     if (jobs.length === 0) return "no cron jobs";
     return jobs.map(formatJobLine).join("\n");
+  }
+
+  private list(): string {
+    return this.listText();
   }
 
   private cancel(args: Record<string, unknown>): string {

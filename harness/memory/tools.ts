@@ -20,7 +20,7 @@ const STORE_DESCRIPTION = "Store one atomic memory (fact|preference|person|episo
   + "Facts about the human (food, hours, people, events) go here — not self_note. "
   + "Months-scale plans: kind=insight, subject=aim/<area> (the sentence stays here; what happened goes to aim_log). Events: fact subject=event/<slug>. "
   + "Waiting on someone else: fact subject=waiting/<slug>. A note for you to follow up: fact subject=follow/<slug>. "
-  + "A thing THEY have to do, even in passing (call, return, renew): fact subject=todo/<slug> this turn — not follow/. Store it and say you added it; never ask whether to add it. Doable now: say do it now, not good luck and not later. A future day named in the words: no cron_schedule for it and do not offer a reminder; that day's planner sets the cue. "
+  + "A thing THEY have to do, even in passing (call, return, renew): fact subject=todo/<slug> this turn — not follow/. Store it and say you added it; never ask whether to add it. Doable now: say do it now, not good luck and not later. A clock today (4pm, 16:00): cron_schedule this turn; prompt is what to say when it fires. A future day named in the words: no cron_schedule for it and do not offer a reminder; that day's planner sets the cue. "
   + "[todo] on [agent] is that whole list with #ids, so never memory_recall for it: same subject rewrites; done is memory_forget by the #id on [todo], only when they say so. "
   + "Priority is a marker leading the words: !! urgent, ! high, none normal (\"!! file the extension\") — theirs, or your read of the stakes. [todo] sorts by it. "
   + "Hours: preference subject=pref/hours as sleep:/work:/quiet: HH:MM-HH:MM lines. "
