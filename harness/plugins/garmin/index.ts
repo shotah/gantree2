@@ -38,6 +38,7 @@ async function storeToken(ctx: PluginContext, token: {
 
 export const garmin: Plugin = {
   name: "garmin",
+  pasteCode: true,
 
   async ready(ctx: PluginContext): Promise<SkipReason | null> {
     ensureGarminSchema(ctx.sql);

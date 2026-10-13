@@ -203,6 +203,165 @@ export async function getAgents(req: Request, env: AgentsHttpEnv): Promise<Respo
   }
 }
 
+async function purgeAgent(env: AgentsHttpEnv, api: SettingsApi, slug: string, actor: string): Promise<boolean> {
+  const stub = agentStub(env, slug);
+  let prevUsers: Awaited<ReturnType<typeof fetchRoomUsers>> = [];
+  if (stub) {
+    try {
+      prevUsers = await fetchRoomUsers(stub);
+    } catch {
+      prevUsers = [];
+    }
+  }
+  if (env.DIRECTORY) {
+    try {
+      await directoryApply(env.DIRECTORY, slug, prevUsers, []);
+    } catch {
+      // Missing KV or a stale index should not block destroy.
+    }
+  }
+  try {
+    await api.removeSlugFromOperators(slug);
+    await api.deleteSamplesForAgent(slug);
+  } catch {
+    return false;
+  }
+  if (stub) {
+    try {
+      const wiped = await stub.fetch(new Request("https://agent/destroy", {
+        method: "POST",
+        headers: { "X-Chat-Op": "destroy" },
+      }));
+      if (!wiped.ok) {
+        return false;
+      }
+    } catch {
+      return false;
+    }
+  }
+  try {
+    const outcome = await api.deleteAgent(slug, actor);
+    return outcome.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function postAgentClone(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
+  const who = authorize(req);
+  if (isResponse(who)) {
+    return who;
+  }
+  const admin = requireAdmin(who);
+  if (admin) {
+    return admin;
+  }
+  const sourceSlug = slugOr400(slugRaw);
+  if (sourceSlug instanceof Response) {
+    return sourceSlug;
+  }
+  const denied = await requireAgentControl(env, who, sourceSlug);
+  if (denied) {
+    return denied;
+  }
+  const api = settingsApi(env);
+  if (!api) {
+    return json({ error: "settings_unavailable" }, 503);
+  }
+  let sourceRow: AgentRow | null;
+  try {
+    sourceRow = await api.getAgent(sourceSlug);
+  } catch {
+    return json({ error: "settings_unavailable" }, 503);
+  }
+  if (!sourceRow) {
+    return json({ error: "not_found" }, 404);
+  }
+  const body = await readJson(req);
+  if (!body || typeof body.slug !== "string") {
+    return json({ error: "bad_json" }, 400);
+  }
+  const newSlug = normalizeSlug(body.slug);
+  if (!newSlug) {
+    return json({ error: "bad_slug" }, 400);
+  }
+  const memories = body.memories === true;
+  const name = typeof body.name === "string" ? body.name : undefined;
+  let outcome: AgentWrite;
+  try {
+    outcome = await api.createAgent({ slug: newSlug, name }, who.sub);
+  } catch {
+    return json({ error: "settings_unavailable" }, 503);
+  }
+  if (!outcome.ok) {
+    const status = outcome.error === "exists" || outcome.error === "name_exists" ? 409 : 400;
+    return json({ error: outcome.error }, status);
+  }
+  await mintBearer(env, newSlug);
+
+  const exportedRes = await callAgent(env, sourceSlug, "https://agent/clone", {
+    headers: { "X-Chat-Op": "clone_export" },
+  });
+  if (!exportedRes.ok) {
+    await purgeAgent(env, api, newSlug, who.sub);
+    return json({ error: "agent_unavailable" }, 503);
+  }
+  let exported: unknown;
+  try {
+    exported = await exportedRes.json();
+  } catch {
+    await purgeAgent(env, api, newSlug, who.sub);
+    return json({ error: "agent_unavailable" }, 503);
+  }
+
+  const importedRes = await callAgent(env, newSlug, "https://agent/clone", {
+    method: "POST",
+    headers: { "X-Chat-Op": "clone_import", "content-type": "application/json" },
+    body: JSON.stringify(exported),
+  });
+  if (!importedRes.ok) {
+    await purgeAgent(env, api, newSlug, who.sub);
+    return json({ error: "agent_unavailable" }, 503);
+  }
+
+  if (memories) {
+    const memExportRes = await callAgent(env, sourceSlug, "https://agent/memory", {
+      headers: { "X-Chat-Op": "memory_export" },
+    });
+    if (!memExportRes.ok) {
+      await purgeAgent(env, api, newSlug, who.sub);
+      return json({ error: "agent_unavailable" }, 503);
+    }
+    let memBody: unknown;
+    try {
+      memBody = await memExportRes.json();
+    } catch {
+      await purgeAgent(env, api, newSlug, who.sub);
+      return json({ error: "agent_unavailable" }, 503);
+    }
+    const memImportRes = await callAgent(env, newSlug, "https://agent/memory", {
+      method: "POST",
+      headers: { "X-Chat-Op": "memory_import", "content-type": "application/json" },
+      body: JSON.stringify(memBody),
+    });
+    if (!memImportRes.ok) {
+      await purgeAgent(env, api, newSlug, who.sub);
+      return json({ error: "agent_unavailable" }, 503);
+    }
+  }
+
+  let row: AgentRow | null;
+  try {
+    row = await api.getAgent(newSlug);
+  } catch {
+    return json({ error: "settings_unavailable" }, 503);
+  }
+  if (!row) {
+    return json({ error: "settings_unavailable" }, 503);
+  }
+  return json({ agent: await cardFor(env, who, row) }, 201);
+}
+
 export async function postAgent(req: Request, env: AgentsHttpEnv): Promise<Response> {
   const who = authorize(req);
   if (isResponse(who)) {

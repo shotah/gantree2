@@ -103,6 +103,12 @@ export type Plugin = {
   authStart?(ctx: PluginContext, redirectUri: string, state: string): Promise<{ url: string; instruction?: string }>;
   /** The OAuth catch: exchange `code`, store the token. */
   authFinish?(ctx: PluginContext, redirectUri: string, code: string): Promise<void>;
+  /**
+   * When set, native `/auth <name> <code>` on a room-bound agent calls
+   * `authFinish` with the pasted code. Browser OAuth plugins leave this unset
+   * and finish on the catch page.
+   */
+  pasteCode?: boolean;
 };
 
 export const textResult = (text: string): ToolResult => ({ content: [{ type: "text", text }] });

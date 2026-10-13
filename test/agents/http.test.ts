@@ -20,6 +20,7 @@ import {
   putAgentSelf,
   startAgentAuth,
   postAgent,
+  postAgentClone,
   putAgentUsers,
   settingsApi,
   type AgentsHttpEnv,
@@ -61,6 +62,8 @@ function world() {
   let bearer: string | null = "room-secret";
   let down = false;
   let destroyFails = false;
+  let memoryImportFails = false;
+  const clonePayload = { env: { SECRET: "sekrit" }, mcp: "toml", persona: "Be brief." };
   const api = {
     listAgents: () => agents.list(),
     getAgent: (slug: string) => agents.get(slug),
@@ -102,6 +105,21 @@ function world() {
           if (op === "config") {
             return Response.json({ envKeys: ["A"], mcp: "toml", persona: "", updatedAt: 1, recreate: false });
           }
+          if (op === "clone_export") {
+            return Response.json(clonePayload);
+          }
+          if (op === "clone_import") {
+            return Response.json({ ok: true });
+          }
+          if (op === "memory_export") {
+            return Response.json({ rows: [{ id: 1, kind: "fact", subject: "x", content: "y", source: "chat", confidence: 1, created_at: "t", updated_at: "t", expires_at: null, superseded_by: null, consolidated: 0, consolidate_attempts: 0 }] });
+          }
+          if (op === "memory_import") {
+            if (memoryImportFails) {
+              return Response.json({ error: "bad_memory" }, { status: 400 });
+            }
+            return Response.json({ ok: true });
+          }
           if (op === "log") {
             return Response.json({ lines: [], next: 0 });
           }
@@ -127,6 +145,9 @@ function world() {
     },
     setDestroyFails: (value: boolean) => {
       destroyFails = value;
+    },
+    setMemoryImportFails: (value: boolean) => {
+      memoryImportFails = value;
     },
   };
 }
@@ -520,6 +541,73 @@ describe("agents http", () => {
     setDestroyFails(true);
     expect((await deleteAgent(asRole("admin", "/api/agents/kit", [], "DELETE"), env, "kit")).status).toBe(503);
     expect(await agents.get("kit")).toMatchObject({ slug: "kit" });
+  });
+
+  it("clones keys without memory ops and never returns env values", async () => {
+    const { env, agents, calls } = world();
+    await agents.create({ slug: "kit", name: "Kit" }, ADA);
+    calls.length = 0;
+    const res = await postAgentClone(
+      asRole("admin", "/api/agents/kit/clone", [], "POST", JSON.stringify({ slug: "copy", name: "Copy" })),
+      env,
+      "kit",
+    );
+    expect(res.status).toBe(201);
+    const body = await res.json<{ agent: Record<string, unknown> }>();
+    expect(body.agent).toMatchObject({ slug: "copy", name: "Copy", canMutate: true });
+    expect(body.agent).not.toHaveProperty("env");
+    expect(body.agent).not.toHaveProperty("envKeys");
+    expect(JSON.stringify(body)).not.toContain("sekrit");
+    expect(await agents.get("copy")).not.toBeNull();
+    const ops = calls.map((c) => c.op);
+    expect(ops).toContain("clone_export");
+    expect(ops).toContain("clone_import");
+    expect(ops).toContain("bearer");
+    expect(ops.filter((op) => op === "memory_export")).toHaveLength(0);
+    expect(ops.filter((op) => op === "memory_import")).toHaveLength(0);
+  });
+
+  it("clones with memories when asked", async () => {
+    const { env, agents, calls } = world();
+    await agents.create({ slug: "kit", name: "Kit" }, ADA);
+    calls.length = 0;
+    const res = await postAgentClone(
+      asRole("admin", "/api/agents/kit/clone", [], "POST", JSON.stringify({ slug: "memcopy", memories: true })),
+      env,
+      "kit",
+    );
+    expect(res.status).toBe(201);
+    const ops = calls.map((c) => c.op);
+    expect(ops.filter((op) => op === "memory_export")).toHaveLength(1);
+    expect(ops.filter((op) => op === "memory_import")).toHaveLength(1);
+    expect(await agents.get("memcopy")).not.toBeNull();
+  });
+
+  it("refuses clone when the caller cannot control the source", async () => {
+    const { env, agents, calls } = world();
+    await agents.create({ slug: "kit", name: "Kit" }, ADA);
+    calls.length = 0;
+    const res = await postAgentClone(
+      asRole("operator", "/api/agents/kit/clone", ["ada"], "POST", JSON.stringify({ slug: "sneak" })),
+      env,
+      "kit",
+    );
+    expect(res.status).toBe(403);
+    expect(await agents.get("sneak")).toBeNull();
+    expect(calls.some((c) => c.op === "clone_export")).toBe(false);
+  });
+
+  it("removes the new inventory row when memory import fails", async () => {
+    const { env, agents, setMemoryImportFails } = world();
+    await agents.create({ slug: "kit", name: "Kit" }, ADA);
+    setMemoryImportFails(true);
+    const res = await postAgentClone(
+      asRole("admin", "/api/agents/kit/clone", [], "POST", JSON.stringify({ slug: "half", memories: true })),
+      env,
+      "kit",
+    );
+    expect(res.status).toBe(503);
+    expect(await agents.get("half")).toBeNull();
   });
 
   it("restarts for an admin only", async () => {

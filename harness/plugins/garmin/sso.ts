@@ -30,7 +30,7 @@ export function loginParams(domain: string): Record<string, string[]> {
 
 export function mfaInstruction(method: string): string {
   return [
-    `garmin: MFA required (${method}) — check your email/app for the code`,
+    `garmin: MFA required (${method}) — check your phone, email, or authenticator for the code`,
     "then paste the code: /auth garmin <code>",
     `guide: ${AUTH_GUIDE_URL}`,
   ].join("\n");

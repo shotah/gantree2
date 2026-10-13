@@ -412,6 +412,10 @@ function patchAgentSlugRoutes(doc: JsonObj): void {
   const authStart = op(doc, "/api/agents/{slug}/auth/start", "post");
   addRefResponse(authStart, "401", "#/components/responses/UnauthorizedJson");
   addRefResponse(authStart, "403", "#/components/responses/ForbiddenJson");
+
+  const clone = op(doc, "/api/agents/{slug}/clone", "post");
+  addRefResponse(clone, "401", "#/components/responses/UnauthorizedJson");
+  addJsonResponse(clone, "400", "bad_json, bad_slug, bad_name, or bad_tags", errorSchemaRef());
 }
 
 function patchToolsSamples(doc: JsonObj): void {

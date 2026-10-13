@@ -41,7 +41,8 @@ required env value is missing (`GOOGLE_MAPS_API_KEY`,
 Google or Strava client id and secret). `no_oauth` means the key is
 there and the token is not: `/auth <plugin>` or the Tools-fold Connect
 button, then the catch ([auth.md](auth.md)). Garmin is
-`/auth garmin` and then the emailed code. `disabled` and `error` are
+`/auth garmin` and then the emailed code (text, email, or authenticator).
+`disabled` and `error` are
 the other skip reasons.
 
 `GARMIN_TOOL_TIER` (`core`, `extended`, `complete`) and

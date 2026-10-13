@@ -59,6 +59,10 @@ function dashClient(options?: { role?: "admin" | "operator"; canMutate?: boolean
     if (method === "DELETE") {
       return new Response(null, { status: 204 });
     }
+    if (url.endsWith("/clone") && method === "POST") {
+      const body = JSON.parse(textBody(init?.body)) as { slug?: string; name?: string; memories?: boolean };
+      return json(201, { agent: card({ slug: body.slug ?? "copy", name: body.name ?? body.slug ?? "copy", canMutate: true }) });
+    }
     if (url === "/api/agents/kit") {
       if (options?.failOnce && misses === 0) {
         misses += 1;
@@ -127,6 +131,25 @@ describe("AgentDashboard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Destroy kit" }));
     await vi.waitFor(() => expect(go).toHaveBeenCalledWith("/agents"));
     expect(vi.mocked(client).mock.calls.filter((call) => call[1]?.method === "DELETE")).toHaveLength(1);
+  });
+
+  it("posts clone bodies from the dashboard buttons", async () => {
+    const go = vi.fn();
+    const client = dashClient();
+    render(<AgentDashboard slug="kit" client={client} go={go} />);
+    expect(await screen.findByRole("heading", { name: "Kit" })).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("New agent ID"), { target: { value: "copy" } });
+    fireEvent.change(screen.getByLabelText("Shown name (optional)"), { target: { value: "Copy cat" } });
+    fireEvent.click(screen.getByRole("button", { name: "Clone with keys" }));
+    await vi.waitFor(() => expect(go).toHaveBeenCalledWith("/agents/copy"));
+    const keyPost = vi.mocked(client).mock.calls.find((call) => call[1]?.method === "POST" && href(call[0]).endsWith("/clone"));
+    expect(JSON.parse(textBody(keyPost?.[1]?.body))).toEqual({ slug: "copy", name: "Copy cat" });
+
+    fireEvent.change(screen.getByLabelText("New agent ID"), { target: { value: "mem" } });
+    fireEvent.click(screen.getByRole("button", { name: "Clone with memories" }));
+    await vi.waitFor(() => expect(go).toHaveBeenCalledWith("/agents/mem"));
+    const memPost = vi.mocked(client).mock.calls.filter((call) => call[1]?.method === "POST" && href(call[0]).endsWith("/clone")).at(-1);
+    expect(JSON.parse(textBody(memPost?.[1]?.body))).toEqual({ slug: "mem", name: "Copy cat", memories: true });
   });
 
   it("has no runtime switch", async () => {

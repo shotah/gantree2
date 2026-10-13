@@ -7,6 +7,7 @@
  *
  *   GET    /api/agents                      → { agents: AgentCard[] }     admin
  *   POST   /api/agents  AgentCreate         → { agent: AgentCard } 201    admin
+ *   POST   /api/agents/:slug/clone { slug, name?, memories? } → { agent: AgentCard } 201  admin + control source
  *   GET    /api/agents/:slug                → { agent: AgentCard }        admin
  *   DELETE /api/agents/:slug                → 204                         admin (destroy)
  *   POST   /api/agents/:slug/enabled { enabled } → { agent: AgentCard }   admin

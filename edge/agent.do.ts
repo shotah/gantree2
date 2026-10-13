@@ -2,6 +2,8 @@ import { DurableObject } from "cloudflare:workers";
 import type { Brain } from "@/harness/core/brain";
 import type { Emit, Inbound } from "@/harness/core/wire";
 import { bindWorkerFetch } from "@/harness/core/fetch";
+import { doSql, migrate } from "@/harness/core/sql";
+import { ensureConsolidateAttempts, memoryMigrations } from "@/harness/memory/schema";
 import { dropRoomBrain, openRoomBrain } from "@/harness/room";
 import { filePersona, openPersonaStore } from "@/harness/room/persona";
 import { openSelfStore } from "@/harness/room/self";
@@ -208,6 +210,12 @@ export class Agent extends DurableObject<AgentEnv> {
     }
     if (request.headers.get("X-Chat-Op") === "config") {
       return this.configHttp(request);
+    }
+    if (request.headers.get("X-Chat-Op") === "clone_export" || request.headers.get("X-Chat-Op") === "clone_import") {
+      return this.cloneHttp(request);
+    }
+    if (request.headers.get("X-Chat-Op") === "memory_export" || request.headers.get("X-Chat-Op") === "memory_import") {
+      return this.memoryCloneHttp(request);
     }
     if (request.headers.get("X-Chat-Op") === "status") {
       return this.statusHttp(request);
@@ -1162,6 +1170,153 @@ export class Agent extends DurableObject<AgentEnv> {
       const started = startedEnvFor(loaded.config);
       await this.ctx.storage.put(CONFIG_STARTED_KEY, started);
       return Response.json(configView(loaded.config, started, house));
+    }
+    return new Response("method", { status: 405 });
+  }
+
+  private async cloneHttp(request: Request): Promise<Response> {
+    const op = request.headers.get("X-Chat-Op");
+    if (op === "clone_export") {
+      if (request.method !== "GET") {
+        return new Response("method", { status: 405 });
+      }
+      const { config } = await this.loadConfig();
+      return Response.json({ env: config.env, mcp: config.mcp, persona: config.persona });
+    }
+    if (op === "clone_import") {
+      if (request.method !== "POST" && request.method !== "PATCH") {
+        return new Response("method", { status: 405 });
+      }
+      let raw: unknown;
+      try {
+        raw = await request.json();
+      } catch {
+        return Response.json({ error: "bad_config" }, { status: 400 });
+      }
+      const loaded = await this.loadConfig();
+      const applied = applyConfigPatch(loaded.config, raw, Date.now());
+      if (!applied.ok) {
+        return Response.json({ error: applied.error }, { status: 400 });
+      }
+      if (applied.changed) {
+        if (applied.config.persona !== loaded.config.persona) {
+          const refused = await this.writePersonaFile(filePersona, applied.config.persona);
+          if (refused) {
+            return refused;
+          }
+        }
+        await this.ctx.storage.put(CONFIG_STORE_KEY, applied.config);
+        await this.retargetBrain(loaded.config, applied.config);
+      }
+      return Response.json({ ok: true });
+    }
+    return new Response("method", { status: 405 });
+  }
+
+  private memorySql() {
+    const sql = doSql(this.ctx.storage.sql);
+    migrate(sql, memoryMigrations);
+    ensureConsolidateAttempts(sql);
+    return sql;
+  }
+
+  private async memoryCloneHttp(request: Request): Promise<Response> {
+    const op = request.headers.get("X-Chat-Op");
+    if (op === "memory_export") {
+      if (request.method !== "GET") {
+        return new Response("method", { status: 405 });
+      }
+      const sql = this.memorySql();
+      const rows = sql.exec(
+        `SELECT id, kind, subject, content, source, confidence, created_at, updated_at, expires_at, superseded_by, consolidated, consolidate_attempts
+         FROM memory ORDER BY id ASC`,
+      );
+      return Response.json({ rows });
+    }
+    if (op === "memory_import") {
+      if (request.method !== "POST") {
+        return new Response("method", { status: 405 });
+      }
+      let raw: unknown;
+      try {
+        raw = await request.json();
+      } catch {
+        return Response.json({ error: "bad_memory" }, { status: 400 });
+      }
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+        return Response.json({ error: "bad_memory" }, { status: 400 });
+      }
+      const list = (raw as { rows?: unknown }).rows;
+      if (!Array.isArray(list)) {
+        return Response.json({ error: "bad_memory" }, { status: 400 });
+      }
+      const sql = this.memorySql();
+      for (const item of list) {
+        if (!item || typeof item !== "object" || Array.isArray(item)) {
+          return Response.json({ error: "bad_memory" }, { status: 400 });
+        }
+        const row = item as Record<string, unknown>;
+        const id = row.id;
+        const kind = row.kind;
+        const subject = row.subject;
+        const content = row.content;
+        const source = row.source;
+        const confidence = row.confidence;
+        const createdAt = row.created_at;
+        const updatedAt = row.updated_at;
+        if (
+          (typeof id !== "number" && typeof id !== "string")
+          || typeof kind !== "string"
+          || typeof subject !== "string"
+          || typeof content !== "string"
+          || typeof source !== "string"
+          || typeof confidence !== "number"
+          || typeof createdAt !== "string"
+          || typeof updatedAt !== "string"
+        ) {
+          return Response.json({ error: "bad_memory" }, { status: 400 });
+        }
+        const rowId = typeof id === "number" ? id : Number(id);
+        if (!Number.isSafeInteger(rowId) || rowId <= 0) {
+          return Response.json({ error: "bad_memory" }, { status: 400 });
+        }
+        const expiresAt = row.expires_at == null ? null : row.expires_at;
+        const supersededBy = row.superseded_by == null ? null : row.superseded_by;
+        const consolidated = row.consolidated;
+        const consolidateAttempts = row.consolidate_attempts;
+        if (expiresAt != null && typeof expiresAt !== "string") {
+          return Response.json({ error: "bad_memory" }, { status: 400 });
+        }
+        if (supersededBy != null && typeof supersededBy !== "number" && typeof supersededBy !== "string") {
+          return Response.json({ error: "bad_memory" }, { status: 400 });
+        }
+        if (typeof consolidated !== "number" || typeof consolidateAttempts !== "number") {
+          return Response.json({ error: "bad_memory" }, { status: 400 });
+        }
+        const supersededId = supersededBy == null
+          ? null
+          : typeof supersededBy === "number" ? supersededBy : Number(supersededBy);
+        if (supersededId != null && (!Number.isSafeInteger(supersededId) || supersededId <= 0)) {
+          return Response.json({ error: "bad_memory" }, { status: 400 });
+        }
+        sql.exec(
+          `INSERT INTO memory (id, kind, subject, content, source, confidence, created_at, updated_at, expires_at, superseded_by, consolidated, consolidate_attempts)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          rowId,
+          kind,
+          subject,
+          content,
+          source,
+          confidence,
+          createdAt,
+          updatedAt,
+          expiresAt,
+          supersededId,
+          consolidated,
+          consolidateAttempts,
+        );
+      }
+      return Response.json({ ok: true });
     }
     return new Response("method", { status: 405 });
   }

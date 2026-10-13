@@ -8,13 +8,19 @@ import { openOAuthCatch, sealOAuthCatch, sessionKey } from "@/lib/door/session";
 const SECRET = "0123456789abcdef0123456789abcdef-more";
 const REDIRECT = "https://gantree2.bldhosting.com/api/auth/catch";
 
-function plugin(start: Plugin["authStart"], finish: Plugin["authFinish"], name = "google"): Plugin {
+function plugin(
+  start: Plugin["authStart"],
+  finish: Plugin["authFinish"],
+  name = "google",
+  opts?: Pick<Plugin, "pasteCode">,
+): Plugin {
   return {
     name,
     ready: () => Promise.resolve(null),
     tools: () => [],
     authStart: start,
     authFinish: finish,
+    ...opts,
   };
 }
 
@@ -71,6 +77,37 @@ describe("native /auth", () => {
     expect(paste).toBe("auth: not needed. Open it, approve, and you'll land back here connected.");
     expect(finish).not.toHaveBeenCalled();
     expect(start).toHaveBeenCalledOnce();
+  });
+
+  it("finishes paste when pasteCode is set", async () => {
+    const key = await sessionKey(SECRET);
+    const sql = {};
+    bindRoomAuth(sql, {
+      redirectUri: () => REDIRECT,
+      sealState: (name) => sealOAuthCatch(key, { slug: "kit", plugin: name }),
+    });
+    const finish = vi.fn(async () => undefined);
+    const start = vi.fn(async () => ({ url: "https://example/garmin" }));
+    const env = slashEnv("", [plugin(start, finish, "garmin", { pasteCode: true })], sql);
+    expect(await runSlash(env, "s", "/auth garmin 806759")).toBe("auth: garmin connected");
+    expect(finish).toHaveBeenCalledOnce();
+    expect(finish).toHaveBeenCalledWith(env.pluginCtx, REDIRECT, "806759");
+    expect(start).not.toHaveBeenCalled();
+  });
+
+  it("returns authFinish errors for pasteCode plugins", async () => {
+    const sql = {};
+    bindRoomAuth(sql, {
+      redirectUri: () => REDIRECT,
+      sealState: () => Promise.resolve("unused"),
+    });
+    const finish = vi.fn(async () => {
+      throw new Error("garmin: no pending MFA (expired or already finished)");
+    });
+    const env = slashEnv("", [plugin(async () => ({ url: "https://example" }), finish, "garmin", { pasteCode: true })], sql);
+    expect(await runSlash(env, "s", "/auth garmin 806759")).toBe(
+      "auth: garmin: no pending MFA (expired or already finished)",
+    );
   });
 
   it("does not ask for OAUTH_REDIRECT_URI once the room is bound", async () => {

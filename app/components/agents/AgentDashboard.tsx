@@ -6,6 +6,7 @@ import {
   AgentsError,
   agentsMessage,
   codeOf,
+  cloneAgent,
   deleteAgent,
   getAgent,
   getConfig,
@@ -79,6 +80,8 @@ export function AgentDashboard({
   const [destroyStep, setDestroyStep] = useState(false);
   const [busy, setBusy] = useState(false);
   const [keyPick, setKeyPick] = useState<{ name: string; n: number } | null>(null);
+  const [cloneSlug, setCloneSlug] = useState("");
+  const [cloneName, setCloneName] = useState("");
 
   const load = useCallback(async () => {
     setPhase("loading");
@@ -125,6 +128,28 @@ export function AgentDashboard({
       go("/agents");
     } catch (err) {
       setError(codeOf(err));
+      setBusy(false);
+    }
+  }
+
+  async function clone(memories: boolean) {
+    const nextSlug = cloneSlug.trim();
+    if (!nextSlug) {
+      setError("bad_slug");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const created = await cloneAgent(slug, {
+        slug: nextSlug,
+        ...(cloneName.trim() ? { name: cloneName.trim() } : {}),
+        ...(memories ? { memories: true } : {}),
+      }, client);
+      go(`/agents/${encodeURIComponent(created.slug)}`);
+    } catch (err) {
+      setError(codeOf(err));
+    } finally {
       setBusy(false);
     }
   }
@@ -207,6 +232,55 @@ export function AgentDashboard({
           onUsers={setUsers}
         />
         <LogFold slug={agent.slug} client={client} />
+        {agent.canMutate
+          ? (
+              <section aria-label="Clone agent" className="rounded-2xl border border-line bg-surface px-5 py-5">
+                <h2 className="text-sm font-semibold text-body">Clone agent</h2>
+                <p className="mt-1 text-xs text-dim">
+                  Copy keys and persona into a new agent ID. Memory copy includes facts, preferences, people, insights, and episodes — not chat or room access.
+                </p>
+                <div className="mt-3 flex flex-wrap items-end gap-2">
+                  <div className="flex flex-col gap-1">
+                    <label htmlFor="clone-slug" className={labelClass}>New agent ID</label>
+                    <input
+                      id="clone-slug"
+                      value={cloneSlug}
+                      autoComplete="off"
+                      spellCheck={false}
+                      onChange={(e) => setCloneSlug(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label htmlFor="clone-name" className={labelClass}>Shown name (optional)</label>
+                    <input
+                      id="clone-name"
+                      value={cloneName}
+                      autoComplete="off"
+                      onChange={(e) => setCloneName(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={busy || !cloneSlug.trim()}
+                    onClick={() => void clone(false)}
+                    className={primaryClass}
+                  >
+                    Clone with keys
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy || !cloneSlug.trim()}
+                    onClick={() => void clone(true)}
+                    className={quietClass}
+                  >
+                    Clone with memories
+                  </button>
+                </div>
+              </section>
+            )
+          : null}
         {role === "admin"
           ? (
               <section aria-label="Danger zone" className="rounded-2xl border border-danger-line bg-danger-soft/40 px-5 py-5">

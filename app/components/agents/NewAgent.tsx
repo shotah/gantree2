@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type SubmitEvent } from "react";
-import { PageHeader, cardClass } from "@/app/components/shared/PageHeader";
+import { PageHeader, cardClass, chipClass } from "@/app/components/shared/PageHeader";
 import {
   agentsMessage,
   codeOf,
@@ -18,7 +18,10 @@ import { tomlFromGrants } from "@/lib/agents/mcpToml";
 import { AGENT_SLUG, type AgentCard, type AgentCreate, type Grant, type ToolEntry } from "@/lib/agents/types";
 import { assignHref } from "./follow";
 import { alertClass, inputClass, labelClass, mainClass, primaryClass, quietClass } from "./Fold";
+import { parseEnvPaste } from "./envPaste";
 import { PERSONA_TEMPLATE, personaFor, scrubPersonaPlaceholders } from "./personaTemplate";
+
+const LLM_ENV_KEYS = new Set(["LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL"]);
 
 const STEPS = ["Name", "Persona", "Keys", "Tools"] as const;
 const panelClass = `${cardClass} flex flex-col gap-4`;
@@ -123,6 +126,9 @@ export function NewAgent({
   const [model, setModel] = useState("");
   const [extras, setExtras] = useState<{ id: number; key: string; value: string }[]>([]);
   const [nextExtra, setNextExtra] = useState(1);
+  const [envPasteOpen, setEnvPasteOpen] = useState(false);
+  const [envPasteRaw, setEnvPasteRaw] = useState("");
+  const [envImportNote, setEnvImportNote] = useState<string | null>(null);
   const [tools, setTools] = useState<ToolEntry[] | null>(null);
   const [house, setHouse] = useState<string[]>([]);
   const [toolsError, setToolsError] = useState<string | null>(null);
@@ -171,6 +177,23 @@ export function NewAgent({
   const visible = (tools ?? []).filter((tool) => home || !tool.homeOnly);
   const nextDisabled = busy || (step === 1 && (!slugOk || !nameOk)) || (step === 3 && !keysOk);
 
+  function wizardKeyValue(key: string): string {
+    const llm = typedLlm[key];
+    if (llm) {
+      return llm;
+    }
+    for (const row of extras) {
+      if (row.key.trim() === key && row.value.trim()) {
+        return row.value.trim();
+      }
+    }
+    return "";
+  }
+
+  function typedNeedValue(toolId: string, key: string): string {
+    return (needs[needId(toolId, key)] ?? "").trim();
+  }
+
   async function forward() {
     setError(null);
     if (step === 1) {
@@ -207,6 +230,49 @@ export function NewAgent({
     setStep((current) => current === 4 ? 3 : current === 3 ? 2 : 1);
   }
 
+  function importEnvPaste() {
+    setEnvImportNote(null);
+    const { entries, skipped } = parseEnvPaste(envPasteRaw);
+    if (entries.length === 0) {
+      if (skipped.length > 0) {
+        setEnvImportNote(`No keys imported. Skipped: ${skipped.join("; ")}`);
+      }
+      return;
+    }
+    for (const { key, value } of entries) {
+      if (key === "LLM_BASE_URL") {
+        setBaseUrl(value);
+      } else if (key === "LLM_API_KEY") {
+        setApiKey(value);
+      } else if (key === "LLM_MODEL") {
+        setModel(value);
+      }
+    }
+    const extraEntries = entries.filter(({ key }) => !LLM_ENV_KEYS.has(key));
+    if (extraEntries.length > 0) {
+      let nextId = nextExtra;
+      setExtras((rows) => {
+        let maxId = Math.max(0, ...rows.map((row) => row.id), nextExtra - 1);
+        const out = rows.map((row) => ({ ...row }));
+        for (const { key, value } of extraEntries) {
+          const idx = out.findIndex((row) => row.key.trim() === key);
+          if (idx >= 0) {
+            out[idx] = { ...out[idx], key, value };
+          } else {
+            maxId += 1;
+            out.push({ id: maxId, key, value });
+          }
+        }
+        nextId = maxId + 1;
+        return out;
+      });
+      setNextExtra(nextId);
+    }
+    setEnvPasteRaw("");
+    const skipPart = skipped.length > 0 ? ` Skipped: ${skipped.join("; ")}` : "";
+    setEnvImportNote(`Imported ${entries.length} key${entries.length === 1 ? "" : "s"}.${skipPart}`);
+  }
+
   function collectEnv(): Record<string, string> | null {
     // A blank LLM_* is not stored: the house value falls through in the config frame.
     const env: Record<string, string> = {};
@@ -221,17 +287,25 @@ export function NewAgent({
         env[key] = row.value;
       }
     }
+    for (const tool of visible) {
+      if (!picked[tool.id]) {
+        continue;
+      }
+      for (const key of tool.needs) {
+        const typed = typedNeedValue(tool.id, key);
+        if (typed) {
+          env[key] = typed;
+        }
+      }
+    }
     const missing: string[] = [];
     for (const tool of visible) {
       if (!picked[tool.id]) {
         continue;
       }
       for (const key of tool.needs) {
-        const value = (needs[needId(tool.id, key)] ?? "").trim();
-        if (!value) {
+        if (!(env[key] ?? "").trim()) {
           missing.push(`${tool.id} ${key}`);
-        } else {
-          env[key] = value;
         }
       }
     }
@@ -434,6 +508,40 @@ export function NewAgent({
                 >
                   Add a key
                 </button>
+                <button
+                  type="button"
+                  aria-expanded={envPasteOpen}
+                  onClick={() => setEnvPasteOpen((open) => !open)}
+                  className={quietClass}
+                >
+                  Import a .env
+                </button>
+                {envPasteOpen
+                  ? (
+                      <div className="flex flex-col gap-1 border-t border-line pt-4">
+                        <label htmlFor="agent-env-paste" className={labelClass}>Paste env</label>
+                        <textarea
+                          id="agent-env-paste"
+                          value={envPasteRaw}
+                          rows={4}
+                          spellCheck={false}
+                          autoComplete="off"
+                          placeholder="GARMIN_EMAIL=you@example.com"
+                          onChange={(e) => {
+                            setEnvPasteRaw(e.target.value);
+                            setEnvImportNote(null);
+                          }}
+                          className={`${inputClass} font-mono text-xs`}
+                        />
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button type="button" onClick={importEnvPaste} className={quietClass}>
+                            Import keys
+                          </button>
+                          {envImportNote ? <p role="status" className="text-xs text-dim">{envImportNote}</p> : null}
+                        </div>
+                      </div>
+                    )
+                  : null}
               </div>
             )
           : null}
@@ -459,20 +567,32 @@ export function NewAgent({
                       {tool.homeOnly ? <p className="mt-1 text-xs text-dim">Home</p> : null}
                       {tool.oauth ? <p className="mt-1 text-xs text-dim">Sign in from chat before this publishes.</p> : null}
                       {on
-                        ? tool.needs.map((key) => (
-                            <div key={key} className="mt-2 flex flex-col gap-1">
-                              <label htmlFor={`need-${tool.id}-${key}`} className={labelClass}>{key}</label>
-                              <input
-                                id={`need-${tool.id}-${key}`}
-                                type="password"
-                                autoComplete="new-password"
-                                spellCheck={false}
-                                value={needs[needId(tool.id, key)] ?? ""}
-                                onChange={(e) => setNeeds((prev) => ({ ...prev, [needId(tool.id, key)]: e.target.value }))}
-                                className={inputClass}
-                              />
-                            </div>
-                          ))
+                        ? tool.needs.map((key) => {
+                            if (wizardKeyValue(key)) {
+                              return (
+                                <div key={key} className="mt-2 flex flex-col gap-1">
+                                  <span className={`${labelClass} flex items-center gap-2`}>
+                                    <span className="font-mono text-body">{key}</span>
+                                    <span className={`${chipClass} border-ok/40 bg-ok/10 text-ok`}>set</span>
+                                  </span>
+                                </div>
+                              );
+                            }
+                            return (
+                              <div key={key} className="mt-2 flex flex-col gap-1">
+                                <label htmlFor={`need-${tool.id}-${key}`} className={labelClass}>{key}</label>
+                                <input
+                                  id={`need-${tool.id}-${key}`}
+                                  type="password"
+                                  autoComplete="new-password"
+                                  spellCheck={false}
+                                  value={needs[needId(tool.id, key)] ?? ""}
+                                  onChange={(e) => setNeeds((prev) => ({ ...prev, [needId(tool.id, key)]: e.target.value }))}
+                                  className={inputClass}
+                                />
+                              </div>
+                            );
+                          })
                         : null}
                     </div>
                   );

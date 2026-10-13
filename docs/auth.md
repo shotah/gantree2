@@ -74,4 +74,5 @@ The code is not written to the log. Refresh tokens land in
 
 Garmin has no public OAuth. Put `GARMIN_EMAIL` and `GARMIN_PASSWORD`
 on the agent, then `/auth garmin`. The vendor emails a code; paste it
-with `/auth garmin <code>`.
+with `/auth garmin <code>`. The code may be a text, an email, or an
+authenticator code.

@@ -666,6 +666,27 @@ export const OPENAPI_BASE = {
           },
         },
       },
+      AgentClone: {
+        type: "object",
+        required: [
+          "slug",
+        ],
+        properties: {
+          slug: {
+            type: "string",
+            pattern: "^[a-z][a-z0-9-]{0,31}$",
+            description: "ID for the new agent.",
+          },
+          name: {
+            type: "string",
+            description: "Display name for the new agent.",
+          },
+          memories: {
+            type: "boolean",
+            description: "When true, copy memory rows from the source agent.",
+          },
+        },
+      },
       AgentConfigView: {
         type: "object",
         required: [
@@ -2095,6 +2116,62 @@ export const OPENAPI_BASE = {
             description: "Deleted (admin only).",
           },
           404: {
+            $ref: "#/components/responses/ErrorJson",
+          },
+        },
+      },
+    },
+    "/api/agents/{slug}/clone": {
+      post: {
+        tags: [
+          "agents",
+        ],
+        summary: "Clone agent keys and persona",
+        description:
+          "Creates a new agent and copies config.env, config.mcp, and config.persona from the source. Optional memory copy includes structured memory rows only — not chat, allow lists, OAuth tokens, or MFA state. Response is the new agent card; env values are never returned.",
+        security: [
+          {
+            sessionCookie: [],
+          },
+          {
+            sessionBearer: [],
+          },
+        ],
+        parameters: [
+          {
+            $ref: "#/components/parameters/AgentSlugPath",
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/AgentClone",
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/AgentOne",
+                },
+              },
+            },
+          },
+          403: {
+            $ref: "#/components/responses/ForbiddenJson",
+          },
+          404: {
+            $ref: "#/components/responses/ErrorJson",
+          },
+          409: {
+            $ref: "#/components/responses/ErrorJson",
+          },
+          503: {
             $ref: "#/components/responses/ErrorJson",
           },
         },

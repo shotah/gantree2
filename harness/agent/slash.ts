@@ -467,7 +467,7 @@ function authError(err: unknown): string {
   return err instanceof Error && err.message.trim() !== "" ? err.message : "login failed";
 }
 
-/** Room-bound native agent: sealed catch state, no code paste. */
+/** Room-bound native agent: sealed catch state; paste when `pasteCode` is set. */
 async function nativeAuth(env: SlashEnv, args: string[], bound: RoomAuth): Promise<string> {
   const withAuth = env.plugins.filter((plugin) => typeof plugin["authStart"] === "function");
   if (args.length === 0) {
@@ -478,14 +478,24 @@ async function nativeAuth(env: SlashEnv, args: string[], bound: RoomAuth): Promi
   const plugin = env.plugins.find((p) => p.name === name);
   if (!plugin) return `auth: unknown server ${JSON.stringify(name)}`;
   if (!plugin.authStart || !plugin.authFinish) return `auth: server ${JSON.stringify(name)} has no login`;
-  if (args.length > 1) {
-    return `auth: not needed. ${NATIVE_LANDING}`;
-  }
   let redirectUri: string;
   try {
     redirectUri = (await bound.redirectUri()).trim();
   } catch (err) {
     return `auth: ${authError(err)}`;
+  }
+  if (args.length > 1) {
+    if (!plugin.pasteCode) {
+      return `auth: not needed. ${NATIVE_LANDING}`;
+    }
+    if (redirectUri === "") return "auth: no public origin";
+    const code = args.slice(1).join(" ").trim();
+    try {
+      await plugin.authFinish(env.pluginCtx, redirectUri, code);
+      return `auth: ${name} connected`;
+    } catch (err) {
+      return `auth: ${authError(err)}`;
+    }
   }
   if (redirectUri === "") return "auth: no public origin";
   let state: string;

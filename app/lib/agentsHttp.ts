@@ -104,6 +104,10 @@ export function usersUrl(slug: string): string {
   return `${agentUrl(slug)}/users`;
 }
 
+export function cloneUrl(sourceSlug: string): string {
+  return `${agentUrl(sourceSlug)}/clone`;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -256,6 +260,14 @@ export async function getAgent(slug: string, client: ApiClient = api): Promise<A
 
 export async function createAgent(body: AgentCreate, client: ApiClient = api): Promise<AgentCard> {
   return asCard(await send(client, agentsUrl(), jsonInit("POST", body)));
+}
+
+export async function cloneAgent(
+  sourceSlug: string,
+  body: { slug: string; name?: string; memories?: boolean },
+  client: ApiClient = api,
+): Promise<AgentCard> {
+  return asCard(await send(client, cloneUrl(sourceSlug), jsonInit("POST", body)));
 }
 
 export async function deleteAgent(slug: string, client: ApiClient = api): Promise<void> {

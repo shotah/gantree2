@@ -5,7 +5,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseTagList, NewAgent } from "@/app/components/agents/NewAgent";
 import { tomlFromGrants } from "@/lib/agents/mcpToml";
 import type { ApiClient } from "@/app/lib/agentsHttp";
+import type { ToolEntry } from "@/lib/agents/types";
 import { CAST, MAPS, card, config, json, href, buttonOf, inputOf, areaOf } from "./fixtures";
+
+const GOOGLE: ToolEntry = {
+  id: "google",
+  binary: "google-bin",
+  needs: ["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"],
+  oauth: true,
+  homeOnly: false,
+};
 
 afterEach(() => {
   cleanup();
@@ -151,6 +160,8 @@ describe("NewAgent", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("Add a value for maps MAPS_KEY.");
     expect(go).not.toHaveBeenCalled();
 
+    fireEvent.change(screen.getByLabelText("MAPS_KEY"), { target: { value: "m" } });
+    expect(screen.getByLabelText("MAPS_KEY")).toBeTruthy();
     fireEvent.change(screen.getByLabelText("MAPS_KEY"), { target: { value: "mk" } });
     fireEvent.click(screen.getByRole("button", { name: "Create agent" }));
     await vi.waitFor(() => expect(go).toHaveBeenCalledWith("/agents/kit"));
@@ -167,6 +178,153 @@ describe("NewAgent", () => {
       },
       persona: expect.stringMatching(/Your name is Kit\.\n[\s\S]*- \*\*Name:\*\* Kit/) as string,
       mcp: tomlFromGrants([{ name: "maps", command: "maps-bin", env: ["MAPS_KEY"] }]),
+    });
+  });
+
+  it("keeps the tools password field while typing and patches the partial value", async () => {
+    const { go, calls } = await reachTools();
+    fireEvent.click(await screen.findByRole("checkbox", { name: "maps" }));
+    fireEvent.change(screen.getByLabelText("MAPS_KEY"), { target: { value: "m" } });
+    expect(screen.getByLabelText("MAPS_KEY")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Create agent" }));
+    await vi.waitFor(() => expect(go).toHaveBeenCalledWith("/agents/kit"));
+    expect(JSON.parse(calls.find((call) => call.method === "PATCH")?.body ?? "{}")).toMatchObject({
+      env: { MAPS_KEY: "m" },
+    });
+  });
+
+  it("shows default keys UI without paste until Import a .env is opened", async () => {
+    render(<NewAgent client={toolsClient().client} go={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText("Agent ID"), { target: { value: "kit" } });
+    fireEvent.change(screen.getByLabelText("Shown as"), { target: { value: "Kit" } });
+    await nextFromName();
+    await nextFromPersona();
+    expect(screen.getByLabelText("LLM_BASE_URL")).toBeTruthy();
+    expect(screen.getByLabelText("LLM_API_KEY")).toBeTruthy();
+    expect(screen.getByLabelText("LLM_MODEL")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Add a key" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Import a .env" })).toBeTruthy();
+    expect(screen.queryByLabelText("Paste env")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Import a .env" }));
+    expect(screen.getByLabelText("Paste env")).toBeTruthy();
+    expect(buttonOf(screen.getByRole("button", { name: "Import a .env" })).getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("imports pasted env into LLM fields and extras on create", async () => {
+    const go = vi.fn();
+    const { client, calls } = toolsClient([], false, ["LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL"]);
+    render(<NewAgent client={client} go={go} />);
+    fireEvent.change(screen.getByLabelText("Agent ID"), { target: { value: "kit" } });
+    fireEvent.change(screen.getByLabelText("Shown as"), { target: { value: "Kit" } });
+    await nextFromName();
+    await nextFromPersona();
+    fireEvent.click(screen.getByRole("button", { name: "Import a .env" }));
+    fireEvent.change(screen.getByLabelText("Paste env"), {
+      target: { value: "LLM_MODEL=gpt-4\nGARMIN_EMAIL=you@example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Import keys" }));
+    expect((await screen.findByRole("status")).textContent).toContain("Imported 2 keys.");
+    expect(inputOf(screen.getByLabelText("LLM_MODEL")).value).toBe("gpt-4");
+    expect(inputOf(screen.getByLabelText("Key")).value).toBe("GARMIN_EMAIL");
+    expect(inputOf(screen.getByLabelText("Value")).value).toBe("you@example.com");
+    expect(areaOf(screen.getByLabelText("Paste env")).value).toBe("");
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Create agent" }));
+    await vi.waitFor(() => expect(go).toHaveBeenCalledWith("/agents/kit"));
+    const patch = calls.find((call) => call.method === "PATCH");
+    expect(JSON.parse(patch?.body ?? "{}")).toMatchObject({
+      env: {
+        LLM_MODEL: "gpt-4",
+        GARMIN_EMAIL: "you@example.com",
+      },
+    });
+  });
+
+  it("counts pasted tool keys on the tools step without retyping", async () => {
+    const go = vi.fn();
+    const { client, calls } = toolsClient([MAPS, GOOGLE], false, ["LLM_BASE_URL", "LLM_API_KEY"]);
+    render(<NewAgent client={client} go={go} />);
+    fireEvent.change(screen.getByLabelText("Agent ID"), { target: { value: "kit" } });
+    fireEvent.change(screen.getByLabelText("Shown as"), { target: { value: "Kit" } });
+    await nextFromName();
+    await nextFromPersona();
+    fireEvent.click(screen.getByRole("button", { name: "Import a .env" }));
+    fireEvent.change(screen.getByLabelText("Paste env"), {
+      target: {
+        value: [
+          "# oauth block",
+          "LLM_MODEL=gpt-4",
+          "GOOGLE_OAUTH_CLIENT_ID=gid",
+          "GOOGLE_OAUTH_CLIENT_SECRET=gsec",
+          "MAPS_KEY=mk",
+        ].join("\n"),
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Import keys" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: "maps" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "google" }));
+    const mapsBlock = screen.getByRole("checkbox", { name: "maps" }).closest("div");
+    const googleBlock = screen.getByRole("checkbox", { name: "google" }).closest("div");
+    expect(mapsBlock).toBeTruthy();
+    expect(googleBlock).toBeTruthy();
+    expect(within(mapsBlock as HTMLElement).getByText("set")).toBeTruthy();
+    expect(within(googleBlock as HTMLElement).getAllByText("set")).toHaveLength(2);
+    expect(within(mapsBlock as HTMLElement).queryByLabelText("MAPS_KEY")).toBeNull();
+    expect(within(googleBlock as HTMLElement).queryByLabelText("GOOGLE_OAUTH_CLIENT_ID")).toBeNull();
+    expect(within(googleBlock as HTMLElement).queryByLabelText("GOOGLE_OAUTH_CLIENT_SECRET")).toBeNull();
+    expect(screen.queryByDisplayValue("gsec")).toBeNull();
+    expect(screen.queryByDisplayValue("mk")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Create agent" }));
+    await vi.waitFor(() => expect(go).toHaveBeenCalledWith("/agents/kit"));
+    const patch = calls.find((call) => call.method === "PATCH");
+    expect(patch?.body ?? "").not.toContain("# oauth");
+    expect(JSON.parse(patch?.body ?? "{}")).toMatchObject({
+      env: {
+        LLM_MODEL: "gpt-4",
+        GOOGLE_OAUTH_CLIENT_ID: "gid",
+        GOOGLE_OAUTH_CLIENT_SECRET: "gsec",
+        MAPS_KEY: "mk",
+      },
+      mcp: tomlFromGrants([
+        { name: "maps", command: "maps-bin", env: ["MAPS_KEY"] },
+        { name: "google", command: "google-bin", env: ["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"] },
+      ]),
+    });
+  });
+
+  it("still prompts for tool keys not covered by paste", async () => {
+    const go = vi.fn();
+    const { client, calls } = toolsClient([MAPS, GOOGLE], false, ["LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL"]);
+    render(<NewAgent client={client} go={go} />);
+    fireEvent.change(screen.getByLabelText("Agent ID"), { target: { value: "kit" } });
+    fireEvent.change(screen.getByLabelText("Shown as"), { target: { value: "Kit" } });
+    await nextFromName();
+    await nextFromPersona();
+    fireEvent.click(screen.getByRole("button", { name: "Import a .env" }));
+    fireEvent.change(screen.getByLabelText("Paste env"), {
+      target: { value: "GOOGLE_OAUTH_CLIENT_ID=gid\nGOOGLE_OAUTH_CLIENT_SECRET=gsec" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Import keys" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: "maps" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create agent" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("Add a value for maps MAPS_KEY.");
+    fireEvent.click(screen.getByRole("checkbox", { name: "google" }));
+    const googleBlock = screen.getByRole("checkbox", { name: "google" }).closest("div");
+    expect(googleBlock).toBeTruthy();
+    expect(within(googleBlock as HTMLElement).getAllByText("set")).toHaveLength(2);
+    expect(within(googleBlock as HTMLElement).queryByLabelText("GOOGLE_OAUTH_CLIENT_ID")).toBeNull();
+    fireEvent.change(screen.getByLabelText("MAPS_KEY"), { target: { value: "mk" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create agent" }));
+    await vi.waitFor(() => expect(go).toHaveBeenCalledWith("/agents/kit"));
+    const patch = calls.find((call) => call.method === "PATCH");
+    expect(JSON.parse(patch?.body ?? "{}")).toMatchObject({
+      env: {
+        GOOGLE_OAUTH_CLIENT_ID: "gid",
+        GOOGLE_OAUTH_CLIENT_SECRET: "gsec",
+        MAPS_KEY: "mk",
+      },
     });
   });
 
