@@ -336,7 +336,7 @@ export class AimStore {
         "UPDATE aim_event SET superseded_by = id WHERE id = ? AND superseded_by IS NULL",
         old.id,
       );
-      if (this.sql.changes() !== 1) {
+      if (this.sql.changes() === 0) {
         throw new AimsError(`aims: event ${String(old.id)} is superseded`);
       }
     }

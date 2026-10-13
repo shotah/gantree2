@@ -166,7 +166,8 @@ export class Store {
       id,
       stamp,
     );
-    return this.sql.changes() === 1;
+    // Durable Object SQLite counts index rows in changes(); PK-scoped UPDATE means >0 claimed one row.
+    return this.sql.changes() > 0;
   }
 
   /**

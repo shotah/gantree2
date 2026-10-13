@@ -20,11 +20,28 @@ function open(max = 50) {
   return { sql, clock, store };
 }
 
+function overcountSql(base: Sql): Sql {
+  return {
+    exec: (...args) => base.exec(...args),
+    one: (...args) => base.one(...args),
+    changes: () => base.changes() * 2,
+  };
+}
+
 function delivery(sessionId: string, userId = "", chatId = ""): WatchDelivery {
   return { sessionId, userId, chatId };
 }
 
 describe("WatchStore", () => {
+  it("claim succeeds when changes() overcounts (Durable Object index rows)", () => {
+    const { sql: base, clock } = open(5);
+    const log = makeLogger(memorySink(), () => clock.now());
+    const store = new WatchStore(overcountSql(base), clock, 5, log);
+    const watch = store.add("feeds__items_list", { url: "https://x" }, "nws", 15 * 60, delivery("s1"));
+    expect(store.claim(watch.id, clock.now())).toBe(true);
+    expect(store.get(watch.id).running).toBe(true);
+  });
+
   it("adds, claims, finishes, and cancels", () => {
     const { sql, clock, store } = open(5);
     expect(store.maxWatches).toBe(5);

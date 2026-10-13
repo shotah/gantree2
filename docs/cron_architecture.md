@@ -121,7 +121,10 @@ find which.
    only that handler calls `fireDue`, so a set flag is a claim left by
    a crashed wake, not a live job. `Store.due` then selects
    `enabled = 1 AND running = 0 AND next_run_at <= now`. `Store.claim`
-   sets `running = 1`. The runner builds the job prompt (prefix, optional
+   sets `running = 1`. It reads the claim back as `changes() > 0`,
+   because Durable Object SQLite counts the `idx_cron_due` index row in
+   `rowsWritten`, so a successful claim reports 2, never 1. The runner
+   builds the job prompt (prefix, optional
    `[job memory]`, the stored prompt) and calls `onCron`, which is the
    same `execute` loop a chat turn uses: same model, same tools, same
    persona. Skipped entirely when cron is off.
@@ -331,3 +334,10 @@ The holes from the first walk-through. Each one is in the tree now.
 - [x] **`/cron` lists the table.** Same text as `cron_list`, and it is
       in the slash catalog, so it does not depend on the model calling
       the tool.
+
+- [x] **`claim()` reads `changes() > 0`.** Durable Object SQLite reports
+      index row writes in `rowsWritten`, so the one-row claim UPDATE
+      returned 2 and `=== 1` was false. `fireDue` skipped every due job
+      and left `running = 1`, which is the `cron cleared stale running
+      flags` line on the next open with no `cron job firing` after it.
+      Same fix in the watch store and the aims event supersede.

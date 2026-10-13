@@ -287,7 +287,8 @@ export class WatchStore {
       id,
       now,
     );
-    return n === 1;
+    // Durable Object SQLite counts index rows in changes(); PK-scoped UPDATE means >0 claimed one row.
+    return n > 0;
   }
 
   /**

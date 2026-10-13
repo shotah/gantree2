@@ -18,7 +18,7 @@ export type Sql = {
   exec<T extends SqlRow = SqlRow>(query: string, ...params: SqlValue[]): T[];
   /** First row or `null`. */
   one<T extends SqlRow = SqlRow>(query: string, ...params: SqlValue[]): T | null;
-  /** Rows written by the last `exec` (INSERT/UPDATE/DELETE). */
+  /** Rows written by the last `exec` (INSERT/UPDATE/DELETE). On Durable Object SQLite this includes index rows, so compare against zero, never against 1. */
   changes(): number;
 };
 

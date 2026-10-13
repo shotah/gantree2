@@ -1,3 +1,4 @@
+import type { Sql } from "@/harness/core/sql";
 import { KindDaily, KindDailyPlanner, KindEvery, KindOnce } from "@/harness/cron/constants";
 import { DefaultDailyPlannerPrompt } from "@/harness/cron/prompts";
 import { parsePlannerSchedule } from "@/harness/cron/schedule";
@@ -10,6 +11,24 @@ describe("store", () => {
     const { sql } = openCron();
     const ids = sql.exec<{ id: string }>("SELECT id FROM brain_migration").map((row) => row.id);
     expect(ids).toContain("cron.001");
+  });
+
+  it("claim succeeds when changes() overcounts (Durable Object index rows)", () => {
+    const { sql: base, clock } = openCron();
+    const sql: Sql = {
+      exec: (...args) => base.exec(...args),
+      one: (...args) => base.one(...args),
+      changes: () => base.changes() * 2,
+    };
+    const store = reopen(sql, clock);
+    const job = store.schedule("due now", {
+      kind: KindOnce,
+      expr: "x",
+      timezone: "UTC",
+      nextRun: clock.now() - 60_000,
+    }, { sessionId: "s", userId: "u" });
+    expect(store.claim(job.id, clock.now())).toBe(true);
+    expect(store.get(job.id).running).toBe(true);
   });
 
   it("clears a stale running flag so a due job can fire", () => {
