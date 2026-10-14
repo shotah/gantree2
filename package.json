@@ -1,6 +1,6 @@
 {
   "name": "gantree",
-  "version": "0.2.38",
+  "version": "0.2.39",
   "private": true,
   "description": "gantree — one repo, one door, one product. Settings and chat (PWA), on Cloudflare or celld.",
   "license": "MIT",
