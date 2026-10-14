@@ -169,7 +169,7 @@ plugin, and the eval fixtures updated <strong>in the same PR</strong>.
 <tr>
 <td>Web search</td>
 <td><code>web_</code></td>
-<td>builtin <code>web_search</code> (not a plugin)</td>
+<td>websearch plugin; model name stays <code>web_search</code></td>
 </tr>
 <tr>
 <td>Flight offers / dates / airports / returns / booking / quota</td>
@@ -313,7 +313,7 @@ under <code>test/harness/plugins/</code>.</p>
 <p>Hyphenated plugin ids are fine; tool suffixes stay underscores. The
 host aliases underscored prefixes (<code>google_health__…</code> →
 <code>google-health__…</code>) on call — <strong>suffixes are never rewritten</strong>. Web
-search is the unprefixed builtin <code>web_search</code>.</p>
+search is plugin <code>websearch</code>; the model still calls unprefixed <code>web_search</code>.</p>
 <hr>
 <h2 id="checklist-for-a-new-or-reshaped-plugin">Checklist for a new or reshaped plugin</h2>
 <ul>

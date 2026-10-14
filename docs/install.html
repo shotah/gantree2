@@ -161,12 +161,13 @@ also puts that user on the agent room, which is what opens the chat
 socket. The harness is the Agent Durable Object that deploy ships.</p>
 <p>House keys the harness reads from <code>.dev.vars</code> (and, in production, from
 Worker secrets): <code>LLM_BASE_URL</code>, <code>LLM_API_KEY</code>, <code>LLM_MODEL</code>, and
-optionally <code>BRAVE_SEARCH_API_KEY</code>. An agent&#39;s own <code>config.env</code> wins
+optionally <code>SEARCH_API_KEY</code> and <code>SEARCH_PROVIDER</code>. An agent&#39;s own <code>config.env</code> wins
 when the same name is set on both. Other keys live on the agent. Feeds
 publish with no key; <code>FEEDS_USER_AGENT</code> only overrides the User-Agent,
 which defaults to <code>gantree/&lt;version&gt; (+https://gantree2.bldhosting.com)</code>.
-The Keys fold suggests every row below. Register the catch URIs in
-<a href="auth.html">auth.md</a>. <code>CRON_TZ</code>, <code>DAILY_PLANNER_AT</code>,
+The Keys fold suggests every row below (search keys are listed once under
+<code>websearch</code>; the Worker may still set them as house secrets). How each
+provider registers the catch is in <a href="auth.html">auth.md</a>. <code>CRON_TZ</code>, <code>DAILY_PLANNER_AT</code>,
 <code>MEMORY_CONSOLIDATE_MINUTES</code>, <code>DYNAMIC_TOOLS</code>, <code>MCP_ENABLE_FORCE</code>, and
 <code>PUBLIC_ORIGIN</code> are harness knobs. <code>PUBLIC_ORIGIN</code> is the catch host,
 with no path.</p>
@@ -194,14 +195,19 @@ with no path.</p>
 <td>yes, house or agent</td>
 </tr>
 <tr>
-<td>house</td>
-<td><code>BRAVE_SEARCH_API_KEY</code></td>
-<td>no</td>
-</tr>
-<tr>
 <td>feeds</td>
 <td><code>FEEDS_USER_AGENT</code></td>
 <td>no</td>
+</tr>
+<tr>
+<td>websearch</td>
+<td><code>SEARCH_API_KEY</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>websearch</td>
+<td><code>SEARCH_PROVIDER</code></td>
+<td>no — blank means brave</td>
 </tr>
 <tr>
 <td>twitter</td>
@@ -424,9 +430,9 @@ auth values (<code>GOOGLE_CLIENT_ID</code>, <code>GOOGLE_CLIENT_SECRET</code>,
 <code>SESSION_SECRET</code>, <code>GANTREE_ADMINS</code>) is empty.</p>
 <p><strong>Not in GitHub.</strong> The house keys that let a new agent run with no
 keys of its own (<code>LLM_BASE_URL</code>, <code>LLM_API_KEY</code>, <code>LLM_MODEL</code>,
-<code>BRAVE_SEARCH_API_KEY</code>) are Worker secrets, set once from a laptop
+<code>SEARCH_API_KEY</code>, <code>SEARCH_PROVIDER</code>) are Worker secrets, set once from a laptop
 with the same Cloudflare token:</p>
-<pre><code class="language-bash">npx wrangler secret put LLM_BASE_URL     # and LLM_API_KEY, LLM_MODEL, BRAVE_SEARCH_API_KEY</code></pre>
+<pre><code class="language-bash">npx wrangler secret put LLM_BASE_URL     # and LLM_API_KEY, LLM_MODEL, SEARCH_API_KEY</code></pre>
 <p>Never set in production: <code>GANTREE_DEV_USER</code> (loopback dev door) and
 <code>CHAT_SECRET</code> (loopback two-tab spike). <code>AGENT_BEARERS</code> is an
 override; the Agent DO mints bearers itself.</p>

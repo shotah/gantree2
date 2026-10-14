@@ -353,9 +353,12 @@ not read <code>Authorization</code>) and an admin or a member of that room, post
 the code to the DO, and <code>authFinish</code> stores ciphertext in
 <code>oauth_token</code>. The room gets <code>&lt;plugin&gt; connected</code>. The code is not
 written to the log. Detail: <a href="auth.html">auth.md</a>.</p>
-<p>Register exactly, no trailing slash:</p>
+<p>Google and Google Health register exactly, no trailing slash:</p>
 <pre><code class="language-text">https://gantree2.bldhosting.com/api/auth/catch
 http://127.0.0.1:3000/api/auth/catch</code></pre>
+<p>Strava&#39;s Authorization Callback Domain is the hostname only
+(<code>gantree2.bldhosting.com</code>, or <code>localhost</code>). Detail:
+<a href="auth.html">auth.md</a>.</p>
 <p><code>PUBLIC_ORIGIN</code> overrides the host.</p>
 <table>
 <thead>
@@ -377,11 +380,10 @@ http://127.0.0.1:3000/api/auth/catch</code></pre>
 <td>Required for verification; versioned with the code</td>
 </tr>
 </tbody></table>
-<p>This is a different Google OAuth client than the door&#39;s. The door&#39;s
-redirect is <code>/api/auth/callback/google</code> and asks for identity only.
-The tool client asks for the scopes you grant and redirects to the
-catch. Keep them separate in Google Cloud so revoking one does not
-break the other.</p>
+<p>The platform Google OAuth client id and secret live in the Settings
+Durable Object (<code>platform_secret</code>); when set there they override the
+Worker deploy vars and secret for door login and for agents that use
+the platform client on Tools.</p>
 <hr>
 <h2 id="secrets-where-each-one-is-allowed-to-be">Secrets — where each one is allowed to be</h2>
 <table>

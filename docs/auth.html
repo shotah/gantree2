@@ -44,19 +44,28 @@ redirect that lands on this Worker. Garmin is email, password, and
 MFA. Nothing listens on your LAN. Pictures:
 <a href="architecture.html">architecture.md</a>. The threat write-up:
 <a href="security.html">security.md</a>.</p>
-<p>This is a different Google client from the door. The door&#39;s redirect
-is <code>/api/auth/callback/google</code> and asks for identity only. The tools
-client asks for the scopes you grant and redirects to the catch below.</p>
+<p>Door sign-in and tool OAuth use one platform Google client (Settings
+or deploy). Register both redirect URIs on that client:
+<code>/api/auth/callback/google</code> for the door and <code>/api/auth/catch</code> for
+chat Connect and <code>/auth</code> flows. They stay separate HTTP requests; only
+the client id is shared.</p>
 <hr>
 <h2 id="redirect-uris">Redirect URIs</h2>
-<p>Register these on the provider, exactly, with no trailing slash.
-<code>PUBLIC_ORIGIN</code> (no path) overrides the host the Worker prints.
-An unusable <code>PUBLIC_ORIGIN</code> does not fall through to the request
-origin.</p>
+<p>Google and Google Health register these on the client, exactly, with
+no trailing slash. <code>PUBLIC_ORIGIN</code> (no path) overrides the host the
+Worker prints. An unusable <code>PUBLIC_ORIGIN</code> does not fall through to
+the request origin.</p>
 <pre><code class="language-text">https://gantree2.bldhosting.com/api/auth/catch
 http://127.0.0.1:3000/api/auth/catch</code></pre>
 <p>A home box uses its own public origin the same way:
 <code>https://&lt;host&gt;/api/auth/catch</code>.</p>
+<p>Strava does not register a full redirect URI. The API application
+setting is Authorization Callback Domain: the hostname only
+(<code>gantree2.bldhosting.com</code>, or <code>localhost</code>). No scheme, no path, no
+comma-separated list. <code>localhost</code> and <code>127.0.0.1</code> are whitelisted
+for local dev. The redirect we send is still
+<code>{origin}/api/auth/catch</code>. Pasting that full URI into the domain
+field makes every authorize call return <code>redirect_uri</code> invalid.</p>
 <p>Plugin names are the module names: <code>google</code>, <code>strava</code>,
 <code>google-health</code>. Not <code>ghealth</code>.</p>
 <hr>

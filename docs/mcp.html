@@ -41,11 +41,12 @@
     <article class="prose"><h1 id="mcp-host">MCP host</h1>
 <p>How tools are named for the model, how a prefix is turned on, and how
 the host recovers from a bad name.</p>
-<p>On this product the twelve plugins are in-process modules under
+<p>On this product the thirteen plugins are in-process modules under
 <code>harness/plugins</code>. There is no stdio transport and no child process.
 <code>harness/tools</code> is the registry: <code>{plugin}__{tool}</code>, <code>mcp_enable</code>,
 truncation, and the skip list. Builtins (memory, cron, watch,
-<code>self_note</code>, <code>web_search</code>, aims) have no prefix and never idle-drop.
+<code>self_note</code>, aims) have no prefix and never idle-drop. The <code>websearch</code>
+plugin publishes unprefixed <code>web_search</code> when granted (<code>bare: true</code>).
 The shapes stay MCP-shaped so the Tools grid and eval fixtures do not
 change. Pictures: <a href="architecture.html">architecture.md</a>. Pasteable live
 checks for a person in chat: <a href="live-check.html">live-check.md</a>.</p>
@@ -66,7 +67,7 @@ repair names and finish turns or the horizon collapses into ERROR.</p>
 </thead>
 <tbody><tr>
 <td>Keep the loop small</td>
-<td>Calendar and mail stay in the <code>google</code> plugin. Web search is a builtin.</td>
+<td>Calendar and mail stay in the <code>google</code> plugin. Web search is the <code>websearch</code> plugin.</td>
 </tr>
 <tr>
 <td>Clear grant model</td>
@@ -81,7 +82,8 @@ repair names and finish turns or the horizon collapses into ERROR.</p>
 <td>Same tool schemas work for Gemini, ChatGPT, Ollama — OpenAI-compat tool calls</td>
 </tr>
 </tbody></table>
-<p>Chat, memory, cron, and web search work with <strong>zero</strong> MCP servers. Other tools are optional.</p>
+<p>Chat, memory, and cron work with <strong>zero</strong> MCP servers. Web search needs
+the <code>websearch</code> grant and a search key. Other tools are optional.</p>
 <hr>
 <h2 id="naming-servertool">Naming: <code>{server}__{tool}</code></h2>
 <p><strong>Authoring new MCP tools?</strong> Follow the shared package contract:
@@ -99,9 +101,9 @@ tool name, stable verbs, sibling nouns). This section is the <strong>host</stron
 </tr>
 </thead>
 <tbody><tr>
-<td><em>(builtin)</em></td>
+<td><code>websearch</code></td>
 <td><code>web_search</code></td>
-<td><code>web_search</code> (always on; no prefix)</td>
+<td><code>web_search</code> (unprefixed when granted)</td>
 </tr>
 <tr>
 <td><code>google</code></td>
@@ -331,14 +333,19 @@ as <code>/auth garmin &lt;code&gt;</code>.</p>
 <td>yes, house or agent</td>
 </tr>
 <tr>
-<td>house</td>
-<td><code>BRAVE_SEARCH_API_KEY</code></td>
-<td>no</td>
-</tr>
-<tr>
 <td>feeds</td>
 <td><code>FEEDS_USER_AGENT</code></td>
 <td>no</td>
+</tr>
+<tr>
+<td>websearch</td>
+<td><code>SEARCH_API_KEY</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>websearch</td>
+<td><code>SEARCH_PROVIDER</code></td>
+<td>no — blank means brave</td>
 </tr>
 <tr>
 <td>twitter</td>
@@ -411,6 +418,9 @@ as <code>/auth garmin &lt;code&gt;</code>.</p>
 <td>no — <code>core</code> (default), <code>extended</code>, or <code>complete</code></td>
 </tr>
 </tbody></table>
+<p>The Worker house env may also supply <code>SEARCH_API_KEY</code> and
+<code>SEARCH_PROVIDER</code> (<code>HOUSE_KEYS</code>); the Keys fold documents them under
+<code>websearch</code> only.</p>
 <h3 id="prefix-enable">Prefix enable</h3>
 <p>By default MCP schemas stay <strong>off</strong> until the agent calls <code>mcp_enable</code>
 (list of prefixes, next model call in the same turn). The prompt lists
