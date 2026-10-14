@@ -18,6 +18,7 @@ import { filePersona, openPersonaStore, personaParts } from "@/harness/room/pers
 import { allPlugins } from "@/harness/plugins";
 import { openaiProvider } from "@/harness/provider";
 import { AesTokenStore, mintTokenKey, TOKEN_KEY_STORE_KEY, tokenKeyOk } from "@/harness/tools";
+import { applyPlatformGoogle } from "@/lib/agents/platform";
 import { canonicalEnv, CONFIG_STORE_KEY, frameEnv, parseConfig } from "@/lib/agents/config";
 import { houseEnv, type HouseEnv } from "@/lib/agents/house";
 import { parseStoredSlug, SLUG_STORE_KEY } from "@/lib/chat/allow";
@@ -43,6 +44,8 @@ export type OpenRoomOpts = {
   chat?: { origin: string; bearer: string; serve: (req: Request) => Promise<Response> };
   /** Passed to `createBrain`; arms the DO alarm when cron/watch/consolidation due changes. */
   onClock?: (at: number | null) => void | Promise<void>;
+  /** Door Google client copied into google / google-health env unless the agent opts out. */
+  platformGoogle?: { clientId: string; clientSecret: string };
 };
 
 type Memo = { generation: string; harness: Brain };
@@ -60,6 +63,9 @@ export async function openRoomBrain(ctx: DurableObjectState, env: HouseEnv, opts
   const slug = opts.slug ?? stored ?? "";
   const tokenKey = await ensureTokenKey(ctx);
   let map = frameEnv(config, houseEnv(env));
+  if (opts.platformGoogle) {
+    map = applyPlatformGoogle(map, config.env, opts.platformGoogle);
+  }
   const chat = opts.chat;
   const chatAttach = Boolean(chat && slug && chat.origin.trim() && chat.bearer.trim());
   if (chat && chatAttach) {

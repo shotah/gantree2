@@ -283,9 +283,10 @@ describe("NewAgent", () => {
     expect(JSON.parse(patch?.body ?? "{}")).toMatchObject({
       env: {
         LLM_MODEL: "gpt-4",
+        MAPS_KEY: "mk",
         GOOGLE_OAUTH_CLIENT_ID: "gid",
         GOOGLE_OAUTH_CLIENT_SECRET: "gsec",
-        MAPS_KEY: "mk",
+        GOOGLE_OWN_CLIENT: "1",
       },
       mcp: tomlFromGrants([
         { name: "maps", command: "maps-bin", env: ["MAPS_KEY"] },
@@ -322,8 +323,6 @@ describe("NewAgent", () => {
     const patch = calls.find((call) => call.method === "PATCH");
     expect(JSON.parse(patch?.body ?? "{}")).toMatchObject({
       env: {
-        GOOGLE_OAUTH_CLIENT_ID: "gid",
-        GOOGLE_OAUTH_CLIENT_SECRET: "gsec",
         MAPS_KEY: "mk",
       },
     });

@@ -1,6 +1,7 @@
 import { startGoogle } from "@/lib/door/http";
-import { doorEnv } from "@/lib/door/runtime";
+import { doorEnv, platformGoogle } from "@/lib/door/runtime";
 
-export function GET(request: Request): Promise<Response> {
-  return startGoogle(request, doorEnv());
+export async function GET(request: Request): Promise<Response> {
+  const google = await platformGoogle();
+  return startGoogle(request, doorEnv(), google);
 }

@@ -94,8 +94,8 @@ when the same name is set on both. Other keys live on the agent. Feeds
 publish with no key; `FEEDS_USER_AGENT` only overrides the User-Agent,
 which defaults to `gantree/<version> (+https://gantree2.bldhosting.com)`.
 The Keys fold suggests every row below (search keys are listed once under
-`websearch`; the Worker may still set them as house secrets). Register the catch URIs in
-[auth.md](auth.md). `CRON_TZ`, `DAILY_PLANNER_AT`,
+`websearch`; the Worker may still set them as house secrets). How each
+provider registers the catch is in [auth.md](auth.md). `CRON_TZ`, `DAILY_PLANNER_AT`,
 `MEMORY_CONSOLIDATE_MINUTES`, `DYNAMIC_TOOLS`, `MCP_ENABLE_FORCE`, and
 `PUBLIC_ORIGIN` are harness knobs. `PUBLIC_ORIGIN` is the catch host,
 with no path.

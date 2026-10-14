@@ -27,6 +27,11 @@ function clientFor(role: string, agents: string[] = []): ApiClient {
     if (url.includes("/api/auth/me")) {
       return json({ sub: "1", email: "ada@example.com", role, agents });
     }
+    if (url.includes("/api/platform/keys")) {
+      return json({
+        google: { clientId: "cid", secretSet: true, idFromDeploy: false, secretFromDeploy: true },
+      });
+    }
     return json({ samples: [] });
   });
 }
@@ -48,6 +53,7 @@ describe("SettingsScreen", () => {
     expect(screen.queryByRole("link", { name: "Users" })).toBeNull();
     expect(screen.queryByRole("region", { name: "Spend" })).toBeNull();
     expect(screen.queryByRole("region", { name: "Who can be here" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Platform" })).toBeNull();
     // Members already land in chat; the Entry fold is for staff.
     expect(screen.queryByRole("region", { name: "Entry" })).toBeNull();
 
@@ -60,6 +66,9 @@ describe("SettingsScreen", () => {
 
   it("explains locked environment rows to an admin behind a closed fold, and links to users", async () => {
     render(<SettingsScreen client={clientFor("admin", ["kit"])} />);
+    const platform = await screen.findByRole("region", { name: "Platform" });
+    fireEvent.click(within(platform).getByRole("button", { name: "Platform" }));
+    expect(await within(platform).findByLabelText("Google client id")).toBeTruthy();
     const who = await screen.findByRole("region", { name: "Who can be here" });
     expect(who.textContent).not.toContain("stay locked");
     fireEvent.click(within(who).getByRole("button", { name: "Who can be here" }));

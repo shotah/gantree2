@@ -16,6 +16,12 @@ import { api } from "@/app/lib/api";
 import { llmCovered } from "@/lib/agents/house";
 import { knownKey } from "@/lib/agents/keys";
 import { tomlFromGrants } from "@/lib/agents/mcpToml";
+import {
+  googleOAuthEnvKeys,
+  googleOwnClientFlag,
+  googlePlatformToolId,
+  PLATFORM_GOOGLE_LINE,
+} from "@/lib/agents/platform";
 import { AGENT_SLUG, type AgentCard, type AgentCreate, type Grant, type ToolEntry } from "@/lib/agents/types";
 import { assignHref } from "./follow";
 import { alertClass, inputClass, labelClass, mainClass, primaryClass, quietClass } from "./Fold";
@@ -134,6 +140,7 @@ export function NewAgent({
   const [house, setHouse] = useState<string[]>([]);
   const [toolsError, setToolsError] = useState<string | null>(null);
   const [picked, setPicked] = useState<Record<string, boolean>>({});
+  const [ownGoogleClient, setOwnGoogleClient] = useState<Record<string, boolean>>({});
   const [needs, setNeeds] = useState<Record<string, string>>({});
   const [made, setMade] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -257,6 +264,15 @@ export function NewAgent({
       }
     }
     const extraEntries = entries.filter(({ key }) => !LLM_ENV_KEYS.has(key));
+    const own: Record<string, boolean> = {};
+    for (const toolId of ["google", "google-health"] as const) {
+      if (extraEntries.some(({ key }) => googleOAuthEnvKeys(toolId).includes(key))) {
+        own[toolId] = true;
+      }
+    }
+    if (Object.keys(own).length > 0) {
+      setOwnGoogleClient((prev) => ({ ...prev, ...own }));
+    }
     if (extraEntries.length > 0) {
       let nextId = nextExtra;
       setExtras((rows) => {
@@ -299,7 +315,17 @@ export function NewAgent({
       if (!picked[tool.id]) {
         continue;
       }
+      const own = googlePlatformToolId(tool.id) ? Boolean(ownGoogleClient[tool.id]) : false;
+      if (own) {
+        const flag = googleOwnClientFlag(tool.id);
+        if (flag) {
+          env[flag] = "1";
+        }
+      }
       for (const key of toolKeys(tool)) {
+        if (googlePlatformToolId(tool.id) && !own && googleOAuthEnvKeys(tool.id).includes(key)) {
+          continue;
+        }
         const typed = typedNeedValue(tool.id, key);
         if (typed) {
           env[key] = typed;
@@ -311,7 +337,11 @@ export function NewAgent({
       if (!picked[tool.id]) {
         continue;
       }
+      const own = googlePlatformToolId(tool.id) ? Boolean(ownGoogleClient[tool.id]) : false;
       for (const key of tool.needs) {
+        if (googlePlatformToolId(tool.id) && !own && googleOAuthEnvKeys(tool.id).includes(key)) {
+          continue;
+        }
         const typed = typedNeedValue(tool.id, key);
         if (typed || house.includes(key)) {
           continue;
@@ -565,6 +595,8 @@ export function NewAgent({
                 {tools !== null && visible.length === 0 ? <p className="text-sm text-muted">No tools to show.</p> : null}
                 {visible.map((tool) => {
                   const on = Boolean(picked[tool.id]);
+                  const ownClient = Boolean(ownGoogleClient[tool.id]);
+                  const showGoogleKeys = !googlePlatformToolId(tool.id) || ownClient;
                   return (
                     <div key={tool.id} className="rounded-xl border border-line bg-canvas/50 px-3 py-3">
                       <label className="flex items-center gap-2 text-sm text-fg">
@@ -578,9 +610,27 @@ export function NewAgent({
                       <p className="mt-1 text-xs text-dim">{tool.binary}</p>
                       {tool.homeOnly ? <p className="mt-1 text-xs text-dim">Home</p> : null}
                       {tool.oauth ? <p className="mt-1 text-xs text-dim">Sign in from chat before this publishes.</p> : null}
-                      {on
+                      {on && googlePlatformToolId(tool.id)
+                        ? (
+                            <>
+                              <label className="mt-2 flex items-center gap-2 text-xs text-fg">
+                                <input
+                                  type="checkbox"
+                                  checked={ownClient}
+                                  onChange={(e) => setOwnGoogleClient((prev) => ({ ...prev, [tool.id]: e.target.checked }))}
+                                />
+                                Use my own client
+                              </label>
+                              {!ownClient ? <p className="mt-1 text-xs text-dim">{PLATFORM_GOOGLE_LINE}</p> : null}
+                            </>
+                          )
+                        : null}
+                      {on && showGoogleKeys
                         ? toolKeys(tool).map((key) => {
                             const optional = tool.optional.includes(key);
+                            if (googlePlatformToolId(tool.id) && !ownClient && googleOAuthEnvKeys(tool.id).includes(key)) {
+                              return null;
+                            }
                             if (wizardKeyValue(key)) {
                               return (
                                 <div key={key} className="mt-2 flex flex-col gap-1">

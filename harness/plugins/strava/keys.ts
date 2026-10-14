@@ -4,7 +4,7 @@ export const keys: readonly PluginKeyMeta[] = [
   {
     name: "STRAVA_CLIENT_ID",
     label: "Strava client id",
-    help: "OAuth client id from your Strava API application at https://www.strava.com/settings/api.",
+    help: "OAuth client id from your Strava API application at https://www.strava.com/settings/api, where Authorization Callback Domain is the site hostname only.",
     example: "12345",
     where: "https://www.strava.com/settings/api",
     kind: "text",

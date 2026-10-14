@@ -13,9 +13,12 @@ import {
   KEY_PLACEHOLDER_SET,
   missingNeeds,
   oauthLine,
+  stravaCallbackHost,
+  stravaDomainHint,
   ToolsFold,
   withGrant,
 } from "@/app/components/agents/ToolsFold";
+import { PLATFORM_GOOGLE_LINE } from "@/lib/agents/platform";
 import { tomlFromGrants } from "@/lib/agents/mcpToml";
 import type { ApiClient } from "@/app/lib/agentsHttp";
 import type { AgentConfigView, AgentStatus, ToolEntry } from "@/lib/agents/types";
@@ -47,6 +50,7 @@ describe("tool grants", () => {
 });
 
 const GARMIN: ToolEntry = { id: "garmin", binary: "garmin-bin", needs: [], optional: [], oauth: false, homeOnly: false };
+const STRAVA: ToolEntry = { id: "strava", binary: "strava-bin", needs: [], optional: [], oauth: true, homeOnly: false };
 
 function Harness({ client, tools, start, canMutate = true, seen, status = null, onPickKey }: {
   client: ApiClient;
@@ -100,6 +104,21 @@ describe("ToolsFold", () => {
     expect(sent[1]).toBe(tomlFromGrants([], ""));
   });
 
+  it("uses the platform client until Use my own client is checked", async () => {
+    const client: ApiClient = vi.fn(async () => json(200, config({
+      mcp: tomlFromGrants([grantFor(GOOGLE)], ""),
+      envKeys: ["GOOGLE_OWN_CLIENT"],
+    })));
+    render(<Harness client={client} tools={[GOOGLE]} start={config({ mcp: tomlFromGrants([grantFor(GOOGLE)], ""), envKeys: [] })} />);
+    fireEvent.click(screen.getByRole("button", { name: "Tools" }));
+    expect(screen.getByText(PLATFORM_GOOGLE_LINE)).toBeTruthy();
+    expect(screen.queryByRole("form", { name: "Keys for google" })).toBeNull();
+    expect(screen.queryByText("google needs G_SECRET")).toBeNull();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Use my own client" }));
+    await vi.waitFor(() => expect(screen.getByText("google needs G_SECRET")).toBeTruthy());
+    expect(screen.getByRole("form", { name: "Keys for google" })).toBeTruthy();
+  });
+
   it("shows a tool's keys under it when on: missing gets a field, set gets a replace field", async () => {
     const seen: AgentConfigView[] = [];
     const patches: Record<string, string>[] = [];
@@ -107,9 +126,10 @@ describe("ToolsFold", () => {
       await Promise.resolve();
       const body = JSON.parse(textBody(init?.body)) as { env: Record<string, string> };
       patches.push(body.env);
-      return json(200, config({ mcp: tomlFromGrants([grantFor(GOOGLE)], ""), envKeys: ["LLM_API_KEY", "G_ID", ...Object.keys(body.env)], recreate: true }));
+      const envKeys = ["LLM_API_KEY", "G_ID", "GOOGLE_OWN_CLIENT", ...Object.keys(body.env)];
+      return json(200, config({ mcp: tomlFromGrants([grantFor(GOOGLE)], ""), envKeys, recreate: true }));
     });
-    const start = config({ mcp: tomlFromGrants([grantFor(GOOGLE)], ""), envKeys: ["LLM_API_KEY", "G_ID"] });
+    const start = config({ mcp: tomlFromGrants([grantFor(GOOGLE)], ""), envKeys: ["LLM_API_KEY", "G_ID", "GOOGLE_OWN_CLIENT"] });
     render(<Harness client={client} tools={[GOOGLE]} start={start} seen={seen} />);
     fireEvent.click(screen.getByRole("button", { name: "Tools" }));
     expect(screen.getByText("google needs G_SECRET")).toBeTruthy();
@@ -191,6 +211,33 @@ describe("ToolsFold", () => {
       "_blank",
       "noopener,noreferrer",
     ));
+    open.mockRestore();
+  });
+
+  it("tells Strava the callback domain is the hostname, then the host on the authorize URL", async () => {
+    const sent = "https://www.strava.com/oauth/authorize?redirect_uri=" + encodeURIComponent("https://gantree2.bldhosting.com/api/auth/catch");
+    expect(stravaCallbackHost(sent)).toBe("gantree2.bldhosting.com");
+    expect(stravaCallbackHost("https://www.strava.com/oauth/authorize")).toBe("");
+    expect(stravaCallbackHost("not a url")).toBe("");
+    expect(stravaDomainHint("localhost")).toBe("Authorization Callback Domain is the hostname only (localhost).");
+    expect(stravaDomainHint("localhost", "localhost")).toBe(stravaDomainHint("localhost"));
+    expect(stravaDomainHint("localhost", "gantree2.bldhosting.com")).toBe(
+      "Authorization Callback Domain is the hostname only. Strava received gantree2.bldhosting.com.",
+    );
+    expect(stravaDomainHint("")).toBe("Authorization Callback Domain is the hostname only.");
+
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+    const client: ApiClient = vi.fn(async () => {
+      await Promise.resolve();
+      return json(200, { url: sent });
+    });
+    render(<Harness client={client} tools={[STRAVA]} start={config()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Tools" }));
+    expect(screen.getByText(connectChatHint("strava"))).toBeTruthy();
+    expect(screen.getByText(stravaDomainHint(window.location.hostname))).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Connect strava" }));
+    await vi.waitFor(() => expect(screen.getByText(stravaDomainHint(window.location.hostname, "gantree2.bldhosting.com"))).toBeTruthy());
+    expect(open).toHaveBeenCalledWith(sent, "_blank", "noopener,noreferrer");
     open.mockRestore();
   });
 

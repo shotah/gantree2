@@ -106,9 +106,10 @@ Connect button (`POST /api/agents/<agent id>/auth/start`) return the
 provider URL with `state` sealed as an `oauth-catch` JWE
 (agent id and plugin). The catch requires the `gantree_session` cookie
 and an admin or a member of that room, calls `authFinish`, and posts
-`<plugin> connected` into the room. Register exactly
-`https://gantree2.bldhosting.com/api/auth/catch` and
-`http://127.0.0.1:3000/api/auth/catch` (no trailing slash).
+`<plugin> connected` into the room. Google and Google Health
+register exactly `https://gantree2.bldhosting.com/api/auth/catch`
+and `http://127.0.0.1:3000/api/auth/catch` (no trailing slash).
+Strava's Authorization Callback Domain is the hostname only.
 `PUBLIC_ORIGIN` overrides the host. Garmin is email, password, and
 MFA, not this redirect. Detail: [auth.md](auth.md).
 

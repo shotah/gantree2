@@ -18,6 +18,7 @@ import {
   openSettings,
   type AuditEvent,
   type PutOutcome,
+  type PutPlatformSecretsOutcome,
   type PutUserInput,
   type RemoveOutcome,
   type SampleInput,
@@ -89,5 +90,13 @@ export class Settings extends DurableObject {
 
   removeSlugFromOperators(slug: string): Promise<void> {
     return this.#store.removeSlugFromOperators(slug);
+  }
+
+  platformSecrets(): Promise<Record<string, string>> {
+    return this.#store.platformSecrets();
+  }
+
+  putPlatformSecrets(patch: Record<string, string | null>, actor: string): Promise<PutPlatformSecretsOutcome> {
+    return this.#store.putPlatformSecrets(patch, actor);
   }
 }

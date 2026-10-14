@@ -33,6 +33,14 @@ export const SAMPLES_SQL = `CREATE TABLE IF NOT EXISTS samples (
   value REAL
 )`;
 
+export const PLATFORM_SECRET_SQL = `CREATE TABLE IF NOT EXISTS platform_secret (
+  name TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+)`;
+
+const PLATFORM_SECRET_NAMES = new Set(["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]);
+const PLATFORM_SECRET_VALUE_MAX = 2048;
+
 const SLUG = /^[a-z][a-z0-9-]{0,62}$/;
 const SAMPLE_KIND = /^[a-z][a-z0-9_-]{0,63}$/;
 
@@ -92,12 +100,18 @@ export type UserMutations = {
   audit(limit?: number): Promise<AuditEvent[]>;
 };
 
+export type PutPlatformSecretsOutcome
+  = | { ok: true }
+    | { ok: false; error: "bad_key" | "bad_value" };
+
 export type SettingsStore = UserStore & UserMutations & {
   addSample(input: SampleInput): Promise<SampleOutcome>;
   samples(limit?: number): Promise<SampleRow[]>;
   listSamples(query?: SampleQuery): Promise<SampleRow[]>;
   deleteSamplesForAgent(agent: string): Promise<void>;
   removeSlugFromOperators(slug: string): Promise<void>;
+  platformSecrets(): Promise<Record<string, string>>;
+  putPlatformSecrets(patch: Record<string, string | null>, actor: string): Promise<PutPlatformSecretsOutcome>;
 };
 
 export function hasUserMutations(store: UserStore): store is UserStore & UserMutations {
@@ -125,6 +139,7 @@ export function migrate(sql: Sql): void {
   sql.exec(USERS_SQL);
   sql.exec(AUDIT_SQL);
   sql.exec(SAMPLES_SQL);
+  sql.exec(PLATFORM_SECRET_SQL);
 }
 
 export function openSettings(sql: Sql, now: () => number = Date.now): SettingsStore {
@@ -139,7 +154,72 @@ export function openSettings(sql: Sql, now: () => number = Date.now): SettingsSt
     listSamples: (query) => Promise.resolve(querySamples(sql, query ?? {})),
     deleteSamplesForAgent: (agent) => Promise.resolve(deleteSamplesForAgent(sql, agent)),
     removeSlugFromOperators: (slug) => Promise.resolve(removeSlugFromOperators(sql, slug)),
+    platformSecrets: () => Promise.resolve(readPlatformSecrets(sql)),
+    putPlatformSecrets: (patch, actor) => Promise.resolve(writePlatformSecrets(sql, patch, actor, now())),
   };
+}
+
+function platformSecretValueOk(value: string): boolean {
+  if (value.length === 0 || value.length > PLATFORM_SECRET_VALUE_MAX) {
+    return false;
+  }
+  for (let i = 0; i < value.length; i++) {
+    const code = value.charCodeAt(i);
+    if (code <= 0x1f || code === 0x7f) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function readPlatformSecrets(sql: Sql): Record<string, string> {
+  const found = rows(sql, "SELECT name, value FROM platform_secret");
+  const out: Record<string, string> = {};
+  for (const row of found) {
+    const name = asText(row.name);
+    const value = asText(row.value);
+    if (!name || !PLATFORM_SECRET_NAMES.has(name) || !value) {
+      continue;
+    }
+    const trimmed = value.trim();
+    if (trimmed) {
+      out[name] = trimmed;
+    }
+  }
+  return out;
+}
+
+function writePlatformSecrets(
+  sql: Sql,
+  patch: Record<string, string | null>,
+  actor: string,
+  at: number,
+): PutPlatformSecretsOutcome {
+  for (const [key, raw] of Object.entries(patch)) {
+    if (!PLATFORM_SECRET_NAMES.has(key)) {
+      return { ok: false, error: "bad_key" };
+    }
+    if (raw === null || raw === "") {
+      sql.exec("DELETE FROM platform_secret WHERE name = ?", key);
+      insertAudit(sql, at, actor, "platform_secret", { key, action: "cleared" });
+      continue;
+    }
+    if (typeof raw !== "string") {
+      return { ok: false, error: "bad_value" };
+    }
+    const trimmed = raw.trim();
+    if (!platformSecretValueOk(trimmed)) {
+      return { ok: false, error: "bad_value" };
+    }
+    const existing = rows(sql, "SELECT name FROM platform_secret WHERE name = ?", key);
+    if (existing.length > 0) {
+      sql.exec("UPDATE platform_secret SET value = ? WHERE name = ?", trimmed, key);
+    } else {
+      sql.exec("INSERT INTO platform_secret (name, value) VALUES (?, ?)", key, trimmed);
+    }
+    insertAudit(sql, at, actor, "platform_secret", { key, action: "set" });
+  }
+  return { ok: true };
 }
 
 function deleteSamplesForAgent(sql: Sql, agentRaw: string): void {

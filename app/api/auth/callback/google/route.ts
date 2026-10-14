@@ -1,6 +1,7 @@
 import { finishGoogle } from "@/lib/door/http";
-import { doorEnv, userStore } from "@/lib/door/runtime";
+import { doorEnv, platformGoogle, userStore } from "@/lib/door/runtime";
 
-export function GET(request: Request): Promise<Response> {
-  return finishGoogle(request, doorEnv(), userStore());
+export async function GET(request: Request): Promise<Response> {
+  const google = await platformGoogle();
+  return finishGoogle(request, doorEnv(), userStore(), { google });
 }

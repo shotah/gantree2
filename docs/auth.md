@@ -6,18 +6,20 @@ MFA. Nothing listens on your LAN. Pictures:
 [architecture.md](architecture.md). The threat write-up:
 [security.md](security.md).
 
-This is a different Google client from the door. The door's redirect
-is `/api/auth/callback/google` and asks for identity only. The tools
-client asks for the scopes you grant and redirects to the catch below.
+Door sign-in and tool OAuth use one platform Google client (Settings
+or deploy). Register both redirect URIs on that client:
+`/api/auth/callback/google` for the door and `/api/auth/catch` for
+chat Connect and `/auth` flows. They stay separate HTTP requests; only
+the client id is shared.
 
 ---
 
 ## Redirect URIs
 
-Register these on the provider, exactly, with no trailing slash.
-`PUBLIC_ORIGIN` (no path) overrides the host the Worker prints.
-An unusable `PUBLIC_ORIGIN` does not fall through to the request
-origin.
+Google and Google Health register these on the client, exactly, with
+no trailing slash. `PUBLIC_ORIGIN` (no path) overrides the host the
+Worker prints. An unusable `PUBLIC_ORIGIN` does not fall through to
+the request origin.
 
 ```text
 https://gantree2.bldhosting.com/api/auth/catch
@@ -26,6 +28,14 @@ http://127.0.0.1:3000/api/auth/catch
 
 A home box uses its own public origin the same way:
 `https://<host>/api/auth/catch`.
+
+Strava does not register a full redirect URI. The API application
+setting is Authorization Callback Domain: the hostname only
+(`gantree2.bldhosting.com`, or `localhost`). No scheme, no path, no
+comma-separated list. `localhost` and `127.0.0.1` are whitelisted
+for local dev. The redirect we send is still
+`{origin}/api/auth/catch`. Pasting that full URI into the domain
+field makes every authorize call return `redirect_uri` invalid.
 
 Plugin names are the module names: `google`, `strava`,
 `google-health`. Not `ghealth`.

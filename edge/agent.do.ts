@@ -5,6 +5,7 @@ import { bindWorkerFetch } from "@/harness/core/fetch";
 import { doSql, migrate } from "@/harness/core/sql";
 import { ensureConsolidateAttempts, memoryMigrations } from "@/harness/memory/schema";
 import { dropRoomBrain, openRoomBrain } from "@/harness/room";
+import { platformGoogleFor } from "@/lib/door/runtime";
 import { filePersona, openPersonaStore } from "@/harness/room/persona";
 import { openSelfStore } from "@/harness/room/self";
 import { MAX_CHARS, type PersonaStore } from "@/harness/persona";
@@ -1513,6 +1514,7 @@ export class Agent extends DurableObject<AgentEnv> {
           serve: (req: Request) => this.serveOwnChat(req),
         }
       : undefined;
+    const platformGoogle = await platformGoogleFor(this.env);
     const harness = await openRoomBrain(this.ctx, this.env, {
       slug,
       foldLog: (frame) => {
@@ -1523,6 +1525,7 @@ export class Agent extends DurableObject<AgentEnv> {
         sealState: (plugin) => this.sealForSlash(plugin),
       },
       onClock: (at) => this.armAlarm(at),
+      platformGoogle,
       ...(chat ? { chat } : {}),
     });
     const fresh = harness !== this.harness;

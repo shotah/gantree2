@@ -149,12 +149,16 @@ the code to the DO, and `authFinish` stores ciphertext in
 `oauth_token`. The room gets `<plugin> connected`. The code is not
 written to the log. Detail: [auth.md](auth.md).
 
-Register exactly, no trailing slash:
+Google and Google Health register exactly, no trailing slash:
 
 ```text
 https://gantree2.bldhosting.com/api/auth/catch
 http://127.0.0.1:3000/api/auth/catch
 ```
+
+Strava's Authorization Callback Domain is the hostname only
+(`gantree2.bldhosting.com`, or `localhost`). Detail:
+[auth.md](auth.md).
 
 `PUBLIC_ORIGIN` overrides the host.
 
@@ -164,11 +168,10 @@ http://127.0.0.1:3000/api/auth/catch
 | Garmin has no public OAuth. `/auth garmin`, then the emailed code | We do not proxy a vendor login |
 | The privacy policy Google's consent screen points at is `https://github.bldhosting.com/privacy/` | Required for verification; versioned with the code |
 
-This is a different Google OAuth client than the door's. The door's
-redirect is `/api/auth/callback/google` and asks for identity only.
-The tool client asks for the scopes you grant and redirects to the
-catch. Keep them separate in Google Cloud so revoking one does not
-break the other.
+The platform Google OAuth client id and secret live in the Settings
+Durable Object (`platform_secret`); when set there they override the
+Worker deploy vars and secret for door login and for agents that use
+the platform client on Tools.
 
 ---
 

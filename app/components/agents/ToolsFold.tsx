@@ -6,6 +6,12 @@ import { agentsMessage, codeOf, patchConfig, startAuth, type ApiClient } from "@
 import { api } from "@/app/lib/api";
 import { grantsFromToml, tomlFromGrants } from "@/lib/agents/mcpToml";
 import { knownKey } from "@/lib/agents/keys";
+import {
+  googleOwnClientFlag,
+  googlePlatformToolId,
+  PLATFORM_GOOGLE_LINE,
+  usesOwnGoogleClient,
+} from "@/lib/agents/platform";
 import type { AgentConfigView, AgentStatus, Grant, ToolEntry } from "@/lib/agents/types";
 import { alertClass, Fold, inputClass, labelClass, primaryClass, quietClass } from "./Fold";
 
@@ -30,6 +36,9 @@ export function missingNeeds(
     const tool = tools.find((item) => item.id === grant.name);
     const keys = tool?.needs ?? grant.env ?? [];
     for (const key of keys) {
+      if (googlePlatformToolId(grant.name) && !usesOwnGoogleClient(grant.name, envKeys)) {
+        continue;
+      }
       if (!have.has(key)) {
         notes.push(`${grant.name} needs ${key}`);
       }
@@ -65,6 +74,33 @@ export const KEY_PLACEHOLDER_MISSING = "paste the key";
 /** Under Connect: the same login the chat slash command starts. */
 export function connectChatHint(id: string): string {
   return `or type /auth ${id} in chat`;
+}
+
+/** Host on the authorize URL's `redirect_uri`. Empty when that param is missing or not a URL. */
+export function stravaCallbackHost(authorizeUrl: string): string {
+  try {
+    const redirect = new URL(authorizeUrl).searchParams.get("redirect_uri") ?? "";
+    if (redirect === "") {
+      return "";
+    }
+    return new URL(redirect).hostname;
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Strava's API setting is Authorization Callback Domain, hostname only.
+ * `usual` is the page host. `received` is the host Strava was sent, after Connect.
+ */
+export function stravaDomainHint(usual: string, received = ""): string {
+  if (received !== "" && received !== usual) {
+    return `Authorization Callback Domain is the hostname only. Strava received ${received}.`;
+  }
+  if (usual === "") {
+    return "Authorization Callback Domain is the hostname only.";
+  }
+  return `Authorization Callback Domain is the hostname only (${usual}).`;
 }
 
 /**
@@ -192,10 +228,16 @@ export function ToolsFold({
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pageHost, setPageHost] = useState("");
+  const [stravaReceived, setStravaReceived] = useState("");
 
   useEffect(() => {
     setGrants(grantsFromToml(config.mcp));
   }, [config.mcp]);
+
+  useEffect(() => {
+    setPageHost(window.location.hostname);
+  }, []);
 
   async function toggle(tool: ToolEntry, on: boolean) {
     const next = withGrant(grants, tool, on);
@@ -206,6 +248,22 @@ export function ToolsFold({
       onConfig(await patchConfig(slug, { mcp: tomlFromGrants(next, config.mcp) }, client));
     } catch (err) {
       setGrants(grantsFromToml(config.mcp));
+      setError(codeOf(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggleOwnClient(tool: ToolEntry, own: boolean) {
+    const flag = googleOwnClientFlag(tool.id);
+    if (!flag) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      onConfig(await patchConfig(slug, { env: { [flag]: own ? "1" : null } }, client));
+    } catch (err) {
       setError(codeOf(err));
     } finally {
       setBusy(false);
@@ -237,6 +295,9 @@ export function ToolsFold({
     setError(null);
     try {
       const started = await startAuth(slug, tool.id, client);
+      if (tool.id === "strava") {
+        setStravaReceived(stravaCallbackHost(started.url));
+      }
       window.open(started.url, "_blank", "noopener,noreferrer");
     } catch (err) {
       setError(codeOf(err));
@@ -253,7 +314,16 @@ export function ToolsFold({
           const on = grants.some((grant) => grant.name === tool.id);
           const line = tool.oauth ? oauthLine(status, tool.id) : null;
           const have = new Set([...config.envKeys, ...config.house]);
-          const missing = on ? tool.needs.filter((key) => !have.has(key)) : [];
+          const ownClient = usesOwnGoogleClient(tool.id, config.envKeys);
+          const missing = on
+            ? tool.needs.filter((key) => {
+                if (googlePlatformToolId(tool.id) && !ownClient) {
+                  return false;
+                }
+                return !have.has(key);
+              })
+            : [];
+          const showKeyFields = on && toolKeys(tool).length > 0 && (!googlePlatformToolId(tool.id) || ownClient);
           return (
             <li key={tool.id} className="rounded-xl border border-line bg-canvas/40 px-3 py-2">
               <label className="flex items-center gap-2 text-sm text-fg">
@@ -268,6 +338,22 @@ export function ToolsFold({
               <p className="mt-1 text-xs text-dim">{tool.binary}</p>
               {tool.homeOnly ? <p className="text-xs text-dim">Home</p> : null}
               {line ? <p className="text-xs text-dim">{line}</p> : null}
+              {googlePlatformToolId(tool.id)
+                ? (
+                    <>
+                      <label className="mt-2 flex items-center gap-2 text-xs text-fg">
+                        <input
+                          type="checkbox"
+                          checked={ownClient}
+                          disabled={!canMutate || busy}
+                          onChange={() => void toggleOwnClient(tool, !ownClient)}
+                        />
+                        Use my own client
+                      </label>
+                      {!ownClient ? <p className="mt-1 text-xs text-dim">{PLATFORM_GOOGLE_LINE}</p> : null}
+                    </>
+                  )
+                : null}
               {tool.id === "garmin"
                 ? <p className="mt-1 text-xs text-dim">{GARMIN_AUTH_HINT}</p>
                 : null}
@@ -278,6 +364,9 @@ export function ToolsFold({
                         Connect {tool.id}
                       </button>
                       <p className="mt-1 text-xs text-dim">{connectChatHint(tool.id)}</p>
+                      {tool.id === "strava"
+                        ? <p className="mt-1 text-xs text-dim">{stravaDomainHint(pageHost, stravaReceived)}</p>
+                        : null}
                     </>
                   )
                 : null}
@@ -292,7 +381,7 @@ export function ToolsFold({
                   </button>
                 </p>
               ))}
-              {on && toolKeys(tool).length > 0
+              {showKeyFields
                 ? (
                     <KeyFields
                       tool={tool}

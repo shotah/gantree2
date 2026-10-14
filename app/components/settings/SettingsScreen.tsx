@@ -6,6 +6,7 @@ import { FontSelect } from "@/app/components/shared/FontSelect";
 import { chipClass, PageHeader } from "@/app/components/shared/PageHeader";
 import { api } from "@/app/lib/api";
 import { landingCookie, landingPref, readSession, type LandingPref, type SessionView } from "@/lib/door/landing";
+import { PlatformGoogleCard } from "./PlatformGoogleCard";
 import { SpendCard } from "./SpendCard";
 import { ThemeGallery } from "./ThemeGallery";
 
@@ -67,6 +68,7 @@ export function SettingsScreen({ client = api }: { client?: ApiClient }) {
   const [entryOpen, setEntryOpen] = useState(true);
   const [whoOpen, setWhoOpen] = useState(false);
   const [spendOpen, setSpendOpen] = useState(true);
+  const [platformOpen, setPlatformOpen] = useState(false);
 
   useEffect(() => {
     setLanding(landingPref(document.cookie));
@@ -154,9 +156,14 @@ export function SettingsScreen({ client = api }: { client?: ApiClient }) {
 
         {session?.role === "admin"
           ? (
-              <Fold title="Who can be here" open={whoOpen} onOpen={setWhoOpen}>
-                <WhoCard />
-              </Fold>
+              <>
+                <Fold title="Platform" hint="Google" open={platformOpen} onOpen={setPlatformOpen}>
+                  <PlatformGoogleCard client={client} />
+                </Fold>
+                <Fold title="Who can be here" open={whoOpen} onOpen={setWhoOpen}>
+                  <WhoCard />
+                </Fold>
+              </>
             )
           : null}
         {staff

@@ -26,6 +26,9 @@ export const OPENAPI_BASE = {
       name: "users",
     },
     {
+      name: "platform",
+    },
+    {
       name: "agents",
     },
     {
@@ -408,6 +411,60 @@ export const OPENAPI_BASE = {
         properties: {
           user: {
             $ref: "#/components/schemas/UserRow",
+          },
+        },
+      },
+      PlatformGoogle: {
+        type: "object",
+        required: [
+          "clientId",
+          "secretSet",
+          "idFromDeploy",
+          "secretFromDeploy",
+        ],
+        properties: {
+          clientId: {
+            type: "string",
+          },
+          secretSet: {
+            type: "boolean",
+            description: "True when a client secret is set. The secret itself is never returned.",
+          },
+          idFromDeploy: {
+            type: "boolean",
+          },
+          secretFromDeploy: {
+            type: "boolean",
+          },
+        },
+      },
+      PlatformKeys: {
+        type: "object",
+        required: [
+          "google",
+        ],
+        properties: {
+          google: {
+            $ref: "#/components/schemas/PlatformGoogle",
+          },
+        },
+      },
+      PlatformKeysPatch: {
+        type: "object",
+        properties: {
+          clientId: {
+            type: [
+              "string",
+              "null",
+            ],
+            description: "Empty string or null clears the stored client id.",
+          },
+          clientSecret: {
+            type: [
+              "string",
+              "null",
+            ],
+            description: "Empty string or null clears the stored client secret.",
           },
         },
       },
@@ -1977,6 +2034,104 @@ export const OPENAPI_BASE = {
           },
           409: {
             description: "locked",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/Error",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/platform/keys": {
+      get: {
+        tags: [
+          "platform",
+        ],
+        summary: "Platform Google OAuth client",
+        description: "Admin only. Returns the effective client id and whether a secret is set. Never returns the secret. A stored value overrides the Worker binding.",
+        security: [
+          {
+            sessionCookie: [],
+          },
+          {
+            sessionBearer: [],
+          },
+        ],
+        responses: {
+          200: {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/PlatformKeys",
+                },
+              },
+            },
+          },
+          401: {
+            $ref: "#/components/responses/UnauthorizedJson",
+          },
+          403: {
+            $ref: "#/components/responses/ForbiddenJson",
+          },
+        },
+      },
+      patch: {
+        tags: [
+          "platform",
+        ],
+        summary: "Store or clear the platform Google client",
+        description: "Admin only. A non-empty value overrides the Worker binding until cleared. Empty string or null clears that field. The response never includes the secret.",
+        security: [
+          {
+            sessionCookie: [],
+          },
+          {
+            sessionBearer: [],
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/PlatformKeysPatch",
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/PlatformKeys",
+                },
+              },
+            },
+          },
+          400: {
+            description: "bad_json, bad_key, or bad_value",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/Error",
+                },
+              },
+            },
+          },
+          401: {
+            $ref: "#/components/responses/UnauthorizedJson",
+          },
+          403: {
+            $ref: "#/components/responses/ForbiddenJson",
+          },
+          503: {
+            description: "settings_unavailable",
             content: {
               "application/json": {
                 schema: {

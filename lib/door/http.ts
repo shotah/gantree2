@@ -40,10 +40,13 @@ export function loginUrl(url: URL, next: string, error?: string): string {
   return to.toString();
 }
 
+export type EffectiveGoogle = { clientId: string; clientSecret?: string };
+
 /** GET /api/auth/google?next=/x → 302 to Google with state+nonce+PKCE sealed in a short cookie. */
-export async function startGoogle(req: Request, env: DoorEnv): Promise<Response> {
+export async function startGoogle(req: Request, env: DoorEnv, google?: EffectiveGoogle): Promise<Response> {
   const url = new URL(req.url);
-  if (!env.GOOGLE_CLIENT_ID || !env.SESSION_SECRET) {
+  const clientId = google?.clientId?.trim() || env.GOOGLE_CLIENT_ID?.trim();
+  if (!clientId || !env.SESSION_SECRET) {
     return json({ error: "login not configured: GOOGLE_CLIENT_ID and SESSION_SECRET" }, 503);
   }
   const claims = {
@@ -54,7 +57,7 @@ export async function startGoogle(req: Request, env: DoorEnv): Promise<Response>
   };
   const key = await sessionKey(env.SESSION_SECRET);
   const cookie = await sealOAuth(key, claims);
-  const to = await authorizeUrl({ clientId: env.GOOGLE_CLIENT_ID, origin: url.origin, ...claims });
+  const to = await authorizeUrl({ clientId, origin: url.origin, ...claims });
   return new Response(null, {
     status: 302,
     headers: { location: to, "set-cookie": cookieHeader(OAUTH_COOKIE, cookie, url, OAUTH_TTL_S), "cache-control": "no-store" },
@@ -70,14 +73,21 @@ export async function finishGoogle(
   req: Request,
   env: DoorEnv,
   store: UserStore,
-  deps: { fetchFn?: typeof fetch; key?: JWTVerifyGetKey | CryptoKey | Uint8Array; now?: number } = {},
+  deps: {
+    fetchFn?: typeof fetch;
+    key?: JWTVerifyGetKey | CryptoKey | Uint8Array;
+    now?: number;
+    google?: EffectiveGoogle;
+  } = {},
 ): Promise<Response> {
   const url = new URL(req.url);
   const clearOauth = clearCookieHeader(OAUTH_COOKIE, url);
   const bounce = (error: string, next = "/") =>
     new Response(null, { status: 302, headers: { location: loginUrl(url, next, error), "set-cookie": clearOauth, "cache-control": "no-store" } });
 
-  if (!env.GOOGLE_CLIENT_ID || !env.SESSION_SECRET) {
+  const clientId = deps.google?.clientId?.trim() || env.GOOGLE_CLIENT_ID?.trim();
+  const clientSecret = deps.google?.clientSecret?.trim() || env.GOOGLE_CLIENT_SECRET?.trim();
+  if (!clientId || !env.SESSION_SECRET) {
     return bounce("not_configured");
   }
   const key = await sessionKey(env.SESSION_SECRET);
@@ -90,14 +100,20 @@ export async function finishGoogle(
   if (!code || url.searchParams.get("state") !== oauth.state) {
     return bounce("state", oauth.next);
   }
-  const token = await exchangeCode({ env, origin: url.origin, code, verifier: oauth.verifier, fetchFn: deps.fetchFn });
+  const token = await exchangeCode({
+    env: { GOOGLE_CLIENT_ID: clientId, GOOGLE_CLIENT_SECRET: clientSecret },
+    origin: url.origin,
+    code,
+    verifier: oauth.verifier,
+    fetchFn: deps.fetchFn,
+  });
   if (!token.ok) {
     // Status only, never the body: "token endpoint 401" is Google refusing
     // the client secret; "google client not configured" is a missing var.
     console.warn("door: google token exchange failed:", token.error);
     return bounce("exchange", oauth.next);
   }
-  const verified = await verifyIdToken({ idToken: token.idToken, clientId: env.GOOGLE_CLIENT_ID, nonce: oauth.nonce, key: deps.key, now: deps.now });
+  const verified = await verifyIdToken({ idToken: token.idToken, clientId, nonce: oauth.nonce, key: deps.key, now: deps.now });
   if (!verified.ok) {
     return bounce("token", oauth.next);
   }

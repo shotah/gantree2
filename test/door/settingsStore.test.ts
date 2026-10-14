@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { canRunAgent, resolveUser } from "@/lib/door/users";
 import {
   AUDIT_SQL,
+  PLATFORM_SECRET_SQL,
   SAMPLES_SQL,
   USERS_SQL,
   asSql,
@@ -20,11 +21,12 @@ describe("schema", () => {
     expect(USERS_SQL).toContain("agents TEXT /*json array*/");
     expect(AUDIT_SQL).toContain("id INTEGER PRIMARY KEY");
     expect(SAMPLES_SQL).toContain("value REAL");
+    expect(PLATFORM_SECRET_SQL).toContain("platform_secret");
     const sql = memorySql();
     openSettings(sql);
     openSettings(sql);
     const names = sql.exec("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").toArray();
-    expect(names.map((row) => row.name)).toEqual(["audit", "samples", "users"]);
+    expect(names.map((row) => row.name)).toEqual(["audit", "platform_secret", "samples", "users"]);
   });
 });
 
@@ -247,5 +249,27 @@ describe("openSettings", () => {
       { id: 3, at: 300, agent: "kit", kind: "tokens_completion", value: 2 },
     ]);
     expect(await store.listSamples()).toHaveLength(3);
+  });
+});
+
+describe("platform secrets", () => {
+  it("stores, reads, clears, and audits without secret values", async () => {
+    const sql = memorySql();
+    const store = openSettings(sql);
+    expect(await store.platformSecrets()).toEqual({});
+    expect(await store.putPlatformSecrets({ GOOGLE_CLIENT_ID: "  id  ", GOOGLE_CLIENT_SECRET: "sec" }, "actor")).toEqual({ ok: true });
+    expect(await store.platformSecrets()).toEqual({ GOOGLE_CLIENT_ID: "id", GOOGLE_CLIENT_SECRET: "sec" });
+    expect(await store.putPlatformSecrets({ GOOGLE_CLIENT_SECRET: null }, "actor")).toEqual({ ok: true });
+    expect(await store.platformSecrets()).toEqual({ GOOGLE_CLIENT_ID: "id" });
+    expect(await store.putPlatformSecrets({ BAD: "x" }, "actor")).toEqual({ ok: false, error: "bad_key" });
+    const events = await store.audit(10);
+    const platform = events.filter((event) => event.action === "platform_secret");
+    expect(platform.length).toBeGreaterThan(0);
+    for (const event of platform) {
+      expect(event.detail).not.toContain("sec");
+      const detail = JSON.parse(event.detail) as { key?: string; action?: string };
+      expect(detail.key).toEqual(expect.any(String));
+      expect(detail.action).toMatch(/set|cleared/);
+    }
   });
 });

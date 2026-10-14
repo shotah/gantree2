@@ -1,6 +1,7 @@
 import { authToken } from "@/lib/door/native";
-import { doorEnv, userStore } from "@/lib/door/runtime";
+import { doorEnv, platformGoogle, userStore } from "@/lib/door/runtime";
 
-export function POST(request: Request): Promise<Response> {
-  return authToken(request, doorEnv(), userStore());
+export async function POST(request: Request): Promise<Response> {
+  const google = await platformGoogle();
+  return authToken(request, doorEnv(), userStore(), { google });
 }

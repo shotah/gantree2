@@ -6,7 +6,7 @@ import type { JWTVerifyGetKey } from "jose";
 import { PACKAGE_VERSION } from "@/app/lib/release";
 import { readTts, voiceOffered, type TtsEnv } from "@/lib/tts/http";
 import { verifyIdToken } from "./google";
-import { json, type DoorEnv } from "./http";
+import { json, type DoorEnv, type EffectiveGoogle } from "./http";
 import { isLoopback, openNonce, sealNonce, sealSession, SESSION_TTL_S, sessionKey } from "./session";
 import { resolveUser, type UserStore } from "./users";
 
@@ -16,8 +16,9 @@ function voiceUsable(env: TtsEnv): boolean {
 }
 
 /** GET /api/auth/config — public. Phones read this before showing Google. */
-export function authConfig(req: Request, env: DoorEnv & TtsEnv): Response {
-  const google = Boolean(env.GOOGLE_CLIENT_ID && env.SESSION_SECRET);
+export function authConfig(req: Request, env: DoorEnv & TtsEnv, googleClient?: EffectiveGoogle): Response {
+  const clientId = googleClient?.clientId?.trim() || env.GOOGLE_CLIENT_ID?.trim();
+  const google = Boolean(clientId && env.SESSION_SECRET);
   return json({
     mode: google ? "google" : "spike",
     google,
@@ -36,7 +37,7 @@ export async function authNonce(env: DoorEnv): Promise<Response> {
   return json({ nonce });
 }
 
-type TokenDeps = { key?: JWTVerifyGetKey | CryptoKey | Uint8Array; now?: number };
+type TokenDeps = { key?: JWTVerifyGetKey | CryptoKey | Uint8Array; now?: number; google?: EffectiveGoogle };
 
 async function readJson(req: Request): Promise<Record<string, unknown> | null> {
   try {
@@ -71,7 +72,8 @@ export async function authToken(req: Request, env: DoorEnv, store: UserStore, de
   if (!fields) {
     return json({ error: "bad_request" }, 400);
   }
-  if (!env.GOOGLE_CLIENT_ID || !env.SESSION_SECRET) {
+  const clientId = deps.google?.clientId?.trim() || env.GOOGLE_CLIENT_ID?.trim();
+  if (!clientId || !env.SESSION_SECRET) {
     return json({ error: "not_configured" }, 503);
   }
   const now = deps.now ?? Date.now();
@@ -85,7 +87,7 @@ export async function authToken(req: Request, env: DoorEnv, store: UserStore, de
   // `serverClientId` / `GIDServerClientID`, so Google sets `aud` to GOOGLE_CLIENT_ID.
   const verified = await verifyIdToken({
     idToken: fields.idToken,
-    clientId: env.GOOGLE_CLIENT_ID,
+    clientId,
     nonce: fields.nonce,
     key: deps.key,
     now,
