@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState, type SubmitEvent } from "react";
+import { useEffect, useState, type ReactNode, type SubmitEvent } from "react";
 import { chipClass } from "@/app/components/shared/PageHeader";
 import { agentsMessage, codeOf, patchConfig, startAuth, type ApiClient } from "@/app/lib/agentsHttp";
 import { api } from "@/app/lib/api";
@@ -124,30 +124,28 @@ export function oauthLine(status: AgentStatus | null | undefined, id: string): "
   return null;
 }
 
-function KeyAbout({ name, line }: { name: string; line: string }) {
-  const [open, setOpen] = useState(false);
-  const hintId = useId();
-  return (
-    <>
-      <button
-        type="button"
-        title={line}
-        aria-label={`About ${name}`}
-        aria-expanded={open}
-        aria-controls={hintId}
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
-        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-line text-dim hover:text-fg focus:border-accent-line focus:outline-none"
-      >
-        <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="currentColor" aria-hidden>
-          <path d="M10 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16Zm0 3.6a1.15 1.15 0 1 1 0 2.3 1.15 1.15 0 0 1 0-2.3ZM9 9.1h2V15H9V9.1Z" />
-        </svg>
-      </button>
-      {open ? <p id={hintId} className="basis-full text-xs text-dim">{line}</p> : null}
-    </>
-  );
+/** Addresses in helper copy become links. A trailing period or comma stays outside the link. */
+export function linkifyHelp(text: string): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  const re = /https:\/\/[^\s]+/g;
+  let last = 0;
+  for (const match of text.matchAll(re)) {
+    const start = match.index ?? 0;
+    const url = match[0].replace(/[.,;:)]+$/, "");
+    if (start > last) {
+      nodes.push(text.slice(last, start));
+    }
+    nodes.push(
+      <a key={start} href={url} target="_blank" rel="noopener noreferrer" className="underline decoration-dim/40 underline-offset-2">
+        {url}
+      </a>,
+    );
+    last = start + url.length;
+  }
+  if (last < text.length) {
+    nodes.push(text.slice(last));
+  }
+  return nodes;
 }
 
 function KeyFields({
@@ -197,15 +195,13 @@ function KeyFields({
           : (set ? "border-ok/40 bg-ok/10 text-ok" : "border-danger-line bg-danger-soft text-danger");
         return (
           <div key={key} className="flex flex-col gap-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <label htmlFor={id} className={labelClass}>
-                <span className="font-mono text-body">{key}</span>
-              </label>
-              {meta ? <KeyAbout name={key} line={keyHint(meta)} /> : null}
+            <label htmlFor={id} className={`${labelClass} flex items-center gap-2`}>
+              <span className="font-mono text-body">{key}</span>
               <span className={`${chipClass} ${chipClassName}`}>
                 {chip}
               </span>
-            </div>
+            </label>
+            {meta ? <p className="text-xs text-dim">{linkifyHelp(keyHint(meta))}</p> : null}
             <input
               id={id}
               type={inputType}

@@ -255,11 +255,11 @@ describe("ToolsFold", () => {
     expect(names.length).toBeGreaterThan(0);
     for (const name of names) {
       const meta = knownKey(name);
-      const about = screen.getByRole("button", { name: `About ${name}` });
-      expect(about.getAttribute("title"), name).toBe(meta ? keyHint(meta) : "");
+      const line = meta ? keyHint(meta) : "";
+      expect(screen.getByText((_, node) => node?.tagName === "P" && node.textContent === line), name).toBeTruthy();
       expect(meta?.where.startsWith("https://"), name).toBe(true);
     }
-    expect(screen.queryByRole("button", { name: "About math" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /About / })).toBeNull();
   });
 
   it("explains where to get the flights and rentals keys", () => {
@@ -285,15 +285,13 @@ describe("ToolsFold", () => {
     });
     render(<Harness client={vi.fn()} tools={[flights, rentals]} start={start} />);
     fireEvent.click(screen.getByRole("button", { name: "Tools" }));
-    const flightsAbout = screen.getByRole("button", { name: "About SERPAPI_API_KEY" });
-    const rentalsAbout = screen.getByRole("button", { name: "About RENTCAST_API_KEY" });
-    expect(flightsAbout.getAttribute("title")).toContain("https://serpapi.com/manage-api-key");
-    expect(rentalsAbout.getAttribute("title")).toContain("https://app.rentcast.io/app/api");
-    expect(rentalsAbout.getAttribute("title")).toContain("Create API key");
-    fireEvent.focus(flightsAbout);
+    const flightsLink = screen.getByRole("link", { name: "https://serpapi.com/manage-api-key" });
+    const rentalsLink = screen.getByRole("link", { name: "https://app.rentcast.io/app/api" });
+    expect(flightsLink.getAttribute("href")).toBe("https://serpapi.com/manage-api-key");
+    expect(rentalsLink.getAttribute("href")).toBe("https://app.rentcast.io/app/api");
     expect(screen.getByText(/copy the private API key/)).toBeTruthy();
-    fireEvent.mouseEnter(rentalsAbout);
-    expect(screen.getByText(/free developer plan/)).toBeTruthy();
+    expect(screen.getByText(/Create API key/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /About / })).toBeNull();
   });
 
   it("links a missing catalog key so Keys can preselect it", () => {
