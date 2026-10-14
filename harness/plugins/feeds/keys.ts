@@ -5,7 +5,7 @@ export const keys: readonly PluginKeyMeta[] = [
   {
     name: "FEEDS_USER_AGENT",
     label: "Feed user agent",
-    help: "Optional User-Agent for feed fetches; leave it unset and feeds send the default gantree contact string.",
+    help: "Optional. Leave it unset and feeds send the default gantree contact string. Set one only if a site blocks that default.",
     example: "gantree/... (+https://gantree2.bldhosting.com)",
     where: "https://gantree2.bldhosting.com",
     optional: true,

@@ -7,6 +7,7 @@ import { keys as feedsKeys } from "@/harness/plugins/feeds/keys";
 import { keys as flightsKeys } from "@/harness/plugins/flights/keys";
 import { keys as garminKeys } from "@/harness/plugins/garmin/keys";
 import { keys as googleKeys } from "@/harness/plugins/google/keys";
+import { keys as imageKeys } from "@/harness/plugins/image/keys";
 import { keys as googleHealthKeys } from "@/harness/plugins/google-health/keys";
 import { keys as mapsKeys } from "@/harness/plugins/maps/keys";
 import { keys as websearchKeys } from "@/harness/plugins/websearch/keys";
@@ -72,6 +73,7 @@ export const KNOWN_KEYS: readonly KnownKey[] = [
   ...tagged("feeds", feedsKeys),
   ...tagged("websearch", websearchKeys),
   ...tagged("twitter", twitterKeys),
+  ...tagged("image", imageKeys),
   ...tagged("strava", stravaKeys),
   ...tagged("maps", mapsKeys),
   ...tagged("flights", flightsKeys),

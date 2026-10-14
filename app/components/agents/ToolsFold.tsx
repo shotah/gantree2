@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, type SubmitEvent } from "react";
+import { useEffect, useId, useState, type SubmitEvent } from "react";
 import { chipClass } from "@/app/components/shared/PageHeader";
 import { agentsMessage, codeOf, patchConfig, startAuth, type ApiClient } from "@/app/lib/agentsHttp";
 import { api } from "@/app/lib/api";
 import { grantsFromToml, tomlFromGrants } from "@/lib/agents/mcpToml";
-import { knownKey } from "@/lib/agents/keys";
+import { keyHint, knownKey } from "@/lib/agents/keys";
 import {
   googleOwnClientFlag,
   googlePlatformToolId,
@@ -124,6 +124,32 @@ export function oauthLine(status: AgentStatus | null | undefined, id: string): "
   return null;
 }
 
+function KeyAbout({ name, line }: { name: string; line: string }) {
+  const [open, setOpen] = useState(false);
+  const hintId = useId();
+  return (
+    <>
+      <button
+        type="button"
+        title={line}
+        aria-label={`About ${name}`}
+        aria-expanded={open}
+        aria-controls={hintId}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-line text-dim hover:text-fg focus:border-accent-line focus:outline-none"
+      >
+        <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="currentColor" aria-hidden>
+          <path d="M10 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16Zm0 3.6a1.15 1.15 0 1 1 0 2.3 1.15 1.15 0 0 1 0-2.3ZM9 9.1h2V15H9V9.1Z" />
+        </svg>
+      </button>
+      {open ? <p id={hintId} className="basis-full text-xs text-dim">{line}</p> : null}
+    </>
+  );
+}
+
 function KeyFields({
   tool,
   envKeys,
@@ -161,7 +187,8 @@ function KeyFields({
         const id = `tool-${tool.id}-${key}`;
         const set = have.has(key);
         const optional = tool.optional.includes(key);
-        const inputType = knownKey(key)?.kind === "text" ? "text" : "password";
+        const meta = knownKey(key);
+        const inputType = meta?.kind === "text" ? "text" : "password";
         const chip = optional
           ? (set ? "set" : "default")
           : (set ? "set" : "missing");
@@ -170,12 +197,15 @@ function KeyFields({
           : (set ? "border-ok/40 bg-ok/10 text-ok" : "border-danger-line bg-danger-soft text-danger");
         return (
           <div key={key} className="flex flex-col gap-1">
-            <label htmlFor={id} className={`${labelClass} flex items-center gap-2`}>
-              <span className="font-mono text-body">{key}</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <label htmlFor={id} className={labelClass}>
+                <span className="font-mono text-body">{key}</span>
+              </label>
+              {meta ? <KeyAbout name={key} line={keyHint(meta)} /> : null}
               <span className={`${chipClass} ${chipClassName}`}>
                 {chip}
               </span>
-            </label>
+            </div>
             <input
               id={id}
               type={inputType}

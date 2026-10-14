@@ -4,7 +4,7 @@ export const keys: readonly PluginKeyMeta[] = [
   {
     name: "GARMIN_EMAIL",
     label: "Garmin email",
-    help: "Garmin Connect sign-in email for the account at https://connect.garmin.com/.",
+    help: "The email you use to sign in at https://connect.garmin.com/. Garmin has no separate API key.",
     example: "you@example.com",
     where: "https://connect.garmin.com/",
     kind: "text",
@@ -12,7 +12,7 @@ export const keys: readonly PluginKeyMeta[] = [
   {
     name: "GARMIN_PASSWORD",
     label: "Garmin password",
-    help: "Garmin Connect password for that email; sign in at https://connect.garmin.com/.",
+    help: "The password for that Garmin Connect account. If sign-in asks for a code, finish in chat with /auth garmin and the code.",
     example: "••••••••",
     where: "https://connect.garmin.com/",
     kind: "secret",

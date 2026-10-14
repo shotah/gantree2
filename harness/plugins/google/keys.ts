@@ -4,7 +4,7 @@ export const keys: readonly PluginKeyMeta[] = [
   {
     name: "GOOGLE_OAUTH_CLIENT_ID",
     label: "Google client id",
-    help: "OAuth client id for Gmail, Calendar, and Drive, from https://console.cloud.google.com/apis/credentials.",
+    help: "Create a Web application OAuth client at https://console.cloud.google.com/apis/credentials and add this site's /api/auth/catch as an authorized redirect URI.",
     example: "123-abc.apps.googleusercontent.com",
     where: "https://console.cloud.google.com/apis/credentials",
     kind: "text",
@@ -12,7 +12,7 @@ export const keys: readonly PluginKeyMeta[] = [
   {
     name: "GOOGLE_OAUTH_CLIENT_SECRET",
     label: "Google client secret",
-    help: "OAuth client secret paired with the Google client id, from https://console.cloud.google.com/apis/credentials.",
+    help: "Client secret for that same OAuth client, from https://console.cloud.google.com/apis/credentials.",
     example: "GOCSPX-...",
     where: "https://console.cloud.google.com/apis/credentials",
     kind: "secret",

@@ -137,7 +137,7 @@ describe("SecretsFold", () => {
     const about = screen.getByRole("button", { name: "About X_BEARER_TOKEN" });
     expect(about.getAttribute("title")).toContain("AAAA...");
     fireEvent.focus(about);
-    expect(screen.getByText(/App-only bearer/)).toBeTruthy();
+    expect(screen.getByText(/generate a Bearer Token/)).toBeTruthy();
 
     fireEvent.change(select, { target: { value: "LLM_BASE_URL" } });
     const key = inputOf(screen.getByLabelText("Key"));

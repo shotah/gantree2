@@ -4,9 +4,9 @@ export const keys: readonly PluginKeyMeta[] = [
   {
     name: "RENTCAST_API_KEY",
     label: "RentCast API key",
-    help: "API key for US rental listings, from a RentCast account at https://www.rentcast.io/api.",
+    help: "Sign in at https://app.rentcast.io/app/api, pick a plan, and click Create API key. A free developer plan includes a small monthly quota.",
     example: "rc_...",
-    where: "https://www.rentcast.io/api",
+    where: "https://app.rentcast.io/app/api",
     kind: "secret",
   },
 ];

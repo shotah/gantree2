@@ -4,7 +4,7 @@ export const keys: readonly PluginKeyMeta[] = [
   {
     name: "GOOGLE_MAPS_API_KEY",
     label: "Maps API key",
-    help: "Maps Platform key with Places and Directions enabled, from https://console.cloud.google.com/google/maps-apis/credentials.",
+    help: "In Google Cloud, enable Places API and Directions API, then create a key at https://console.cloud.google.com/google/maps-apis/credentials.",
     example: "AIza...",
     where: "https://console.cloud.google.com/google/maps-apis/credentials",
     kind: "secret",

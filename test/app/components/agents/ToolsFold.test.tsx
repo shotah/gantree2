@@ -18,6 +18,8 @@ import {
   ToolsFold,
   withGrant,
 } from "@/app/components/agents/ToolsFold";
+import { toolCatalog } from "@/lib/agents/catalog";
+import { keyHint, knownKey } from "@/lib/agents/keys";
 import { PLATFORM_GOOGLE_LINE } from "@/lib/agents/platform";
 import { tomlFromGrants } from "@/lib/agents/mcpToml";
 import type { ApiClient } from "@/app/lib/agentsHttp";
@@ -239,6 +241,59 @@ describe("ToolsFold", () => {
     await vi.waitFor(() => expect(screen.getByText(stravaDomainHint(window.location.hostname, "gantree2.bldhosting.com"))).toBeTruthy());
     expect(open).toHaveBeenCalledWith(sent, "_blank", "noopener,noreferrer");
     open.mockRestore();
+  });
+
+  it("explains where to get every tool key", () => {
+    const tools = toolCatalog().filter((tool) => tool.needs.length > 0 || tool.optional.length > 0);
+    const start = config({
+      mcp: tomlFromGrants(tools.map(grantFor), ""),
+      envKeys: ["GOOGLE_OWN_CLIENT", "GOOGLE_HEALTH_OWN_CLIENT"],
+    });
+    render(<Harness client={vi.fn()} tools={tools} start={start} />);
+    fireEvent.click(screen.getByRole("button", { name: "Tools" }));
+    const names = tools.flatMap((tool) => [...tool.needs, ...tool.optional]);
+    expect(names.length).toBeGreaterThan(0);
+    for (const name of names) {
+      const meta = knownKey(name);
+      const about = screen.getByRole("button", { name: `About ${name}` });
+      expect(about.getAttribute("title"), name).toBe(meta ? keyHint(meta) : "");
+      expect(meta?.where.startsWith("https://"), name).toBe(true);
+    }
+    expect(screen.queryByRole("button", { name: "About math" })).toBeNull();
+  });
+
+  it("explains where to get the flights and rentals keys", () => {
+    const flights: ToolEntry = {
+      id: "flights",
+      binary: "flights-search-mcp",
+      needs: ["SERPAPI_API_KEY"],
+      optional: [],
+      oauth: false,
+      homeOnly: false,
+    };
+    const rentals: ToolEntry = {
+      id: "rentals",
+      binary: "rentals-search-mcp",
+      needs: ["RENTCAST_API_KEY"],
+      optional: [],
+      oauth: false,
+      homeOnly: false,
+    };
+    const start = config({
+      mcp: tomlFromGrants([grantFor(flights), grantFor(rentals)], ""),
+      envKeys: ["SERPAPI_API_KEY", "RENTCAST_API_KEY"],
+    });
+    render(<Harness client={vi.fn()} tools={[flights, rentals]} start={start} />);
+    fireEvent.click(screen.getByRole("button", { name: "Tools" }));
+    const flightsAbout = screen.getByRole("button", { name: "About SERPAPI_API_KEY" });
+    const rentalsAbout = screen.getByRole("button", { name: "About RENTCAST_API_KEY" });
+    expect(flightsAbout.getAttribute("title")).toContain("https://serpapi.com/manage-api-key");
+    expect(rentalsAbout.getAttribute("title")).toContain("https://app.rentcast.io/app/api");
+    expect(rentalsAbout.getAttribute("title")).toContain("Create API key");
+    fireEvent.focus(flightsAbout);
+    expect(screen.getByText(/copy the private API key/)).toBeTruthy();
+    fireEvent.mouseEnter(rentalsAbout);
+    expect(screen.getByText(/free developer plan/)).toBeTruthy();
   });
 
   it("links a missing catalog key so Keys can preselect it", () => {

@@ -3,6 +3,7 @@ import { keys as feedsKeys } from "@/harness/plugins/feeds";
 import { keys as flightsKeys } from "@/harness/plugins/flights";
 import { keys as garminKeys } from "@/harness/plugins/garmin";
 import { keys as googleKeys } from "@/harness/plugins/google";
+import { keys as imageKeys } from "@/harness/plugins/image";
 import { keys as googleHealthKeys } from "@/harness/plugins/google-health";
 import { keys as mapsKeys } from "@/harness/plugins/maps";
 import { keys as websearchKeys } from "@/harness/plugins/websearch/keys";
@@ -17,6 +18,7 @@ const exported = [
   ["feeds", feedsKeys],
   ["websearch", websearchKeys],
   ["twitter", twitterKeys],
+  ["image", imageKeys],
   ["strava", stravaKeys],
   ["maps", mapsKeys],
   ["flights", flightsKeys],
@@ -47,6 +49,7 @@ describe("KNOWN_KEYS", () => {
     }
     expect(toolCatalog().find((tool) => tool.id === "feeds")?.needs).toEqual([]);
     expect(KNOWN_KEYS.find((key) => key.name === "FEEDS_USER_AGENT")?.optional).toBe(true);
+    expect(KNOWN_KEYS.find((key) => key.name === "IMAGE_API_KEY")?.optional).toBe(true);
     expect(KNOWN_KEYS.find((key) => key.name === "GARMIN_TOOL_TIER")?.optional).toBe(true);
     expect(KNOWN_KEYS.find((key) => key.name === "GOOGLE_TOOL_PRESET")?.optional).toBe(true);
     for (const key of KNOWN_KEYS) {
