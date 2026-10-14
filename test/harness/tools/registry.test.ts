@@ -118,6 +118,18 @@ describe("publish", () => {
     expect(registry.toolCount()).toBe(1);
   });
 
+  it("publishes bare plugin tools without a prefix", async () => {
+    const barePlugin: Plugin = {
+      name: "websearch",
+      bare: true,
+      ready: () => Promise.resolve(null),
+      tools: () => [echoTool("web_search")],
+    };
+    const { registry } = await start([barePlugin]);
+    expect(names(registry.list())).toEqual(["web_search"]);
+    expect(names(registry.list())).not.toContain("websearch__web_search");
+  });
+
   it("qualifies tool names and fills a missing schema", async () => {
     const bare: Tool = {
       name: "gmail.search",

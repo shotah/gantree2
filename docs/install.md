@@ -89,11 +89,12 @@ socket. The harness is the Agent Durable Object that deploy ships.
 
 House keys the harness reads from `.dev.vars` (and, in production, from
 Worker secrets): `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, and
-optionally `BRAVE_SEARCH_API_KEY`. An agent's own `config.env` wins
+optionally `SEARCH_API_KEY` and `SEARCH_PROVIDER`. An agent's own `config.env` wins
 when the same name is set on both. Other keys live on the agent. Feeds
 publish with no key; `FEEDS_USER_AGENT` only overrides the User-Agent,
 which defaults to `gantree/<version> (+https://gantree2.bldhosting.com)`.
-The Keys fold suggests every row below. Register the catch URIs in
+The Keys fold suggests every row below (search keys are listed once under
+`websearch`; the Worker may still set them as house secrets). Register the catch URIs in
 [auth.md](auth.md). `CRON_TZ`, `DAILY_PLANNER_AT`,
 `MEMORY_CONSOLIDATE_MINUTES`, `DYNAMIC_TOOLS`, `MCP_ENABLE_FORCE`, and
 `PUBLIC_ORIGIN` are harness knobs. `PUBLIC_ORIGIN` is the catch host,
@@ -104,8 +105,9 @@ with no path.
 | house | `LLM_BASE_URL` | yes, house or agent |
 | house | `LLM_API_KEY` | yes, house or agent |
 | house | `LLM_MODEL` | yes, house or agent |
-| house | `BRAVE_SEARCH_API_KEY` | no |
 | feeds | `FEEDS_USER_AGENT` | no |
+| websearch | `SEARCH_API_KEY` | yes |
+| websearch | `SEARCH_PROVIDER` | no — blank means brave |
 | twitter | `X_BEARER_TOKEN` | yes |
 | strava | `STRAVA_CLIENT_ID` | yes |
 | strava | `STRAVA_CLIENT_SECRET` | yes |
@@ -183,11 +185,11 @@ auth values (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
 
 **Not in GitHub.** The house keys that let a new agent run with no
 keys of its own (`LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`,
-`BRAVE_SEARCH_API_KEY`) are Worker secrets, set once from a laptop
+`SEARCH_API_KEY`, `SEARCH_PROVIDER`) are Worker secrets, set once from a laptop
 with the same Cloudflare token:
 
 ```bash
-npx wrangler secret put LLM_BASE_URL     # and LLM_API_KEY, LLM_MODEL, BRAVE_SEARCH_API_KEY
+npx wrangler secret put LLM_BASE_URL     # and LLM_API_KEY, LLM_MODEL, SEARCH_API_KEY
 ```
 
 Never set in production: `GANTREE_DEV_USER` (loopback dev door) and

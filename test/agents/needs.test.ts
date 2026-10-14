@@ -3,10 +3,10 @@ import { missingKeys } from "@/lib/agents/needs";
 import type { Grant, ToolEntry } from "@/lib/agents/types";
 
 const catalog: ToolEntry[] = [
-  { id: "maps", binary: "google-maps-mcp", needs: ["GOOGLE_MAPS_API_KEY"], oauth: false, homeOnly: false },
-  { id: "google", binary: "google-mcp", needs: ["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"], oauth: true, homeOnly: false },
-  { id: "math", binary: "mcp-go-math", needs: [], oauth: false, homeOnly: false },
-  { id: "image", binary: "image-generation-mcp", needs: ["IMAGE_API_KEY", "IMAGE_MODEL"], oauth: false, homeOnly: false },
+  { id: "maps", binary: "google-maps-mcp", needs: ["GOOGLE_MAPS_API_KEY"], optional: [], oauth: false, homeOnly: false },
+  { id: "google", binary: "google-mcp", needs: ["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"], optional: [], oauth: true, homeOnly: false },
+  { id: "math", binary: "mcp-go-math", needs: [], optional: [], oauth: false, homeOnly: false },
+  { id: "image", binary: "image-generation-mcp", needs: ["IMAGE_API_KEY", "IMAGE_MODEL"], optional: [], oauth: false, homeOnly: false },
 ];
 
 describe("missingKeys", () => {

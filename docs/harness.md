@@ -235,7 +235,8 @@ SQLite are the names those packages used.
 | `memory` | `harness/memory` | 1 |
 | `aims` | `harness/aims` | 1 |
 | `cron`, `examples` | `harness/cron`, `harness/examples` | 1 |
-| `watch`, `websearch` | `harness/watch`, `harness/websearch` | 1 |
+| `watch` | `harness/watch` | 1 |
+| `websearch` | `harness/plugins/websearch` | 1 |
 | `mcp` host and `mcpenable` enable rules | `harness/tools` | 1 |
 | `harness/mcp/<name>`, twelve servers | `harness/plugins/<name>` | 1 |
 | `agent` (the loop) | `harness/agent` | 2 |
@@ -273,9 +274,9 @@ check is the comparison the eval already runs: published tools
 against the host-manifest. `mcpenable`'s rules move here. Its process
 supervision does not.
 
-The twelve plugins, under the names they have today: `chat`, `feeds`,
-`flights`, `garmin`, `google`, `google-health`, `image`, `maps`,
-`math`, `rentals`, `strava`, `twitter`.
+The thirteen plugins, under the names they have today: `chat`, `feeds`,
+`math`, `websearch`, `twitter`, `image`, `strava`, `maps`, `flights`,
+`rentals`, `google-health`, `google`, `garmin`.
 
 These do not get a TypeScript folder:
 

@@ -41,4 +41,5 @@ VAPID_SUBJECT=mailto:you@example.com
 # LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
 # LLM_API_KEY=
 # LLM_MODEL=gemini-3.8-flash
-# BRAVE_SEARCH_API_KEY=
+# SEARCH_API_KEY=
+# SEARCH_PROVIDER=brave

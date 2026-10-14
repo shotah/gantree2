@@ -41,8 +41,10 @@ Required for a talking agent:
 | `LLM_API_KEY` | Provider key |
 | `LLM_MODEL` | Model id |
 
-House copies of those three, plus `BRAVE_SEARCH_API_KEY`, live on the
-Worker. An agent's `config.env` wins when the same name is set on both.
+House copies of those three live on the Worker. The same Worker env may
+also carry `SEARCH_API_KEY` and optional `SEARCH_PROVIDER` for every
+agent (`HOUSE_KEYS`); the Keys fold explains them under the `websearch`
+plugin. An agent's `config.env` wins when the same name is set on both.
 
 Plugin keys (`GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`,
 `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET`, `GARMIN_EMAIL` /

@@ -9,6 +9,7 @@ import { keys as garminKeys } from "@/harness/plugins/garmin/keys";
 import { keys as googleKeys } from "@/harness/plugins/google/keys";
 import { keys as googleHealthKeys } from "@/harness/plugins/google-health/keys";
 import { keys as mapsKeys } from "@/harness/plugins/maps/keys";
+import { keys as websearchKeys } from "@/harness/plugins/websearch/keys";
 import { keys as rentalsKeys } from "@/harness/plugins/rentals/keys";
 import { keys as stravaKeys } from "@/harness/plugins/strava/keys";
 import { keys as twitterKeys } from "@/harness/plugins/twitter/keys";
@@ -59,15 +60,6 @@ const houseMeta: readonly PluginKeyMeta[] = [
     where: "https://ai.google.dev/gemini-api/docs/models",
     kind: "text",
   },
-  {
-    name: "BRAVE_SEARCH_API_KEY",
-    label: "Brave Search key",
-    help: "API key for web search, from the Brave Search API dashboard at https://api.search.brave.com/app/keys.",
-    example: "BSA...",
-    where: "https://api.search.brave.com/app/keys",
-    optional: true,
-    kind: "secret",
-  },
 ];
 
 function tagged(plugin: string, list: readonly PluginKeyMeta[]): KnownKey[] {
@@ -78,6 +70,7 @@ function tagged(plugin: string, list: readonly PluginKeyMeta[]): KnownKey[] {
 export const KNOWN_KEYS: readonly KnownKey[] = [
   ...tagged("house", houseMeta),
   ...tagged("feeds", feedsKeys),
+  ...tagged("websearch", websearchKeys),
   ...tagged("twitter", twitterKeys),
   ...tagged("strava", stravaKeys),
   ...tagged("maps", mapsKeys),
@@ -102,6 +95,11 @@ export function keyHint(key: KnownKey): string {
 /** Required keys for one plugin, in catalog order. Optional keys are left out. */
 export function needsOf(plugin: string): string[] {
   return KNOWN_KEYS.filter((key) => key.plugin === plugin && key.optional !== true).map((key) => key.name);
+}
+
+/** Optional keys for one plugin, in catalog order. */
+export function optionalOf(plugin: string): string[] {
+  return KNOWN_KEYS.filter((key) => key.plugin === plugin && key.optional === true).map((key) => key.name);
 }
 
 /**

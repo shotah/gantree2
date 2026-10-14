@@ -948,6 +948,7 @@ export const OPENAPI_BASE = {
           "id",
           "binary",
           "needs",
+          "optional",
           "oauth",
           "homeOnly",
         ],
@@ -959,6 +960,12 @@ export const OPENAPI_BASE = {
             type: "string",
           },
           needs: {
+            type: "array",
+            items: {
+              type: "string",
+            },
+          },
+          optional: {
             type: "array",
             items: {
               type: "string",

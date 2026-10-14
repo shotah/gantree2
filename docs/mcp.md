@@ -3,11 +3,12 @@
 How tools are named for the model, how a prefix is turned on, and how
 the host recovers from a bad name.
 
-On this product the twelve plugins are in-process modules under
+On this product the thirteen plugins are in-process modules under
 `harness/plugins`. There is no stdio transport and no child process.
 `harness/tools` is the registry: `{plugin}__{tool}`, `mcp_enable`,
 truncation, and the skip list. Builtins (memory, cron, watch,
-`self_note`, `web_search`, aims) have no prefix and never idle-drop.
+`self_note`, aims) have no prefix and never idle-drop. The `websearch`
+plugin publishes unprefixed `web_search` when granted (`bare: true`).
 The shapes stay MCP-shaped so the Tools grid and eval fixtures do not
 change. Pictures: [architecture.md](architecture.md). Pasteable live
 checks for a person in chat: [live-check.md](live-check.md).
@@ -26,12 +27,13 @@ repair names and finish turns or the horizon collapses into ERROR.
 
 | Goal | How MCP helps |
 | --- | --- |
-| Keep the loop small | Calendar and mail stay in the `google` plugin. Web search is a builtin. |
+| Keep the loop small | Calendar and mail stay in the `google` plugin. Web search is the `websearch` plugin. |
 | Clear grant model | A plugin on the Tools fold is granted. Omit it and it is not in the catalog. `ready()` still skips a granted plugin with no key or no token |
 | One bundle | The plugins ship in the Worker |
 | Swappable brains | Same tool schemas work for Gemini, ChatGPT, Ollama — OpenAI-compat tool calls |
 
-Chat, memory, cron, and web search work with **zero** MCP servers. Other tools are optional.
+Chat, memory, and cron work with **zero** MCP servers. Web search needs
+the `websearch` grant and a search key. Other tools are optional.
 
 ---
 
@@ -51,7 +53,7 @@ Examples:
 
 | Manifest `name` | MCP tool | Name the model must call |
 | --- | --- | --- |
-| *(builtin)* | `web_search` | `web_search` (always on; no prefix) |
+| `websearch` | `web_search` | `web_search` (unprefixed when granted) |
 | `google` | `calendar_list_events` | `google__calendar_list_events` |
 | `math` | `expression_evaluate` | `math__expression_evaluate` |
 | `garmin` | `sleep_get` | `garmin__sleep_get` |
@@ -258,8 +260,9 @@ as `/auth garmin <code>`.
 | house | `LLM_BASE_URL` | yes, house or agent |
 | house | `LLM_API_KEY` | yes, house or agent |
 | house | `LLM_MODEL` | yes, house or agent |
-| house | `BRAVE_SEARCH_API_KEY` | no |
 | feeds | `FEEDS_USER_AGENT` | no |
+| websearch | `SEARCH_API_KEY` | yes |
+| websearch | `SEARCH_PROVIDER` | no — blank means brave |
 | twitter | `X_BEARER_TOKEN` | yes |
 | strava | `STRAVA_CLIENT_ID` | yes |
 | strava | `STRAVA_CLIENT_SECRET` | yes |
@@ -274,6 +277,10 @@ as `/auth garmin <code>`.
 | garmin | `GARMIN_EMAIL` | yes |
 | garmin | `GARMIN_PASSWORD` | yes |
 | garmin | `GARMIN_TOOL_TIER` | no — `core` (default), `extended`, or `complete` |
+
+The Worker house env may also supply `SEARCH_API_KEY` and
+`SEARCH_PROVIDER` (`HOUSE_KEYS`); the Keys fold documents them under
+`websearch` only.
 
 ### Prefix enable
 

@@ -7,12 +7,17 @@ describe("house keys", () => {
       LLM_BASE_URL: " https://llm.example/v1 ",
       LLM_API_KEY: "",
       LLM_MODEL: "gemini-3.8-flash",
-      BRAVE_SEARCH_API_KEY: "   ",
+      SEARCH_API_KEY: "   ",
+      SEARCH_PROVIDER: " brave ",
       GOOGLE_CLIENT_SECRET: "never",
       SESSION_SECRET: "never",
     };
-    expect(houseEnv(env)).toEqual({ LLM_BASE_URL: "https://llm.example/v1", LLM_MODEL: "gemini-3.8-flash" });
-    expect(houseKeys(env)).toEqual(["LLM_BASE_URL", "LLM_MODEL"]);
+    expect(houseEnv(env)).toEqual({
+      LLM_BASE_URL: "https://llm.example/v1",
+      LLM_MODEL: "gemini-3.8-flash",
+      SEARCH_PROVIDER: "brave",
+    });
+    expect(houseKeys(env)).toEqual(["LLM_BASE_URL", "LLM_MODEL", "SEARCH_PROVIDER"]);
     expect(houseEnv(undefined)).toEqual({});
     expect(houseKeys({})).toEqual([]);
   });
@@ -25,7 +30,7 @@ describe("house keys", () => {
   it("covers LLM_* from the agent, the house, or both", () => {
     expect(llmCovered([], [])).toBe(false);
     expect(llmCovered(["LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL"], [])).toBe(true);
-    expect(llmCovered([], ["LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL", "BRAVE_SEARCH_API_KEY"])).toBe(true);
+    expect(llmCovered([], ["LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL", "SEARCH_API_KEY"])).toBe(true);
     expect(llmCovered(["LLM_API_KEY"], ["LLM_BASE_URL", "LLM_MODEL"])).toBe(true);
     expect(llmCovered(["LLM_API_KEY"], ["LLM_BASE_URL"])).toBe(false);
   });

@@ -24,6 +24,7 @@ const PLUGIN_NAMES = [
   "chat",
   "feeds",
   "math",
+  "websearch",
   "twitter",
   "image",
   "strava",

@@ -88,6 +88,8 @@ export type SkipReason = "no_key" | "no_oauth" | "disabled" | "error";
 export type Plugin = {
   /** Manifest name — `google`, `strava`, … matches `harness/mcp/<name>` and the host-manifest. */
   name: string;
+  /** When true, tools publish under their own names, with no `{plugin}__` prefix. */
+  bare?: boolean;
   /**
    * Null when the plugin can serve; otherwise why not (missing key, no
    * OAuth yet). The agent loop publishes `status.skipped` from this.

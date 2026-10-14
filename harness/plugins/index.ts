@@ -1,5 +1,5 @@
 /**
- * The twelve in-process plugins, in manifest order. A module that does not
+ * The thirteen in-process plugins, in manifest order. A module that does not
  * export a plugin is left out; the loop publishes whatever is here.
  */
 import type { Plugin } from "@/harness/core/tools";
@@ -12,6 +12,7 @@ import { googleHealth } from "@/harness/plugins/google-health";
 import { imagePlugin } from "@/harness/plugins/image";
 import { maps } from "@/harness/plugins/maps";
 import { mathPlugin } from "@/harness/plugins/math";
+import { websearchPlugin } from "@/harness/plugins/websearch";
 import { rentals } from "@/harness/plugins/rentals";
 import { strava } from "@/harness/plugins/strava";
 import { twitterPlugin } from "@/harness/plugins/twitter";
@@ -30,6 +31,7 @@ export const allPlugins: Plugin[] = [
   ...listed(chatPlugin),
   ...listed(feedsPlugin),
   ...listed(mathPlugin),
+  ...listed(websearchPlugin),
   ...listed(twitterPlugin),
   ...listed(imagePlugin),
   ...listed(strava),

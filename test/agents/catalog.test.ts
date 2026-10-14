@@ -24,6 +24,7 @@ describe("toolCatalog", () => {
     expect(tools.find((tool) => tool.id === "feeds")?.needs).toEqual([]);
     expect(tools.find((tool) => tool.id === "image")?.needs).toEqual([]);
     expect(tools.find((tool) => tool.id === "math")?.needs).toEqual([]);
+    expect(tools.find((tool) => tool.id === "websearch")?.optional).toEqual(["SEARCH_PROVIDER"]);
     expect(tools.find((tool) => tool.id === "chat")?.needs).toEqual([]);
     expect(tools.every((tool) => tool.needs.includes("GARMIN_TOOL_TIER"))).toBe(false);
     expect(tools.every((tool) => tool.needs.includes("GOOGLE_TOOL_PRESET"))).toBe(false);

@@ -95,7 +95,7 @@ describe("SecretsFold", () => {
       const [view, setView] = useState(config({
         recreate: true,
         envKeys: ["X_BEARER_TOKEN"],
-        house: ["BRAVE_SEARCH_API_KEY", "LLM_API_KEY"],
+        house: ["SEARCH_API_KEY", "LLM_API_KEY"],
       }));
       return (
         <SecretsFold
@@ -114,7 +114,7 @@ describe("SecretsFold", () => {
       const envKeys = body.env[key] === null ? [] : ["X_BEARER_TOKEN"];
       return json(200, config({
         envKeys,
-        house: ["BRAVE_SEARCH_API_KEY", "LLM_API_KEY"],
+        house: ["SEARCH_API_KEY", "LLM_API_KEY"],
         recreate: true,
       }));
     });
@@ -125,7 +125,7 @@ describe("SecretsFold", () => {
     expect(labels).not.toContain("twitter");
     const offered = [...select.querySelectorAll("option")].map((option) => option.value);
     expect(offered).not.toContain("X_BEARER_TOKEN");
-    expect(offered).not.toContain("BRAVE_SEARCH_API_KEY");
+    expect(offered).not.toContain("SEARCH_API_KEY");
     expect(offered).not.toContain("LLM_API_KEY");
     expect(offered).toContain("LLM_BASE_URL");
     expect(offered).toContain("FEEDS_USER_AGENT");

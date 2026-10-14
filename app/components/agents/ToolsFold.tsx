@@ -5,6 +5,7 @@ import { chipClass } from "@/app/components/shared/PageHeader";
 import { agentsMessage, codeOf, patchConfig, startAuth, type ApiClient } from "@/app/lib/agentsHttp";
 import { api } from "@/app/lib/api";
 import { grantsFromToml, tomlFromGrants } from "@/lib/agents/mcpToml";
+import { knownKey } from "@/lib/agents/keys";
 import type { AgentConfigView, AgentStatus, Grant, ToolEntry } from "@/lib/agents/types";
 import { alertClass, Fold, inputClass, labelClass, primaryClass, quietClass } from "./Fold";
 
@@ -21,8 +22,9 @@ export function missingNeeds(
   grants: readonly Grant[],
   tools: readonly ToolEntry[],
   envKeys: readonly string[],
+  house: readonly string[] = [],
 ): string[] {
-  const have = new Set(envKeys);
+  const have = new Set([...envKeys, ...house]);
   const notes: string[] = [];
   for (const grant of grants) {
     const tool = tools.find((item) => item.id === grant.name);
@@ -44,13 +46,17 @@ export function draftId(toolId: string, key: string): string {
 /** The env patch a tool's form sends: only the keys that were typed into. */
 export function envPatchFor(tool: ToolEntry, drafts: Readonly<Record<string, string>>): Record<string, string> {
   const env: Record<string, string> = {};
-  for (const key of tool.needs) {
+  for (const key of [...tool.needs, ...tool.optional]) {
     const value = drafts[draftId(tool.id, key)] ?? "";
     if (value.length > 0) {
       env[key] = value;
     }
   }
   return env;
+}
+
+function toolKeys(tool: ToolEntry): string[] {
+  return [...tool.needs, ...tool.optional];
 }
 
 export const KEY_PLACEHOLDER_SET = "set — paste to replace";
@@ -85,6 +91,7 @@ export function oauthLine(status: AgentStatus | null | undefined, id: string): "
 function KeyFields({
   tool,
   envKeys,
+  house,
   drafts,
   busy,
   canMutate,
@@ -93,13 +100,14 @@ function KeyFields({
 }: {
   tool: ToolEntry;
   envKeys: readonly string[];
+  house: readonly string[];
   drafts: Readonly<Record<string, string>>;
   busy: boolean;
   canMutate: boolean;
   onDraft: (id: string, value: string) => void;
   onSave: (tool: ToolEntry) => void;
 }) {
-  const have = new Set(envKeys);
+  const have = new Set([...envKeys, ...house]);
   const patch = envPatchFor(tool, drafts);
   const dirty = Object.keys(patch).length > 0;
   return (
@@ -113,24 +121,32 @@ function KeyFields({
         }
       }}
     >
-      {tool.needs.map((key) => {
+      {toolKeys(tool).map((key) => {
         const id = `tool-${tool.id}-${key}`;
         const set = have.has(key);
+        const optional = tool.optional.includes(key);
+        const inputType = knownKey(key)?.kind === "text" ? "text" : "password";
+        const chip = optional
+          ? (set ? "set" : "default")
+          : (set ? "set" : "missing");
+        const chipClassName = optional
+          ? (set ? "border-ok/40 bg-ok/10 text-ok" : "border-line bg-canvas/60 text-dim")
+          : (set ? "border-ok/40 bg-ok/10 text-ok" : "border-danger-line bg-danger-soft text-danger");
         return (
           <div key={key} className="flex flex-col gap-1">
             <label htmlFor={id} className={`${labelClass} flex items-center gap-2`}>
               <span className="font-mono text-body">{key}</span>
-              <span className={`${chipClass} ${set ? "border-ok/40 bg-ok/10 text-ok" : "border-danger-line bg-danger-soft text-danger"}`}>
-                {set ? "set" : "missing"}
+              <span className={`${chipClass} ${chipClassName}`}>
+                {chip}
               </span>
             </label>
             <input
               id={id}
-              type="password"
+              type={inputType}
               autoComplete="new-password"
               spellCheck={false}
               disabled={!canMutate || busy}
-              placeholder={set ? KEY_PLACEHOLDER_SET : KEY_PLACEHOLDER_MISSING}
+              placeholder={set ? KEY_PLACEHOLDER_SET : (optional ? "optional" : KEY_PLACEHOLDER_MISSING)}
               value={drafts[draftId(tool.id, key)] ?? ""}
               onChange={(e) => onDraft(draftId(tool.id, key), e.target.value)}
               className={`${inputClass} w-full`}
@@ -236,7 +252,7 @@ export function ToolsFold({
         {tools.map((tool) => {
           const on = grants.some((grant) => grant.name === tool.id);
           const line = tool.oauth ? oauthLine(status, tool.id) : null;
-          const have = new Set(config.envKeys);
+          const have = new Set([...config.envKeys, ...config.house]);
           const missing = on ? tool.needs.filter((key) => !have.has(key)) : [];
           return (
             <li key={tool.id} className="rounded-xl border border-line bg-canvas/40 px-3 py-2">
@@ -276,11 +292,12 @@ export function ToolsFold({
                   </button>
                 </p>
               ))}
-              {on && tool.needs.length > 0
+              {on && toolKeys(tool).length > 0
                 ? (
                     <KeyFields
                       tool={tool}
                       envKeys={config.envKeys}
+                      house={config.house}
                       drafts={drafts}
                       busy={busy}
                       canMutate={canMutate}

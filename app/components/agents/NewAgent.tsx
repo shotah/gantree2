@@ -14,6 +14,7 @@ import {
 } from "@/app/lib/agentsHttp";
 import { api } from "@/app/lib/api";
 import { llmCovered } from "@/lib/agents/house";
+import { knownKey } from "@/lib/agents/keys";
 import { tomlFromGrants } from "@/lib/agents/mcpToml";
 import { AGENT_SLUG, type AgentCard, type AgentCreate, type Grant, type ToolEntry } from "@/lib/agents/types";
 import { assignHref } from "./follow";
@@ -182,12 +183,19 @@ export function NewAgent({
     if (llm) {
       return llm;
     }
+    if (house.includes(key)) {
+      return "house";
+    }
     for (const row of extras) {
       if (row.key.trim() === key && row.value.trim()) {
         return row.value.trim();
       }
     }
     return "";
+  }
+
+  function toolKeys(tool: ToolEntry): string[] {
+    return [...tool.needs, ...tool.optional];
   }
 
   function typedNeedValue(toolId: string, key: string): string {
@@ -291,7 +299,7 @@ export function NewAgent({
       if (!picked[tool.id]) {
         continue;
       }
-      for (const key of tool.needs) {
+      for (const key of toolKeys(tool)) {
         const typed = typedNeedValue(tool.id, key);
         if (typed) {
           env[key] = typed;
@@ -304,6 +312,10 @@ export function NewAgent({
         continue;
       }
       for (const key of tool.needs) {
+        const typed = typedNeedValue(tool.id, key);
+        if (typed || house.includes(key)) {
+          continue;
+        }
         if (!(env[key] ?? "").trim()) {
           missing.push(`${tool.id} ${key}`);
         }
@@ -567,7 +579,8 @@ export function NewAgent({
                       {tool.homeOnly ? <p className="mt-1 text-xs text-dim">Home</p> : null}
                       {tool.oauth ? <p className="mt-1 text-xs text-dim">Sign in from chat before this publishes.</p> : null}
                       {on
-                        ? tool.needs.map((key) => {
+                        ? toolKeys(tool).map((key) => {
+                            const optional = tool.optional.includes(key);
                             if (wizardKeyValue(key)) {
                               return (
                                 <div key={key} className="mt-2 flex flex-col gap-1">
@@ -578,14 +591,21 @@ export function NewAgent({
                                 </div>
                               );
                             }
+                            const inputType = knownKey(key)?.kind === "text" ? "text" : "password";
                             return (
                               <div key={key} className="mt-2 flex flex-col gap-1">
-                                <label htmlFor={`need-${tool.id}-${key}`} className={labelClass}>{key}</label>
+                                <label htmlFor={`need-${tool.id}-${key}`} className={`${labelClass} flex items-center gap-2`}>
+                                  <span className="font-mono text-body">{key}</span>
+                                  {optional
+                                    ? <span className={`${chipClass} border-line bg-canvas/60 text-dim`}>default</span>
+                                    : null}
+                                </label>
                                 <input
                                   id={`need-${tool.id}-${key}`}
-                                  type="password"
+                                  type={inputType}
                                   autoComplete="new-password"
                                   spellCheck={false}
+                                  placeholder={optional ? "optional" : undefined}
                                   value={needs[needId(tool.id, key)] ?? ""}
                                   onChange={(e) => setNeeds((prev) => ({ ...prev, [needId(tool.id, key)]: e.target.value }))}
                                   className={inputClass}

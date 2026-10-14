@@ -73,7 +73,7 @@ the eval that fails a fixture when a plugin renames a tool
    | Saved Strava courses / share links | `routes_` / `urls_` | strava (`urls_resolve`; not `maps__link_resolve`) |
    | Devices (hardware) | `devices_` | garmin |
    | Math | `expression_` / `units_` | math |
-   | Web search | `web_` | builtin `web_search` (not a plugin) |
+   | Web search | `web_` | websearch plugin; model name stays `web_search` |
    | Flight offers / dates / airports / returns / booking / quota | `offers_` / `dates_` / `airports_` / `returns_` / `booking_` / `link_` / `account_` | flights |
    | Rental listings / rent estimate / markets / areas / quota | `listings_` / `rent_` / `markets_` / `areas_` / `link_` / `account_` | rentals |
    | Car listings / VIN / markets / quota | `listings_` / `vin_` / `markets_` / `link_` / `account_` | cars (prefix disambiguates from rentals) |
@@ -130,7 +130,7 @@ the eval that fails a fixture when a plugin renames a tool
 Hyphenated plugin ids are fine; tool suffixes stay underscores. The
 host aliases underscored prefixes (`google_health__…` →
 `google-health__…`) on call — **suffixes are never rewritten**. Web
-search is the unprefixed builtin `web_search`.
+search is plugin `websearch`; the model still calls unprefixed `web_search`.
 
 ---
 

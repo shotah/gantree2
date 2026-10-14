@@ -146,6 +146,8 @@ export type ToolEntry = {
   binary: string;
   /** Env keys `ready()` treats as `no_key`. */
   needs: string[];
+  /** Optional env keys for this plugin, in catalog order. */
+  optional: string[];
   /** Redirect login via `/api/auth/catch` (google, google-health, strava). Garmin is not this flag. */
   oauth: boolean;
   /** LAN-only; hidden on Cloudflare, shown under celld. */

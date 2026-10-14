@@ -655,6 +655,7 @@ components:
         - id
         - binary
         - needs
+        - optional
         - oauth
         - homeOnly
       properties:
@@ -663,6 +664,10 @@ components:
         binary:
           type: string
         needs:
+          type: array
+          items:
+            type: string
+        optional:
           type: array
           items:
             type: string

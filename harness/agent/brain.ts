@@ -42,7 +42,6 @@ import { WatchStore } from "@/harness/watch/store";
 import { watchTools } from "@/harness/watch/tools";
 import { WATCH_WAKE_MAX_ITEMS } from "@/harness/watch/interval";
 import { quietResumeAt } from "@/harness/watch/quiet";
-import { WebSearch } from "@/harness/websearch/search";
 import type { Brain, BrainDeps } from "@/harness/core/brain";
 import { displaySlug } from "@/lib/chat/slug";
 import type { CallContext, PluginContext } from "@/harness/core/tools";
@@ -151,7 +150,6 @@ export function createBrain(deps: BrainDeps): Brain {
     fetch: bindWorkerFetch(deps.fetch),
     tokens: deps.tokens,
   };
-  const web = new WebSearch({ env, fetch: deps.fetch });
   const registry = new Registry(deps.plugins, pluginCtx, {
     builtins: [
       ...memoryTools(memory, (area) => {
@@ -160,7 +158,6 @@ export function createBrain(deps: BrainDeps): Brain {
       ...aimTools(aims),
       selfNoteTool(selfNote),
       ...watchTools(watch),
-      web.tool(),
       ...(cronOn ? cronTools.toCoreTools(delivery) : []),
     ],
     enable,

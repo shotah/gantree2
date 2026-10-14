@@ -150,7 +150,7 @@ describe("agentsHttp", () => {
         return json(200, { agent });
       }
       if (url === "/api/tools") {
-        return json(200, { tools: [{ id: "maps", binary: "maps-bin", needs: [], oauth: false, homeOnly: false }] });
+        return json(200, { tools: [{ id: "maps", binary: "maps-bin", needs: [], optional: [], oauth: false, homeOnly: false }] });
       }
       return json(500, { error: url });
     });

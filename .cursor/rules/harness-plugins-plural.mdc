@@ -1,6 +1,6 @@
 ---
 description: Harness plugin tools are plural — accept and return sets, never make the agent loop over single calls
-globs: harness/plugins/**,harness/websearch/**,test/harness/plugins/**
+globs: harness/plugins/**,test/harness/plugins/**
 alwaysApply: false
 ---
 

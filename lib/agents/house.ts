@@ -5,7 +5,7 @@
  * frame: a key the agent sets wins, a key it leaves blank falls through to
  * the house. Values never leave the Worker over HTTP; screens see key names.
  */
-export const HOUSE_KEYS = ["LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL", "BRAVE_SEARCH_API_KEY"] as const;
+export const HOUSE_KEYS = ["LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL", "SEARCH_API_KEY", "SEARCH_PROVIDER"] as const;
 
 export type HouseKey = typeof HOUSE_KEYS[number];
 
@@ -29,7 +29,8 @@ export function houseEnv(env: HouseEnv | undefined): Record<string, string> {
 
 /** Key names the house supplies, in `HOUSE_KEYS` order. Safe for a browser. */
 export function houseKeys(env: HouseEnv | undefined): string[] {
-  return Object.keys(houseEnv(env));
+  const map = houseEnv(env);
+  return HOUSE_KEYS.filter((key) => (map[key] ?? "").length > 0);
 }
 
 /** The three the harness refuses to boot without. */

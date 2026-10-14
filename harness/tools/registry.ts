@@ -579,7 +579,14 @@ function loadTools(plugin: Plugin, ctx: PluginContext, existing: ReadonlyMap<str
   for (const tool of listed) {
     let qualified: string;
     try {
-      qualified = prefixedName(prefix, tool.name);
+      if (plugin.bare) {
+        qualified = sanitizeName(tool.name);
+        if (qualified === "") {
+          throw new Error(`mcp: empty tool name after sanitize (server=${JSON.stringify(plugin.name)} tool=${JSON.stringify(tool.name)})`);
+        }
+      } else {
+        qualified = prefixedName(prefix, tool.name);
+      }
     } catch (err) {
       return { name: plugin.name, reason: "error", note: clipNote(errorMessage(err)) };
     }

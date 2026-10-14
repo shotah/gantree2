@@ -25,7 +25,7 @@ afterEach(() => {
   cleanup();
 });
 
-const GOOGLE: ToolEntry = { id: "google", binary: "google-bin", needs: ["G_ID", "G_SECRET"], oauth: true, homeOnly: false };
+const GOOGLE: ToolEntry = { id: "google", binary: "google-bin", needs: ["G_ID", "G_SECRET"], optional: [], oauth: true, homeOnly: false };
 
 describe("tool grants", () => {
   it("toggles a grant and names missing keys", () => {
@@ -46,7 +46,7 @@ describe("tool grants", () => {
   });
 });
 
-const GARMIN: ToolEntry = { id: "garmin", binary: "garmin-bin", needs: [], oauth: false, homeOnly: false };
+const GARMIN: ToolEntry = { id: "garmin", binary: "garmin-bin", needs: [], optional: [], oauth: false, homeOnly: false };
 
 function Harness({ client, tools, start, canMutate = true, seen, status = null, onPickKey }: {
   client: ApiClient;

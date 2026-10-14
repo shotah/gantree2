@@ -12,6 +12,7 @@ const GOOGLE: ToolEntry = {
   id: "google",
   binary: "google-bin",
   needs: ["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET"],
+  optional: [],
   oauth: true,
   homeOnly: false,
 };

@@ -87,6 +87,7 @@ export const MAPS: ToolEntry = {
   id: "maps",
   binary: "maps-bin",
   needs: ["MAPS_KEY"],
+  optional: [],
   oauth: false,
   homeOnly: false,
 };
@@ -95,6 +96,7 @@ export const CAST: ToolEntry = {
   id: "cast",
   binary: "cast-bin",
   needs: [],
+  optional: [],
   oauth: true,
   homeOnly: true,
 };

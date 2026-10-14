@@ -6,7 +6,6 @@ import { fixedClock } from "@/harness/core/clock";
 import { silentLogger } from "@/harness/core/log";
 import { nodeSql, type NodeDatabase } from "@/harness/core/sql";
 import type { JsonSchema, Plugin, PluginContext, ToolDef } from "@/harness/core/tools";
-import { TOOL_NAME, toolDefs } from "@/harness/websearch";
 
 const pluginsRoot = join(process.cwd(), "harness/plugins");
 
@@ -104,6 +103,7 @@ async function loadModule(name: string): Promise<unknown> {
     case "image": return import("@/harness/plugins/image/index.ts");
     case "maps": return import("@/harness/plugins/maps/index.ts");
     case "math": return import("@/harness/plugins/math/index.ts");
+    case "websearch": return import("@/harness/plugins/websearch/index.ts");
     case "rentals": return import("@/harness/plugins/rentals/index.ts");
     case "strava": return import("@/harness/plugins/strava/index.ts");
     case "twitter": return import("@/harness/plugins/twitter/index.ts");
@@ -159,15 +159,6 @@ describe("plugin tools are plural", () => {
           if (!acceptsSet(tool)) offenders.push(id);
         }
       }
-    }
-    const search = toolDefs();
-    const web = search[0];
-    if (search.length !== 1 || web?.name !== TOOL_NAME) {
-      offenders.push("websearch.web_search: missing");
-    } else if (web.description.trim() === "") {
-      offenders.push("websearch.web_search: empty description");
-    } else if (!acceptsSet(web)) {
-      offenders.push("websearch.web_search");
     }
     offenders.sort();
     if (offenders.length > 0) {

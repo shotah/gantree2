@@ -5,15 +5,17 @@ import { keys as garminKeys } from "@/harness/plugins/garmin";
 import { keys as googleKeys } from "@/harness/plugins/google";
 import { keys as googleHealthKeys } from "@/harness/plugins/google-health";
 import { keys as mapsKeys } from "@/harness/plugins/maps";
+import { keys as websearchKeys } from "@/harness/plugins/websearch/keys";
 import { keys as rentalsKeys } from "@/harness/plugins/rentals";
 import { keys as stravaKeys } from "@/harness/plugins/strava";
 import { keys as twitterKeys } from "@/harness/plugins/twitter";
 import { toolCatalog } from "@/lib/agents/catalog";
-import { HOUSE_KEYS } from "@/lib/agents/house";
+import { HOUSE_KEYS, LLM_KEYS } from "@/lib/agents/house";
 import { KNOWN_KEYS, needsOf, pickerKeys } from "@/lib/agents/keys";
 
 const exported = [
   ["feeds", feedsKeys],
+  ["websearch", websearchKeys],
   ["twitter", twitterKeys],
   ["strava", stravaKeys],
   ["maps", mapsKeys],
@@ -26,7 +28,9 @@ const exported = [
 
 describe("KNOWN_KEYS", () => {
   it("derives plugin rows from each plugin export, then needs from the required ones", () => {
-    expect(KNOWN_KEYS.filter((key) => key.plugin === "house").map((key) => key.name)).toEqual([...HOUSE_KEYS]);
+    expect(KNOWN_KEYS.filter((key) => key.plugin === "house").map((key) => key.name)).toEqual([...LLM_KEYS]);
+    expect([...HOUSE_KEYS]).toEqual([...LLM_KEYS, "SEARCH_API_KEY", "SEARCH_PROVIDER"]);
+    expect(new Set(KNOWN_KEYS.map((key) => key.name)).size).toBe(KNOWN_KEYS.length);
     for (const [plugin, list] of exported) {
       expect(KNOWN_KEYS.filter((key) => key.plugin === plugin).map((key) => key.name)).toEqual(list.map((key) => key.name));
       expect(needsOf(plugin)).toEqual(list.filter((key) => key.optional !== true).map((key) => key.name));
@@ -54,12 +58,12 @@ describe("KNOWN_KEYS", () => {
   it("leaves set keys and house keys out of the picker, house first", () => {
     const picked = pickerKeys(
       ["X_BEARER_TOKEN", "LLM_MODEL"],
-      ["BRAVE_SEARCH_API_KEY", "LLM_API_KEY"],
+      ["SEARCH_API_KEY", "LLM_API_KEY"],
     );
     const names = picked.map((key) => key.name);
     expect(names).not.toContain("X_BEARER_TOKEN");
     expect(names).not.toContain("LLM_MODEL");
-    expect(names).not.toContain("BRAVE_SEARCH_API_KEY");
+    expect(names).not.toContain("SEARCH_API_KEY");
     expect(names).not.toContain("LLM_API_KEY");
     expect(names[0]).toBe("LLM_BASE_URL");
     expect(picked[0]?.plugin).toBe("house");

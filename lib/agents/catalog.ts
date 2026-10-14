@@ -5,7 +5,7 @@
  * `GOOGLE_TOOL_PRESET`) are not required.
  */
 import { allPlugins } from "@/harness/plugins";
-import { needsOf } from "./keys";
+import { needsOf, optionalOf } from "./keys";
 import { oauthRedirectPlugin } from "./oauth";
 import type { ToolEntry } from "./types";
 
@@ -14,6 +14,7 @@ export function toolCatalog(): ToolEntry[] {
     id: plugin.name,
     binary: plugin.name,
     needs: needsOf(plugin.name),
+    optional: optionalOf(plugin.name),
     oauth: oauthRedirectPlugin(plugin.name),
     homeOnly: false,
   }));

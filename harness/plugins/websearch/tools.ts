@@ -3,10 +3,12 @@ import { type JsonSchema, type ToolDef } from "@/harness/core/tools";
 /** Builtin exposed to the model (not MCP-prefixed). */
 export const TOOL_NAME = "web_search";
 
-/** Env map key. Same name the Go config reads. */
-export const ENV_API_KEY = "BRAVE_SEARCH_API_KEY";
+export const ENV_SEARCH_KEY = "SEARCH_API_KEY";
+export const ENV_PROVIDER = "SEARCH_PROVIDER";
 
-export const DEFAULT_ENDPOINT = "https://api.search.brave.com/res/v1/web/search";
+export const BRAVE_DEFAULT_ENDPOINT = "https://api.search.brave.com/res/v1/web/search";
+export const TAVILY_DEFAULT_ENDPOINT = "https://api.tavily.com/search";
+export const SERPAPI_DEFAULT_ENDPOINT = "https://serpapi.com/search.json";
 
 export const DEFAULT_COUNT = 8;
 
@@ -19,6 +21,8 @@ const TOOL_DESCRIPTION = "Web search. Exact name: web_search. "
   + "queries accepts up to 5 searches; query still works for one. One failed query is an error row.";
 
 export const MAX_QUERIES = 5;
+
+export type SearchProvider = "brave" | "tavily" | "serpapi";
 
 export function toolDefs(): ToolDef[] {
   const parameters: JsonSchema = {
@@ -59,4 +63,20 @@ export function isSearchTool(name: string): boolean {
     default:
       return false;
   }
+}
+
+export function resolveProvider(env: Readonly<Record<string, string>>): SearchProvider | "unknown" {
+  const raw = (env[ENV_PROVIDER] ?? "").trim().toLowerCase();
+  if (raw === "") {
+    return "brave";
+  }
+  if (raw === "brave" || raw === "tavily" || raw === "serpapi") {
+    return raw;
+  }
+  return "unknown";
+}
+
+/** `SEARCH_API_KEY`, trimmed. Empty when unset. */
+export function resolveSearchApiKey(env: Readonly<Record<string, string>>): string {
+  return (env[ENV_SEARCH_KEY] ?? "").trim();
 }
