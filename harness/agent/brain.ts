@@ -50,6 +50,7 @@ import { assemble, standingPersona, type Assembler, type TurnIn } from "./contex
 import { DraftStream, emitAims, emitCmds, emitPerf, emitReply, emitReact, emitStatus, emitTodo, emitTyping, framingLogger } from "./frames";
 import { allPositive, formatReaction, inPalette, parseReaction, storedAssistantReply, stripHarnessContext, turnSource } from "./judgment";
 import { runLoop, TurnCancelled, TurnFailed, type LoopResult } from "./loop";
+import { idleClock } from "@/lib/agents/idle";
 import { HANDLE_FAILED, MAX_TOOL_ITERS_DEFAULT, SOURCE_REACTION, SOURCE_USER, TOOL_TRACE_COMPACT } from "./notes";
 import { PerfRing, ToolStats, perfInput, zeroStats, type TurnStats } from "./perf";
 import { commandFields, finishAuth, runSlash, startAuth, type SlashEnv } from "./slash";
@@ -628,6 +629,9 @@ export function createBrain(deps: BrainDeps): Brain {
     },
     authFinish(plugin, redirect, code) {
       return finishAuth(slashEnv, plugin, redirect, code);
+    },
+    idle(now, anchorMs, idleMs) {
+      return idleClock(sessions.lastUserAt(roomId), anchorMs, now, idleMs);
     },
   };
 

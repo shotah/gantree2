@@ -118,6 +118,7 @@ import {
   parseConfig,
   startedEnvFor,
 } from "@/lib/agents/config";
+import { idleHoursOf } from "@/lib/agents/idle";
 import type { AgentConfig } from "@/lib/agents/types";
 import { houseEnv, houseKeys } from "@/lib/agents/house";
 import { oauthCatchRedirect, oauthRedirectPlugin } from "@/lib/agents/oauth";
@@ -138,6 +139,8 @@ const RATE_KEY = "rate";
 
 /** Alarms at or before now are dropped; schedule at least this far ahead. */
 const ALARM_MIN_LEAD_MS = 1000;
+const IDLE_ANCHOR_KEY = "agent.idleAnchor";
+const IDLE_RETRY_MS = 15 * 60 * 1000;
 
 const ALARM_FAIL_KEY = "alarm-fail";
 const ALARM_FAIL_BASE_MS = 2000;
@@ -233,6 +236,9 @@ export class Agent extends DurableObject<AgentEnv> {
     if (request.headers.get("X-Chat-Op") === "pause") {
       return this.pauseHttp(request);
     }
+    if (request.headers.get("X-Chat-Op") === "idle_reset") {
+      return this.idleResetHttp(request);
+    }
     if (request.headers.get("X-Chat-Op") === "destroy") {
       return this.destroyHttp(request);
     }
@@ -310,12 +316,39 @@ export class Agent extends DurableObject<AgentEnv> {
     try {
       harness = await this.nativeBrain();
       const brain = harness;
+      let anchor = await this.ctx.storage.get<number>(IDLE_ANCHOR_KEY);
+      if (typeof anchor !== "number") {
+        anchor = Date.now();
+        await this.ctx.storage.put(IDLE_ANCHOR_KEY, anchor);
+      }
+      const now = Date.now();
+      const idleMs = await this.idleMsFromConfig();
+      if (typeof brain.idle === "function") {
+        const idle = brain.idle(now, anchor, idleMs);
+        if (idle.stop) {
+          const slug = parseStoredSlug(await this.ctx.storage.get<string>(SLUG_STORE_KEY));
+          const settings = settingsStub(this.env);
+          if (!slug || !settings?.setAgentEnabled) {
+            await this.armAlarm(now + IDLE_RETRY_MS);
+            return;
+          }
+          try {
+            await settings.setAgentEnabled(slug, false, "idle");
+          } catch {
+            await this.armAlarm(now + IDLE_RETRY_MS);
+            return;
+          }
+          this.forgetBrain();
+          await this.ctx.storage.deleteAlarm();
+          return;
+        }
+      }
       let next: number | null = null;
       await this.withEmit(async (emit) => {
         next = await brain.alarm(emit);
       });
       await this.ctx.storage.delete(ALARM_FAIL_KEY);
-      await this.armAlarm(next);
+      await this.armHarness(brain, next);
     } catch (err) {
       console.error("agent alarm failed", err);
       let at: number | null = null;
@@ -1365,6 +1398,14 @@ export class Agent extends DurableObject<AgentEnv> {
     return new Response(null, { status: 204 });
   }
 
+  private async idleResetHttp(request: Request): Promise<Response> {
+    if (request.method !== "POST") {
+      return new Response("method", { status: 405 });
+    }
+    await this.ctx.storage.put(IDLE_ANCHOR_KEY, Date.now());
+    return new Response(null, { status: 204 });
+  }
+
   private async destroyHttp(request: Request): Promise<Response> {
     if (request.method !== "POST") {
       return new Response("method", { status: 405 });
@@ -1524,7 +1565,14 @@ export class Agent extends DurableObject<AgentEnv> {
         redirectUri: () => oauthCatchRedirect(this.env, this.publicOrigin),
         sealState: (plugin) => this.sealForSlash(plugin),
       },
-      onClock: (at) => this.armAlarm(at),
+      onClock: (at) => {
+        const harness = this.harness;
+        if (harness) {
+          void this.armHarness(harness, at);
+          return;
+        }
+        void this.armAlarm(at);
+      },
       platformGoogle,
       ...(chat ? { chat } : {}),
     });
@@ -1532,10 +1580,37 @@ export class Agent extends DurableObject<AgentEnv> {
     this.harness = harness;
     if (fresh) {
       await this.stampBrainOpen();
+      const anchor = await this.ctx.storage.get<number>(IDLE_ANCHOR_KEY);
+      if (typeof anchor !== "number") {
+        await this.ctx.storage.put(IDLE_ANCHOR_KEY, Date.now());
+      }
       await this.withEmit((emit) => harness.announce(emit));
-      await this.armAlarm(harness.nextAlarm());
+      await this.armHarness(harness);
     }
     return harness;
+  }
+
+  private async idleMsFromConfig(): Promise<number> {
+    const { config } = await this.loadConfig();
+    return idleHoursOf(config.idleHours) * 3_600_000;
+  }
+
+  private async armHarness(harness: Brain, cronAt?: number | null): Promise<void> {
+    let at = cronAt !== undefined ? cronAt : harness.nextAlarm();
+    if (typeof harness.idle === "function") {
+      let anchor = await this.ctx.storage.get<number>(IDLE_ANCHOR_KEY);
+      if (typeof anchor !== "number") {
+        anchor = Date.now();
+        await this.ctx.storage.put(IDLE_ANCHOR_KEY, anchor);
+      }
+      const now = Date.now();
+      const idleMs = await this.idleMsFromConfig();
+      const idle = harness.idle(now, anchor, idleMs);
+      if (idle.wakeAt != null && (at == null || idle.wakeAt < at)) {
+        at = idle.wakeAt;
+      }
+    }
+    await this.armAlarm(at);
   }
 
   private forgetBrain(): void {
@@ -1547,9 +1622,12 @@ export class Agent extends DurableObject<AgentEnv> {
     const envChanged = canonicalEnv(prev.env) !== canonicalEnv(next.env);
     const personaChanged = prev.persona !== next.persona;
     const mcpChanged = prev.mcp !== next.mcp;
+    const idleChanged = prev.idleHours !== next.idleHours;
     if (envChanged || personaChanged || mcpChanged) {
       this.forgetBrain();
       await this.nativeBrain();
+    } else if (idleChanged && this.harness) {
+      await this.armHarness(this.harness);
     }
   }
 
@@ -1560,7 +1638,7 @@ export class Agent extends DurableObject<AgentEnv> {
     const harness = await this.nativeBrain();
     const inbound: Inbound = { ...frame, kind: frame.kind, user_id: frame.user_id ?? "" };
     await this.withEmit((emit) => harness.handleInbound(inbound, emit));
-    await this.armAlarm(harness.nextAlarm());
+    await this.armHarness(harness);
   }
 
   private enqueueCrane(body: string): void {
@@ -1911,6 +1989,36 @@ function authFailureMessage(err: unknown): string {
     return "auth failed";
   }
   return line.slice(0, 240);
+}
+
+function settingsStub(env: AgentEnv): {
+  setAgentEnabled?: (slug: string, enabled: boolean, actor: string) => Promise<unknown>;
+} | null {
+  const ns = env.SETTINGS as unknown as {
+    getByName?: (name: string) => {
+      setAgentEnabled?: (slug: string, enabled: boolean, actor: string) => Promise<unknown>;
+    };
+    idFromName?: (name: string) => unknown;
+    get?: (id: unknown) => {
+      setAgentEnabled?: (slug: string, enabled: boolean, actor: string) => Promise<unknown>;
+    };
+  } | undefined;
+  if (!ns || typeof ns !== "object") {
+    return null;
+  }
+  try {
+    const stub = typeof ns.getByName === "function"
+      ? ns.getByName("settings")
+      : typeof ns.idFromName === "function" && typeof ns.get === "function"
+        ? ns.get(ns.idFromName("settings"))
+        : null;
+    if (!stub || typeof stub.setAgentEnabled !== "function") {
+      return null;
+    }
+    return stub;
+  } catch {
+    return null;
+  }
 }
 
 function sampleSink(env: AgentEnv): { addSample(input: SampleInput): Promise<unknown> } | null {

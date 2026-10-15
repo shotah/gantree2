@@ -99,6 +99,8 @@ export type AgentConfig = {
   mcp: string;
   /** `PERSONA.md` text. */
   persona: string;
+  /** Whole hours before idle stop; null uses the default (48). */
+  idleHours: number | null;
   updatedAt: number | null;
 };
 
@@ -112,6 +114,8 @@ export type AgentConfigView = {
   updatedAt: number | null;
   /** True when env changed since the last applied start marker. */
   recreate: boolean;
+  /** Resolved idle stop window in whole hours (48 when stored null). */
+  idleHours: number;
 };
 
 /** `PATCH` body. `null` deletes that env key. Omitted fields are untouched. */
@@ -119,6 +123,7 @@ export type AgentConfigPatch = {
   env?: Record<string, string | null>;
   mcp?: string;
   persona?: string;
+  idleHours?: number | null;
 };
 
 export type AgentCard = AgentRow & {

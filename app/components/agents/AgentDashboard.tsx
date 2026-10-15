@@ -190,8 +190,11 @@ export function AgentDashboard({
           slug={agent.slug}
           status={agent.status}
           enabled={agent.enabled}
+          idleHours={config.idleHours ?? 48}
+          canMutate={agent.canMutate}
           client={client}
           onEnabled={(enabled) => setAgent((prev) => prev ? { ...prev, enabled } : prev)}
+          onConfig={setConfig}
         />
         {spend}
         <PersonaFold

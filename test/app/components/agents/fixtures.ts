@@ -79,6 +79,7 @@ export function config(over: Partial<AgentConfigView> = {}): AgentConfigView {
     persona: "Be brief.",
     updatedAt: 1,
     recreate: false,
+    idleHours: 48,
     ...over,
   };
 }

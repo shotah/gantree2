@@ -552,8 +552,8 @@ export async function postAgentEnabled(req: Request, env: AgentsHttpEnv, slugRaw
     const status = outcome.error === "not_found" ? 404 : 400;
     return json({ error: outcome.error }, status);
   }
+  const stub = agentStub(env, slug);
   if (!body.enabled) {
-    const stub = agentStub(env, slug);
     if (stub) {
       try {
         await stub.fetch(new Request("https://agent/pause", {
@@ -563,6 +563,15 @@ export async function postAgentEnabled(req: Request, env: AgentsHttpEnv, slugRaw
       } catch {
         // Row is off; the next open can pause again.
       }
+    }
+  } else if (stub) {
+    try {
+      await stub.fetch(new Request("https://agent/idle-reset", {
+        method: "POST",
+        headers: { "X-Chat-Op": "idle_reset" },
+      }));
+    } catch {
+      // Enable stands. A missed reset leaves the previous idle clock.
     }
   }
   return json({ agent: await cardFor(env, who, outcome.agent) });

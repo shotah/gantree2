@@ -14,7 +14,15 @@ import { PUSH_STORE_PREFIX } from "@/lib/chat/push/subscription";
 import { encodeBase64Url, generateVapidKeys } from "@/lib/chat/push/vapid";
 
 const roomMock = vi.hoisted(() => {
-  const harness = {
+  const harness: {
+    handleInbound: ReturnType<typeof vi.fn>;
+    alarm: ReturnType<typeof vi.fn>;
+    nextAlarm: ReturnType<typeof vi.fn>;
+    announce: ReturnType<typeof vi.fn>;
+    authStart: ReturnType<typeof vi.fn>;
+    authFinish: ReturnType<typeof vi.fn>;
+    idle?: (now: number, anchorMs: number) => { stop: boolean; wakeAt: number };
+  } = {
     handleInbound: vi.fn(async (_frame: object, _emit: (frame: object) => void) => undefined),
     alarm: vi.fn(async (_emit: (frame: object) => void) => null as number | null),
     nextAlarm: vi.fn(() => null as number | null),
@@ -1259,10 +1267,10 @@ describe("Agent native runtime", () => {
     await craneRoom.say(cranePhone, { id: "m1", text: "are you there" });
     await craneRoom.say(craneRoom.crane, { kind: "reply", user_id: "1182", id: "r1", text: "Looks like rain." });
 
-    roomMock.harness.announce.mockImplementation(async (emit) => {
+    roomMock.harness.announce.mockImplementation((emit: (frame: object) => void) => {
       emit({ kind: "status", published: ["math"], skipped: [{ name: "strava", reason: "no_key" }] });
     });
-    roomMock.harness.handleInbound.mockImplementation(async (frame, emit) => {
+    roomMock.harness.handleInbound.mockImplementation((frame: object, emit: (frame: object) => void) => {
       expect(frame).toMatchObject({ kind: "inbound", user_id: "1182", text: "are you there", id: "m1" });
       emit({ kind: "reply", user_id: "1182", id: "r1", text: "Looks like rain." });
     });
@@ -1328,6 +1336,47 @@ describe("Agent native runtime", () => {
     expect(state.storage.alarmAt).toBeGreaterThanOrEqual(Date.now());
   });
 
+  it("stops on user idle, disables in settings, and pauses without running cron alarm", async () => {
+    const enabledCalls: { slug: string; enabled: boolean; actor: string }[] = [];
+    roomMock.harness.idle = vi.fn(() => ({ stop: true, wakeAt: 0 }));
+    const twoHourMs = 2 * 3_600_000;
+    const { state, box } = room({
+      SETTINGS: {
+        getByName: () => ({
+          setAgentEnabled: (slug: string, enabled: boolean, actor: string) => {
+            enabledCalls.push({ slug, enabled, actor });
+            return Promise.resolve({ ok: true, agent: { slug, enabled, name: slug } });
+          },
+        }),
+      },
+    });
+    await state.storage.put("slug", "kit");
+    await state.storage.put(CONFIG_STORE_KEY, { ...nativeConfig(), idleHours: 2 });
+    state.storage.alarmAt = Date.now() + 60_000;
+    roomMock.harness.alarm.mockClear();
+    await box.alarm();
+    expect(roomMock.harness.idle).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), twoHourMs);
+    expect(enabledCalls).toEqual([{ slug: "kit", enabled: false, actor: "idle" }]);
+    expect(roomMock.harness.alarm).not.toHaveBeenCalled();
+    expect(state.storage.alarmAt).toBeNull();
+    expect(roomMock.dropRoomBrain).toHaveBeenCalled();
+    delete roomMock.harness.idle;
+  });
+
+  it("arms the earlier of harness alarm and idle wake", async () => {
+    const idleWake = Date.now() + 2000;
+    const far = 9_000_000_000_000;
+    roomMock.harness.idle = vi.fn(() => ({ stop: false, wakeAt: idleWake }));
+    roomMock.harness.alarm.mockResolvedValue(far);
+    const { state, box } = room();
+    await state.storage.put("slug", "kit");
+    await state.storage.put(CONFIG_STORE_KEY, nativeConfig());
+    await box.alarm();
+    expect(state.storage.alarmAt).toBe(idleWake);
+    expect(roomMock.harness.alarm).toHaveBeenCalled();
+    delete roomMock.harness.idle;
+  });
+
   it("clears the storage alarm when harness.alarm() returns null", async () => {
     roomMock.harness.alarm.mockResolvedValue(null);
     const { state, box } = room();
@@ -1339,7 +1388,7 @@ describe("Agent native runtime", () => {
   });
 
   it("sets the next alarm from alarm()", async () => {
-    roomMock.harness.alarm.mockImplementation(async (emit) => {
+    roomMock.harness.alarm.mockImplementation((emit: (frame: object) => void) => {
       emit({ kind: "push", user_id: "1182", id: "wake", text: "ping" });
       return 9_000_000_000_000;
     });
@@ -1409,10 +1458,8 @@ describe("Agent native runtime", () => {
   });
 
   it("deletes alarm-fail and arms success time after a failure then success", async () => {
-    roomMock.harness.alarm.mockImplementationOnce(async () => {
-      throw new Error("alarm failed");
-    });
-    roomMock.harness.alarm.mockImplementationOnce(async (emit) => {
+    roomMock.harness.alarm.mockRejectedValueOnce(new Error("alarm failed"));
+    roomMock.harness.alarm.mockImplementationOnce((emit: (frame: object) => void) => {
       emit({ kind: "push", user_id: "1182", id: "wake", text: "ping" });
       return 9_000_000_000_000;
     });
@@ -1465,7 +1512,7 @@ describe("Agent native runtime", () => {
   });
 
   it("drops the harness on restart and opens a new one", async () => {
-    roomMock.harness.announce.mockImplementation(async (emit) => {
+    roomMock.harness.announce.mockImplementation((emit: (frame: object) => void) => {
       emit({ kind: "status", published: ["math"], skipped: [{ name: "garmin", reason: "disabled" }] });
     });
     const { state, box } = room();
@@ -1516,6 +1563,18 @@ describe("Agent native runtime", () => {
     expect(roomMock.dropRoomBrain).toHaveBeenCalledTimes(1);
     expect(roomMock.openRoomBrain).toHaveBeenCalledTimes(2);
     expect(roomMock.harness.announce).toHaveBeenCalledTimes(2);
+  });
+
+  it("idle_reset stores the anchor without opening the harness", async () => {
+    const { state, box } = room();
+    const opensBefore = roomMock.openRoomBrain.mock.calls.length;
+    const res = await box.fetch(new Request("https://agent/idle-reset", {
+      method: "POST",
+      headers: { "X-Chat-Op": "idle_reset" },
+    }));
+    expect(res.status).toBe(204);
+    expect(typeof await state.storage.get("agent.idleAnchor")).toBe("number");
+    expect(roomMock.openRoomBrain.mock.calls.length).toBe(opensBefore);
   });
 
   it("pauses by dropping the harness and alarm without wiping storage", async () => {
@@ -1652,7 +1711,7 @@ describe("Agent native runtime", () => {
     }));
     expect(missing.status).toBe(404);
 
-    roomMock.harness.authStart.mockImplementation(async () => ({ url: "https://accounts.example/start" }));
+    roomMock.harness.authStart.mockResolvedValue({ url: "https://accounts.example/start" });
     const ok = await box.fetch(new Request("https://agent/auth/start", {
       method: "POST",
       headers: { "X-Chat-Op": "auth_start", "content-type": "application/json" },
@@ -1663,7 +1722,7 @@ describe("Agent native runtime", () => {
     const args = roomMock.harness.authStart.mock.calls.at(-1);
     expect(args?.[0]).toBe("strava");
     expect(args?.[1]).toBe("https://gantree2.bldhosting.com/api/auth/catch");
-    const stateArg = args?.[2];
+    const stateArg: unknown = args?.[2];
     expect(typeof stateArg).toBe("string");
     if (typeof stateArg !== "string") {
       throw new Error("state");
@@ -1672,7 +1731,7 @@ describe("Agent native runtime", () => {
 
     const { box: dev } = room({ SESSION_SECRET: secret });
     roomMock.harness.authStart.mockClear();
-    roomMock.harness.authStart.mockImplementation(async () => ({ url: "https://accounts.example/dev" }));
+    roomMock.harness.authStart.mockResolvedValue({ url: "https://accounts.example/dev" });
     const local = await dev.fetch(new Request("https://agent/auth/start", {
       method: "POST",
       headers: { "X-Chat-Op": "auth_start", "content-type": "application/json" },

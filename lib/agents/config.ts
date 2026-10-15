@@ -3,6 +3,7 @@
  * A crane socket sees the real env inside the `config` frame.
  * `recreate` is true only after `markStarted` and a later env change.
  */
+import { idleHoursOf } from "@/lib/agents/idle";
 import type { AgentConfig, AgentConfigView } from "@/lib/agents/types";
 
 export const CONFIG_STORE_KEY = "agent.config";
@@ -15,7 +16,7 @@ const ENV_VALUE_MAX = 16_384;
 const TEXT_MAX = 262_144;
 
 export function emptyConfig(): AgentConfig {
-  return { env: {}, mcp: "", persona: "", updatedAt: null };
+  return { env: {}, mcp: "", persona: "", updatedAt: null, idleHours: null };
 }
 
 export function canonicalEnv(env: Record<string, string>): string {
@@ -45,6 +46,7 @@ export function configView(config: AgentConfig, startedEnv: string | null, house
     persona: config.persona,
     updatedAt: config.updatedAt,
     recreate: needsRecreate(config.env, startedEnv),
+    idleHours: idleHoursOf(config.idleHours),
   };
 }
 
@@ -82,10 +84,12 @@ export function parseConfig(raw: unknown): AgentConfig {
   }
   const row = raw as Record<string, unknown>;
   const updatedAt = typeof row.updatedAt === "number" && Number.isFinite(row.updatedAt) ? row.updatedAt : null;
+  const idleHours = typeof row.idleHours === "number" && Number.isFinite(row.idleHours) ? row.idleHours : null;
   return {
     env: copyEnv(row.env),
     mcp: typeof row.mcp === "string" ? row.mcp : "",
     persona: typeof row.persona === "string" ? row.persona : "",
+    idleHours,
     updatedAt,
   };
 }
@@ -139,6 +143,7 @@ export function applyConfigPatch(config: AgentConfig, patch: unknown, now: numbe
   }
   let mcp = config.mcp;
   let persona = config.persona;
+  let idleHours = config.idleHours;
   if (Object.prototype.hasOwnProperty.call(body, "mcp")) {
     if (typeof body.mcp !== "string" || body.mcp.length > TEXT_MAX) {
       return { ok: false, error: "bad_config" };
@@ -157,10 +162,28 @@ export function applyConfigPatch(config: AgentConfig, patch: unknown, now: numbe
       changed = true;
     }
   }
+  if (Object.prototype.hasOwnProperty.call(body, "idleHours")) {
+    const next = body.idleHours;
+    if (next === null) {
+      if (idleHours !== null) {
+        idleHours = null;
+        changed = true;
+      }
+    } else if (typeof next === "number" && Number.isInteger(next) && next >= 1 && next <= 8760) {
+      if (idleHours !== next) {
+        idleHours = next;
+        changed = true;
+      }
+    } else {
+      return { ok: false, error: "bad_config" };
+    }
+  }
   return {
     ok: true,
     changed,
-    config: changed ? { env, mcp, persona, updatedAt: now } : { ...config, env: config.env },
+    config: changed
+      ? { env, mcp, persona, idleHours, updatedAt: now }
+      : { ...config, env: config.env, idleHours: config.idleHours },
   };
 }
 

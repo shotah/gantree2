@@ -535,6 +535,24 @@ describe("agents http", () => {
     expect(await blocked.json()).toEqual({ error: "off" });
   });
 
+  it("resets idle anchor when an agent is re-enabled", async () => {
+    const { env, agents, calls } = world();
+    await agents.create({ slug: "kit", name: "Kit" }, ADA);
+    await postAgentEnabled(
+      asRole("admin", "/api/agents/kit/enabled", [], "POST", JSON.stringify({ enabled: false })),
+      env,
+      "kit",
+    );
+    calls.length = 0;
+    const on = await postAgentEnabled(
+      asRole("admin", "/api/agents/kit/enabled", [], "POST", JSON.stringify({ enabled: true })),
+      env,
+      "kit",
+    );
+    expect(on.status).toBe(200);
+    expect(calls.some((c) => c.op === "idle_reset")).toBe(true);
+  });
+
   it("keeps the inventory row when the durable object wipe fails", async () => {
     const { env, agents, setDestroyFails } = world();
     await agents.create({ slug: "kit", name: "Kit" }, ADA);

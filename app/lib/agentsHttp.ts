@@ -189,6 +189,7 @@ function asConfig(body: unknown): AgentConfigView {
     || typeof body.mcp !== "string"
     || typeof body.persona !== "string"
     || typeof body.recreate !== "boolean"
+    || ("idleHours" in body && typeof body.idleHours !== "number")
   ) {
     bad();
   }

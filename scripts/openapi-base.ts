@@ -753,6 +753,7 @@ export const OPENAPI_BASE = {
           "persona",
           "updatedAt",
           "recreate",
+          "idleHours",
         ],
         properties: {
           envKeys: {
@@ -780,6 +781,9 @@ export const OPENAPI_BASE = {
           recreate: {
             type: "boolean",
           },
+          idleHours: {
+            type: "integer",
+          },
         },
       },
       AgentConfigPatch: {
@@ -803,6 +807,16 @@ export const OPENAPI_BASE = {
           },
           persona: {
             type: "string",
+          },
+          idleHours: {
+            oneOf: [
+              {
+                type: "integer",
+              },
+              {
+                type: "null",
+              },
+            ],
           },
         },
       },

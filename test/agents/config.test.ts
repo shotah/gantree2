@@ -21,20 +21,20 @@ describe("config", () => {
       updatedAt: 4,
     });
     const view = configView(parseConfig({ env: { B: "2", A: "1" }, mcp: "", persona: "", updatedAt: null }), null);
-    expect(view).toEqual({ envKeys: ["A", "B"], house: [], mcp: "", persona: "", updatedAt: null, recreate: false });
+    expect(view).toEqual({ envKeys: ["A", "B"], house: [], mcp: "", persona: "", updatedAt: null, recreate: false, idleHours: 48 });
     expect(JSON.stringify(view)).not.toContain("sekrit");
     expect(configView(emptyConfig(), null, ["LLM_MODEL"]).house).toEqual(["LLM_MODEL"]);
   });
 
   it("patches env with null deletes, leaves omitted fields, and bumps updatedAt only on change", () => {
-    const start = { env: { A: "1", B: "2" }, mcp: "old", persona: "p", updatedAt: 1 };
+    const start = { env: { A: "1", B: "2" }, mcp: "old", persona: "p", idleHours: null, updatedAt: 1 };
     const same = applyConfigPatch(start, { env: { A: "1" }, mcp: "old" }, 9);
     expect(same).toEqual({ ok: true, changed: false, config: start });
     const next = applyConfigPatch(start, { env: { B: null, C: "3" }, persona: "next" }, 9);
     expect(next).toEqual({
       ok: true,
       changed: true,
-      config: { env: { A: "1", C: "3" }, mcp: "old", persona: "next", updatedAt: 9 },
+      config: { env: { A: "1", C: "3" }, mcp: "old", persona: "next", idleHours: null, updatedAt: 9 },
     });
     expect(start.env).toEqual({ A: "1", B: "2" });
   });
@@ -72,7 +72,7 @@ describe("config", () => {
     expect(next).toEqual({
       ok: true,
       changed: true,
-      config: { env: { GOOGLE_OAUTH_CLIENT_SECRET: "sekrit" }, mcp: "", persona: "", updatedAt: 3 },
+      config: { env: { GOOGLE_OAUTH_CLIENT_SECRET: "sekrit" }, mcp: "", persona: "", idleHours: null, updatedAt: 3 },
     });
   });
 
@@ -96,7 +96,7 @@ describe("config", () => {
 
   it("builds a config frame from env, mcp, and persona", () => {
     const frame = JSON.parse(configFrame(
-      { env: { LLM_API_KEY: "sekrit" }, mcp: "toml", persona: "be brief", updatedAt: 1 },
+      { env: { LLM_API_KEY: "sekrit" }, mcp: "toml", persona: "be brief", idleHours: null, updatedAt: 1 },
     )) as { kind: string; env: { LLM_API_KEY: string }; mcp: string; persona: string; restore?: unknown };
     expect(frame.kind).toBe("config");
     expect(frame.env.LLM_API_KEY).toBe("sekrit");
@@ -107,15 +107,33 @@ describe("config", () => {
 
   it("lays the house floor under the agent env; the agent's own key wins", () => {
     const frame = JSON.parse(configFrame(
-      { env: { LLM_MODEL: "mine" }, mcp: "", persona: "", updatedAt: 1 },
+      { env: { LLM_MODEL: "mine" }, mcp: "", persona: "", idleHours: null, updatedAt: 1 },
       { LLM_MODEL: "house", LLM_API_KEY: "house-key" },
     )) as { env: Record<string, string> };
     expect(frame.env).toEqual({ LLM_MODEL: "mine", LLM_API_KEY: "house-key" });
   });
 
+  it("patches idleHours and resolves the default in the view", () => {
+    const start = emptyConfig();
+    expect(applyConfigPatch(start, { idleHours: 12 }, 5)).toEqual({
+      ok: true,
+      changed: true,
+      config: { ...emptyConfig(), idleHours: 12, updatedAt: 5 },
+    });
+    expect(applyConfigPatch({ ...start, idleHours: 12 }, { idleHours: null }, 6)).toEqual({
+      ok: true,
+      changed: true,
+      config: { ...emptyConfig(), updatedAt: 6 },
+    });
+    expect(applyConfigPatch(start, { idleHours: 0 }, 1)).toEqual({ ok: false, error: "bad_config" });
+    expect(applyConfigPatch(start, { idleHours: 8761 }, 1)).toEqual({ ok: false, error: "bad_config" });
+    expect(configView({ ...emptyConfig(), idleHours: null }, null).idleHours).toBe(48);
+    expect(configView({ ...emptyConfig(), idleHours: 2 }, null).idleHours).toBe(2);
+  });
+
   it("drops SNAPSHOT_KEY from the frame", () => {
     const frame = JSON.parse(configFrame(
-      { env: { SNAPSHOT_KEY: "user-key", LLM_API_KEY: "sekrit" }, mcp: "", persona: "", updatedAt: 1 },
+      { env: { SNAPSHOT_KEY: "user-key", LLM_API_KEY: "sekrit" }, mcp: "", persona: "", idleHours: null, updatedAt: 1 },
       { SNAPSHOT_KEY: "house-key" },
     )) as { env: Record<string, string> };
     expect(frame.env.SNAPSHOT_KEY).toBeUndefined();

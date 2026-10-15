@@ -527,6 +527,7 @@ components:
         - persona
         - updatedAt
         - recreate
+        - idleHours
       properties:
         envKeys:
           type: array
@@ -546,6 +547,8 @@ components:
             - "null"
         recreate:
           type: boolean
+        idleHours:
+          type: integer
     AgentConfigPatch:
       type: object
       properties:
@@ -559,6 +562,10 @@ components:
           type: string
         persona:
           type: string
+        idleHours:
+          oneOf:
+            - type: integer
+            - type: "null"
     LogLine:
       type: object
       required:

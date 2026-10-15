@@ -49,4 +49,6 @@ export type Brain = {
   /** `/auth <plugin>` support: start a provider login; null when the plugin has none. */
   authStart(plugin: string, redirectUri: string, state: string): Promise<{ url: string } | null>;
   authFinish(plugin: string, redirectUri: string, code: string): Promise<void>;
+  /** Optional user-idle gate; absent in test fakes that omit cron/user tracking. */
+  idle?: (now: number, anchorMs: number, idleMs?: number) => { stop: boolean; wakeAt: number };
 };

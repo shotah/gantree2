@@ -7,7 +7,7 @@ import { StatusFold } from "@/app/components/agents/StatusFold";
 import type { ApiClient } from "@/app/lib/agentsHttp";
 import { PACKAGE_VERSION } from "@/app/lib/release";
 import type { AgentStatus } from "@/lib/agents/types";
-import { STATUS, href, json } from "./fixtures";
+import { STATUS, config, href, json } from "./fixtures";
 
 afterEach(() => {
   cleanup();
@@ -130,6 +130,52 @@ describe("StatusFold", () => {
     fireEvent.click(screen.getByRole("button", { name: "Turn off" }));
     expect(await screen.findByText("stopped — chat and schedules are paused")).toBeTruthy();
     expect(vi.mocked(client).mock.calls.some((call) => href(call[0]).endsWith("/enabled"))).toBe(true);
+  });
+
+  it("shows 48 hours by default and saves idleHours", async () => {
+    const seen: unknown[] = [];
+    const client: ApiClient = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      await Promise.resolve();
+      const url = href(input);
+      if (url.endsWith("/config") && init?.method === "PATCH") {
+        const raw = init?.body;
+        seen.push(typeof raw === "string" ? JSON.parse(raw) as unknown : raw);
+        return json(200, config({ idleHours: 12 }));
+      }
+      return json(200, STATUS);
+    });
+    function Harness() {
+      const [cfg, setCfg] = useState(config());
+      return (
+        <StatusFold
+          slug="kit"
+          status={STATUS}
+          idleHours={cfg.idleHours}
+          canMutate
+          client={client}
+          onConfig={setCfg}
+        />
+      );
+    }
+    render(<Harness />);
+    const field = screen.getByLabelText("Stop after");
+    expect((field as HTMLInputElement).value).toBe("48");
+    fireEvent.change(field, { target: { value: "12" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await screen.findByDisplayValue("12");
+    expect(seen).toEqual([{ idleHours: 12 }]);
+  });
+
+  it("does not PATCH idleHours of zero", async () => {
+    const client: ApiClient = vi.fn(async () => json(200, STATUS));
+    render(
+      <StatusFold slug="kit" status={STATUS} canMutate client={client} onConfig={() => undefined} />,
+    );
+    const field = screen.getByLabelText("Stop after");
+    fireEvent.change(field, { target: { value: "0" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect(vi.mocked(client).mock.calls.some((call) => href(call[0]).endsWith("/config"))).toBe(false);
   });
 
   it("restarts the harness and refetches status", async () => {
