@@ -3,6 +3,7 @@ import type { Brain } from "@/harness/core/brain";
 import type { Emit, Inbound } from "@/harness/core/wire";
 import { bindWorkerFetch } from "@/harness/core/fetch";
 import { doSql, migrate } from "@/harness/core/sql";
+import { AIM_MIGRATIONS } from "@/harness/aims/schema";
 import { ensureConsolidateAttempts, memoryMigrations } from "@/harness/memory/schema";
 import { dropRoomBrain, openRoomBrain } from "@/harness/room";
 import { platformGoogleFor } from "@/lib/door/runtime";
@@ -226,6 +227,9 @@ export class Agent extends DurableObject<AgentEnv> {
     }
     if (request.headers.get("X-Chat-Op") === "memory_export" || request.headers.get("X-Chat-Op") === "memory_import") {
       return this.memoryCloneHttp(request);
+    }
+    if (request.headers.get("X-Chat-Op") === "aims_export" || request.headers.get("X-Chat-Op") === "aims_import") {
+      return this.aimsCloneHttp(request);
     }
     if (request.headers.get("X-Chat-Op") === "status") {
       return this.statusHttp(request);
@@ -1372,6 +1376,128 @@ export class Agent extends DurableObject<AgentEnv> {
     return new Response("method", { status: 405 });
   }
 
+  private aimsSql() {
+    const sql = doSql(this.ctx.storage.sql);
+    migrate(sql, AIM_MIGRATIONS);
+    return sql;
+  }
+
+  private async aimsCloneHttp(request: Request): Promise<Response> {
+    const op = request.headers.get("X-Chat-Op");
+    if (op === "aims_export") {
+      if (request.method !== "GET") {
+        return new Response("method", { status: 405 });
+      }
+      const sql = this.aimsSql();
+      const aim_event = sql.exec(
+        `SELECT id, day, what, ref, metric, value, unit, source, created_at, superseded_by
+         FROM aim_event ORDER BY id ASC`,
+      );
+      const aim_score = sql.exec(
+        "SELECT event_id, area, score, note FROM aim_score ORDER BY event_id ASC, area ASC",
+      );
+      const aim_block = sql.exec(
+        "SELECT area, from_day, to_day FROM aim_block ORDER BY area ASC",
+      );
+      return Response.json({ aim_event, aim_score, aim_block });
+    }
+    if (op === "aims_import") {
+      if (request.method !== "POST") {
+        return new Response("method", { status: 405 });
+      }
+      let raw: unknown;
+      try {
+        raw = await request.json();
+      } catch {
+        return Response.json({ error: "bad_aims" }, { status: 400 });
+      }
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+        return Response.json({ error: "bad_aims" }, { status: 400 });
+      }
+      const body = raw as {
+        aim_event?: { rows?: unknown };
+        aim_score?: { rows?: unknown };
+        aim_block?: { rows?: unknown };
+      };
+      const events = body.aim_event?.rows;
+      const scores = body.aim_score?.rows;
+      const blocks = body.aim_block?.rows;
+      if (
+        (events !== undefined && !Array.isArray(events))
+        || (scores !== undefined && !Array.isArray(scores))
+        || (blocks !== undefined && !Array.isArray(blocks))
+      ) {
+        return Response.json({ error: "bad_aims" }, { status: 400 });
+      }
+      const sql = this.aimsSql();
+      if (Array.isArray(events)) {
+        for (const item of events) {
+          if (!item || typeof item !== "object" || Array.isArray(item)) {
+            return Response.json({ error: "bad_aims" }, { status: 400 });
+          }
+          const row = item as Record<string, unknown>;
+          const parsed = parseAimEventRow(row);
+          if (!parsed) {
+            return Response.json({ error: "bad_aims" }, { status: 400 });
+          }
+          sql.exec(
+            `INSERT INTO aim_event (id, day, what, ref, metric, value, unit, source, created_at, superseded_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            parsed.id,
+            parsed.day,
+            parsed.what,
+            parsed.ref,
+            parsed.metric,
+            parsed.value,
+            parsed.unit,
+            parsed.source,
+            parsed.createdAt,
+            parsed.supersededBy,
+          );
+        }
+      }
+      if (Array.isArray(scores)) {
+        for (const item of scores) {
+          if (!item || typeof item !== "object" || Array.isArray(item)) {
+            return Response.json({ error: "bad_aims" }, { status: 400 });
+          }
+          const row = item as Record<string, unknown>;
+          const parsed = parseAimScoreRow(row);
+          if (!parsed) {
+            return Response.json({ error: "bad_aims" }, { status: 400 });
+          }
+          sql.exec(
+            "INSERT INTO aim_score (event_id, area, score, note) VALUES (?, ?, ?, ?)",
+            parsed.eventId,
+            parsed.area,
+            parsed.score,
+            parsed.note,
+          );
+        }
+      }
+      if (Array.isArray(blocks)) {
+        for (const item of blocks) {
+          if (!item || typeof item !== "object" || Array.isArray(item)) {
+            return Response.json({ error: "bad_aims" }, { status: 400 });
+          }
+          const row = item as Record<string, unknown>;
+          const parsed = parseAimBlockRow(row);
+          if (!parsed) {
+            return Response.json({ error: "bad_aims" }, { status: 400 });
+          }
+          sql.exec(
+            "INSERT INTO aim_block (area, from_day, to_day) VALUES (?, ?, ?)",
+            parsed.area,
+            parsed.fromDay,
+            parsed.toDay,
+          );
+        }
+      }
+      return Response.json({ ok: true });
+    }
+    return new Response("method", { status: 405 });
+  }
+
   private async statusHttp(request: Request): Promise<Response> {
     if (request.method !== "GET") {
       return new Response("method", { status: 405 });
@@ -2019,6 +2145,110 @@ function settingsStub(env: AgentEnv): {
   } catch {
     return null;
   }
+}
+
+function parseAimEventRow(row: Record<string, unknown>): {
+  id: number;
+  day: string;
+  what: string;
+  ref: string;
+  metric: string;
+  value: number | null;
+  unit: string;
+  source: string;
+  createdAt: string;
+  supersededBy: number | null;
+} | null {
+  const id = row.id;
+  const day = row.day;
+  const what = row.what;
+  const source = row.source;
+  const createdAt = row.created_at;
+  if (
+    (typeof id !== "number" && typeof id !== "string")
+    || typeof day !== "string"
+    || typeof what !== "string"
+    || typeof source !== "string"
+    || typeof createdAt !== "string"
+  ) {
+    return null;
+  }
+  const rowId = typeof id === "number" ? id : Number(id);
+  if (!Number.isSafeInteger(rowId) || rowId <= 0) {
+    return null;
+  }
+  const ref = typeof row.ref === "string" ? row.ref : "";
+  const metric = typeof row.metric === "string" ? row.metric : "";
+  const unit = typeof row.unit === "string" ? row.unit : "";
+  const valueRaw = row.value;
+  let value: number | null = null;
+  if (valueRaw != null) {
+    if (typeof valueRaw !== "number" || !Number.isFinite(valueRaw)) {
+      return null;
+    }
+    value = valueRaw;
+  }
+  const supersededBy = row.superseded_by == null ? null : row.superseded_by;
+  if (supersededBy != null && typeof supersededBy !== "number" && typeof supersededBy !== "string") {
+    return null;
+  }
+  const supersededId = supersededBy == null
+    ? null
+    : typeof supersededBy === "number" ? supersededBy : Number(supersededBy);
+  if (supersededId != null && (!Number.isSafeInteger(supersededId) || supersededId <= 0)) {
+    return null;
+  }
+  return {
+    id: rowId,
+    day,
+    what,
+    ref,
+    metric,
+    value,
+    unit,
+    source,
+    createdAt,
+    supersededBy: supersededId,
+  };
+}
+
+function parseAimScoreRow(row: Record<string, unknown>): {
+  eventId: number;
+  area: string;
+  score: number;
+  note: string;
+} | null {
+  const eventId = row.event_id;
+  const area = row.area;
+  const score = row.score;
+  if (
+    (typeof eventId !== "number" && typeof eventId !== "string")
+    || typeof area !== "string"
+    || typeof score !== "number"
+    || !Number.isInteger(score)
+  ) {
+    return null;
+  }
+  const id = typeof eventId === "number" ? eventId : Number(eventId);
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    return null;
+  }
+  const note = typeof row.note === "string" ? row.note : "";
+  return { eventId: id, area, score, note };
+}
+
+function parseAimBlockRow(row: Record<string, unknown>): {
+  area: string;
+  fromDay: string;
+  toDay: string;
+} | null {
+  const area = row.area;
+  const fromDay = row.from_day;
+  const toDay = row.to_day;
+  if (typeof area !== "string" || typeof fromDay !== "string" || typeof toDay !== "string") {
+    return null;
+  }
+  return { area, fromDay, toDay };
 }
 
 function sampleSink(env: AgentEnv): { addSample(input: SampleInput): Promise<unknown> } | null {

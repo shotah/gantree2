@@ -25,6 +25,8 @@
     "agent": "node scripts/agent.ts",
     "icons": "node scripts/icons.ts",
     "seed": "node scripts/seed.ts",
+    "export-onprem": "node scripts/export-onprem.ts",
+    "import-onprem": "node scripts/import-onprem.ts",
     "shot": "node scripts/shot.mjs",
     "theme:export": "node scripts/theme-export.ts",
     "openapi": "node scripts/openapi.ts",

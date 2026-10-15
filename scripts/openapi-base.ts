@@ -744,6 +744,71 @@ export const OPENAPI_BASE = {
           },
         },
       },
+      OnPremMigrateBundle: {
+        type: "object",
+        required: [
+          "version",
+          "memory",
+          "aim_event",
+          "aim_score",
+          "aim_block",
+          "persona_file",
+          "selfnote",
+        ],
+        description:
+          "Export from `npm run export-onprem`. Memory rows, aims ledger, persona files, and selfnote only — no OAuth, chat, or session secrets.",
+        properties: {
+          version: {
+            type: "integer",
+            enum: [1],
+          },
+          memory: {
+            type: "object",
+            required: ["rows"],
+            properties: {
+              rows: {
+                type: "array",
+                items: { type: "object" },
+              },
+            },
+          },
+          aim_event: {
+            type: "object",
+            required: ["rows"],
+            properties: {
+              rows: { type: "array", items: { type: "object" } },
+            },
+          },
+          aim_score: {
+            type: "object",
+            required: ["rows"],
+            properties: {
+              rows: { type: "array", items: { type: "object" } },
+            },
+          },
+          aim_block: {
+            type: "object",
+            required: ["rows"],
+            properties: {
+              rows: { type: "array", items: { type: "object" } },
+            },
+          },
+          persona_file: {
+            type: "object",
+            required: ["rows"],
+            properties: {
+              rows: { type: "array", items: { type: "object" } },
+            },
+          },
+          selfnote: {
+            type: "object",
+            required: ["rows"],
+            properties: {
+              rows: { type: "array", items: { type: "object" } },
+            },
+          },
+        },
+      },
       AgentConfigView: {
         type: "object",
         required: [

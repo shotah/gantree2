@@ -90,6 +90,16 @@ describe("AgentsBoard", () => {
     expect(within(kitCard).getByRole("link", { name: "Manage" }).className).toContain("border-line");
   });
 
+  it("shows stopped when the card is disabled even if status is ready", async () => {
+    const halted = card({ enabled: false, status: { ...STATUS, state: "ready" } });
+    render(<AgentsBoard client={boardClient("admin", [halted])} />);
+    const tile = await screen.findByRole("listitem", { name: "Kit" });
+    expect(within(tile).getByText("stopped")).toBeTruthy();
+    expect(within(tile).queryByText("running")).toBeNull();
+    expect(within(tile).getByText("stopped").closest("p")?.className).toContain("bg-track");
+    expect(within(tile).getByText("stopped").closest("p")?.className).not.toContain("bg-ok/15");
+  });
+
   it("offers an admin an empty-state create link and an operator a plain sentence", async () => {
     const { rerender } = render(<AgentsBoard client={boardClient("admin", [])} />);
     expect(await screen.findByRole("link", { name: "Create your first agent" })).toBeTruthy();

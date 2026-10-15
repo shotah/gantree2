@@ -10,6 +10,7 @@ import {
   parseLog,
   parseStatus,
   stateFromPlugins,
+  agentRunLabel,
   statusLabel,
 } from "@/lib/agents/status";
 
@@ -150,6 +151,13 @@ describe("harness frames", () => {
     expect(statusLabel("starting")).toBe("not started");
     expect(statusLabel(null)).toBe("not started");
     expect(statusLabel(undefined)).toBe("not started");
+  });
+
+  it("prefers enabled for the board pill", () => {
+    expect(agentRunLabel({ enabled: false, state: "ready" })).toBe("stopped");
+    expect(agentRunLabel({ enabled: false, state: "needs_keys" })).toBe("stopped");
+    expect(agentRunLabel({ enabled: true, state: "ready" })).toBe("running");
+    expect(agentRunLabel({ enabled: true, state: "starting" })).toBe("not started");
   });
 
   it("caps a runaway token total", () => {

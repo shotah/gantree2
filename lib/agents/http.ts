@@ -25,7 +25,6 @@ import { json } from "@/lib/door/http";
 import { canRunAgent } from "@/lib/door/users";
 import type { DirectoryKv } from "@/lib/chat/directory";
 import type { SampleQuery, SampleRow } from "@/lib/door/settingsStore";
-
 export type AgentsHttpEnv = AgentsEnv & {
   DIRECTORY?: DirectoryKv;
   LOCATION_HINT?: string;

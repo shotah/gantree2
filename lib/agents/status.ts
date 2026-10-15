@@ -165,6 +165,16 @@ export function statusLabel(state: BrainState | null | undefined): "running" | "
   return "not started";
 }
 
+export type AgentRunLabel = "running" | "not started" | "stopped";
+
+/** Board pill. Disabled cards are stopped regardless of the stored brain state. */
+export function agentRunLabel(opts: { enabled: boolean; state: BrainState | null | undefined }): AgentRunLabel {
+  if (!opts.enabled) {
+    return "stopped";
+  }
+  return statusLabel(opts.state);
+}
+
 export function emptyLog(): LogRing {
   return { seq: 0, lines: [] };
 }
