@@ -35,6 +35,8 @@ export type UpgradeStamp = {
   exp?: number;
   doorRole?: DoorRole;
   assignedAgents?: readonly string[];
+  /** DIRECTORY already indexed this person on this slug. */
+  inDirectory?: boolean;
 };
 
 /** Copy the upgrade request, strip client stamps, write the principal the Worker earned. */
@@ -61,6 +63,9 @@ export function stampAgentHeaders(request: Request, stamp: UpgradeStamp): Header
   }
   if (stamp.assignedAgents?.length) {
     headers.set("X-Chat-Assigned", stamp.assignedAgents.join(","));
+  }
+  if (stamp.inDirectory) {
+    headers.set("X-Chat-Dir", "1");
   }
   headers.delete("Authorization");
   return headers;

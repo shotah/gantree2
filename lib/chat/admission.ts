@@ -83,6 +83,16 @@ export type DoorUser = Resolved & {
   email: string | null;
 };
 
+/** Session email, or the allowlist email on the row this sub already matched. */
+function listedEmail(sessionEmail: string | null | undefined, entryEmail: string | null | undefined): string | null {
+  const fromSession = sessionEmail?.trim() ?? "";
+  if (fromSession) {
+    return fromSession;
+  }
+  const fromRow = entryEmail?.trim() ?? "";
+  return fromRow || null;
+}
+
 export async function doorUserForRequest(
   env: AgentEnv & GateEnv,
   req: Request,
@@ -96,7 +106,7 @@ export async function doorUserForRequest(
       agents: fromHeaders.agents,
       entry: fromHeaders.entry,
       sub: fromHeaders.sub,
-      email: fromHeaders.email,
+      email: listedEmail(fromHeaders.email, fromHeaders.entry.email),
     };
   }
   const url = new URL(req.url);
@@ -118,5 +128,5 @@ export async function doorUserForRequest(
   if (!user) {
     return null;
   }
-  return { ...user, sub: identity.sub, email: identity.email };
+  return { ...user, sub: identity.sub, email: listedEmail(identity.email, user.entry.email) };
 }

@@ -37,6 +37,8 @@ export type HandshakeInput = {
   roomBearer?: string | null;
   host?: string;
   admit?: PhoneAdmitCtx;
+  /** Allowlist email for this sub when the sealed session itself has none. */
+  listedEmail?: string | null;
 };
 
 function bearerFrom(
@@ -135,10 +137,13 @@ async function oidcHandshake(input: HandshakeInput, now: number): Promise<Handsh
     if (!session) {
       return { ok: false, error: "unauthorized" };
     }
+    const listed = input.listedEmail?.trim() ?? "";
+    const email = session.email ?? (listed || undefined);
+    const emailVerified = session.emailVerified || Boolean(listed && !session.email);
     if (!input.admit || !phoneAdmitted(input.roomList, {
       sub: session.sub,
-      email: session.email,
-      emailVerified: session.emailVerified,
+      email,
+      emailVerified,
     }, input.env, input.admit)) {
       return { ok: false, error: "forbidden" };
     }
@@ -147,8 +152,8 @@ async function oidcHandshake(input: HandshakeInput, now: number): Promise<Handsh
       principal: {
         kind: "phone",
         sub: session.sub,
-        email: session.email,
-        emailVerified: session.emailVerified,
+        email,
+        emailVerified,
         exp: session.exp,
       },
     };

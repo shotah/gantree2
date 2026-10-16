@@ -150,6 +150,30 @@ describe("email-only env admin on Who can chat", () => {
     expect(body.agents).toEqual(["kit"]);
   });
 
+  it("opens the socket when the sealed session has a sub and Who can chat has the allowlist email", async () => {
+    const { AGENT, stub } = kitBinding([{ email: EMAIL }]);
+    const env = {
+      GOOGLE_CLIENT_ID: "id",
+      SESSION_SECRET: SECRET,
+      GANTREE_ADMINS: `${SUB}:${EMAIL}`,
+      AGENT,
+      SETTINGS: settingsInventory(["kit"]),
+    };
+    const token = await sealSession(await sessionKey(SECRET), { sub: SUB, email: null });
+    const socket = await routeAgentSocket(new Request("https://g.test/ws/kit?role=phone", {
+      headers: { Cookie: `${SESSION_COOKIE}=${encodeURIComponent(token)}` },
+    }), env, "kit", memoryStore());
+    expect(socket?.status).toBe(200);
+    const upgrade = stub.fetch.mock.calls.map((call) => call[0]).find((input) => {
+      const req = input instanceof Request ? input : new Request(input);
+      return req.headers.get("X-Chat-Role") === "phone";
+    });
+    const stamped = upgrade instanceof Request ? upgrade : new Request(upgrade ?? "https://g.test/");
+    expect(stamped.headers.get("X-Chat-Sub")).toBe(SUB);
+    expect(stamped.headers.get("X-Chat-Email")).toBe(EMAIL);
+    expect(stamped.headers.get("X-Chat-EmailVerified")).toBe("1");
+  });
+
   it("403s that admin when Who can chat is empty", async () => {
     const { AGENT, idFromName } = kitBinding([]);
     const env = {

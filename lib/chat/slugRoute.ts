@@ -96,6 +96,7 @@ export async function authorizeSlug(
     roomBearer,
     host: url.hostname,
     admit,
+    listedEmail: who?.email,
   });
   if (auth.ok) {
     return null;

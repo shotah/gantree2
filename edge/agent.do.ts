@@ -297,6 +297,7 @@ export class Agent extends DurableObject<AgentEnv> {
       doorRole,
       assignedAgents,
       chatSlug: slug ?? undefined,
+      inDirectory: request.headers.get("X-Chat-Dir") === "1",
     }));
     if (role === "crane") {
       await this.sendConfig(pair[1]);

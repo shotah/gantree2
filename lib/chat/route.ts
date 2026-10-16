@@ -212,6 +212,7 @@ export async function routeAgentSocket(
       emailVerified: session.emailVerified,
       doorRole: doorUser.role,
       assignedAgents: doorUser.agents,
+      inDirectory,
     });
     return stub.fetch(new Request(req, { headers }));
   }
@@ -255,6 +256,7 @@ export async function routeAgentSocket(
           host: url.hostname,
           roomList,
           admit,
+          listedEmail: doorUser?.email,
         })
       : await handshake({
           env,
@@ -291,6 +293,7 @@ export async function routeAgentSocket(
     exp: auth.principal.kind === "phone" ? auth.principal.exp : undefined,
     doorRole: doorUser?.role,
     assignedAgents: doorUser?.agents,
+    inDirectory: admit?.inDirectory,
   });
   return stub.fetch(new Request(req, { headers }));
 }
