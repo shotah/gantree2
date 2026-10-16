@@ -270,8 +270,12 @@ is in the cookie: no role, no agents, no name. Code: <code>lib/door/session.ts</
 </tbody></table>
 <p>Public: <code>/login</code>, <code>/api/auth/google</code>, <code>/api/auth/callback/google</code>,
 <code>/api/auth/catch</code>, <code>/api/health</code>, <code>/api/auth/config</code>, <code>/api/auth/nonce</code>, <code>/api/auth/token</code>,
-<code>/manifest.webmanifest</code>, <code>/sw.js</code>, <code>/icon.svg</code>, <code>/favicon.ico</code>,
-<code>/robots.txt</code>, <code>/_vinext/*</code>, <code>/_next/*</code>, <code>/assets/*</code>, <code>/.well-known/*</code>.
+<code>/manifest.webmanifest</code>, <code>/sw.js</code>, <code>/icon.svg</code>, the manifest PNG icons
+(<code>/icon-192.png</code>, <code>/icon-512.png</code>, <code>/icon-maskable-512.png</code>),
+<code>/apple-touch-icon.png</code>, <code>/favicon.ico</code>, <code>/robots.txt</code>, <code>/_vinext/*</code>,
+<code>/_next/*</code>, <code>/assets/*</code>, <code>/.well-known/*</code>. The icons must stay public:
+Chrome fetches them without cookies before it offers Install, and a
+push card loads its icon the same way.
 Code: <code>lib/door/gate.ts</code>, <code>lib/door/http.ts</code>, <code>middleware.ts</code>. A cookie
 that opens wins; otherwise the same JWE on <code>Authorization: Bearer</code>.
 A bearer on <code>/api/chat/{avatar,backdrop,theme}</code> that does not open as a
