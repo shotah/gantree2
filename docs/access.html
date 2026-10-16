@@ -68,7 +68,8 @@ Setup by place: <a href="install.html">install.md</a>. Open walks: <a href="todo
 </tr>
 </tbody></table>
 <p>Bob can operate Ada and never message her. Sam can message Ada from
-a phone and never see settings. Both sign in at the same <code>/login</code>.
+a phone, open Ada&#39;s own page, and never see the rest of settings.
+Both sign in at the same <code>/login</code>.
 There is no second door and no passphrase.</p>
 <p><img src="../assets/docs/login.png" alt="Sign-in page with Continue with Google"></p>
 <p><img src="../assets/docs/users.png" alt="Users page with an admin row and a member row"></p>
@@ -83,6 +84,7 @@ There is no second door and no passphrase.</p>
          └───────────────────────────┼────────────────────────────┘
                                      │  role
          /users /settings /agents  admin only
+         /agents/&lt;id&gt;       admin / operator: &lt;id&gt; on their row / member: on &lt;id&gt;'s room list
          /chat/&lt;id&gt;        signed in ──┐
                                        └─ admin / operator: &lt;id&gt; on their row
                                           member: room list (and inventory)
@@ -175,12 +177,12 @@ frames are always <code>sub</code>.</p>
 <tr>
 <td><code>operator</code></td>
 <td>Settings row with <code>agents[]</code></td>
-<td>Agents console for those ids. Chat only where Who can chat lists them</td>
+<td>Agents console for those ids (<code>/agents/&lt;id&gt;</code>). Chat only where Who can chat lists them</td>
 </tr>
 <tr>
 <td><code>member</code></td>
 <td><code>GANTREE_ALLOW</code> (locked) or a Settings row</td>
-<td>Sign in via allow; chat only where Who can chat lists them. <code>/api/auth/me</code> is that list</td>
+<td>Sign in via allow; chat only where Who can chat lists them; <code>/agents/&lt;id&gt;</code> for each room that lists them. <code>/api/auth/me</code> is that list</td>
 </tr>
 </tbody></table>
 <p>Resolution is per request: collect every row that matches, take the
@@ -188,8 +190,11 @@ highest role, union the operators&#39; <code>agents[]</code>. Env rows are <stro
 settings shows them and cannot remove them; edit the env to change
 them. Empty <code>GANTREE_ADMINS</code> → every gated route is <code>503</code> until it is
 set. Code: <code>lib/door/users.ts</code>.</p>
-<p><strong>Turn off and destroy (admin only).</strong> Turn off sets the inventory row
-to disabled, drops the Agent Durable Object alarm, and forgets the
+<p><strong>Turn off, destroy, and the agent page.</strong> Anyone who may control an
+agent — an admin, an operator assigned it, or a member its room list
+admits — may open <code>/agents/&lt;id&gt;</code> and change that agent; the rest of
+the console stays admin-only. Turn off sets the inventory row to
+disabled, drops the Agent Durable Object alarm, and forgets the
 in-memory harness; chat and schedules return <code>409</code> <code>off</code> while the object
 and its stored chat, keys, and memory stay. Turn on re-enables the row
 without wiping anything. Destroy is a second confirm on the agent
