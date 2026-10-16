@@ -923,6 +923,34 @@ describe("Agent room ops", () => {
     expect(state.storage.rows.get("allow.hash")).toBeTruthy();
   });
 
+  it("keeps the first phone frame open for an email-only allow row without a verified tag", async () => {
+    const ada = "118212345678901234567";
+    const { state, box } = room({ GOOGLE_CLIENT_ID: "id" });
+    await state.storage.put("allow", [{ email: "ada@example.com" }]);
+    const dial = (email?: string) => {
+      const ws = new FakeSocket();
+      state.acceptWebSocket(ws, socketTags({
+        role: "phone",
+        rateId: `sub:${ada}`,
+        userId: ada,
+        email,
+        emailVerified: false,
+        doorRole: "admin",
+        chatSlug: "kit",
+      }));
+      return ws;
+    };
+    const phone = dial("ada@example.com");
+    await box.webSocketMessage(phone as unknown as WebSocket, JSON.stringify({ kind: "ack" }));
+    expect(phone.readyState).toBe(OPEN);
+    const stranger = dial("eve@example.com");
+    await box.webSocketMessage(stranger as unknown as WebSocket, JSON.stringify({ kind: "ack" }));
+    expect(stranger.readyState).toBe(CLOSING);
+    const untagged = dial();
+    await box.webSocketMessage(untagged as unknown as WebSocket, JSON.stringify({ kind: "ack" }));
+    expect(untagged.readyState).toBe(CLOSING);
+  });
+
   it("serves a face and clears a backdrop", async () => {
     const { box, phone } = room();
     const live = phone("1182");

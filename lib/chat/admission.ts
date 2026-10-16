@@ -77,15 +77,27 @@ export async function memberRoomUsersWhenNeeded(
   return fetchRoomUsers(stub);
 }
 
+/** Door row plus the sealed Google identity. `entry.sub` may be null on an email-only admin. */
+export type DoorUser = Resolved & {
+  sub: string;
+  email: string | null;
+};
+
 export async function doorUserForRequest(
   env: AgentEnv & GateEnv,
   req: Request,
   store: UserStore,
   now = Date.now(),
-): Promise<Resolved | null> {
+): Promise<DoorUser | null> {
   const fromHeaders = principalFromHeaders(req.headers);
   if (fromHeaders) {
-    return { role: fromHeaders.role, agents: fromHeaders.agents, entry: fromHeaders.entry };
+    return {
+      role: fromHeaders.role,
+      agents: fromHeaders.agents,
+      entry: fromHeaders.entry,
+      sub: fromHeaders.sub,
+      email: fromHeaders.email,
+    };
   }
   const url = new URL(req.url);
   let identity = devIdentity(env, url);
@@ -102,5 +114,9 @@ export async function doorUserForRequest(
   if (!identity) {
     return null;
   }
-  return resolveUser(env, store, { sub: identity.sub, email: identity.email, emailVerified: true });
+  const user = await resolveUser(env, store, { sub: identity.sub, email: identity.email, emailVerified: true });
+  if (!user) {
+    return null;
+  }
+  return { ...user, sub: identity.sub, email: identity.email };
 }

@@ -166,20 +166,24 @@ export async function routeAgentSocket(
   if (!inventoried.enabled) {
     return agentOff();
   }
+  if (!env.AGENT) {
+    return configError();
+  }
 
   let roomList: readonly RoomUser[] = [];
   let admit: Parameters<typeof handshake>[0]["admit"];
   let doorUser: Awaited<ReturnType<typeof doorUserForRequest>> = null;
 
   if (dev && role === "phone") {
-    doorUser = await resolveUser(env, store, { sub: dev.sub, email: dev.email, emailVerified: true });
-    if (!doorUser) {
+    const resolved = await resolveUser(env, store, { sub: dev.sub, email: dev.email, emailVerified: true });
+    if (!resolved) {
       return unauthorized();
     }
+    doorUser = { ...resolved, sub: dev.sub, email: dev.email };
     const session = {
-      sub: doorUser.entry.sub ?? dev.sub,
-      email: doorUser.entry.email ?? dev.email ?? undefined,
-      emailVerified: Boolean(doorUser.entry.email ?? dev.email),
+      sub: dev.sub,
+      email: dev.email ?? doorUser.entry.email ?? undefined,
+      emailVerified: Boolean(dev.email ?? doorUser.entry.email),
     };
     const pre = humanChatPrecheck(env, doorUser, slug, session);
     if (pre === "forbidden") {
@@ -197,7 +201,7 @@ export async function routeAgentSocket(
     }
     const stub = agentStub(env, slug);
     if (!stub) {
-      return new Response("not found", { status: 404 });
+      return configError();
     }
     const headers = stampAgentHeaders(req, {
       role,
@@ -216,9 +220,9 @@ export async function routeAgentSocket(
     doorUser = await doorUserForRequest(env, req, store);
     if (doorUser) {
       const session = {
-        sub: doorUser.entry.sub ?? "",
-        email: doorUser.entry.email ?? undefined,
-        emailVerified: Boolean(doorUser.entry.email),
+        sub: doorUser.sub,
+        email: doorUser.email ?? undefined,
+        emailVerified: Boolean(doorUser.email),
       };
       const pre = humanChatPrecheck(env, doorUser, slug, session);
       if (pre === "forbidden") {
@@ -275,7 +279,7 @@ export async function routeAgentSocket(
   }
   const stub = agentStub(env, slug);
   if (!stub) {
-    return new Response("not found", { status: 404 });
+    return configError();
   }
   const headers = stampAgentHeaders(req, {
     role,

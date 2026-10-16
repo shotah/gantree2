@@ -37,6 +37,9 @@ export async function authorizeSlug(
   if (!row.enabled) {
     return agentOff();
   }
+  if (!env.AGENT) {
+    return configError();
+  }
   const url = new URL(req.url);
   const who = await doorUserForRequest(env, req, store);
   let roomList: readonly RoomUser[] = [];
@@ -54,9 +57,9 @@ export async function authorizeSlug(
 
   if (who) {
     const session = {
-      sub: who.entry.sub ?? "",
-      email: who.entry.email ?? undefined,
-      emailVerified: Boolean(who.entry.email),
+      sub: who.sub,
+      email: who.email ?? undefined,
+      emailVerified: Boolean(who.email),
     };
     const pre = humanChatPrecheck(env, who, slug, session);
     if (pre === "forbidden") {
@@ -69,9 +72,9 @@ export async function authorizeSlug(
 
   if (devIdentity(env, url) && who) {
     const session = {
-      sub: who.entry.sub ?? "",
-      email: who.entry.email ?? undefined,
-      emailVerified: Boolean(who.entry.email),
+      sub: who.sub,
+      email: who.email ?? undefined,
+      emailVerified: Boolean(who.email),
     };
     const ctx = admit ?? {
       role: who.role,

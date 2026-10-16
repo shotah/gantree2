@@ -100,6 +100,28 @@ describe("socketAuth", () => {
     })).toBe(false);
   });
 
+  it("keeps an email-listed phone when the verified flag was dropped", () => {
+    expect(phone({
+      userId: ada,
+      email: "ada@example.com",
+      roomUsers: [{ email: "ada@example.com" }],
+      doorRole: "admin",
+      now: 1_000,
+    })).toBe(true);
+    expect(phone({
+      userId: ada,
+      roomUsers: [{ email: "ada@example.com" }],
+      doorRole: "admin",
+      now: 1_000,
+    })).toBe(false);
+    expect(phone({
+      userId: ada,
+      roomUsers: [{ sub: ada }],
+      doorRole: "admin",
+      now: 1_000,
+    })).toBe(true);
+  });
+
   it("admits a verified email on the room list and closes a removed socket", () => {
     const room = [{ email: "ada@example.com" }];
     expect(phone({

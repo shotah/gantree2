@@ -41,10 +41,13 @@ function phoneSession(input: SocketAuthInput): RoomSession | null {
   if (!input.userId) {
     return null;
   }
+  const email = input.email?.trim();
   return {
     sub: input.userId,
-    email: input.email,
-    emailVerified: input.emailVerified,
+    email: email || undefined,
+    // The worker stamps an email only after the sealed session verified it.
+    // A dropped verified tag must not close that socket on the next frame.
+    emailVerified: input.emailVerified === true || Boolean(email),
   };
 }
 

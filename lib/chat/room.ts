@@ -38,16 +38,13 @@ export function roomAllows(
   session: RoomSession,
   extra?: string,
 ): boolean {
-  if (!session.sub) {
-    return false;
-  }
-  if (extraSubs(extra).has(session.sub)) {
+  if (session.sub && extraSubs(extra).has(session.sub)) {
     return true;
   }
   const email = session.email?.trim().toLowerCase() ?? "";
   const verified = session.emailVerified === true && Boolean(email);
   for (const row of list ?? []) {
-    if (row.sub && row.sub === session.sub) {
+    if (session.sub && row.sub && row.sub === session.sub) {
       return true;
     }
     if (verified && row.email && row.email === email) {

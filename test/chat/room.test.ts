@@ -17,6 +17,17 @@ describe("roomAllows", () => {
     )).toBe(true);
   });
 
+  it("matches a verified email when the session sub is empty", () => {
+    expect(roomAllows(
+      [{ email: "ada@example.com" }],
+      { sub: "", email: "ada@example.com", emailVerified: true },
+    )).toBe(true);
+    expect(roomAllows(
+      [{ email: "ada@example.com" }],
+      { sub: "", email: "ada@example.com", emailVerified: false },
+    )).toBe(false);
+  });
+
   it("refuses an unverified email", () => {
     expect(roomAllows(
       [{ email: "ada@example.com" }],

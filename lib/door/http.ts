@@ -140,8 +140,8 @@ export function logout(req: Request): Response {
 /**
  * GET /api/auth/me → the principal, or 401 / 503 from the gate.
  *
- * `agents` is the union of the Settings grants and whatever `rooms` admits
- * (chat room membership). `cranes` is an alias copy: gantree-android and
+ * `agents` is Who can chat (`rooms`). Console assignment on the user row
+ * is not membership. `cranes` is an alias copy: gantree-android and
  * gantree-ios read `agents` and fall back to it; dropped at the Phase 4 cutover.
  */
 export async function me(
@@ -153,7 +153,7 @@ export async function me(
   const d = await gate(req, env, store);
   if (d.kind === "pass") {
     const admitted = rooms ? await rooms(d.who) : [];
-    const agents = [...new Set([...d.who.agents, ...admitted])].sort();
+    const agents = [...new Set(admitted)].sort();
     return json({ sub: d.who.sub, email: d.who.email, role: d.who.role, agents, cranes: [...agents] });
   }
   if (d.kind === "unauthorized") {

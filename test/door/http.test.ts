@@ -129,7 +129,7 @@ describe("me / logout / guard", () => {
     const ok = await me(await sessionReq("/api/auth/me"), env, memoryStore());
     expect(ok.status).toBe(200);
     expect(await ok.json()).toEqual({ sub: ADA_SUB, email: "ada@example.com", role: "admin", agents: [], cranes: [] });
-    // Room admission merges into `agents`; grants and rooms are one sorted set; `cranes` is the alias copy.
+    // `agents` is the rooms list. `cranes` is the alias copy.
     const withRooms = await me(await sessionReq("/api/auth/me"), env, memoryStore(), async (who) => [who.agents.length ? "x" : "kit", "ada"]);
     expect(await withRooms.json()).toMatchObject({ agents: ["ada", "kit"], cranes: ["ada", "kit"] });
     expect((await me(new Request("https://g.test/api/auth/me"), env, memoryStore())).status).toBe(401);

@@ -149,6 +149,79 @@ describe("email-only env admin on Who can chat", () => {
     const body: { agents: string[] } = await meRes.json();
     expect(body.agents).toEqual(["kit"]);
   });
+
+  it("403s that admin when Who can chat is empty", async () => {
+    const { AGENT, idFromName } = kitBinding([]);
+    const env = {
+      GOOGLE_CLIENT_ID: "id",
+      SESSION_SECRET: SECRET,
+      GANTREE_ADMINS: EMAIL,
+      AGENT,
+      SETTINGS: settingsInventory(["kit"]),
+    };
+    const token = await sealSession(await sessionKey(SECRET), { sub: SUB, email: EMAIL });
+    const res = await routeAgentSocket(new Request("https://g.test/ws/kit?role=phone", {
+      headers: { Cookie: `${SESSION_COOKIE}=${encodeURIComponent(token)}` },
+    }), env, "kit", memoryStore());
+    expect(res?.status).toBe(403);
+    expect(idFromName).toHaveBeenCalled();
+  });
+
+  it("is 503 when the inventoried agent has no binding", async () => {
+    const env = {
+      GOOGLE_CLIENT_ID: "id",
+      SESSION_SECRET: SECRET,
+      GANTREE_ADMINS: EMAIL,
+      SETTINGS: settingsInventory(["kit"]),
+    };
+    const token = await sealSession(await sessionKey(SECRET), { sub: SUB, email: EMAIL });
+    const res = await routeAgentSocket(new Request("https://g.test/ws/kit?role=phone", {
+      headers: { Cookie: `${SESSION_COOKIE}=${encodeURIComponent(token)}` },
+    }), env, "kit", memoryStore());
+    expect(res?.status).toBe(503);
+    expect(await res?.json()).toEqual({ error: "config" });
+  });
+
+  it("does not put an operator's console assignment on /api/auth/me", async () => {
+    const idFromName = vi.fn((name: string) => ({ name }) as unknown as DurableObjectId);
+    const AGENT = {
+      idFromName,
+      get: (id: { name: string }) => ({
+        fetch: async (input: RequestInfo | URL) => {
+          const req = input instanceof Request ? input : new Request(input);
+          if (req.headers.get("X-Chat-Op") === "allow") {
+            return Response.json({ users: id.name === "kit" ? [{ email: "op@example.com" }] : [] });
+          }
+          return new Response(null, { status: 200 });
+        },
+      }),
+    } as unknown as DurableObjectNamespace;
+    const env = {
+      GOOGLE_CLIENT_ID: "id",
+      SESSION_SECRET: SECRET,
+      GANTREE_ADMINS: "admin@example.com",
+      AGENT,
+      SETTINGS: settingsInventory(["kit", "ada"]),
+      DIRECTORY: {
+        get: async () => null,
+        put: async () => {},
+        delete: async () => {},
+      },
+    };
+    const store = memoryStore([{
+      entry: { sub: OP, email: "op@example.com" },
+      role: "operator",
+      agents: ["ada"],
+      locked: false,
+    }]);
+    const token = await sealSession(await sessionKey(SECRET), { sub: OP, email: "op@example.com" });
+    const headers = { Cookie: `${SESSION_COOKIE}=${encodeURIComponent(token)}` };
+    const meRes = await me(new Request("https://g.test/api/auth/me", { headers }), env, store, roomsFor(env));
+    const listed: { agents: string[] } = await meRes.json();
+    expect(listed.agents).toEqual(["kit"]);
+    const ada = await routeAgentSocket(new Request("https://g.test/ws/ada?role=phone", { headers }), env, "ada", store);
+    expect(ada?.status).toBe(403);
+  });
 });
 
 describe("member room list when DIRECTORY is unset", () => {
