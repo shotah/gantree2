@@ -275,6 +275,14 @@ export async function deleteAgent(slug: string, client: ApiClient = api): Promis
   await send(client, agentUrl(slug), { method: "DELETE" });
 }
 
+export async function getAgentEnabled(slug: string, client: ApiClient = api): Promise<boolean> {
+  const body = await send(client, enabledUrl(slug), { method: "GET" });
+  if (!isRecord(body) || typeof body.enabled !== "boolean") {
+    bad();
+  }
+  return body.enabled;
+}
+
 export async function setAgentEnabled(slug: string, enabled: boolean, client: ApiClient = api): Promise<AgentCard> {
   return asCard(await send(client, enabledUrl(slug), jsonInit("POST", { enabled })));
 }

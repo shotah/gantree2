@@ -511,6 +511,35 @@ export async function deleteAgent(req: Request, env: AgentsHttpEnv, slugRaw: str
   return new Response(null, { status: 204 });
 }
 
+export async function getAgentEnabled(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
+  const who = authorizeSignedIn(req);
+  if (isResponse(who)) {
+    return who;
+  }
+  const slug = slugOr400(slugRaw);
+  if (slug instanceof Response) {
+    return slug;
+  }
+  const api = settingsApi(env);
+  if (!api) {
+    return json({ error: "settings_unavailable" }, 503);
+  }
+  let row: AgentRow | null;
+  try {
+    row = await api.getAgent(slug);
+  } catch {
+    return json({ error: "settings_unavailable" }, 503);
+  }
+  if (!row) {
+    return json({ error: "not_found" }, 404);
+  }
+  const denied = await requireAgentControl(env, who, slug);
+  if (denied) {
+    return denied;
+  }
+  return json({ enabled: row.enabled });
+}
+
 export async function postAgentEnabled(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
   const who = authorizeSignedIn(req);
   if (isResponse(who)) {

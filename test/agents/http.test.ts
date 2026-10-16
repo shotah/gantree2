@@ -12,6 +12,7 @@ import {
   getAgents,
   getAgentStatus,
   postAgentRestart,
+  getAgentEnabled,
   postAgentEnabled,
   getAgentUsers,
   getSamples,
@@ -435,6 +436,36 @@ describe("agents http", () => {
     api.listSamples = () => Promise.reject(new Error("down"));
     expect((await getSamples(asRole("admin", "/api/samples"), env)).status).toBe(503);
     expect((await getSamples(asRole("admin", "/api/samples?since=9007199254740993"), env)).status).toBe(400);
+  });
+
+  it("reads enabled for admin and operator with the same control gate as POST", async () => {
+    const { env, agents } = world();
+    await agents.create({ slug: "kit", name: "Kit" }, ADA);
+    await agents.create({ slug: "ada", name: "Ada" }, ADA);
+
+    const adminOn = await getAgentEnabled(asRole("admin", "/api/agents/kit/enabled"), env, "kit");
+    expect(adminOn.status).toBe(200);
+    expect(await adminOn.json()).toEqual({ enabled: true });
+
+    await postAgentEnabled(
+      asRole("admin", "/api/agents/kit/enabled", [], "POST", JSON.stringify({ enabled: false })),
+      env,
+      "kit",
+    );
+    const adminOff = await getAgentEnabled(asRole("admin", "/api/agents/kit/enabled"), env, "kit");
+    expect(adminOff.status).toBe(200);
+    expect(await adminOff.json()).toEqual({ enabled: false });
+
+    const opOk = await getAgentEnabled(asRole("operator", "/api/agents/kit/enabled", ["kit"]), env, "kit");
+    expect(opOk.status).toBe(200);
+    expect(await opOk.json()).toEqual({ enabled: false });
+
+    const opDenied = await getAgentEnabled(asRole("operator", "/api/agents/ada/enabled", ["kit"]), env, "ada");
+    expect(opDenied.status).toBe(403);
+
+    expect((await getAgentEnabled(new Request("https://g.test/api/agents/kit/enabled"), env, "kit")).status).toBe(401);
+
+    expect((await getAgentEnabled(asRole("admin", "/api/agents/missing/enabled"), env, "missing")).status).toBe(404);
   });
 
   it("lets an operator control an assigned slug and forbids another", async () => {

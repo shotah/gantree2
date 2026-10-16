@@ -1,27 +1,49 @@
 "use client";
 
 import { useState } from "react";
-import { agentsMessage, codeOf, deleteAgent, setAgentEnabled } from "@/app/lib/agentsHttp";
+import { agentsMessage, codeOf, deleteAgent, restartAgent, setAgentEnabled } from "@/app/lib/agentsHttp";
 import { api } from "@/app/lib/api";
 import { displaySlug } from "@/lib/avatar/store";
 
 const DESTROY_WARN
   = "This will delete EVERYTHING — chat, keys, memory, and the durable object — and cannot be undone. Are you sure?";
 
-export function AgentRoomControls({ slug }: { slug: string }) {
-  const [enabled, setEnabled] = useState(true);
+export function AgentRoomControls({
+  slug,
+  enabled,
+  onEnabled,
+  canRestart = false,
+}: {
+  slug: string;
+  enabled: boolean | null;
+  onEnabled: (enabled: boolean) => void;
+  canRestart?: boolean;
+}) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState("");
   const [destroyStep, setDestroyStep] = useState(false);
   const label = displaySlug(slug);
+  const on = enabled !== false;
 
   async function toggle(next: boolean) {
     setBusy(true);
     setError(null);
     try {
       const card = await setAgentEnabled(slug, next, api);
-      setEnabled(card.enabled);
+      onEnabled(card.enabled);
+    } catch (err) {
+      setError(codeOf(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function restart() {
+    setBusy(true);
+    setError(null);
+    try {
+      await restartAgent(slug, api);
     } catch (err) {
       setError(codeOf(err));
     } finally {
@@ -41,6 +63,8 @@ export function AgentRoomControls({ slug }: { slug: string }) {
     }
   }
 
+  const btnClass = "rounded-lg border border-line bg-canvas/60 px-2.5 py-1 text-xs text-body hover:border-accent-line disabled:opacity-50";
+
   return (
     <div className="flex flex-col gap-2 border-t border-line pt-2">
       <span className="text-xs text-muted">This agent ({label})</span>
@@ -48,14 +72,26 @@ export function AgentRoomControls({ slug }: { slug: string }) {
         <button
           type="button"
           disabled={busy}
-          className="rounded-lg border border-line bg-canvas/60 px-2.5 py-1 text-xs text-body hover:border-accent-line disabled:opacity-50"
-          onClick={() => void toggle(!enabled)}
+          className={btnClass}
+          onClick={() => void toggle(!on)}
         >
-          {enabled ? "Turn off" : "Turn on"}
+          {on ? "Stop" : "Start"}
         </button>
+        {canRestart && on
+          ? (
+              <button
+                type="button"
+                disabled={busy}
+                className={btnClass}
+                onClick={() => void restart()}
+              >
+                Restart
+              </button>
+            )
+          : null}
       </div>
-      {enabled
-        ? null
+      {on
+        ? <p className="text-[11px] text-dim">Stop pauses chat and schedules. An idle agent stops on its own.</p>
         : <p className="text-[11px] text-dim">stopped — chat and schedules are paused</p>}
       <div className="mt-1 flex flex-col gap-1.5 rounded-lg border border-danger-line/60 bg-danger-soft/30 px-2.5 py-2">
         <span className="text-xs font-medium text-danger">Destroy agent</span>

@@ -10,6 +10,7 @@
  *   POST   /api/agents/:slug/clone { slug, name?, memories? } → { agent: AgentCard } 201  admin + control source
  *   GET    /api/agents/:slug                → { agent: AgentCard }        admin
  *   DELETE /api/agents/:slug                → 204                         admin (destroy)
+ *   GET    /api/agents/:slug/enabled        → { enabled }                 admin/operator/member
  *   POST   /api/agents/:slug/enabled { enabled } → { agent: AgentCard }   admin
  *   GET    /api/agents/:slug/config         → AgentConfigView             admin
  *   PATCH  /api/agents/:slug/config  AgentConfigPatch → AgentConfigView   admin

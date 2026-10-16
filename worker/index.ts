@@ -7,6 +7,7 @@
 import vinext from "vinext/server/fetch-handler";
 import { withAgentSockets } from "@/lib/chat/entry";
 import type { AgentEnv } from "@/lib/chat/env";
+import { userStore } from "@/lib/door/runtime";
 
 export { Agent } from "@/edge/agent.do";
 export { Settings } from "@/edge/settings.do";
@@ -20,5 +21,5 @@ export default {
       return new Response("no app handler", { status: 500 });
     }
     return app.fetch(request, env, ctx);
-  }),
+  }, userStore),
 } satisfies ExportedHandler<AgentEnv>;

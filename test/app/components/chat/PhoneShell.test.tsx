@@ -1941,6 +1941,108 @@ describe("PhoneShell", () => {
     expect(window.location.search).not.toContain("sub=");
   });
 
+  describe("agent enabled (oidc phone)", () => {
+    const meMember = { sub: "u1", email: "a@b.c", role: "member", agents: ["kit"] };
+    const restartStatus = {
+      state: "ready",
+      since: 1,
+      version: "0",
+      lastTurnAt: null,
+      lastTurn: null,
+      plugins: [],
+      published: [],
+      skipped: [],
+      lastError: null,
+      perf: { turns: 0, prompt: 0, completion: 0, errors: 0 },
+    };
+
+    function stubOidcKit(
+      me: { sub: string; email?: string; role?: string; agents: string[] },
+      enabledGet: { enabled: boolean } | "404" = { enabled: true },
+    ) {
+      vi.stubGlobal("fetch", async (input: RequestInfo, init?: RequestInit) => {
+        const url = requestUrl(input);
+        const method = init?.method ?? "GET";
+        if (url.includes("/api/auth/config")) {
+          return Response.json({ mode: "oidc", google: true, dev: false });
+        }
+        if (url.includes("/api/auth/me")) {
+          return Response.json(me);
+        }
+        if (url === "/api/agents/kit/enabled" && method === "GET") {
+          if (enabledGet === "404") {
+            return new Response(null, { status: 404 });
+          }
+          return Response.json(enabledGet);
+        }
+        if (url === "/api/agents/kit/enabled" && method === "POST") {
+          const body = JSON.parse(typeof init?.body === "string" ? init.body : "{}") as { enabled?: boolean };
+          return Response.json({
+            agent: {
+              slug: "kit",
+              name: "Kit",
+              enabled: body.enabled ?? true,
+              tags: [],
+              createdBy: "",
+              createdAt: 1,
+              canMutate: false,
+              status: null,
+            },
+          });
+        }
+        if (url === "/api/agents/kit/restart" && method === "POST") {
+          return Response.json(restartStatus);
+        }
+        return new Response(null, { status: 404 });
+      });
+    }
+
+    it("header Start turns the agent on and redials", async () => {
+      stubOidcKit(meMember, { enabled: false });
+      stubSocket();
+      render(<PhoneShell slug="kit" />);
+      expect(await screen.findByText("stopped")).toBeTruthy();
+      const start = screen.getByRole("button", { name: "Start Kit" });
+      const socketsBefore = FakeSocket.instances.length;
+      fireEvent.click(start);
+      await vi.waitFor(() => expect(screen.queryByRole("button", { name: "Start Kit" })).toBeNull());
+      expect(FakeSocket.instances.length).toBeGreaterThan(socketsBefore);
+    });
+
+    it("does not show Start when enabled", async () => {
+      stubOidcKit(meMember, { enabled: true });
+      stubSocket();
+      render(<PhoneShell slug="kit" />);
+      await vi.waitFor(() => expect(screen.queryByRole("button", { name: "Start Kit" })).toBeNull());
+    });
+
+    it("tolerates missing GET /enabled", async () => {
+      stubOidcKit(meMember, "404");
+      stubSocket();
+      render(<PhoneShell slug="kit" />);
+      await vi.waitFor(() => expect(screen.queryByRole("button", { name: "Start Kit" })).toBeNull());
+    });
+
+    it("Restart in settings is admin-only", async () => {
+      stubOidcKit({ ...meMember, role: "admin" }, { enabled: true });
+      stubSocket();
+      render(<PhoneShell slug="kit" />);
+      expect(await screen.findByText("Kit")).toBeTruthy();
+      await vi.waitFor(() => expect(screen.queryByRole("button", { name: "Start Kit" })).toBeNull());
+      fireEvent.click(screen.getByRole("button", { name: "settings" }));
+      expect(screen.getByRole("button", { name: "Restart" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Stop" })).toBeTruthy();
+      cleanup();
+      stubOidcKit(meMember, { enabled: true });
+      stubSocket();
+      render(<PhoneShell slug="kit" />);
+      expect(await screen.findByText("Kit")).toBeTruthy();
+      fireEvent.click(screen.getByRole("button", { name: "settings" }));
+      expect(screen.queryByRole("button", { name: "Restart" })).toBeNull();
+      expect(screen.getByRole("button", { name: "Stop" })).toBeTruthy();
+    });
+  });
+
   it("paints give it a minute when /me is rate-limited", async () => {
     let meCalls = 0;
     vi.stubGlobal("fetch", async (input: RequestInfo) => {

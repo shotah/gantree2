@@ -20,8 +20,10 @@ import {
   getMe,
   getRoomUsers,
   getStatus,
+  getAgentEnabled,
   restartAgent,
   listAgents,
+  enabledUrl,
   listTools,
   logUrl,
   patchConfig,
@@ -270,6 +272,19 @@ describe("agentsHttp", () => {
     const emailMissing = await getMe(client(() => json(200, { sub: "s", role: "member", agents: [] })));
     expect(emailMissing.email).toBeNull();
     expect(emailMissing.role).toBe("member");
+  });
+
+  it("reads enabled flag from GET /enabled", async () => {
+    const http = client((url, init) => {
+      if (url === enabledUrl("kit") && (init?.method ?? "GET") === "GET") {
+        return json(200, { enabled: false });
+      }
+      return json(500, { error: "nope" });
+    });
+    expect(await getAgentEnabled("kit", http)).toBe(false);
+    await expect(getAgentEnabled("kit", client(() => json(200, { enabled: "yes" })))).rejects.toMatchObject({
+      code: "bad_body",
+    });
   });
 
   it("posts restart and uses the returned status", async () => {

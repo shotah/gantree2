@@ -2419,6 +2419,56 @@ export const OPENAPI_BASE = {
       },
     },
     "/api/agents/{slug}/enabled": {
+      get: {
+        tags: [
+          "agents",
+        ],
+        summary: "Read whether agent is on",
+        security: [
+          {
+            sessionCookie: [],
+          },
+          {
+            sessionBearer: [],
+          },
+        ],
+        parameters: [
+          {
+            $ref: "#/components/parameters/AgentSlugPath",
+          },
+        ],
+        responses: {
+          200: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: [
+                    "enabled",
+                  ],
+                  properties: {
+                    enabled: {
+                      type: "boolean",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: {
+            $ref: "#/components/responses/UnauthorizedJson",
+          },
+          403: {
+            $ref: "#/components/responses/ForbiddenJson",
+          },
+          404: {
+            $ref: "#/components/responses/ErrorJson",
+          },
+          503: {
+            $ref: "#/components/responses/ErrorJson",
+          },
+        },
+      },
       post: {
         tags: [
           "agents",

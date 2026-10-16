@@ -18,6 +18,7 @@ import { NotifyEnable } from "./NotifyEnable";
 import { GoalsButton, GoalsSheet } from "./GoalsBoard";
 import { TasksButton, TasksSheet } from "./TasksBoard";
 import { AgentRoomControls } from "./AgentRoomControls";
+import { agentsMessage, codeOf, getAgentEnabled, setAgentEnabled } from "@/app/lib/agentsHttp";
 import { SettingsMenu } from "./SettingsMenu";
 import { bubbleFrom, Thread, type ChatBubble } from "./Thread";
 import { mailboxUrl, parseIncoming } from "@/app/lib/socket";
@@ -168,6 +169,9 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
   const [me, setMe] = useState<Me>(null);
   const [sampleId, setSampleId] = useState<SampleId | null>(null);
   const [status, setStatus] = useState<"idle" | "up" | "down">("idle");
+  const [agentOn, setAgentOn] = useState<boolean | null>(null);
+  const [agentHint, setAgentHint] = useState("");
+  const [startBusy, setStartBusy] = useState(false);
   const [gpsHint, setGpsHint] = useState("GPS attaches on send if the OS allows it.");
   const [gpsOn, setGpsOn] = useState(true);
   const [photoSize, setPhotoSize] = useState<PhotoSizeId>(DEFAULT_PHOTO_SIZE);
@@ -210,6 +214,8 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
   const stoppedRef = useRef(true);
   const connectGen = useRef(0);
   const backoffRef = useRef(BACKOFF_MS);
+  const enabledFetchGen = useRef(0);
+  const prevStatusRef = useRef<"idle" | "up" | "down">("idle");
   const reconnectTimer = useRef(0);
   const lastSeenId = useRef<string | undefined>(undefined);
   const lastSeenSeq = useRef(0);
@@ -522,6 +528,7 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
     phone && cfg?.mode === "oidc" && !cfg.dev && me && !listed,
   );
   const canSocket = Boolean(cfg && roomSlug && listed && (cfg.mode === "spike" ? secret : phone ? me : bearer));
+  const canControl = Boolean(phone && roomSlug && listed && cfg?.mode === "oidc" && me);
   // The on-device thread row: only for a room this phone is about to dial, never for a sample paint.
   const threadKey = phone && !painting && canSocket ? threadCacheKey(roomSlug, me?.sub) : "";
 
@@ -936,6 +943,56 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
       }
     };
   }, [bearer, canSocket, cfg?.mode, phone, role, roomSlug, secret]);
+
+  const refreshAgentEnabled = useCallback(async () => {
+    if (!canControl || !roomSlug) {
+      return;
+    }
+    const gen = ++enabledFetchGen.current;
+    try {
+      const on = await getAgentEnabled(roomSlug);
+      if (gen === enabledFetchGen.current) {
+        setAgentOn(on);
+      }
+    } catch {
+      if (gen === enabledFetchGen.current) {
+        setAgentOn(null);
+      }
+    }
+  }, [canControl, roomSlug]);
+
+  useEffect(() => {
+    setAgentOn(null);
+    enabledFetchGen.current += 1;
+    if (canControl) {
+      void refreshAgentEnabled();
+    }
+  }, [canControl, roomSlug, refreshAgentEnabled]);
+
+  useEffect(() => {
+    if (prevStatusRef.current !== "down" && status === "down" && canControl) {
+      void refreshAgentEnabled();
+    }
+    prevStatusRef.current = status;
+  }, [status, canControl, refreshAgentEnabled]);
+
+  const startAgent = useCallback(async () => {
+    if (startBusy || !canControl || !roomSlug) {
+      return;
+    }
+    setStartBusy(true);
+    setAgentHint("");
+    try {
+      const card = await setAgentEnabled(roomSlug, true);
+      setAgentOn(card.enabled);
+      backoffRef.current = BACKOFF_MS;
+      connect();
+    } catch (err) {
+      setAgentHint(agentsMessage(codeOf(err)));
+    } finally {
+      setStartBusy(false);
+    }
+  }, [canControl, connect, roomSlug, startBusy]);
 
   useEffect(() => {
     if (!canSocket || painting) {
@@ -1383,10 +1440,27 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
             </div>
           </div>
           <div className="min-w-0">
-            <p className="truncate text-chat font-medium text-fg">{title}</p>
+            <div className="flex min-w-0 items-center gap-2">
+              <p className="min-w-0 truncate text-chat font-medium text-fg">{title}</p>
+              {agentOn === false && canControl
+                ? (
+                    <button
+                      type="button"
+                      aria-label={`Start ${title}`}
+                      disabled={startBusy}
+                      className="shrink-0 rounded-lg border border-accent-line bg-accent-soft px-2 py-0.5 text-xs text-mark disabled:opacity-50"
+                      onClick={() => void startAgent()}
+                    >
+                      Start
+                    </button>
+                  )
+                : null}
+            </div>
             <p className="text-[11px] text-dim">
               <span className={status === "up" ? "text-ok" : "text-dim"}>
-                {status === "up" ? "live" : status === "down" ? "down" : "idle"}
+                {agentOn === false
+                  ? "stopped"
+                  : status === "up" ? "live" : status === "down" ? "down" : "idle"}
               </span>
               {status === "up" && typing ? " · typing…" : null}
               {speakStatus(speakPhase)
@@ -1395,6 +1469,9 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
               {cfg?.dev && !painting ? " · dev" : null}
               {phone ? null : " · stand-in"}
             </p>
+            {agentHint
+              ? <p role="alert" className="text-[11px] text-danger">{agentHint}</p>
+              : null}
           </div>
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-1">
@@ -1539,8 +1616,21 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
                     </div>
                   )
                 : null}
-              {phone && roomSlug && listed && cfg?.mode === "oidc" && me
-                ? <AgentRoomControls slug={roomSlug} />
+              {canControl
+                ? (
+                    <AgentRoomControls
+                      slug={roomSlug}
+                      enabled={agentOn}
+                      canRestart={me?.role === "admin"}
+                      onEnabled={(on) => {
+                        setAgentOn(on);
+                        if (on) {
+                          backoffRef.current = BACKOFF_MS;
+                          connect();
+                        }
+                      }}
+                    />
+                  )
                 : null}
               {(cfg?.dev || (cfg?.google && phone))
                 ? (
