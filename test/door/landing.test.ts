@@ -92,18 +92,20 @@ describe("readSession", () => {
 });
 
 describe("manageRows", () => {
-  it("only admins get console links", () => {
+  it("admins get the full console; others get Manage only for their room", () => {
     const settings = { href: "/settings", label: "Settings" };
+    const manageKit = { href: "/agents/kit", label: "Manage kit" };
     expect(manageRows(null, "kit")).toEqual([]);
-    expect(manageRows({ role: "member", agents: ["kit"] }, "kit")).toEqual([]);
+    expect(manageRows({ role: "member", agents: ["kit"] }, "kit")).toEqual([manageKit]);
+    expect(manageRows({ role: "member", agents: ["kit"] }, "ada")).toEqual([]);
+    expect(manageRows({ role: "operator", agents: ["kit"] }, "kit")).toEqual([manageKit]);
     expect(manageRows({ role: "member", agents: [] }, null)).toEqual([]);
-    expect(manageRows({ role: "operator", agents: ["kit"] }, "kit")).toEqual([]);
     expect(manageRows({ role: "admin", agents: [] }, null)).toEqual([
       { href: "/agents", label: "All agents" },
       settings,
     ]);
     expect(manageRows({ role: "admin", agents: [] }, "kit")).toEqual([
-      { href: "/agents/kit", label: "Manage kit" },
+      manageKit,
       { href: "/agents", label: "All agents" },
       settings,
     ]);

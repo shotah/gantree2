@@ -3,6 +3,7 @@ import {
   accountStatus,
   activitiesGet,
   activitiesList,
+  coreScopes,
   healthClient,
   heartRateGet,
   hrvGet,
@@ -11,6 +12,7 @@ import {
   weightGet,
   type HealthClient,
 } from "@/harness/plugins/google-health/client";
+import { authFinish as googleAuthFinish, buildAuthUrl } from "@/harness/plugins/google/oauth";
 import {
   activitiesListJSON,
   activityJSON,
@@ -60,10 +62,26 @@ function envTrim(env: Readonly<Record<string, string>>, key: string): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+const HEALTH_SCOPES = [
+  "openid",
+  "https://www.googleapis.com/auth/userinfo.email",
+  ...coreScopes,
+] as const;
+
+function healthCreds(ctx: PluginContext): { id: string; secret: string } | undefined {
+  const id = envTrim(ctx.env, "GOOGLE_HEALTH_CLIENT_ID") || envTrim(ctx.env, "GOOGLE_OAUTH_CLIENT_ID");
+  const secret = envTrim(ctx.env, "GOOGLE_HEALTH_CLIENT_SECRET") || envTrim(ctx.env, "GOOGLE_OAUTH_CLIENT_SECRET");
+  if (!id || !secret) {
+    return undefined;
+  }
+  return { id, secret };
+}
+
 function openClient(ctx: PluginContext, call: CallContext): HealthClient {
+  const creds = healthCreds(ctx);
   return healthClient({
-    clientId: envTrim(ctx.env, "GOOGLE_HEALTH_CLIENT_ID"),
-    clientSecret: envTrim(ctx.env, "GOOGLE_HEALTH_CLIENT_SECRET"),
+    clientId: creds?.id ?? "",
+    clientSecret: creds?.secret ?? "",
     baseURL: envTrim(ctx.env, "GOOGLE_HEALTH_BASE_URL"),
     fetch: ctx.fetch,
     signal: call.signal,
@@ -158,7 +176,7 @@ async function callTool(run: () => Promise<unknown>): Promise<ToolResult> {
 export const googleHealth: Plugin = {
   name: "google-health",
   async ready(ctx) {
-    if (envTrim(ctx.env, "GOOGLE_HEALTH_CLIENT_ID") === "" || envTrim(ctx.env, "GOOGLE_HEALTH_CLIENT_SECRET") === "") {
+    if (!healthCreds(ctx)) {
       return "no_key";
     }
     const token = await ctx.tokens.get("google");
@@ -166,6 +184,12 @@ export const googleHealth: Plugin = {
       return "no_oauth";
     }
     return null;
+  },
+  async authStart(ctx, redirectUri, state) {
+    return { url: await buildAuthUrl(ctx, redirectUri, state, { scopes: HEALTH_SCOPES, creds: healthCreds(ctx) }) };
+  },
+  async authFinish(ctx, redirectUri, code) {
+    await googleAuthFinish(ctx, redirectUri, code, { creds: healthCreds(ctx) });
   },
   tools(ctx) {
     const sleep: Tool = {

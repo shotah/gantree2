@@ -92,6 +92,27 @@ function authorize(req: Request): Principal | Response {
   return who;
 }
 
+/** Signed in and may control `slug` (admin, assigned operator, or admitted room member). */
+async function authorizeControl(
+  req: Request,
+  env: AgentsHttpEnv,
+  slugRaw: string,
+): Promise<{ who: Principal; slug: string } | Response> {
+  const who = authorizeSignedIn(req);
+  if (isResponse(who)) {
+    return who;
+  }
+  const slug = slugOr400(slugRaw);
+  if (slug instanceof Response) {
+    return slug;
+  }
+  const denied = await requireAgentControl(env, who, slug);
+  if (denied) {
+    return denied;
+  }
+  return { who, slug };
+}
+
 async function requireAgentControl(env: AgentsHttpEnv, who: Principal, slug: string): Promise<Response | null> {
   if (who.role === "admin") {
     return null;
@@ -159,9 +180,9 @@ async function readStatus(env: AgentsHttpEnv, slug: string): Promise<AgentStatus
   }
 }
 
-async function cardFor(env: AgentsHttpEnv, who: Principal, row: AgentRow): Promise<AgentCard> {
+async function cardFor(env: AgentsHttpEnv, row: AgentRow, canMutate: boolean): Promise<AgentCard> {
   const status = await readStatus(env, row.slug);
-  return { ...row, status, canMutate: who.role === "admin" };
+  return { ...row, status, canMutate };
 }
 
 async function callAgent(env: AgentsHttpEnv, slug: string, url: string, init?: RequestInit): Promise<Response> {
@@ -195,7 +216,7 @@ export async function getAgents(req: Request, env: AgentsHttpEnv): Promise<Respo
   }
   try {
     const rows = await api.listAgents();
-    const agents = await Promise.all(rows.map((row) => cardFor(env, who, row)));
+    const agents = await Promise.all(rows.map((row) => cardFor(env, row, who.role === "admin")));
     return json({ agents });
   } catch {
     return json({ error: "settings_unavailable" }, 503);
@@ -358,7 +379,7 @@ export async function postAgentClone(req: Request, env: AgentsHttpEnv, slugRaw: 
   if (!row) {
     return json({ error: "settings_unavailable" }, 503);
   }
-  return json({ agent: await cardFor(env, who, row) }, 201);
+  return json({ agent: await cardFor(env, row, who.role === "admin") }, 201);
 }
 
 export async function postAgent(req: Request, env: AgentsHttpEnv): Promise<Response> {
@@ -389,7 +410,7 @@ export async function postAgent(req: Request, env: AgentsHttpEnv): Promise<Respo
     return json({ error: outcome.error }, status);
   }
   await mintBearer(env, outcome.agent.slug);
-  return json({ agent: await cardFor(env, who, outcome.agent) }, 201);
+  return json({ agent: await cardFor(env, outcome.agent, who.role === "admin") }, 201);
 }
 
 /**
@@ -414,14 +435,11 @@ async function mintBearer(env: AgentsHttpEnv, slug: string): Promise<void> {
 }
 
 export async function getAgent(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
-  const who = authorize(req);
-  if (isResponse(who)) {
-    return who;
+  const auth = await authorizeControl(req, env, slugRaw);
+  if (auth instanceof Response) {
+    return auth;
   }
-  const slug = slugOr400(slugRaw);
-  if (slug instanceof Response) {
-    return slug;
-  }
+  const { slug } = auth;
   const api = settingsApi(env);
   if (!api) {
     return json({ error: "settings_unavailable" }, 503);
@@ -431,7 +449,7 @@ export async function getAgent(req: Request, env: AgentsHttpEnv, slugRaw: string
     if (!row) {
       return json({ error: "not_found" }, 404);
     }
-    return json({ agent: await cardFor(env, who, row) });
+    return json({ agent: await cardFor(env, row, true) });
   } catch {
     return json({ error: "settings_unavailable" }, 503);
   }
@@ -602,7 +620,7 @@ export async function postAgentEnabled(req: Request, env: AgentsHttpEnv, slugRaw
       // Enable stands. A missed reset leaves the previous idle clock.
     }
   }
-  return json({ agent: await cardFor(env, who, outcome.agent) });
+  return json({ agent: await cardFor(env, outcome.agent, who.role === "admin") });
 }
 
 /**
@@ -639,26 +657,20 @@ export async function getAgentBearer(req: Request, env: AgentsHttpEnv, slugRaw: 
 }
 
 export async function getAgentConfig(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
-  const who = authorize(req);
-  if (isResponse(who)) {
-    return who;
+  const auth = await authorizeControl(req, env, slugRaw);
+  if (auth instanceof Response) {
+    return auth;
   }
-  const slug = slugOr400(slugRaw);
-  if (slug instanceof Response) {
-    return slug;
-  }
+  const { slug } = auth;
   return callAgent(env, slug, "https://agent/config", { headers: { "X-Chat-Op": "config" } });
 }
 
 export async function patchAgentConfig(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
-  const who = authorize(req);
-  if (isResponse(who)) {
-    return who;
+  const auth = await authorizeControl(req, env, slugRaw);
+  if (auth instanceof Response) {
+    return auth;
   }
-  const slug = slugOr400(slugRaw);
-  if (slug instanceof Response) {
-    return slug;
-  }
+  const { slug } = auth;
   const body = await req.text();
   return callAgent(env, slug, "https://agent/config", {
     method: "PATCH",
@@ -668,26 +680,20 @@ export async function patchAgentConfig(req: Request, env: AgentsHttpEnv, slugRaw
 }
 
 export async function getAgentSelf(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
-  const who = authorize(req);
-  if (isResponse(who)) {
-    return who;
+  const auth = await authorizeControl(req, env, slugRaw);
+  if (auth instanceof Response) {
+    return auth;
   }
-  const slug = slugOr400(slugRaw);
-  if (slug instanceof Response) {
-    return slug;
-  }
+  const { slug } = auth;
   return callAgent(env, slug, "https://agent/self", { headers: { "X-Chat-Op": "self_get" } });
 }
 
 export async function putAgentSelf(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
-  const who = authorize(req);
-  if (isResponse(who)) {
-    return who;
+  const auth = await authorizeControl(req, env, slugRaw);
+  if (auth instanceof Response) {
+    return auth;
   }
-  const slug = slugOr400(slugRaw);
-  if (slug instanceof Response) {
-    return slug;
-  }
+  const { slug } = auth;
   const body = await req.text();
   return callAgent(env, slug, "https://agent/self", {
     method: "PUT",
@@ -697,26 +703,20 @@ export async function putAgentSelf(req: Request, env: AgentsHttpEnv, slugRaw: st
 }
 
 export async function getAgentPersona(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
-  const who = authorize(req);
-  if (isResponse(who)) {
-    return who;
+  const auth = await authorizeControl(req, env, slugRaw);
+  if (auth instanceof Response) {
+    return auth;
   }
-  const slug = slugOr400(slugRaw);
-  if (slug instanceof Response) {
-    return slug;
-  }
+  const { slug } = auth;
   return callAgent(env, slug, "https://agent/persona", { headers: { "X-Chat-Op": "persona_get" } });
 }
 
 export async function putAgentPersona(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
-  const who = authorize(req);
-  if (isResponse(who)) {
-    return who;
+  const auth = await authorizeControl(req, env, slugRaw);
+  if (auth instanceof Response) {
+    return auth;
   }
-  const slug = slugOr400(slugRaw);
-  if (slug instanceof Response) {
-    return slug;
-  }
+  const { slug } = auth;
   const body = await req.text();
   return callAgent(env, slug, "https://agent/persona", {
     method: "PUT",
@@ -726,14 +726,11 @@ export async function putAgentPersona(req: Request, env: AgentsHttpEnv, slugRaw:
 }
 
 export async function startAgentAuth(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
-  const who = authorize(req);
-  if (isResponse(who)) {
-    return who;
+  const auth = await authorizeControl(req, env, slugRaw);
+  if (auth instanceof Response) {
+    return auth;
   }
-  const slug = slugOr400(slugRaw);
-  if (slug instanceof Response) {
-    return slug;
-  }
+  const { slug } = auth;
   const body = await readJson(req);
   const plugin = typeof body?.plugin === "string" ? body.plugin.trim() : "";
   if (!oauthRedirectPlugin(plugin)) {
@@ -753,14 +750,11 @@ export async function startAgentAuth(req: Request, env: AgentsHttpEnv, slugRaw: 
 }
 
 export async function deleteAgentPersona(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
-  const who = authorize(req);
-  if (isResponse(who)) {
-    return who;
+  const auth = await authorizeControl(req, env, slugRaw);
+  if (auth instanceof Response) {
+    return auth;
   }
-  const slug = slugOr400(slugRaw);
-  if (slug instanceof Response) {
-    return slug;
-  }
+  const { slug } = auth;
   const body = await req.text();
   return callAgent(env, slug, "https://agent/persona", {
     method: "DELETE",
@@ -770,26 +764,20 @@ export async function deleteAgentPersona(req: Request, env: AgentsHttpEnv, slugR
 }
 
 export async function getAgentStatus(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
-  const who = authorize(req);
-  if (isResponse(who)) {
-    return who;
+  const auth = await authorizeControl(req, env, slugRaw);
+  if (auth instanceof Response) {
+    return auth;
   }
-  const slug = slugOr400(slugRaw);
-  if (slug instanceof Response) {
-    return slug;
-  }
+  const { slug } = auth;
   return callAgent(env, slug, "https://agent/status", { headers: { "X-Chat-Op": "status" } });
 }
 
 export async function postAgentRestart(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
-  const who = authorize(req);
-  if (isResponse(who)) {
-    return who;
+  const auth = await authorizeControl(req, env, slugRaw);
+  if (auth instanceof Response) {
+    return auth;
   }
-  const slug = slugOr400(slugRaw);
-  if (slug instanceof Response) {
-    return slug;
-  }
+  const { slug } = auth;
   const api = settingsApi(env);
   if (!api) {
     return json({ error: "settings_unavailable" }, 503);
@@ -813,40 +801,31 @@ export async function postAgentRestart(req: Request, env: AgentsHttpEnv, slugRaw
 }
 
 export async function getAgentLog(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
-  const who = authorize(req);
-  if (isResponse(who)) {
-    return who;
+  const auth = await authorizeControl(req, env, slugRaw);
+  if (auth instanceof Response) {
+    return auth;
   }
-  const slug = slugOr400(slugRaw);
-  if (slug instanceof Response) {
-    return slug;
-  }
+  const { slug } = auth;
   const after = new URL(req.url).searchParams.get("after");
   const url = after == null ? "https://agent/log" : `https://agent/log?after=${encodeURIComponent(after)}`;
   return callAgent(env, slug, url, { headers: { "X-Chat-Op": "log" } });
 }
 
 export async function getAgentUsers(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
-  const who = authorize(req);
-  if (isResponse(who)) {
-    return who;
+  const auth = await authorizeControl(req, env, slugRaw);
+  if (auth instanceof Response) {
+    return auth;
   }
-  const slug = slugOr400(slugRaw);
-  if (slug instanceof Response) {
-    return slug;
-  }
+  const { slug } = auth;
   return callAgent(env, slug, "https://agent/allow", { headers: { "X-Chat-Op": "allow" } });
 }
 
 export async function putAgentUsers(req: Request, env: AgentsHttpEnv, slugRaw: string): Promise<Response> {
-  const who = authorize(req);
-  if (isResponse(who)) {
-    return who;
+  const auth = await authorizeControl(req, env, slugRaw);
+  if (auth instanceof Response) {
+    return auth;
   }
-  const slug = slugOr400(slugRaw);
-  if (slug instanceof Response) {
-    return slug;
-  }
+  const { slug } = auth;
   const body = await req.text();
   return callAgent(env, slug, "https://agent/allow", {
     method: "PUT",

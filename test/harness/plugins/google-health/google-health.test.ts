@@ -1,5 +1,7 @@
+import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { fixedClock, makeLogger, memorySink } from "@/harness/core";
+import { nodeSql, type NodeDatabase } from "@/harness/core/sql";
 import type { CallContext, OAuthToken, PluginContext, TokenStore, ToolResult } from "@/harness/core/tools";
 import {
   addDays,
@@ -15,6 +17,7 @@ import {
   accountStatus,
   activitiesGet,
   activitiesList,
+  coreScopes,
   dataPointsURL,
   defaultBaseURL,
   googleTokenURL,
@@ -96,6 +99,33 @@ function textOf(result: ToolResult): string {
 const authed = { accessToken: "test-token" };
 const creds = { GOOGLE_HEALTH_CLIENT_ID: "cid", GOOGLE_HEALTH_CLIENT_SECRET: "sec" };
 
+const HEALTH_AUTH_SCOPES = [
+  "openid",
+  "https://www.googleapis.com/auth/userinfo.email",
+  ...coreScopes,
+];
+
+function idToken(email: string): string {
+  const payload = btoa(JSON.stringify({ email })).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/u, "");
+  return `hdr.${payload}.sig`;
+}
+
+function oauthPluginCtx(
+  env: Record<string, string>,
+  fetchFn: typeof fetch,
+  at = aug3,
+): PluginContext & { tokens: TokenStore & { read(): OAuthToken | null } } {
+  const tokens = memoryTokens(null);
+  return {
+    env,
+    sql: nodeSql(new DatabaseSync(":memory:") as unknown as NodeDatabase),
+    clock: fixedClock(at, "UTC"),
+    log: makeLogger(memorySink(), () => at),
+    fetch: fetchFn,
+    tokens,
+  };
+}
+
 function snakeTool(name: string): boolean {
   const parts = name.split("_");
   const head = parts[0] ?? "";
@@ -124,6 +154,64 @@ describe("google-health plugin", () => {
     expect(await googleHealth.ready(pluginCtx({ GOOGLE_HEALTH_CLIENT_ID: "cid" }, ctx.fetch, authed))).toBe("no_key");
     expect(await googleHealth.ready(pluginCtx(creds, ctx.fetch, null))).toBe("no_oauth");
     expect(await googleHealth.ready(pluginCtx(creds, ctx.fetch, { accessToken: "tok", expiresAt: aug3 - 60_000 }))).toBeNull();
+    expect(await googleHealth.ready(pluginCtx(
+      { GOOGLE_OAUTH_CLIENT_ID: "oauth-cid", GOOGLE_OAUTH_CLIENT_SECRET: "oauth-sec" },
+      ctx.fetch,
+      authed,
+    ))).toBeNull();
+  });
+
+  it("authStart builds a health authorize URL with incremental scopes", async () => {
+    if (!googleHealth.authStart) {
+      throw new Error("googleHealth authStart missing");
+    }
+    const ctx = oauthPluginCtx(creds, routeFetch(() => jsonResponse({})));
+    const { url } = await googleHealth.authStart(ctx, "https://app.example/callback", "state-h");
+    expect(url.startsWith("https://accounts.google.com/o/oauth2/auth?")).toBe(true);
+    const params = new URL(url).searchParams;
+    expect(params.get("client_id")).toBe("cid");
+    expect(params.get("include_granted_scopes")).toBe("true");
+    expect(params.get("scope")?.split(" ")).toEqual(HEALTH_AUTH_SCOPES);
+  });
+
+  it("authStart falls back to GOOGLE_OAUTH client credentials", async () => {
+    if (!googleHealth.authStart) {
+      throw new Error("googleHealth authStart missing");
+    }
+    const ctx = oauthPluginCtx(
+      { GOOGLE_OAUTH_CLIENT_ID: "oauth-cid", GOOGLE_OAUTH_CLIENT_SECRET: "oauth-sec" },
+      routeFetch(() => jsonResponse({})),
+    );
+    const { url } = await googleHealth.authStart(ctx, "https://app.example/callback", "state-oauth");
+    expect(new URL(url).searchParams.get("client_id")).toBe("oauth-cid");
+  });
+
+  it("authFinish stores the shared google provider token", async () => {
+    if (!googleHealth.authStart || !googleHealth.authFinish) {
+      throw new Error("googleHealth auth methods missing");
+    }
+    const ctx = oauthPluginCtx(creds, routeFetch(() => jsonResponse({})));
+    await googleHealth.authStart(ctx, "https://app.example/callback", "state-finish");
+    const pending = ctx.sql.one<{ verifier: string }>("SELECT verifier FROM google_oauth_pending WHERE id = 1");
+    ctx.fetch = routeFetch((url, init) => {
+      if (url.origin + url.pathname === googleTokenURL) {
+        const body = new URLSearchParams(typeof init?.body === "string" ? init.body : "");
+        expect(body.get("grant_type")).toBe("authorization_code");
+        expect(body.get("client_id")).toBe("cid");
+        expect(body.get("client_secret")).toBe("sec");
+        expect(body.get("code_verifier")).toBe(pending?.verifier);
+        return jsonResponse({
+          access_token: "ya29.health",
+          refresh_token: "1//health",
+          expires_in: 3600,
+          token_type: "Bearer",
+          id_token: idToken("health@example.com"),
+        });
+      }
+      return jsonResponse({});
+    });
+    await googleHealth.authFinish(ctx, "https://app.example/callback", "health-code");
+    expect(ctx.tokens.read()?.accessToken).toBe("ya29.health");
   });
 
   it("builds civil filters from the injected clock", () => {

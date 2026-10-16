@@ -4,8 +4,8 @@ import { decodeBase64UrlToString, encodeBase64UrlRaw } from "@/harness/plugins/g
 import { isRecord } from "@/harness/plugins/google/args";
 
 /**
- * Scopes the Go server requests (`auth.DefaultScopes`). One authorize URL
- * covers every Workspace service this plugin (and google-health) calls.
+ * Scopes the Go server requests (`auth.DefaultScopes`) for Workspace services.
+ * google-health adds its own scopes via incremental auth (`include_granted_scopes`).
  */
 export const GOOGLE_SCOPES = [
   "openid",
@@ -40,6 +40,11 @@ const PENDING_TTL_MS = 10 * 60 * 1000;
 const REFRESH_SKEW_MS = 60_000;
 
 const MISSING_CLIENT = "OAuth client credentials not found. Please set GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET environment variables";
+
+export type GoogleAuthOptions = {
+  scopes?: readonly string[];
+  creds?: { id: string; secret: string };
+};
 
 export const EMAIL_REQUIRED_MESSAGE
   = "Ask which Google account to use — work, personal, or another mailbox — then call again with user_google_email set to that address. Do not guess.";
@@ -152,11 +157,17 @@ function newVerifier(): string {
  * The verifier is stored in `google_oauth_pending` for authFinish (the host
  * does not pass it back). `state` is the host's CSRF token.
  */
-export async function buildAuthUrl(ctx: PluginContext, redirectUri: string, state: string): Promise<string> {
-  const creds = clientCreds(ctx);
+export async function buildAuthUrl(
+  ctx: PluginContext,
+  redirectUri: string,
+  state: string,
+  opts: GoogleAuthOptions = {},
+): Promise<string> {
+  const creds = opts.creds ?? clientCreds(ctx);
   if (!creds) {
     throw new AuthFailed(MISSING_CLIENT);
   }
+  const scopes = opts.scopes ?? GOOGLE_SCOPES;
   const verifier = newVerifier();
   const challenge = await codeChallenge(verifier);
   savePending(ctx, {
@@ -170,10 +181,11 @@ export async function buildAuthUrl(ctx: PluginContext, redirectUri: string, stat
     client_id: creds.id,
     code_challenge: challenge,
     code_challenge_method: "S256",
+    include_granted_scopes: "true",
     prompt: "consent",
     redirect_uri: redirectUri,
     response_type: "code",
-    scope: GOOGLE_SCOPES.join(" "),
+    scope: scopes.join(" "),
     state,
   });
   return `${AUTH_URL}?${q}`;
@@ -184,9 +196,14 @@ export async function authStart(ctx: PluginContext, redirectUri: string, state: 
   return { url };
 }
 
-export async function authFinish(ctx: PluginContext, redirectUri: string, code: string): Promise<void> {
+export async function authFinish(
+  ctx: PluginContext,
+  redirectUri: string,
+  code: string,
+  opts: GoogleAuthOptions = {},
+): Promise<void> {
   try {
-    await finishGoogleAuth(ctx, redirectUri, code);
+    await finishGoogleAuth(ctx, redirectUri, code, opts);
   } catch (err) {
     if (err instanceof AuthFailed) {
       ctx.log.error(err.message);
@@ -195,8 +212,13 @@ export async function authFinish(ctx: PluginContext, redirectUri: string, code: 
   }
 }
 
-async function finishGoogleAuth(ctx: PluginContext, redirectUri: string, code: string): Promise<void> {
-  const creds = clientCreds(ctx);
+async function finishGoogleAuth(
+  ctx: PluginContext,
+  redirectUri: string,
+  code: string,
+  opts: GoogleAuthOptions = {},
+): Promise<void> {
+  const creds = opts.creds ?? clientCreds(ctx);
   if (!creds) {
     throw new AuthFailed(MISSING_CLIENT);
   }

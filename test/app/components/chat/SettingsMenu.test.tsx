@@ -98,7 +98,7 @@ describe("SettingsMenu", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("gives an operator no console links", async () => {
+  it("gives an operator Manage for their room only", async () => {
     window.history.pushState({}, "", "/chat/kit");
     vi.stubGlobal("fetch", vi.fn(async () => Response.json({
       sub: "1",
@@ -108,14 +108,35 @@ describe("SettingsMenu", () => {
     })));
     render(<SettingsMenu><span>inside</span></SettingsMenu>);
     fireEvent.click(screen.getByRole("button", { name: "settings" }));
-    await screen.findByText("inside");
-    expect(screen.queryByRole("link", { name: "Manage kit" })).toBeNull();
+    const manage = await screen.findByRole("link", { name: "Manage kit" });
+    expect(manage.getAttribute("href")).toBe("/agents/kit");
     expect(screen.queryByRole("link", { name: "All agents" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Settings" })).toBeNull();
   });
 
-  it("hides console rows from a member and from an operator on someone else's agent", async () => {
+  it("shows Manage for a member on their room and hides console rows otherwise", async () => {
     window.history.pushState({}, "", "/chat/kit");
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+      sub: "1",
+      email: "bob@example.com",
+      role: "member",
+      agents: ["kit"],
+    })));
+    render(<SettingsMenu><span>inside</span></SettingsMenu>);
+    fireEvent.click(screen.getByRole("button", { name: "settings" }));
+    const manage = await screen.findByRole("link", { name: "Manage kit" });
+    expect(manage.getAttribute("href")).toBe("/agents/kit");
+    expect(screen.queryByRole("link", { name: "All agents" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Settings" })).toBeNull();
+
+    cleanup();
+    window.history.pushState({}, "", "/chat/kit");
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+      sub: "1",
+      email: "ada@example.com",
+      role: "member",
+      agents: [],
+    })));
     render(<SettingsMenu><span>inside</span></SettingsMenu>);
     fireEvent.click(screen.getByRole("button", { name: "settings" }));
     expect(await screen.findByText("inside")).toBeTruthy();

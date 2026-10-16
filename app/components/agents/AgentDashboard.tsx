@@ -29,11 +29,14 @@ import { StatusFold } from "./StatusFold";
 import { ToolsFold } from "./ToolsFold";
 import { UsersFold } from "./UsersFold";
 
-function AgentHeader({ agent, slug }: { agent: AgentCard | null; slug: string }) {
+function AgentHeader({ agent, slug, role }: { agent: AgentCard | null; slug: string; role: Role | null }) {
   const chatSlug = agent ? agent.slug : slug;
+  const crumb = role === "admin"
+    ? { href: "/agents", label: "Agents" }
+    : { href: `/chat/${encodeURIComponent(chatSlug)}`, label: "Chat" };
   return (
     <PageHeader
-      crumb={{ href: "/agents", label: "Agents" }}
+      crumb={crumb}
       title={agent ? agent.name : "Agent"}
       blurb={agent ? agent.slug : undefined}
       aside={(
@@ -157,7 +160,7 @@ export function AgentDashboard({
   if (phase !== "ready" || !agent || !config) {
     return (
       <main className={mainClass}>
-        <AgentHeader agent={null} slug={slug} />
+        <AgentHeader agent={null} slug={slug} role={role} />
         {phase === "loading" ? <p className="text-sm text-muted">Loading agent.</p> : null}
         {phase === "missing" ? <p role="alert" className={alertClass}>{agentsMessage("not_found")}</p> : null}
         {phase === "denied" ? <p role="alert" className={alertClass}>{agentsMessage("forbidden")}</p> : null}
@@ -176,7 +179,7 @@ export function AgentDashboard({
   return (
     <FoldGroup id="agent">
       <main className={mainClass}>
-        <AgentHeader agent={agent} slug={slug} />
+        <AgentHeader agent={agent} slug={slug} role={role} />
 
         {error ? <p role="alert" className={alertClass}>{agentsMessage(error)}</p> : null}
         {agent.canMutate

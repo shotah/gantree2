@@ -63,7 +63,7 @@ export function isApiPath(pathname: string): boolean {
   return pathname.startsWith("/api/") || pathname.startsWith("/ws/");
 }
 
-/** Agents console, settings, and user management — admin only. */
+/** Agents console, settings, and user management — admin only; agent-scoped paths pass through to handler control checks. */
 export function isAdminConsolePath(pathname: string): boolean {
   if (pathname === "/settings" || pathname === "/users") {
     return true;
@@ -80,24 +80,24 @@ export function isAdminConsolePath(pathname: string): boolean {
   return false;
 }
 
-const AGENT_SLUG_ONLY = /^\/api\/agents\/[a-z][a-z0-9-]{0,31}$/;
-const AGENT_ENABLED = /^\/api\/agents\/[a-z][a-z0-9-]{0,31}\/enabled$/;
+const AGENT_SLUG = "[a-z][a-z0-9-]{0,31}";
+const AGENT_PAGE = new RegExp(`^/agents/${AGENT_SLUG}$`);
+const AGENT_API = new RegExp(`^/api/agents/${AGENT_SLUG}(?:/.*)?$`);
 
-/** Turn off, turn on, and destroy for an agent you may control — not the rest of the console. */
-export function isAgentSelfServiceApi(pathname: string, method: string): boolean {
-  const verb = method.toUpperCase();
-  if (verb === "DELETE" && AGENT_SLUG_ONLY.test(pathname)) {
-    return true;
+/** One agent's page and its APIs. Who may touch that agent is the handler's check (`requireAgentControl`). */
+export function isAgentScopedPath(pathname: string): boolean {
+  if (pathname === "/agents/new") {
+    return false;
   }
-  return verb === "POST" && AGENT_ENABLED.test(pathname);
+  return AGENT_PAGE.test(pathname) || AGENT_API.test(pathname);
 }
 
-/** After the door passes: non-admin hits on console paths redirect or 403. */
-export function adminConsoleRefusal(who: Principal, url: URL, method = "GET"): Response | null {
+/** After the door passes: non-admin hits on console paths redirect or 403. Agent-scoped paths pass through to the handler's control check. */
+export function adminConsoleRefusal(who: Principal, url: URL): Response | null {
   if (who.role === "admin" || !isAdminConsolePath(url.pathname)) {
     return null;
   }
-  if (isAgentSelfServiceApi(url.pathname, method)) {
+  if (isAgentScopedPath(url.pathname)) {
     return null;
   }
   if (isApiPath(url.pathname)) {

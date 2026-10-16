@@ -11,7 +11,7 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
-function dashClient(options?: { role?: "admin" | "operator"; canMutate?: boolean; status?: number; failOnce?: boolean }): ApiClient {
+function dashClient(options?: { role?: "admin" | "operator" | "member"; canMutate?: boolean; status?: number; failOnce?: boolean }): ApiClient {
   let misses = 0;
   const view = config();
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -198,6 +198,14 @@ describe("AgentDashboard", () => {
   it("hides changes from an operator", async () => {
     render(<AgentDashboard slug="kit" client={dashClient({ role: "operator", canMutate: false })} />);
     expect(await screen.findByText("Looking only. Changes belong to an admin or this agent's operator.")).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "Danger zone" })).toBeNull();
+  });
+
+  it("shows a Chat crumb and no destroy section for a member", async () => {
+    render(<AgentDashboard slug="kit" client={dashClient({ role: "member" })} />);
+    expect(await screen.findByRole("heading", { name: "Kit" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Chat" }).getAttribute("href")).toBe("/chat/kit");
+    expect(screen.queryByRole("link", { name: "Agents" })).toBeNull();
     expect(screen.queryByRole("region", { name: "Danger zone" })).toBeNull();
   });
 

@@ -16,7 +16,7 @@ export async function middleware(request: Request): Promise<Response> {
     return refused;
   }
   if (decision.kind === "pass") {
-    const consoleRefused = adminConsoleRefusal(decision.who, url, request.method);
+    const consoleRefused = adminConsoleRefusal(decision.who, url);
     if (consoleRefused) {
       return consoleRefused;
     }

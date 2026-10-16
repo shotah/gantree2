@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adminConsoleRefusal, gate, isAdminConsolePath, isAgentSelfServiceApi } from "@/lib/door/gate";
+import { adminConsoleRefusal, gate, isAdminConsolePath, isAgentScopedPath } from "@/lib/door/gate";
 import { sealSession, SESSION_COOKIE, sessionKey } from "@/lib/door/session";
 import { memoryStore } from "@/lib/door/users";
 
@@ -15,7 +15,7 @@ async function sessionReq(path: string, sub: string, email: string, store = memo
   if (d.kind !== "pass") {
     throw new Error("expected pass");
   }
-  return adminConsoleRefusal(d.who, new URL(req.url), method);
+  return adminConsoleRefusal(d.who, new URL(req.url));
 }
 
 describe("admin console paths", () => {
@@ -29,6 +29,18 @@ describe("admin console paths", () => {
     expect(isAdminConsolePath("/api/tools")).toBe(false);
   });
 
+  it("names agent-scoped page and API paths", () => {
+    expect(isAgentScopedPath("/agents/kit")).toBe(true);
+    expect(isAgentScopedPath("/api/agents/kit")).toBe(true);
+    expect(isAgentScopedPath("/api/agents/kit/config")).toBe(true);
+    expect(isAgentScopedPath("/api/agents/kit/enabled")).toBe(true);
+    expect(isAgentScopedPath("/agents")).toBe(false);
+    expect(isAgentScopedPath("/agents/new")).toBe(false);
+    expect(isAgentScopedPath("/api/agents")).toBe(false);
+    expect(isAgentScopedPath("/settings")).toBe(false);
+    expect(isAgentScopedPath("/api/users")).toBe(false);
+  });
+
   it("redirects members and operators away from HTML console pages", async () => {
     const store = memoryStore([{ entry: { sub: "1182", email: "op@example.com" }, role: "operator", agents: ["kit"], locked: false }]);
     const res = await sessionReq("/agents", "1182", "op@example.com", store);
@@ -38,19 +50,21 @@ describe("admin console paths", () => {
     expect(member?.status).toBe(302);
   });
 
-  it("names agent lifecycle APIs operators may call", () => {
-    expect(isAgentSelfServiceApi("/api/agents/kit", "DELETE")).toBe(true);
-    expect(isAgentSelfServiceApi("/api/agents/kit/enabled", "POST")).toBe(true);
-    expect(isAgentSelfServiceApi("/api/agents/kit/config", "DELETE")).toBe(false);
-    expect(isAgentSelfServiceApi("/api/agents/kit", "GET")).toBe(false);
-  });
+  it("lets operators and members through agent-scoped paths but not the rest of the console", async () => {
+    const opStore = memoryStore([{ entry: { sub: "1182", email: "op@example.com" }, role: "operator", agents: ["kit"], locked: false }]);
+    expect(await sessionReq("/agents/kit", "1182", "op@example.com", opStore)).toBeNull();
+    expect(await sessionReq("/api/agents/kit/config", "1182", "op@example.com", opStore)).toBeNull();
+    expect((await sessionReq("/agents/new", "1182", "op@example.com", opStore))?.status).toBe(302);
+    expect((await sessionReq("/agents", "1182", "op@example.com", opStore))?.status).toBe(302);
+    expect((await sessionReq("/api/agents", "1182", "op@example.com", opStore))?.status).toBe(403);
+    expect((await sessionReq("/api/users", "1182", "op@example.com", opStore))?.status).toBe(403);
 
-  it("lets operators DELETE and enable their slug but not the rest of the agents API", async () => {
-    const store = memoryStore([{ entry: { sub: "1182", email: "op@example.com" }, role: "operator", agents: ["kit"], locked: false }]);
-    expect(await sessionReq("/api/agents/kit", "1182", "op@example.com", store, "DELETE")).toBeNull();
-    expect(await sessionReq("/api/agents/kit/enabled", "1182", "op@example.com", store, "POST")).toBeNull();
-    expect((await sessionReq("/api/agents", "1182", "op@example.com", store))?.status).toBe(403);
-    expect((await sessionReq("/api/agents/kit/config", "1182", "op@example.com", store))?.status).toBe(403);
+    expect(await sessionReq("/agents/kit", "999", "bob@example.com")).toBeNull();
+    expect(await sessionReq("/api/agents/kit/config", "999", "bob@example.com")).toBeNull();
+    expect((await sessionReq("/agents/new", "999", "bob@example.com"))?.status).toBe(302);
+    expect((await sessionReq("/agents", "999", "bob@example.com"))?.status).toBe(302);
+    expect((await sessionReq("/api/agents", "999", "bob@example.com"))?.status).toBe(403);
+    expect((await sessionReq("/api/users", "999", "bob@example.com"))?.status).toBe(403);
   });
 
   it("403s members and operators on console APIs", async () => {

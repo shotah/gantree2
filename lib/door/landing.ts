@@ -121,18 +121,24 @@ export function readSession(body: unknown): SessionView | null {
 export type ManageLink = { href: string; label: string };
 
 /**
- * Gear-menu rows: the way back out of chat. Only admins get manage links
- * and Settings; operators and members stay in chat.
+ * Gear-menu rows: the way back out of chat. Admins get the full console;
+ * operators and members get Manage for the current room when it is on their list.
  */
 export function manageRows(who: { role: Role; agents: readonly string[] } | null, slug: string | null): ManageLink[] {
-  if (!who || who.role !== "admin") {
+  if (!who) {
     return [];
   }
-  const rows: ManageLink[] = [];
-  if (slug) {
-    rows.push({ href: `/agents/${encodeURIComponent(slug)}`, label: `Manage ${slug}` });
+  if (who.role === "admin") {
+    const rows: ManageLink[] = [];
+    if (slug) {
+      rows.push({ href: `/agents/${encodeURIComponent(slug)}`, label: `Manage ${slug}` });
+    }
+    rows.push({ href: "/agents", label: "All agents" });
+    rows.push({ href: "/settings", label: "Settings" });
+    return rows;
   }
-  rows.push({ href: "/agents", label: "All agents" });
-  rows.push({ href: "/settings", label: "Settings" });
-  return rows;
+  if (slug && who.agents.includes(slug)) {
+    return [{ href: `/agents/${encodeURIComponent(slug)}`, label: `Manage ${slug}` }];
+  }
+  return [];
 }

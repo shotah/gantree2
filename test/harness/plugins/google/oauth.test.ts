@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { google } from "@/harness/plugins/google/index";
-import { GOOGLE_SCOPES } from "@/harness/plugins/google/oauth";
+import { authFinish, buildAuthUrl, GOOGLE_SCOPES } from "@/harness/plugins/google/oauth";
 import { callTool, jsonResponse, liveToken, recordingFetch, testCtx, textOf } from "@/test/harness/plugins/google/harness";
 
 function idToken(email: string): string {
@@ -38,6 +38,7 @@ describe("google oauth", () => {
     expect(params.get("state")).toBe("state-1");
     expect(params.get("access_type")).toBe("offline");
     expect(params.get("prompt")).toBe("consent");
+    expect(params.get("include_granted_scopes")).toBe("true");
     expect(params.get("code_challenge_method")).toBe("S256");
     expect(params.get("code_challenge")).toBeTruthy();
     expect(params.get("scope")?.split(" ")).toEqual([...GOOGLE_SCOPES]);
@@ -46,6 +47,39 @@ describe("google oauth", () => {
     );
     expect(pending?.redirect_uri).toBe("https://app.example/callback");
     expect(pending?.verifier).toBeTruthy();
+  });
+
+  it("honors custom scopes and client credentials in buildAuthUrl and authFinish", async () => {
+    const customScopes = ["openid", "https://www.googleapis.com/auth/drive"] as const;
+    const ctx = testCtx({ env: { GOOGLE_OAUTH_CLIENT_ID: "default-id", GOOGLE_OAUTH_CLIENT_SECRET: "default-secret" } });
+    const url = await buildAuthUrl(ctx, "https://app.example/callback", "state-custom", {
+      scopes: customScopes,
+      creds: { id: "health-id", secret: "health-secret" },
+    });
+    const params = new URL(url).searchParams;
+    expect(params.get("client_id")).toBe("health-id");
+    expect(params.get("scope")?.split(" ")).toEqual([...customScopes]);
+    expect(params.get("include_granted_scopes")).toBe("true");
+    const pending = ctx.sql.one<{ verifier: string }>("SELECT verifier FROM google_oauth_pending WHERE id = 1");
+    const { fetch, hits } = recordingFetch((hit) => {
+      const body = new URLSearchParams(hit.body);
+      expect(body.get("client_id")).toBe("health-id");
+      expect(body.get("client_secret")).toBe("health-secret");
+      expect(body.get("code_verifier")).toBe(pending?.verifier);
+      return jsonResponse({
+        access_token: "ya29.custom",
+        refresh_token: "1//custom",
+        expires_in: 3600,
+        token_type: "Bearer",
+        id_token: idToken("custom@example.com"),
+      });
+    });
+    ctx.fetch = fetch;
+    await authFinish(ctx, "https://app.example/callback", "code-custom", {
+      creds: { id: "health-id", secret: "health-secret" },
+    });
+    expect(hits).toHaveLength(1);
+    expect(ctx.tokens.saved.get("google")?.accessToken).toBe("ya29.custom");
   });
 
   it("exchanges the code and stores the google token", async () => {

@@ -239,6 +239,39 @@ describe("agents http", () => {
     const card = await getAgent(asRole("admin", "/api/agents/kit"), env, "kit");
     expect((await card.json<{ agent: { slug: string } }>()).agent.slug).toBe("kit");
 
+    const opCard = await getAgent(asRole("operator", "/api/agents/kit", ["kit"]), env, "kit");
+    expect(opCard.status).toBe(200);
+    expect((await opCard.json<{ agent: { slug: string; canMutate: boolean } }>()).agent).toMatchObject({
+      slug: "kit",
+      canMutate: true,
+    });
+    expect((await getAgent(asRole("operator", "/api/agents/kit", ["ada"]), env, "kit")).status).toBe(403);
+    expect((await getAgentConfig(asRole("operator", "/api/agents/kit/config", ["ada"]), env, "kit")).status).toBe(403);
+    expect((await putAgentUsers(asRole("operator", "/api/agents/kit/users", ["ada"], "PUT", "{}"), env, "kit")).status).toBe(403);
+    expect((await getAgent(asRole("member", "/api/agents/kit"), env, "kit")).status).toBe(403);
+    expect(
+      (await patchAgentConfig(asRole("member", "/api/agents/kit/config", [], "PATCH", "{}"), env, "kit")).status,
+    ).toBe(403);
+
+    expect((await getAgentConfig(asRole("operator", "/api/agents/kit/config", ["kit"]), env, "kit")).status).toBe(200);
+    const opPatch = await patchAgentConfig(
+      asRole("operator", "/api/agents/kit/config", ["kit"], "PATCH", JSON.stringify({ mcp: "toml" })),
+      env,
+      "kit",
+    );
+    expect(opPatch.status).toBe(200);
+    expect((await getAgentUsers(asRole("operator", "/api/agents/kit/users", ["kit"]), env, "kit")).status).toBe(200);
+    const opUsers = await putAgentUsers(
+      asRole("operator", "/api/agents/kit/users", ["kit"], "PUT", JSON.stringify({ users: [{ sub: ADA }] })),
+      env,
+      "kit",
+    );
+    expect(opUsers.status).toBe(200);
+    expect((await getAgentStatus(asRole("operator", "/api/agents/kit/status", ["kit"]), env, "kit")).status).toBe(200);
+    expect((await postAgentRestart(asRole("operator", "/api/agents/kit/restart", ["kit"], "POST"), env, "kit")).status).toBe(200);
+    expect((await getAgentLog(asRole("operator", "/api/agents/kit/log", ["kit"]), env, "kit")).status).toBe(200);
+    expect((await getAgentPersona(asRole("operator", "/api/agents/kit/persona", ["kit"]), env, "kit")).status).toBe(200);
+
     expect((await getAgentConfig(asRole("admin", "/api/agents/kit/config"), env, "kit")).status).toBe(200);
     const patched = await patchAgentConfig(
       asRole("admin", "/api/agents/kit/config", [], "PATCH", JSON.stringify({ mcp: "toml" })),
@@ -268,7 +301,7 @@ describe("agents http", () => {
     expect((await getAgentSelf(asRole("member", "/api/agents/kit/self"), env, "kit")).status).toBe(403);
     expect((await getAgentSelf(asRole("operator", "/api/agents/ada/self", ["kit"]), env, "ada")).status).toBe(403);
     expect((await getAgentSelf(asRole("admin", "/api/agents/nope/self"), env, "Bad_Slug")).status).toBe(400);
-    expect((await getAgentSelf(asRole("operator", "/api/agents/kit/self", ["kit"]), env, "kit")).status).toBe(403);
+    expect((await getAgentSelf(asRole("operator", "/api/agents/kit/self", ["kit"]), env, "kit")).status).toBe(200);
     expect((await getAgentSelf(asRole("admin", "/api/agents/kit/self"), env, "kit")).status).toBe(200);
     expect(calls.at(-1)).toMatchObject({ method: "GET", op: "self_get" });
     const put = await putAgentSelf(
@@ -293,7 +326,7 @@ describe("agents http", () => {
     expect((await post("admin", "kit", [], JSON.stringify({ plugin: "garmin" }))).status).toBe(400);
     expect((await post("admin", "kit", [], "not-json")).status).toBe(400);
     expect(calls.length).toBe(before);
-    expect((await post("operator", "kit", ["kit"], JSON.stringify({ plugin: "google" }))).status).toBe(403);
+    expect((await post("operator", "kit", ["kit"], JSON.stringify({ plugin: "google" }))).status).toBe(200);
     const ok = await post("admin", "kit", [], JSON.stringify({ plugin: "google" }));
     expect(ok.status).toBe(200);
     expect(calls.at(-1)).toMatchObject({
@@ -310,7 +343,7 @@ describe("agents http", () => {
     expect((await getAgentPersona(asRole("member", "/api/agents/kit/persona"), env, "kit")).status).toBe(403);
     expect((await getAgentPersona(asRole("operator", "/api/agents/ada/persona", ["kit"]), env, "ada")).status).toBe(403);
     expect((await getAgentPersona(asRole("admin", "/api/agents/nope/persona"), env, "Bad_Slug")).status).toBe(400);
-    expect((await getAgentPersona(asRole("operator", "/api/agents/kit/persona", ["kit"]), env, "kit")).status).toBe(403);
+    expect((await getAgentPersona(asRole("operator", "/api/agents/kit/persona", ["kit"]), env, "kit")).status).toBe(200);
     expect((await getAgentPersona(asRole("admin", "/api/agents/kit/persona"), env, "kit")).status).toBe(200);
     expect(calls.at(-1)).toMatchObject({ method: "GET", op: "persona_get" });
     const put = await putAgentPersona(
@@ -539,6 +572,12 @@ describe("agents http", () => {
       "x-gantree-role": "member",
       "x-gantree-agents": "",
     };
+    const admitted = await getAgent(new Request("https://g.test/api/agents/kit", { headers: memberHeaders }), env, "kit");
+    expect(admitted.status).toBe(200);
+    expect((await admitted.json<{ agent: { slug: string; canMutate: boolean } }>()).agent).toMatchObject({
+      slug: "kit",
+      canMutate: true,
+    });
     const denied = await deleteAgent(new Request("https://g.test/api/agents/ada", { method: "DELETE", headers: memberHeaders }), env, "ada");
     expect(denied.status).toBe(403);
     expect(calls.some((c) => c.op === "destroy")).toBe(false);
@@ -659,14 +698,14 @@ describe("agents http", () => {
     expect(await agents.get("half")).toBeNull();
   });
 
-  it("restarts for an admin only", async () => {
+  it("restarts when the caller controls the slug", async () => {
     const { env, agents, calls } = world();
     await agents.create({ slug: "kit", name: "Kit" }, ADA);
     expect((await postAgentRestart(new Request("https://g.test/api/agents/kit/restart", { method: "POST" }), env, "kit")).status).toBe(401);
     expect((await postAgentRestart(asRole("member", "/api/agents/kit/restart", [], "POST"), env, "kit")).status).toBe(403);
     expect((await postAgentRestart(asRole("operator", "/api/agents/ada/restart", ["kit"], "POST"), env, "ada")).status).toBe(403);
     expect((await postAgentRestart(asRole("admin", "/api/agents/nope/restart", [], "POST"), env, "Bad_Slug")).status).toBe(400);
-    expect((await postAgentRestart(asRole("operator", "/api/agents/kit/restart", ["kit"], "POST"), env, "kit")).status).toBe(403);
+    expect((await postAgentRestart(asRole("operator", "/api/agents/kit/restart", ["kit"], "POST"), env, "kit")).status).toBe(200);
     expect((await postAgentRestart(asRole("admin", "/api/agents/kit/restart", [], "POST"), env, "kit")).status).toBe(200);
     expect(calls.at(-1)).toMatchObject({ method: "POST", op: "restart" });
   });
