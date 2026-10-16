@@ -84,8 +84,7 @@ There is no second door and no passphrase.</p>
                                      │  role
          /users /settings /agents  admin only
          /chat/&lt;id&gt;        signed in ──┐
-                                       └─ admin: every inventoried agent
-                                          operator: &lt;id&gt; on their row
+                                       └─ admin / operator: &lt;id&gt; on their row
                                           member: room list (and inventory)
                                           `GANTREE_ALLOW` does not open every room</code></pre>
 <hr>
@@ -98,9 +97,9 @@ check at request time.</strong></p>
 here at all, and with what role.</li>
 <li>The agent&#39;s room list says whether that agent will talk to you. It
 lives on the Agent DO. Settings edits it. The harness publishes it as
-an <code>allow</code> frame. Nothing else does. Admins may chat with every
-inventoried agent even when that list is empty. Operators and members
-need assignment as in the roles table; <code>GANTREE_ALLOW</code> only lets
+an <code>allow</code> frame. Nothing else does. Admins and operators chat only
+for agent ids on their Settings row (inventory ∩ <code>agents[]</code>). Members
+need the room list as in the roles table; <code>GANTREE_ALLOW</code> only lets
 someone sign in.</li>
 <li>A cookie only proves who. Removing a person from a list ends their
 access on the next request, not at cookie expiry.</li>
@@ -171,7 +170,7 @@ frames are always <code>sub</code>.</p>
 <tbody><tr>
 <td><code>admin</code></td>
 <td><code>GANTREE_ADMINS</code> (locked) or a Settings row</td>
-<td><code>/users</code>, <code>/settings</code>, <code>/agents</code>, every inventoried agent in chat</td>
+<td><code>/users</code>, <code>/settings</code>, <code>/agents</code>; chat only for listed ids in the inventory</td>
 </tr>
 <tr>
 <td><code>operator</code></td>
@@ -270,8 +269,9 @@ is in the cookie: no role, no agents, no name. Code: <code>lib/door/session.ts</
 <code>/robots.txt</code>, <code>/_vinext/*</code>, <code>/_next/*</code>, <code>/assets/*</code>, <code>/.well-known/*</code>.
 Code: <code>lib/door/gate.ts</code>, <code>lib/door/http.ts</code>, <code>middleware.ts</code>. A cookie
 that opens wins; otherwise the same JWE on <code>Authorization: Bearer</code>.
-A bearer on <code>/api/chat/{avatar,backdrop,theme}</code> is the room token
-(<code>isAgentRoomRequest</code>) and is let through before that read.
+A bearer on <code>/api/chat/{avatar,backdrop,theme}</code> that does not open as a
+session is the room token (<code>isAgentRoomRequest</code>) and is let through before
+that read. A session JWE on those paths is the phone and follows this door.
 <code>/api/auth/catch</code> is on the public list so a missing cookie is a
 plain-text 401. The handler still requires the session cookie.</p>
 <h3 id="apiauthme"><code>/api/auth/me</code></h3>
@@ -280,7 +280,7 @@ plain-text 401. The handler still requires the session cookie.</p>
 <p><code>agents</code> for a member is the agent ids whose room list has them (KV
 directory <code>sub:&lt;sub&gt;</code> / <code>email:&lt;email&gt;</code> → agent ids, written by each Agent
 DO when it stores an <code>allow</code> frame). For an operator it is their
-assignment. For an admin it is every agent id. gantree-android and
+assignment. For an admin it is their row&#39;s agent ids (inventory ∩ <code>agents[]</code>). gantree-android and
 gantree-ios read <code>agents</code> and fall back to <code>cranes</code>; the alias is
 still written until the Phase 4 wire-name drop. The only identity a stranger sees
 is their own.</p>
@@ -365,8 +365,8 @@ Token <code>503</code> means <code>GOOGLE_CLIENT_ID</code> or <code>SESSION_SECR
 <p>The gate takes the bearer wherever it takes the cookie. A cookie that
 opens wins; a cookie that does not falls through to the bearer.
 <code>isAgentRoomRequest</code> still runs first: a bearer on
-<code>/api/chat/{avatar,backdrop,theme}</code> is the room token, not a
-session.</p>
+<code>/api/chat/{avatar,backdrop,theme}</code> that does not open as a session is
+the room token. A session JWE is the phone.</p>
 <h3 id="room-admission-wsltagent-idgt">Room admission (<code>/ws/&lt;agent id&gt;</code>)</h3>
 <table>
 <thead>

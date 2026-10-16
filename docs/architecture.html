@@ -221,9 +221,10 @@ decision into a <code>Response</code>; <code>middleware.ts</code> is one line.</
   RES -- admin / operator / member --&gt; HDR[&quot;x-gantree-sub · email · role · agents&quot;]
   HDR --&gt; PASS</pre>
 <p>A cookie that opens wins; otherwise <code>Authorization: Bearer</code> is the
-same session JWE. A bearer on <code>/api/chat/{avatar,backdrop,theme}</code> is
-the room token (<code>isAgentRoomRequest</code>) and is let through before either
-of those reads. <code>/api/auth/catch</code> is on the public list so a missing
+same session JWE. On <code>/api/chat/{avatar,backdrop,theme}</code>, a bearer that
+does not open as a session is the room token (<code>isAgentRoomRequest</code>) and
+is let through before either of those reads. A session JWE continues
+through the door. <code>/api/auth/catch</code> is on the public list so a missing
 cookie is a plain-text 401, not an HTML login redirect. The handler
 still requires that cookie.</p>
 <p><code>GET /ws/&lt;slug&gt;</code> is handled in <code>worker/index.ts</code> before this middleware
@@ -499,8 +500,8 @@ Settings is one more actor. Nothing is shared except the KV directory.</p>
 <p>If a task fails one of these, it is later, or it is wrong.</p>
 <ol>
 <li><strong>One door.</strong> Google signs you in; one list says whether; a role
-says what; each agent&#39;s room list says who it talks to, except
-<code>GANTREE_ADMINS</code> and <code>GANTREE_ALLOW</code> may chat with every agent.
+says what; each agent&#39;s room list says who it talks to. Chat for an
+admin is the agents on their user row; <code>GANTREE_ALLOW</code> is sign-in only.
 Role is computed every request, never read from the cookie. No second
 login. <a href="access.html">access.md</a>.</li>
 <li><strong>The Agent DO is truth.</strong> <code>config.env</code>, the room list, and the

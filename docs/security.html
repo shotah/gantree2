@@ -239,8 +239,8 @@ header is Worker-to-DO glue. It is not an internet route.</p>
 </tr>
 <tr>
 <td><strong>Room bearer</strong></td>
-<td><code>GET</code>, <code>POST</code>, <code>DELETE</code> on <code>/api/chat/avatar</code>, <code>/api/chat/backdrop</code>, <code>/api/chat/theme</code> when <code>Authorization: Bearer</code> is present</td>
-<td>Gate treats the header as public; <code>admitRoom</code> checks <code>AGENT_BEARERS</code> or the DO row. A mismatch is 401 and does not fall through to the session</td>
+<td><code>GET</code>, <code>POST</code>, <code>DELETE</code> on <code>/api/chat/avatar</code>, <code>/api/chat/backdrop</code>, <code>/api/chat/theme</code> when <code>Authorization: Bearer</code> is present and does not open as a session</td>
+<td>Gate treats that header as public; <code>admitRoom</code> checks <code>AGENT_BEARERS</code> or the DO row. A session JWE on the same header is the phone door. A token that is neither is 401</td>
 </tr>
 <tr>
 <td><strong>Native Google proof</strong></td>
