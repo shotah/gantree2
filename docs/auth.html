@@ -55,13 +55,13 @@ the client id is shared.</p>
 no trailing slash. <code>PUBLIC_ORIGIN</code> (no path) overrides the host the
 Worker prints. An unusable <code>PUBLIC_ORIGIN</code> does not fall through to
 the request origin.</p>
-<pre><code class="language-text">https://gantree2.bldhosting.com/api/auth/catch
+<pre><code class="language-text">https://gantree.bldhosting.com/api/auth/catch
 http://127.0.0.1:3000/api/auth/catch</code></pre>
 <p>A home box uses its own public origin the same way:
 <code>https://&lt;host&gt;/api/auth/catch</code>.</p>
 <p>Strava does not register a full redirect URI. The API application
 setting is Authorization Callback Domain: the hostname only
-(<code>gantree2.bldhosting.com</code>, or <code>localhost</code>). No scheme, no path, no
+(<code>gantree.bldhosting.com</code>, or <code>localhost</code>). No scheme, no path, no
 comma-separated list. <code>localhost</code> and <code>127.0.0.1</code> are whitelisted
 for local dev. The redirect we send is still
 <code>{origin}/api/auth/catch</code>. Pasting that full URI into the domain

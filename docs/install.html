@@ -62,7 +62,7 @@ the Vinext app and serves the HTTP API, including the mailbox at
 <td>Cloudflare</td>
 <td><code>wrangler deploy</code> (CI)</td>
 <td>Workers · DO · KV</td>
-<td><code>https://gantree2.bldhosting.com</code> (custom domain in <code>wrangler.jsonc</code>; a fork edits <code>routes</code> or drops it for <code>workers.dev</code>)</td>
+<td><code>https://gantree.bldhosting.com</code> (custom domain in <code>wrangler.jsonc</code>; a fork edits <code>routes</code> or drops it for <code>workers.dev</code>)</td>
 </tr>
 <tr>
 <td>Home (Mini / NUC / VM)</td>
@@ -110,7 +110,7 @@ Create credentials → OAuth client ID</strong>.</p>
 </tr>
 <tr>
 <td>Cloudflare</td>
-<td><code>https://gantree2.bldhosting.com/api/auth/callback/google</code> (a fork: its own <code>routes</code> host or <code>workers.dev</code> origin)</td>
+<td><code>https://gantree.bldhosting.com/api/auth/callback/google</code> (a fork: its own <code>routes</code> host or <code>workers.dev</code> origin)</td>
 </tr>
 <tr>
 <td>Home</td>
@@ -164,7 +164,7 @@ Worker secrets): <code>LLM_BASE_URL</code>, <code>LLM_API_KEY</code>, <code>LLM_
 optionally <code>SEARCH_API_KEY</code> and <code>SEARCH_PROVIDER</code>. An agent&#39;s own <code>config.env</code> wins
 when the same name is set on both. Other keys live on the agent. Feeds
 publish with no key; <code>FEEDS_USER_AGENT</code> only overrides the User-Agent,
-which defaults to <code>gantree/&lt;version&gt; (+https://gantree2.bldhosting.com)</code>.
+which defaults to <code>gantree/&lt;version&gt; (+https://gantree.bldhosting.com)</code>.
 The Keys fold suggests every row below (search keys are listed once under
 <code>websearch</code>; the Worker may still set them as house secrets). How each
 provider registers the catch is in <a href="auth.html">auth.md</a>. <code>CRON_TZ</code>, <code>DAILY_PLANNER_AT</code>,

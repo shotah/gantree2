@@ -354,10 +354,10 @@ the code to the DO, and <code>authFinish</code> stores ciphertext in
 <code>oauth_token</code>. The room gets <code>&lt;plugin&gt; connected</code>. The code is not
 written to the log. Detail: <a href="auth.html">auth.md</a>.</p>
 <p>Google and Google Health register exactly, no trailing slash:</p>
-<pre><code class="language-text">https://gantree2.bldhosting.com/api/auth/catch
+<pre><code class="language-text">https://gantree.bldhosting.com/api/auth/catch
 http://127.0.0.1:3000/api/auth/catch</code></pre>
 <p>Strava&#39;s Authorization Callback Domain is the hostname only
-(<code>gantree2.bldhosting.com</code>, or <code>localhost</code>). Detail:
+(<code>gantree.bldhosting.com</code>, or <code>localhost</code>). Detail:
 <a href="auth.html">auth.md</a>.</p>
 <p><code>PUBLIC_ORIGIN</code> overrides the host.</p>
 <table>
@@ -728,7 +728,7 @@ Settings DO and are readable by admins only. Not a SIEM.</p>
 <ol>
 <li>Two Google OAuth clients: <strong>door</strong> (redirect <code>/api/auth/callback/google</code>
 on your hostname, identity scopes) and <strong>tools</strong> (redirect exactly
-<code>https://gantree2.bldhosting.com/api/auth/catch</code> and
+<code>https://gantree.bldhosting.com/api/auth/catch</code> and
 <code>http://127.0.0.1:3000/api/auth/catch</code>, no trailing slash, plus the
 scopes you grant). <code>PUBLIC_ORIGIN</code> overrides the host. Privacy
 policy URL = the <code>privacy/</code> page.</li>
