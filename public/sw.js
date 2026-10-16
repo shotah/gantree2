@@ -23,8 +23,10 @@ self.addEventListener("fetch", (event) => {
 });
 
 // Web Push (VAPID). Android may keep a mailbox socket OPEN while frozen, so
-// the Worker fans push even then. Skip the tray only if a window is visible —
-// except a round-trip test (`test: true`), which you tapped with the app open.
+// the Worker fans push even then. Skip the tray only when a window is focused
+// (Chrome silent-push exception). An installed Chrome window stays visible
+// while it sits in the background, so visibility is the wrong signal.
+// A round-trip test (`test: true`) still shows with the app open.
 self.addEventListener("push", (event) => {
   event.waitUntil((async () => {
     let title = "gantree";
@@ -49,7 +51,7 @@ self.addEventListener("push", (event) => {
       // unencrypted / empty payload
     }
     const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-    if (!test && windows.some((c) => c.visibilityState === "visible")) {
+    if (!test && windows.some((c) => c.focused === true)) {
       return;
     }
     await self.registration.showNotification(title, {

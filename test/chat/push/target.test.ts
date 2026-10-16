@@ -17,9 +17,10 @@ describe("push target", () => {
     })).toEqual(["ada", "bob"]);
   });
 
-  it("skips the tray when a window is visible", () => {
-    expect(windowBlocksPushToast([{ visibilityState: "visible" }])).toBe(true);
-    expect(windowBlocksPushToast([{ visibilityState: "hidden" }])).toBe(false);
+  it("skips the tray when a window is focused", () => {
+    expect(windowBlocksPushToast([{ focused: true }])).toBe(true);
+    expect(windowBlocksPushToast([{ focused: false }])).toBe(false);
+    expect(windowBlocksPushToast([{}])).toBe(false);
     expect(windowBlocksPushToast([])).toBe(false);
   });
 });

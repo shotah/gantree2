@@ -14,9 +14,9 @@ export function webPushUserIds(opts: {
   return want.filter(Boolean);
 }
 
-/** Skip the tray when a controlled window is in front (Chrome silent-push exception). */
+/** Skip the tray when a window is focused (Chrome silent-push exception). An installed window can be visible and unfocused. */
 export function windowBlocksPushToast(
-  clients: readonly { visibilityState?: string }[],
+  clients: readonly { focused?: boolean }[],
 ): boolean {
-  return clients.some((c) => c.visibilityState === "visible");
+  return clients.some((c) => c.focused === true);
 }
