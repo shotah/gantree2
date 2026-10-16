@@ -97,10 +97,10 @@ check at request time.</strong></p>
 here at all, and with what role.</li>
 <li>The agent&#39;s room list says whether that agent will talk to you. It
 lives on the Agent DO. Settings edits it. The harness publishes it as
-an <code>allow</code> frame. Nothing else does. Admins and operators chat only
-for agent ids on their Settings row (inventory ∩ <code>agents[]</code>). Members
-need the room list as in the roles table; <code>GANTREE_ALLOW</code> only lets
-someone sign in.</li>
+an <code>allow</code> frame. Nothing else does. That list is Who can chat.
+An admin, an operator, and a member all chat only where it lists
+them. The phone apps read the same slugs from <code>/api/auth/me</code>.
+<code>GANTREE_ALLOW</code> only lets someone sign in.</li>
 <li>A cookie only proves who. Removing a person from a list ends their
 access on the next request, not at cookie expiry.</li>
 </ul>
@@ -170,17 +170,17 @@ frames are always <code>sub</code>.</p>
 <tbody><tr>
 <td><code>admin</code></td>
 <td><code>GANTREE_ADMINS</code> (locked) or a Settings row</td>
-<td><code>/users</code>, <code>/settings</code>, <code>/agents</code>; chat only for listed ids in the inventory</td>
+<td><code>/users</code>, <code>/settings</code>, <code>/agents</code>. Chat only where Who can chat lists them</td>
 </tr>
 <tr>
 <td><code>operator</code></td>
 <td>Settings row with <code>agents[]</code></td>
-<td>Chat only for listed ids that exist in the inventory; no agents console</td>
+<td>Agents console for those ids. Chat only where Who can chat lists them</td>
 </tr>
 <tr>
 <td><code>member</code></td>
 <td><code>GANTREE_ALLOW</code> (locked) or a Settings row</td>
-<td>Sign in via allow; chat only where the room list admits them (inventory only). <code>/api/auth/me</code> lists assigned agents</td>
+<td>Sign in via allow; chat only where Who can chat lists them. <code>/api/auth/me</code> is that list</td>
 </tr>
 </tbody></table>
 <p>Resolution is per request: collect every row that matches, take the

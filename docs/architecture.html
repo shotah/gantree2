@@ -500,8 +500,9 @@ Settings is one more actor. Nothing is shared except the KV directory.</p>
 <p>If a task fails one of these, it is later, or it is wrong.</p>
 <ol>
 <li><strong>One door.</strong> Google signs you in; one list says whether; a role
-says what; each agent&#39;s room list says who it talks to. Chat for an
-admin is the agents on their user row; <code>GANTREE_ALLOW</code> is sign-in only.
+says what; each agent&#39;s Who can chat list says who it talks to,
+including admins. The phone apps use that same list from
+<code>/api/auth/me</code>. <code>GANTREE_ALLOW</code> is sign-in only.
 Role is computed every request, never read from the cookie. No second
 login. <a href="access.html">access.md</a>.</li>
 <li><strong>The Agent DO is truth.</strong> <code>config.env</code>, the room list, and the
