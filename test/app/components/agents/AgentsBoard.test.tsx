@@ -2,7 +2,7 @@
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AgentsBoard, BOARD_POLL_MS, nagsFor } from "@/app/components/agents/AgentsBoard";
+import { AgentsBoard, BOARD_POLL_MS } from "@/app/components/agents/AgentsBoard";
 import type { ApiClient } from "@/app/lib/agentsHttp";
 import { STATUS, card, json, session, href } from "./fixtures";
 
@@ -26,21 +26,8 @@ function boardClient(role: "admin" | "operator" = "admin", agents = [card()]): A
   });
 }
 
-describe("nagsFor", () => {
-  it("flags skipped tools", () => {
-    expect(nagsFor(card())).toEqual([]);
-    expect(nagsFor(card({ status: null }))).toEqual([]);
-    expect(nagsFor(card({
-      status: { ...STATUS, skipped: [{ name: "maps", reason: "no key" }] },
-    }))).toEqual(["1 tool skipped"]);
-    expect(nagsFor(card({
-      status: { ...STATUS, published: [], skipped: [{ name: "a", reason: "x" }, { name: "b", reason: "y" }] },
-    }))).toEqual(["2 tools skipped"]);
-  });
-});
-
 describe("AgentsBoard", () => {
-  it("lists agents with chat, manage, and a nag", async () => {
+  it("lists agents with chat, manage, and the enabled tool count", async () => {
     const now = Date.now();
     const kit = card({ tags: ["home"], status: { ...STATUS, lastTurnAt: now - 10_000, lastTurn: now - 10_000 } });
     const ada = card({
@@ -61,15 +48,16 @@ describe("AgentsBoard", () => {
     const kitCard = await screen.findByRole("listitem", { name: "Kit" });
     expect(within(kitCard).getByText("running")).toBeTruthy();
     expect(within(kitCard).getByText("home")).toBeTruthy();
-    expect(within(kitCard).getByText("1 published · 0 skipped")).toBeTruthy();
+    expect(within(kitCard).getByText("1 enabled")).toBeTruthy();
     expect(within(kitCard).getByText("10s ago")).toBeTruthy();
-    expect(within(kitCard).queryByRole("list", { name: "Needs attention for Kit" })).toBeNull();
     expect(within(kitCard).getByRole("link", { name: "Open chat" }).getAttribute("href")).toBe("/chat/kit");
     expect(within(kitCard).getByRole("link", { name: "Manage" }).getAttribute("href")).toBe("/agents/kit");
 
     const adaCard = screen.getByRole("listitem", { name: "Ada" });
     expect(within(adaCard).getByText("running")).toBeTruthy();
-    expect(within(adaCard).getByText("1 tool skipped")).toBeTruthy();
+    // Skipped tools are not flagged: the board counts what is enabled, nothing else.
+    expect(within(adaCard).getByText("0 enabled")).toBeTruthy();
+    expect(within(adaCard).queryByText(/skipped/)).toBeNull();
     expect(within(adaCard).getByText("—")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Users" }).getAttribute("href")).toBe("/users");
     expect(screen.getByRole("link", { name: "Settings" }).getAttribute("href")).toBe("/settings");
@@ -85,7 +73,6 @@ describe("AgentsBoard", () => {
     expect(within(adaCard).getByText("running").closest("p")?.className).toContain("bg-ok/15");
     expect(within(kitCard).getByText("home").className).toContain("bg-accent-soft");
     expect(within(kitCard).getByText("Tools").className).toContain("uppercase");
-    expect(within(adaCard).getByText("1 tool skipped").className).toContain("bg-danger-soft");
     expect(within(kitCard).getByRole("link", { name: "Open chat" }).className).toContain("rounded-xl");
     expect(within(kitCard).getByRole("link", { name: "Manage" }).className).toContain("border-line");
   });

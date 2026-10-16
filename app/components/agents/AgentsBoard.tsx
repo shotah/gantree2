@@ -23,17 +23,6 @@ const statClass = "rounded-xl bg-canvas/60 px-2.5 py-2";
 const statLabelClass = "text-[10px] uppercase tracking-wide text-dim";
 const statValueClass = "text-sm text-fg";
 
-export function nagsFor(agent: AgentCard): string[] {
-  const nags: string[] = [];
-  const skipped = agent.status ? agent.status.skipped.length : 0;
-  if (skipped === 1) {
-    nags.push("1 tool skipped");
-  } else if (skipped > 1) {
-    nags.push(`${skipped} tools skipped`);
-  }
-  return nags;
-}
-
 function initialOf(name: string): string {
   const first = Array.from(name.trim())[0];
   return first ? first.toUpperCase() : "?";
@@ -56,11 +45,9 @@ function pillTone(label: AgentRunLabel): { chip: string; dot: string } {
 }
 
 function AgentTile({ agent }: { agent: AgentCard }) {
-  const published = agent.status ? agent.status.published.length : 0;
-  const skipped = agent.status ? agent.status.skipped.length : 0;
+  const enabledTools = agent.status ? agent.status.published.length : 0;
   const label = agentRunLabel({ enabled: agent.enabled, state: agent.status?.state });
   const tone = pillTone(label);
-  const nags = nagsFor(agent);
   const lastTurn = agent.status ? agent.status.lastTurnAt ?? agent.status.lastTurn : null;
   return (
     <article className={`${cardClass} flex h-full flex-col gap-4`}>
@@ -90,20 +77,11 @@ function AgentTile({ agent }: { agent: AgentCard }) {
           )
         : null}
       <dl className="grid grid-cols-2 gap-2">
-        <Stat label="Tools">{published} published · {skipped} skipped</Stat>
+        <Stat label="Tools">{enabledTools} enabled</Stat>
         <Stat label="Last turn">
           <time dateTime={timeStamp(lastTurn)}>{relativeTime(lastTurn)}</time>
         </Stat>
       </dl>
-      {nags.length > 0
-        ? (
-            <ul aria-label={`Needs attention for ${agent.name}`} className="space-y-1">
-              {nags.map((nag) => (
-                <li key={nag} className="rounded-lg border border-danger-line bg-danger-soft px-2 py-1 text-xs text-danger">{nag}</li>
-              ))}
-            </ul>
-          )
-        : null}
       <div className="mt-auto flex flex-wrap gap-2">
         <a href={`/chat/${encodeURIComponent(agent.slug)}`} className={primaryClass}>
           Open chat
