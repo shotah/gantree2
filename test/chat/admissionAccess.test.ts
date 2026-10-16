@@ -94,6 +94,63 @@ function fakeAgentForMember(users: unknown[] = []) {
   return { AGENT, idFromName };
 }
 
+describe("email-only env admin on Who can chat", () => {
+  const SUB = "118212345678901234567";
+  const EMAIL = "ada@example.com";
+
+  function kitBinding(users: { sub?: string; email?: string }[]) {
+    const idFromName = vi.fn((name: string) => ({ name }) as unknown as DurableObjectId);
+    const stub = {
+      fetch: vi.fn(async (input: RequestInfo | URL) => {
+        const req = input instanceof Request ? input : new Request(input);
+        if (req.headers.get("X-Chat-Op") === "allow") {
+          return Response.json({ users });
+        }
+        return new Response(null, { status: 200 });
+      }),
+    };
+    return {
+      idFromName,
+      stub,
+      AGENT: { idFromName, get: () => stub } as unknown as DurableObjectNamespace,
+    };
+  }
+
+  it("opens the socket and lists kit when the allow row is email-only", async () => {
+    const { AGENT, stub } = kitBinding([{ email: EMAIL }]);
+    const env = {
+      GOOGLE_CLIENT_ID: "id",
+      SESSION_SECRET: SECRET,
+      GANTREE_ADMINS: EMAIL,
+      AGENT,
+      SETTINGS: settingsInventory(["kit"]),
+      DIRECTORY: {
+        get: async () => null,
+        put: async () => {},
+        delete: async () => {},
+      },
+    };
+    const token = await sealSession(await sessionKey(SECRET), { sub: SUB, email: EMAIL });
+    const headers = { Cookie: `${SESSION_COOKIE}=${encodeURIComponent(token)}` };
+    const socket = await routeAgentSocket(new Request("https://g.test/ws/kit?role=phone", { headers }), env, "kit", memoryStore());
+    expect(socket?.status).toBe(200);
+    const upgrade = stub.fetch.mock.calls.map((call) => call[0]).find((input) => {
+      const req = input instanceof Request ? input : new Request(input);
+      return req.headers.get("Upgrade") === "websocket" || req.headers.get("X-Chat-Role") === "phone";
+    });
+    const stamped = upgrade instanceof Request ? upgrade : new Request(upgrade ?? "https://g.test/");
+    expect(stamped.headers.get("X-Chat-Sub")).toBe(SUB);
+    expect(stamped.headers.get("X-Chat-Email")).toBe(EMAIL);
+    expect(stamped.headers.get("X-Chat-EmailVerified")).toBe("1");
+    expect(stamped.headers.get("X-Chat-Door-Role")).toBe("admin");
+
+    const meRes = await me(new Request("https://g.test/api/auth/me", { headers }), env, memoryStore(), roomsFor(env));
+    expect(meRes.status).toBe(200);
+    const body: { agents: string[] } = await meRes.json();
+    expect(body.agents).toEqual(["kit"]);
+  });
+});
+
 describe("member room list when DIRECTORY is unset", () => {
   it("allows authorizeSlug when the room lists the member and may call agentStub", async () => {
     const token = await sealSession(await sessionKey(SECRET), { sub: MEM, email: "member@example.com" });

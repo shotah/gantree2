@@ -10,7 +10,7 @@ info:
     The harness also calls `GET` and `POST` `/api/chat/avatar`, and the backdrop and theme routes, with the room bearer.
     This file is written by `npm run openapi` from `scripts/openapi-doc.ts` (patches) and `scripts/openapi-base.ts` (operations); do not edit `docs/openapi.yaml` by hand.
 servers:
-  - url: https://gantree2.bldhosting.com
+  - url: https://gantree.bldhosting.com
   - url: http://127.0.0.1:3000
 tags:
   - name: health

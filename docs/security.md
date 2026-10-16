@@ -152,12 +152,12 @@ written to the log. Detail: [auth.md](auth.md).
 Google and Google Health register exactly, no trailing slash:
 
 ```text
-https://gantree2.bldhosting.com/api/auth/catch
+https://gantree.bldhosting.com/api/auth/catch
 http://127.0.0.1:3000/api/auth/catch
 ```
 
 Strava's Authorization Callback Domain is the hostname only
-(`gantree2.bldhosting.com`, or `localhost`). Detail:
+(`gantree.bldhosting.com`, or `localhost`). Detail:
 [auth.md](auth.md).
 
 `PUBLIC_ORIGIN` overrides the host.
@@ -321,7 +321,7 @@ Settings DO and are readable by admins only. Not a SIEM.
 
 1. Two Google OAuth clients: **door** (redirect `/api/auth/callback/google`
    on your hostname, identity scopes) and **tools** (redirect exactly
-   `https://gantree2.bldhosting.com/api/auth/catch` and
+   `https://gantree.bldhosting.com/api/auth/catch` and
    `http://127.0.0.1:3000/api/auth/catch`, no trailing slash, plus the
    scopes you grant). `PUBLIC_ORIGIN` overrides the host. Privacy
    policy URL = the `privacy/` page.

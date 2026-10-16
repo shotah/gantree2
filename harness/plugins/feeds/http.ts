@@ -10,7 +10,7 @@ export const maxRedirects = 5;
 
 const ACCEPT = "application/atom+xml, application/rss+xml, application/feed+json, application/json, application/xml, text/xml, text/html;q=0.8, */*;q=0.5";
 
-export const defaultUserAgent = `gantree/${version} (+https://gantree2.bldhosting.com)`;
+export const defaultUserAgent = `gantree/${version} (+https://gantree.bldhosting.com)`;
 
 export function userAgentFrom(env: Readonly<Record<string, string>>): string {
   const ua = (env.FEEDS_USER_AGENT ?? "").trim();

@@ -22,7 +22,7 @@ Worker prints. An unusable `PUBLIC_ORIGIN` does not fall through to
 the request origin.
 
 ```text
-https://gantree2.bldhosting.com/api/auth/catch
+https://gantree.bldhosting.com/api/auth/catch
 http://127.0.0.1:3000/api/auth/catch
 ```
 
@@ -31,7 +31,7 @@ A home box uses its own public origin the same way:
 
 Strava does not register a full redirect URI. The API application
 setting is Authorization Callback Domain: the hostname only
-(`gantree2.bldhosting.com`, or `localhost`). No scheme, no path, no
+(`gantree.bldhosting.com`, or `localhost`). No scheme, no path, no
 comma-separated list. `localhost` and `127.0.0.1` are whitelisted
 for local dev. The redirect we send is still
 `{origin}/api/auth/catch`. Pasting that full URI into the domain

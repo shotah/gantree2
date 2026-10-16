@@ -6,7 +6,7 @@
   "main": "./worker/index.ts",
   // The real URL. Cloudflare creates the DNS record and certificate for a
   // custom domain on deploy; the zone (bldhosting.com) must be on this account.
-  "routes": [{ "pattern": "gantree2.bldhosting.com", "custom_domain": true }],
+  "routes": [{ "pattern": "gantree.bldhosting.com", "custom_domain": true }],
   "assets": {
     "directory": "dist/client",
     "not_found_handling": "none",

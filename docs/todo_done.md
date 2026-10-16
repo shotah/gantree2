@@ -442,7 +442,7 @@ shipping-yard art is gone, not restyled.
       titles. Plugin defaults (`*_OAUTH_REDIRECT_URI` in
       `harness/mcp/{google,strava,google-health}`) point there; the old
       `ai-gantry` Pages URI is gone from the code.
-- [x] **URLs (2026-10-10).** The app is `https://gantree2.bldhosting.com`
+- [x] **URLs (2026-10-10).** The app is `https://gantree.bldhosting.com`
       (`wrangler.jsonc` `routes` custom domain; Cloudflare makes the DNS
       record on deploy). The docs site, OAuth catch page, and privacy
       policy are `https://github.bldhosting.com/…` — one GitHub Pages
@@ -654,7 +654,7 @@ Decision and the package map: [harness.md](harness.md). Landed
       room. Connect on the Tools fold and
       `POST /api/agents/:slug/auth/start` start the same path. The
       redirect is `/api/auth/catch` on the origin. Consoles list
-      `https://gantree2.bldhosting.com/api/auth/catch` and
+      `https://gantree.bldhosting.com/api/auth/catch` and
       `http://127.0.0.1:3000/api/auth/catch`. `OAUTH_REDIRECT_URI`
       is not read.
 - [x] **Watch and Twitter on the DO alarm (2026-10-11).** Feeds
@@ -708,7 +708,7 @@ Decision and the package map: [harness.md](harness.md). Landed
 - [x] **First native deploy (2026-10-11).** v0.2.18 from `main`
       `c3fa813`. `ci`, `codeql`, `scorecard`, `release`, and
       `deploy-cloudflare` were green. Public
-      `GET https://gantree2.bldhosting.com/api/health` returned
+      `GET https://gantree.bldhosting.com/api/health` returned
       `{"ok":true,"version":"0.2.18"}`.
 - [x] **GitHub labels (2026-10-11).** The seven labels exist:
       `harness`, `plugins`, `edge`, `app`, `docs`, `ci`, `tests`.

@@ -217,14 +217,14 @@ describe("ToolsFold", () => {
   });
 
   it("tells Strava the callback domain is the hostname, then the host on the authorize URL", async () => {
-    const sent = "https://www.strava.com/oauth/authorize?redirect_uri=" + encodeURIComponent("https://gantree2.bldhosting.com/api/auth/catch");
-    expect(stravaCallbackHost(sent)).toBe("gantree2.bldhosting.com");
+    const sent = "https://www.strava.com/oauth/authorize?redirect_uri=" + encodeURIComponent("https://gantree.bldhosting.com/api/auth/catch");
+    expect(stravaCallbackHost(sent)).toBe("gantree.bldhosting.com");
     expect(stravaCallbackHost("https://www.strava.com/oauth/authorize")).toBe("");
     expect(stravaCallbackHost("not a url")).toBe("");
     expect(stravaDomainHint("localhost")).toBe("Authorization Callback Domain is the hostname only (localhost).");
     expect(stravaDomainHint("localhost", "localhost")).toBe(stravaDomainHint("localhost"));
-    expect(stravaDomainHint("localhost", "gantree2.bldhosting.com")).toBe(
-      "Authorization Callback Domain is the hostname only. Strava received gantree2.bldhosting.com.",
+    expect(stravaDomainHint("localhost", "gantree.bldhosting.com")).toBe(
+      "Authorization Callback Domain is the hostname only. Strava received gantree.bldhosting.com.",
     );
     expect(stravaDomainHint("")).toBe("Authorization Callback Domain is the hostname only.");
 
@@ -238,7 +238,7 @@ describe("ToolsFold", () => {
     expect(screen.getByText(connectChatHint("strava"))).toBeTruthy();
     expect(screen.getByText(stravaDomainHint(window.location.hostname))).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Connect strava" }));
-    await vi.waitFor(() => expect(screen.getByText(stravaDomainHint(window.location.hostname, "gantree2.bldhosting.com"))).toBeTruthy());
+    await vi.waitFor(() => expect(screen.getByText(stravaDomainHint(window.location.hostname, "gantree.bldhosting.com"))).toBeTruthy());
     expect(open).toHaveBeenCalledWith(sent, "_blank", "noopener,noreferrer");
     open.mockRestore();
   });

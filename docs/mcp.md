@@ -247,7 +247,7 @@ catalogs before publish.
 Required keys are what `ready()` treats as `no_key`. Optional keys
 have a default. Feeds publish with no key; `FEEDS_USER_AGENT` only
 overrides the User-Agent, which defaults to
-`gantree/<version> (+https://gantree2.bldhosting.com)`. The same list
+`gantree/<version> (+https://gantree.bldhosting.com)`. The same list
 is what the Keys fold suggests. A house key may come from the Worker
 instead of the agent.
 

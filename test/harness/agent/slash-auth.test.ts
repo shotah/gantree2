@@ -6,7 +6,7 @@ import type { Sql } from "@/harness/core/sql";
 import { openOAuthCatch, sealOAuthCatch, sessionKey } from "@/lib/door/session";
 
 const SECRET = "0123456789abcdef0123456789abcdef-more";
-const REDIRECT = "https://gantree2.bldhosting.com/api/auth/catch";
+const REDIRECT = "https://gantree.bldhosting.com/api/auth/catch";
 
 function plugin(
   start: Plugin["authStart"],

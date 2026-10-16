@@ -211,12 +211,12 @@ describe("openRoomBrain", () => {
       slug: "kit",
       foldLog: () => undefined,
       auth: {
-        redirectUri: () => "https://gantree2.bldhosting.com/api/auth/catch",
+        redirectUri: () => "https://gantree.bldhosting.com/api/auth/catch",
         sealState: seal,
       },
     });
     const bound = roomAuth(depsOf().sql);
-    expect(bound?.redirectUri()).toBe("https://gantree2.bldhosting.com/api/auth/catch");
+    expect(bound?.redirectUri()).toBe("https://gantree.bldhosting.com/api/auth/catch");
     expect(await bound?.sealState("google")).toBe("sealed:google");
     expect(depsOf().env.OAUTH_REDIRECT_URI).toBeUndefined();
   });
@@ -287,7 +287,7 @@ describe("openRoomBrain", () => {
     rows.set(CONFIG_STORE_KEY, { env: {}, mcp: "", persona: "", runtime: "native", updatedAt: 1 });
     const ctx = ctxFor(rows) as unknown as DurableObjectState;
     const serve = vi.fn(async () => Response.json({ ok: true, rev: 1 }));
-    const origin = "https://gantree2.bldhosting.com";
+    const origin = "https://gantree.bldhosting.com";
     const bearer = "room-bearer-secret";
     const chatOpts = {
       slug: "kit",
@@ -297,7 +297,7 @@ describe("openRoomBrain", () => {
     const house = { LLM_API_KEY: "house-key" };
     await openRoomBrain(ctx, house, chatOpts);
     const deps = depsOf();
-    expect(deps.env.CHAT_MAILBOX_URL).toBe("wss://gantree2.bldhosting.com/ws/kit");
+    expect(deps.env.CHAT_MAILBOX_URL).toBe("wss://gantree.bldhosting.com/ws/kit");
     expect(deps.env.CHAT_BEARER).toBe(bearer);
     const res = await deps.fetch(`${origin}/api/chat/avatar?slug=kit`, {
       method: "POST",

@@ -40,4 +40,4 @@ On the tag: `release` opens the GitHub Release (a `-` in the tag is a prerelease
 
 No branch rules on main: one developer. Add a ruleset (PR + `app` + `Analyze (javascript-typescript)`) when a second committer arrives.
 
-After a deploy: `curl -fsS https://gantree2.bldhosting.com/api/health` (`{ok, version, time}`, public, `cache-control: no-store`).
+After a deploy: `curl -fsS https://gantree.bldhosting.com/api/health` (`{ok, version, time}`, public, `cache-control: no-store`).

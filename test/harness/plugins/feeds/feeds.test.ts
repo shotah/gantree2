@@ -207,7 +207,7 @@ describe("feeds http", () => {
 
   it("reads FEEDS_USER_AGENT and falls back, and honors a canceled call", async () => {
     expect(userAgentFrom({ FEEDS_USER_AGENT: "nws-contact/1 (me@example.com)" })).toBe("nws-contact/1 (me@example.com)");
-    expect(defaultUserAgent).toBe(`gantree/${PACKAGE_VERSION} (+https://gantree2.bldhosting.com)`);
+    expect(defaultUserAgent).toBe(`gantree/${PACKAGE_VERSION} (+https://gantree.bldhosting.com)`);
     expect(userAgentFrom({ FEEDS_USER_AGENT: "  " })).toBe(defaultUserAgent);
     expect(userAgentFrom({})).toBe(defaultUserAgent);
     const signal = AbortSignal.abort();

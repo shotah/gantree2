@@ -1694,7 +1694,7 @@ describe("Agent native runtime", () => {
 
   it("starts a sealed catch redirect for native oauth plugins", async () => {
     const secret = "0123456789abcdef0123456789abcdef-more";
-    const { state, box } = room({ SESSION_SECRET: secret, PUBLIC_ORIGIN: "https://gantree2.bldhosting.com" });
+    const { state, box } = room({ SESSION_SECRET: secret, PUBLIC_ORIGIN: "https://gantree.bldhosting.com" });
     await state.storage.put(CONFIG_STORE_KEY, nativeConfig());
     const garmin = await box.fetch(new Request("https://agent/auth/start", {
       method: "POST",
@@ -1721,7 +1721,7 @@ describe("Agent native runtime", () => {
     expect(await ok.json()).toEqual({ url: "https://accounts.example/start" });
     const args = roomMock.harness.authStart.mock.calls.at(-1);
     expect(args?.[0]).toBe("strava");
-    expect(args?.[1]).toBe("https://gantree2.bldhosting.com/api/auth/catch");
+    expect(args?.[1]).toBe("https://gantree.bldhosting.com/api/auth/catch");
     const stateArg: unknown = args?.[2];
     expect(typeof stateArg).toBe("string");
     if (typeof stateArg !== "string") {

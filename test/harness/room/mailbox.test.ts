@@ -3,8 +3,8 @@ import { chatLoopbackFetch, mailboxSocket, withChatMailbox } from "@/harness/roo
 
 describe("mailboxSocket", () => {
   it("maps https to wss and strips origin path", () => {
-    expect(mailboxSocket("https://gantree2.bldhosting.com/extra", "kit")).toBe(
-      "wss://gantree2.bldhosting.com/ws/kit",
+    expect(mailboxSocket("https://gantree.bldhosting.com/extra", "kit")).toBe(
+      "wss://gantree.bldhosting.com/ws/kit",
     );
   });
 
@@ -20,16 +20,16 @@ describe("mailboxSocket", () => {
 describe("withChatMailbox", () => {
   it("fills missing chat env without overwriting", () => {
     const filled = withChatMailbox({}, {
-      origin: "https://gantree2.bldhosting.com",
+      origin: "https://gantree.bldhosting.com",
       slug: "kit",
       bearer: "room-token",
     });
-    expect(filled.CHAT_MAILBOX_URL).toBe("wss://gantree2.bldhosting.com/ws/kit");
+    expect(filled.CHAT_MAILBOX_URL).toBe("wss://gantree.bldhosting.com/ws/kit");
     expect(filled.CHAT_BEARER).toBe("room-token");
 
     const kept = withChatMailbox(
       { CHAT_MAILBOX_URL: "wss://other.test/ws/ada", CHAT_BEARER: "custom" },
-      { origin: "https://gantree2.bldhosting.com", slug: "kit", bearer: "room-token" },
+      { origin: "https://gantree.bldhosting.com", slug: "kit", bearer: "room-token" },
     );
     expect(kept.CHAT_MAILBOX_URL).toBe("wss://other.test/ws/ada");
     expect(kept.CHAT_BEARER).toBe("custom");
@@ -37,7 +37,7 @@ describe("withChatMailbox", () => {
 });
 
 describe("chatLoopbackFetch", () => {
-  const origin = "https://gantree2.bldhosting.com";
+  const origin = "https://gantree.bldhosting.com";
   const slug = "kit";
   const bearer = "room-bearer";
 
@@ -45,7 +45,7 @@ describe("chatLoopbackFetch", () => {
     const serve = vi.fn(async () => Response.json({ ok: true }));
     const base = vi.fn(async () => Response.json({ routed: "base" }));
     const fetch = chatLoopbackFetch(base, { origin, slug, bearer, serve });
-    const res = await fetch(`https://gantree2.bldhosting.com/api/chat/avatar?slug=kit`, {
+    const res = await fetch(`https://gantree.bldhosting.com/api/chat/avatar?slug=kit`, {
       method: "POST",
       headers: { Authorization: `Bearer ${bearer}` },
       body: "jpeg",
@@ -59,7 +59,7 @@ describe("chatLoopbackFetch", () => {
     const serve = vi.fn(async () => Response.json({ ok: true }));
     const base = vi.fn(async () => Response.json({ routed: "base" }));
     const fetch = chatLoopbackFetch(base, { origin, slug, bearer, serve });
-    const res = await fetch(`https://gantree2.bldhosting.com/api/chat/avatar?slug=kit`, {
+    const res = await fetch(`https://gantree.bldhosting.com/api/chat/avatar?slug=kit`, {
       method: "POST",
       headers: { Authorization: "Bearer wrong" },
     });

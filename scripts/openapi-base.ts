@@ -9,7 +9,7 @@ export const OPENAPI_BASE = {
   },
   servers: [
     {
-      url: "https://gantree2.bldhosting.com",
+      url: "https://gantree.bldhosting.com",
     },
     {
       url: "http://127.0.0.1:3000",

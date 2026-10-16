@@ -74,7 +74,7 @@ describe("oauth catch", () => {
     const key = await sessionKey(SECRET);
     const state = await sealOAuthCatch(key, { slug: "kit", plugin: "strava" });
     const { env, seen } = envFor(() => Response.json({ ok: true }), {
-      PUBLIC_ORIGIN: "https://gantree2.bldhosting.com/path",
+      PUBLIC_ORIGIN: "https://gantree.bldhosting.com/path",
     });
     const res = await catchOAuth(
       await authed(`http://127.0.0.1:3000/api/auth/catch?state=${encodeURIComponent(state)}&code=abc`, ADMIN),
@@ -85,7 +85,7 @@ describe("oauth catch", () => {
     if (!req) {
       throw new Error("missing auth call");
     }
-    expect(await req.json()).toMatchObject({ redirectUri: "https://gantree2.bldhosting.com/api/auth/catch" });
+    expect(await req.json()).toMatchObject({ redirectUri: "https://gantree.bldhosting.com/api/auth/catch" });
   });
 
   it("lets a room member through and refuses everyone else", async () => {

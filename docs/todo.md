@@ -16,7 +16,7 @@ The catalog is `toolCatalog()` from `harness/plugins`. `npm run agent`
 starts (or reuses) Vite and opens browser chat on the native Agent DO with house
 `LLM_*` from `.dev.vars`. Live eval is 30/30. `package.json` is
 0.2.32.
-`GET https://gantree2.bldhosting.com/api/health` returns
+`GET https://gantree.bldhosting.com/api/health` returns
 `{"ok":true,"version":"0.2.32"}`. Live eval for v0.2.31 passed:
 https://github.com/shotah/gantree2/actions/runs/38312868354. Kit files
 tasks and goals from chat. Phones can sign in without a browser
@@ -50,7 +50,7 @@ from the repo.
 
 - [ ] **owner · easy** Provider consoles for the tools (§7): the
       **tools** Google client, Strava, and Google Health list
-      `https://gantree2.bldhosting.com/api/auth/catch` and
+      `https://gantree.bldhosting.com/api/auth/catch` and
       `http://127.0.0.1:3000/api/auth/catch` as redirects. The
       consent screen's privacy URL is
       `https://github.bldhosting.com/privacy/`. Proof is a
@@ -178,7 +178,7 @@ product.
       is the only OAuth a hosted customer does, but they still need a
       GCP project and a client. A wizard step with the five console
       clicks and a paste box, checked live (the redirect must be
-      `https://gantree2.bldhosting.com/api/auth/catch`). This is also the
+      `https://gantree.bldhosting.com/api/auth/catch`). This is also the
       free "set it up with me" product from monetize.md Path 1.
 - [ ] **owner · easy** Price: $8–10 a month for one agent, $3–4 per
       extra agent on the household, 14-day trial, no one-time tier

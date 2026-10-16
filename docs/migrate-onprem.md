@@ -8,7 +8,7 @@ The on-prem file is the Agent DO database that contains a `memory` table. On
 a home box that is the sqlite backing that agent’s Durable Object (often
 referred to as `gantry.db` in older docs).
 
-There is **no public HTTP migrate URL** on gantree2.bldhosting.com (or
+There is **no public HTTP migrate URL** on gantree.bldhosting.com (or
 elsewhere). Import runs from your laptop via Wrangler **remote bindings** and
 talks to the Agent Durable Object with internal `X-Chat-Op` requests.
 

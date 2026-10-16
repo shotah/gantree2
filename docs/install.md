@@ -8,7 +8,7 @@ the Vinext app and serves the HTTP API, including the mailbox at
 | Place | Command | State | Reach it at |
 | --- | --- | --- | --- |
 | Local dev | `npm run dev` | in-memory, `.wrangler/` | `http://127.0.0.1:3000` |
-| Cloudflare | `wrangler deploy` (CI) | Workers · DO · KV | `https://gantree2.bldhosting.com` (custom domain in `wrangler.jsonc`; a fork edits `routes` or drops it for `workers.dev`) |
+| Cloudflare | `wrangler deploy` (CI) | Workers · DO · KV | `https://gantree.bldhosting.com` (custom domain in `wrangler.jsonc`; a fork edits `routes` or drops it for `workers.dev`) |
 | Home (Mini / NUC / VM) | `npm run deploy:home` (`celld deploy`) | celld | Tailscale HTTPS or a Cloudflare Tunnel |
 
 Need **Node 22** (`node -v`). Distro `apt install npm` is often Node 20
@@ -30,7 +30,7 @@ Create credentials → OAuth client ID**.
 | Place | Redirect URI |
 | --- | --- |
 | Local dev | `http://127.0.0.1:3000/api/auth/callback/google` (Google accepts loopback `http`) |
-| Cloudflare | `https://gantree2.bldhosting.com/api/auth/callback/google` (a fork: its own `routes` host or `workers.dev` origin) |
+| Cloudflare | `https://gantree.bldhosting.com/api/auth/callback/google` (a fork: its own `routes` host or `workers.dev` origin) |
 | Home | `https://<mini>.<tailnet>.ts.net/api/auth/callback/google` or your Tunnel hostname |
 
 **Google rejects private LAN IPs** (`http://192.168.x.x`). A home box
@@ -92,7 +92,7 @@ Worker secrets): `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, and
 optionally `SEARCH_API_KEY` and `SEARCH_PROVIDER`. An agent's own `config.env` wins
 when the same name is set on both. Other keys live on the agent. Feeds
 publish with no key; `FEEDS_USER_AGENT` only overrides the User-Agent,
-which defaults to `gantree/<version> (+https://gantree2.bldhosting.com)`.
+which defaults to `gantree/<version> (+https://gantree.bldhosting.com)`.
 The Keys fold suggests every row below (search keys are listed once under
 `websearch`; the Worker may still set them as house secrets). How each
 provider registers the catch is in [auth.md](auth.md). `CRON_TZ`, `DAILY_PLANNER_AT`,
