@@ -34,9 +34,22 @@ describe("assignment and inventory", () => {
     expect(body.agents).toEqual([]);
   });
 
-  it("lets an operator socket an assigned slug and forbids another without idFromName", async () => {
-    const idFromName = vi.fn((name: string) => ({ name }) as unknown as DurableObjectId);
-    const stub = { fetch: vi.fn(async () => new Response(null, { status: 200 })) };
+  it("lets an operator socket a slug that lists them and forbids one that does not", async () => {
+    let named = "";
+    const idFromName = vi.fn((name: string) => {
+      named = name;
+      return { name } as unknown as DurableObjectId;
+    });
+    const stub = {
+      fetch: vi.fn(async (input: RequestInfo | URL) => {
+        const req = input instanceof Request ? input : new Request(input);
+        if (req.headers.get("X-Chat-Op") === "allow") {
+          const users = named === "kit" ? [{ email: "op@example.com" }] : [];
+          return Response.json({ users });
+        }
+        return new Response(null, { status: 200 });
+      }),
+    };
     const env = {
       GOOGLE_CLIENT_ID: "id",
       SESSION_SECRET: SECRET,
@@ -59,7 +72,7 @@ describe("assignment and inventory", () => {
       headers: { Cookie: `${SESSION_COOKIE}=${encodeURIComponent(token)}` },
     }), env, "ada", store);
     expect(no?.status).toBe(403);
-    expect(idFromName.mock.calls.length).toBe(namedBefore);
+    expect(idFromName.mock.calls.length).toBeGreaterThan(namedBefore);
   });
 });
 

@@ -30,7 +30,7 @@ function room(handler: (req: Request) => Promise<Response> | Response, slugs: st
   } as unknown as RoomEnv;
 }
 
-/** Env admin plus a stored row that assigns kit and ada. Chat follows that assignment. */
+/** Env admin plus a stored row. Chat follows Who can chat, not this assignment. */
 const store: UserStore = memoryStore([{
   entry: { sub: SUB, email: "ada@example.com" },
   role: "admin",
@@ -97,7 +97,7 @@ describe("handleAvatar", () => {
     expect(res.status).toBe(403);
   });
 
-  it("admits a deployment admin when the room lists someone else", async () => {
+  it("refuses a deployment admin when Who can chat lists someone else", async () => {
     const env = room((req) => {
       if (req.headers.get("X-Chat-Op") === "allow") {
         return Response.json({ users: [{ sub: "someone-else", email: "nope@example.com", role: "owner" }] });
@@ -109,8 +109,7 @@ describe("handleAvatar", () => {
     const res = await handleAvatar(new Request("https://chat.test/api/chat/avatar?slug=kit", {
       headers: { cookie: await cookie() },
     }), env, store);
-    expect(res.status).toBe(200);
-    expect(res.headers.get("X-Chat-Rev")).toBe("7");
+    expect(res.status).toBe(403);
   });
 
   it("admits the harness with the bearer stored on the room, header only", async () => {

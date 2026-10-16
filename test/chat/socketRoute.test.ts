@@ -155,8 +155,11 @@ describe("routeAgentSocket", () => {
     expect(query?.status).toBe(401);
   });
 
-  it("admits the loopback dev user when they are an admin", async () => {
+  it("admits the loopback dev user when Who can chat lists them", async () => {
     const { env } = binding(async (req) => {
+      if (req.headers.get("X-Chat-Op") === "allow") {
+        return Response.json({ users: [{ sub: ADA, email: "ada@example.com" }] });
+      }
       expect(req.headers.get("X-Chat-Sub")).toBe(ADA);
       expect(req.headers.get("X-Chat-Rate")).toBe(`sub:${ADA}`);
       return new Response(null, { status: 200 });

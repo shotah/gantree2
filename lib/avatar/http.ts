@@ -220,7 +220,11 @@ export async function admitRoom(
   if (pre === "forbidden") {
     return { response: forbidden() };
   }
-  const inDirectory = doorRole === "member" && await memberInDirectory(env, session, slug);
+  const inDirectory = await memberInDirectory(env, session, slug);
+  const stub = agentStub(env, slug);
+  if (!stub) {
+    return { response: configError() };
+  }
   const list = await memberRoomUsersWhenNeeded(env, slug, doorRole, inDirectory);
   const allowed = phoneAdmitted(list, session, env, {
     role: doorRole,
@@ -230,10 +234,6 @@ export async function admitRoom(
   });
   if (!allowed) {
     return { response: forbidden() };
-  }
-  const stub = agentStub(env, slug);
-  if (!stub) {
-    return { response: configError() };
   }
   return { user: who.user, stub };
 }

@@ -77,7 +77,8 @@ describe("UsersScreen", () => {
     expect(within(bob).getByText("kit")).toBeTruthy();
     expect(within(bob).getByRole("button", { name: "Remove bob@example.com" })).toBeTruthy();
     expect(screen.getByRole("region", { name: "Audit" }).textContent).toContain("added bob@example.com operator [kit]");
-    expect(screen.getByText("Users, settings, and every agent; chat only the agents on their row.")).toBeTruthy();
+    expect(screen.getByText("Users, settings, and every agent. Chat is Who can chat on the agent.")).toBeTruthy();
+    expect(within(ada).queryByRole("button", { name: "Edit ada@example.com" })).toBeNull();
   });
 
   it("adds an operator and keeps a rejected entry in the field", async () => {

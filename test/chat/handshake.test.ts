@@ -369,7 +369,7 @@ describe("handshake room list", () => {
     expect(refused).toEqual({ ok: false, error: "forbidden" });
   });
 
-  it("forbids an admin without assignment and admits when kit is assigned", async () => {
+  it("admits an admin only when Who can chat lists them", async () => {
     const refused = await handshake({
       env,
       slug: "kit",
@@ -380,16 +380,16 @@ describe("handshake room list", () => {
       now,
     });
     expect(refused).toEqual({ ok: false, error: "forbidden" });
-    const ok = await handshake({
+    const open = await handshake({
       env,
       slug: "kit",
       role: "phone",
       cookieHeader: await cookie({ sub: ada, email: "ada@example.com" }),
-      roomList: [],
-      admit: admit("admin", "kit", ["kit"]),
+      roomList: [{ email: "ada@example.com" }],
+      admit: admit("admin"),
       now,
     });
-    expect(ok.ok && ok.principal.kind === "phone" && ok.principal.sub).toBe(ada);
+    expect(open.ok && open.principal.kind === "phone" && open.principal.sub).toBe(ada);
   });
 
   it("does not admit GANTREE_ALLOW alone on an empty room list", async () => {

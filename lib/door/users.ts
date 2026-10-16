@@ -3,9 +3,9 @@ import { type AllowEntry, type Identity, entryMatches, formatEntry, parseAllowli
 /**
  * Who may be here, and what they may touch.
  *
- *   admin     users, settings, agents console; chat for slugs on their row (inventory ∩ agents[])
- *   operator  chat only for slugs on their row (inventory ∩ agents[])
- *   member    sign in; chat where the room list admits them (inventory only)
+ *   admin     users, settings, agents console. Chat is Who can chat on the agent.
+ *   operator  the agents console for slugs on their row. Chat is Who can chat.
+ *   member    sign in; chat where Who can chat lists them (inventory only)
  *
  * Env is the floor: GANTREE_ADMINS and GANTREE_ALLOW are applied on every
  * request and can never be removed from the UI. Stored users come from a
@@ -17,7 +17,7 @@ export type Role = "admin" | "operator" | "member";
 export type UserRow = {
   entry: AllowEntry;
   role: Role;
-  /** Agent slugs an admin or operator may chat with. Ignored for member (none). */
+  /** Agent slugs an operator may run. Chat uses Who can chat, not this list. */
   agents: string[];
   /** True when the row comes from env. Shown locked in the UI. */
   locked: boolean;

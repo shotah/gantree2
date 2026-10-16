@@ -37,45 +37,20 @@ describe("roomsFor", () => {
     expect(await roomsFor({})({ ...ada, agents: [] })).toEqual([]);
   });
 
-  it("returns no chat agents for an admin with an empty assignment", async () => {
+  it("lists Who can chat for an admin, not the whole inventory", async () => {
     const admin: Principal = { ...ada, role: "admin", agents: [] };
     const env = {
-      DIRECTORY: kvOf({}),
-      SETTINGS: {
-        getByName: () => ({
-          listAgents: async () => [{ slug: "kit", name: "Kit", status: "idle" as const, createdAt: 0, updatedAt: 0 }],
-        }),
-      } as unknown as DurableObjectNamespace,
-    };
-    expect(await roomsFor(env)(admin)).toEqual([]);
-  });
-
-  it("intersects admin assignment with the inventory", async () => {
-    const admin: Principal = { ...ada, role: "admin", agents: ["kit"] };
-    const env = {
-      SETTINGS: {
-        getByName: () => ({
-          listAgents: async () => [
-            { slug: "kit", name: "Kit", status: "idle" as const, createdAt: 0, updatedAt: 0 },
-            { slug: "ada", name: "Ada", status: "idle" as const, createdAt: 0, updatedAt: 0 },
-          ],
-        }),
-      } as unknown as DurableObjectNamespace,
+      DIRECTORY: kvOf({ "email:ada@example.com": "[\"kit\"]" }),
+      SETTINGS: settingsInventory(["kit", "ada"]),
     };
     expect(await roomsFor(env)(admin)).toEqual(["kit"]);
   });
 
-  it("intersects operator assignment with the inventory", async () => {
-    const op: Principal = { ...ada, role: "operator", agents: ["kit"] };
+  it("lists Who can chat for an operator, not the agents on their row", async () => {
+    const op: Principal = { ...ada, role: "operator", agents: ["ada"] };
     const env = {
-      SETTINGS: {
-        getByName: () => ({
-          listAgents: async () => [
-            { slug: "kit", name: "Kit", status: "idle" as const, createdAt: 0, updatedAt: 0 },
-            { slug: "ada", name: "Ada", status: "idle" as const, createdAt: 0, updatedAt: 0 },
-          ],
-        }),
-      } as unknown as DurableObjectNamespace,
+      DIRECTORY: kvOf({ "sub:118200000000000000001": "[\"kit\"]" }),
+      SETTINGS: settingsInventory(["kit", "ada"]),
     };
     expect(await roomsFor(env)(op)).toEqual(["kit"]);
   });

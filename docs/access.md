@@ -57,10 +57,10 @@ check at request time.**
   here at all, and with what role.
 - The agent's room list says whether that agent will talk to you. It
   lives on the Agent DO. Settings edits it. The harness publishes it as
-  an `allow` frame. Nothing else does. Admins and operators chat only
-  for agent ids on their Settings row (inventory ∩ `agents[]`). Members
-  need the room list as in the roles table; `GANTREE_ALLOW` only lets
-  someone sign in.
+  an `allow` frame. Nothing else does. That list is Who can chat.
+  An admin, an operator, and a member all chat only where it lists
+  them. The phone apps read the same slugs from `/api/auth/me`.
+  `GANTREE_ALLOW` only lets someone sign in.
 - A cookie only proves who. Removing a person from a list ends their
   access on the next request, not at cookie expiry.
 
@@ -102,9 +102,9 @@ frames are always `sub`.
 
 | Role | From | May |
 | --- | --- | --- |
-| `admin` | `GANTREE_ADMINS` (locked) or a Settings row | `/users`, `/settings`, `/agents`; chat only for listed ids in the inventory |
-| `operator` | Settings row with `agents[]` | Chat only for listed ids that exist in the inventory; no agents console |
-| `member` | `GANTREE_ALLOW` (locked) or a Settings row | Sign in via allow; chat only where the room list admits them (inventory only). `/api/auth/me` lists assigned agents |
+| `admin` | `GANTREE_ADMINS` (locked) or a Settings row | `/users`, `/settings`, `/agents`. Chat only where Who can chat lists them |
+| `operator` | Settings row with `agents[]` | Agents console for those ids. Chat only where Who can chat lists them |
+| `member` | `GANTREE_ALLOW` (locked) or a Settings row | Sign in via allow; chat only where Who can chat lists them. `/api/auth/me` is that list |
 
 Resolution is per request: collect every row that matches, take the
 highest role, union the operators' `agents[]`. Env rows are **locked**:

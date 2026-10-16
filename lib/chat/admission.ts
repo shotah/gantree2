@@ -53,16 +53,10 @@ export type HumanChatVerdict = "ok" | "forbidden";
 /** Whether this human may chat with the slug before loading the Agent DO room list. */
 export function humanChatPrecheck(
   _env: AgentEnv,
-  who: Pick<Resolved, "role" | "agents">,
-  slug: string,
+  _who: Pick<Resolved, "role" | "agents">,
+  _slug: string,
   _session: RoomSession,
 ): HumanChatVerdict {
-  if (who.role === "admin") {
-    return who.agents.includes(slug) ? "ok" : "forbidden";
-  }
-  if (who.role === "operator") {
-    return who.agents.includes(slug) ? "ok" : "forbidden";
-  }
   return "ok";
 }
 
@@ -70,10 +64,10 @@ export function humanChatPrecheck(
 export async function memberRoomUsersWhenNeeded(
   env: AgentEnv,
   slug: string,
-  role: Role,
+  _role: Role,
   inDirectory: boolean,
 ): Promise<readonly RoomUser[]> {
-  if (role !== "member" || inDirectory) {
+  if (inDirectory) {
     return [];
   }
   const stub = agentStub(env, slug);

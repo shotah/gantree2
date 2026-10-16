@@ -1,9 +1,9 @@
 /**
  * The `agents` a signed-in person may chat with, for `/api/auth/me`.
  *
- * Two lists meet here: the Settings row's grants (what an operator or member
- * was assigned) and room admission (the KV directory plus each candidate
- * room's own list). Grants are candidates, not membership — the room decides.
+ * Who can chat: the KV directory plus each candidate room's own list.
+ * The phone apps read this from `/api/auth/me` and will not open a slug
+ * that is missing from it.
  */
 import type { Principal } from "@/lib/door/gate";
 import { inventorySlugs } from "./admission";
@@ -19,10 +19,6 @@ export function roomsFor(env: AgentEnv): RoomsFor {
     const inventory = await inventorySlugs(env);
     if (inventory.length === 0) {
       return [];
-    }
-    if (who.role === "admin" || who.role === "operator") {
-      const allowed = new Set(who.agents);
-      return inventory.filter((slug) => allowed.has(slug));
     }
     const session = {
       sub: who.sub,

@@ -12,7 +12,7 @@ export type ApiClient = (input: RequestInfo | URL, init?: RequestInit) => Promis
 const ROLES: Role[] = ["admin", "operator", "member"];
 
 const ROLE_BLURB: Record<Role, string> = {
-  admin: "Users, settings, and every agent; chat only the agents on their row.",
+  admin: "Users, settings, and every agent. Chat is Who can chat on the agent.",
   operator: "The agents listed on their row.",
   member: "Sign in, and chat where an agent allows them.",
 };
@@ -518,7 +518,11 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                                   aria-label={`Save ${label}`}
                                   disabled={busy}
                                   onClick={() => void submit(
-                                    { entry: label, role: editRole, agents: roleStoresAgents(editRole) ? agentTokens(editAgents) : [] },
+                                    {
+                                      entry: label,
+                                      role: editRole,
+                                      agents: roleStoresAgents(editRole) ? agentTokens(editAgents) : [],
+                                    },
                                     label,
                                   )}
                                   className={saveClass}

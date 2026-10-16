@@ -62,7 +62,7 @@ export async function authorizeSlug(
     if (pre === "forbidden") {
       return forbidden();
     }
-    const inDirectory = who.role === "member" && await memberInDirectory(env, session, slug);
+    const inDirectory = await memberInDirectory(env, session, slug);
     roomList = await memberRoomUsersWhenNeeded(env, slug, who.role, inDirectory);
     admit = { role: who.role, assignedSlugs: who.agents, slug, inDirectory };
   }
@@ -77,7 +77,7 @@ export async function authorizeSlug(
       role: who.role,
       assignedSlugs: who.agents,
       slug,
-      inDirectory: who.role === "member" && await memberInDirectory(env, session, slug),
+      inDirectory: await memberInDirectory(env, session, slug),
     };
     return phoneAdmitted(roomList, session, env, ctx) ? null : forbidden();
   }

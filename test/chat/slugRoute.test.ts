@@ -173,7 +173,7 @@ describe("authorizeSlug", () => {
       headers: { Cookie: `${SESSION_COOKIE}=${encodeURIComponent(strangerToken)}` },
     }), "kit", memoryStore());
     expect(denied?.status).toBe(403);
-    expect(idFromName).toHaveBeenCalledTimes(1);
+    expect(idFromName).toHaveBeenCalledTimes(2);
   });
 });
 

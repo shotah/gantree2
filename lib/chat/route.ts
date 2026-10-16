@@ -185,7 +185,7 @@ export async function routeAgentSocket(
     if (pre === "forbidden") {
       return forbidden();
     }
-    const inDirectory = doorUser.role === "member" && await memberInDirectory(env, session, slug);
+    const inDirectory = await memberInDirectory(env, session, slug);
     roomList = await memberRoomUsersWhenNeeded(env, slug, doorUser.role, inDirectory);
     if (!phoneAdmitted(roomList, session, env, {
       role: doorUser.role,
@@ -224,7 +224,7 @@ export async function routeAgentSocket(
       if (pre === "forbidden") {
         return forbidden();
       }
-      const inDirectory = doorUser.role === "member" && await memberInDirectory(env, session, slug);
+      const inDirectory = await memberInDirectory(env, session, slug);
       roomList = await memberRoomUsersWhenNeeded(env, slug, doorUser.role, inDirectory);
       admit = { role: doorUser.role, assignedSlugs: doorUser.agents, slug, inDirectory };
     }
