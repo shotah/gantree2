@@ -237,7 +237,7 @@ function removeSlugFromOperators(sql: Sql, slugRaw: string): void {
   }
   const found = rows(sql, "SELECT entry, role, agents FROM users");
   for (const row of found) {
-    if (!isRole(row.role) || row.role !== "operator") {
+    if (!isRole(row.role) || (row.role !== "operator" && row.role !== "admin")) {
       continue;
     }
     const agents = parseAgents(row.agents);
@@ -265,7 +265,13 @@ function clampLimit(limit: number | undefined): number {
 }
 
 function normalizeAgents(role: Role, agents: unknown): { ok: true; agents: string[] } | { ok: false } {
-  if (role !== "operator" || agents == null) {
+  if (role === "member") {
+    return { ok: true, agents: [] };
+  }
+  if (role !== "admin" && role !== "operator") {
+    return { ok: true, agents: [] };
+  }
+  if (agents == null) {
     return { ok: true, agents: [] };
   }
   if (!Array.isArray(agents) || agents.length > 64) {

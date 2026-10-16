@@ -65,6 +65,19 @@ describe("gate", () => {
     expect(isAgentRoomRequest(new Request("https://g.test/api/chat/theme?slug=kit", { headers: { Authorization: "Basic abc" } }))).toBe(false);
   });
 
+  it("a session JWE on a room route is the phone door, not a public room token", async () => {
+    const key = await sessionKey(SECRET);
+    const ada = await sealSession(key, { sub: ADA_SUB, email: "ada@example.com" });
+    const req = new Request("https://g.test/api/chat/avatar?slug=kit", {
+      headers: { Authorization: `Bearer ${ada}` },
+    });
+    expect(isAgentRoomRequest(req)).toBe(true);
+    expect(await gate(req, env, memoryStore())).toMatchObject({
+      kind: "pass",
+      who: { sub: ADA_SUB, email: "ada@example.com", role: "admin" },
+    });
+  });
+
   it("no admins is 503 on every gated route, even for a stranger", async () => {
     const d = await gate(new Request("https://g.test/"), { SESSION_SECRET: SECRET }, memoryStore());
     expect(d).toMatchObject({ kind: "unauthorized", status: 503 });

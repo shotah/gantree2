@@ -31,16 +31,32 @@ export function isPublicPath(pathname: string): boolean {
 }
 
 /**
- * Agent face / wallpaper / mood (`chat__avatar_update` and friends). The
- * room presents its bearer, never a cookie — the same token it dials
- * `/ws/<slug>` with. Only these three paths, and only when a bearer header is
- * on the request; `admitRoom` (`lib/avatar/http`) then checks that token
- * against `AGENT_BEARERS` or the Agent DO row. A cookie here is gated as usual.
+ * Agent face / wallpaper / mood. The harness presents its room bearer, never
+ * a cookie — the same token it dials `/ws/<slug>` with. Only these three
+ * paths, and only when a bearer header is on the request. A bearer that
+ * opens as a session JWE is the phone (`gate` does not take the public
+ * shortcut); `admitRoom` then checks a non-session token against
+ * `AGENT_BEARERS` or the Agent DO row. A cookie here is gated as usual.
  */
 const ROOM_PATH = /^\/api\/chat\/(?:avatar|backdrop|theme)$/;
 
 export function isAgentRoomRequest(req: Request): boolean {
   return ROOM_PATH.test(new URL(req.url).pathname) && Boolean(bearerToken(req.headers.get("Authorization")));
+}
+
+/** True when `Authorization` is a session JWE, so the phone door can run. */
+async function bearerOpensSession(req: Request, env: GateEnv, now: number): Promise<boolean> {
+  const token = bearerToken(req.headers.get("Authorization"));
+  const secret = env.SESSION_SECRET?.trim();
+  if (!token || !secret) {
+    return false;
+  }
+  try {
+    const key = await sessionKey(secret);
+    return (await openSession(key, token, now)) != null;
+  } catch {
+    return false;
+  }
 }
 
 export function isApiPath(pathname: string): boolean {
@@ -113,9 +129,9 @@ export function devIdentity(env: GateEnv, url: URL): { sub: string; email: strin
 
 export async function gate(req: Request, env: GateEnv, store: UserStore, now = Date.now()): Promise<Decision> {
   const url = new URL(req.url);
-  // A bearer on /api/chat/{avatar,backdrop,theme} is the room token,
-  // not a session JWE. isAgentRoomRequest stays ahead of the session read.
-  if (isPublicPath(url.pathname) || isAgentRoomRequest(req)) {
+  // A non-session bearer on /api/chat/{avatar,backdrop,theme} is the room
+  // token. A session JWE is the phone and continues through the door.
+  if (isPublicPath(url.pathname) || (isAgentRoomRequest(req) && !(await bearerOpensSession(req, env, now)))) {
     return { kind: "public" };
   }
   if (!hasAdmins(env)) {

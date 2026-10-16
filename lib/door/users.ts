@@ -3,7 +3,7 @@ import { type AllowEntry, type Identity, entryMatches, formatEntry, parseAllowli
 /**
  * Who may be here, and what they may touch.
  *
- *   admin     users, settings, agents console, every inventoried agent
+ *   admin     users, settings, agents console; chat for slugs on their row (inventory ∩ agents[])
  *   operator  chat only for slugs on their row (inventory ∩ agents[])
  *   member    sign in; chat where the room list admits them (inventory only)
  *
@@ -17,7 +17,7 @@ export type Role = "admin" | "operator" | "member";
 export type UserRow = {
   entry: AllowEntry;
   role: Role;
-  /** Agent slugs an operator may run. Ignored for admin (all) and member (none). */
+  /** Agent slugs an admin or operator may chat with. Ignored for member (none). */
   agents: string[];
   /** True when the row comes from env. Shown locked in the UI. */
   locked: boolean;
@@ -59,8 +59,8 @@ export const memoryStore = (rows: UserRow[] = []): UserStore => ({
 });
 
 /**
- * Highest role wins across every row that matches. Operator agents are the
- * union of matching operator rows. A miss is null — one shape for every miss.
+ * Highest role wins across every row that matches. Admin and operator agents
+ * are the union of matching rows. A miss is null — one shape for every miss.
  */
 export function resolveFrom(rows: UserRow[], who: Identity): Resolved | null {
   let best: Resolved | null = null;
@@ -69,7 +69,7 @@ export function resolveFrom(rows: UserRow[], who: Identity): Resolved | null {
     if (!entryMatches(row.entry, who)) {
       continue;
     }
-    if (row.role === "operator") {
+    if (row.role === "admin" || row.role === "operator") {
       for (const slug of row.agents) {
         agents.add(slug);
       }
@@ -81,7 +81,8 @@ export function resolveFrom(rows: UserRow[], who: Identity): Resolved | null {
   if (!best) {
     return null;
   }
-  return { ...best, agents: best.role === "operator" ? [...agents].sort() : [] };
+  const chatAgents = best.role === "admin" || best.role === "operator" ? [...agents].sort() : [];
+  return { ...best, agents: chatAgents };
 }
 
 export async function resolveUser(env: UsersEnv, store: UserStore, who: Identity): Promise<Resolved | null> {

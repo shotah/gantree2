@@ -37,13 +37,28 @@ describe("roomsFor", () => {
     expect(await roomsFor({})({ ...ada, agents: [] })).toEqual([]);
   });
 
-  it("lists every inventoried agent for an admin", async () => {
+  it("returns no chat agents for an admin with an empty assignment", async () => {
     const admin: Principal = { ...ada, role: "admin", agents: [] };
     const env = {
       DIRECTORY: kvOf({}),
       SETTINGS: {
         getByName: () => ({
           listAgents: async () => [{ slug: "kit", name: "Kit", status: "idle" as const, createdAt: 0, updatedAt: 0 }],
+        }),
+      } as unknown as DurableObjectNamespace,
+    };
+    expect(await roomsFor(env)(admin)).toEqual([]);
+  });
+
+  it("intersects admin assignment with the inventory", async () => {
+    const admin: Principal = { ...ada, role: "admin", agents: ["kit"] };
+    const env = {
+      SETTINGS: {
+        getByName: () => ({
+          listAgents: async () => [
+            { slug: "kit", name: "Kit", status: "idle" as const, createdAt: 0, updatedAt: 0 },
+            { slug: "ada", name: "Ada", status: "idle" as const, createdAt: 0, updatedAt: 0 },
+          ],
         }),
       } as unknown as DurableObjectNamespace,
     };

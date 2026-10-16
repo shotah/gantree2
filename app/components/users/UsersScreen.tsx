@@ -12,7 +12,7 @@ export type ApiClient = (input: RequestInfo | URL, init?: RequestInit) => Promis
 const ROLES: Role[] = ["admin", "operator", "member"];
 
 const ROLE_BLURB: Record<Role, string> = {
-  admin: "Users, settings, and every agent.",
+  admin: "Users, settings, and every agent; chat only the agents on their row.",
   operator: "The agents listed on their row.",
   member: "Sign in, and chat where an agent allows them.",
 };
@@ -64,6 +64,10 @@ function isRole(value: string): value is Role {
 
 function agentTokens(raw: string): string[] {
   return raw.split(/[\s,]+/).map((part) => part.trim().toLowerCase()).filter(Boolean);
+}
+
+function roleStoresAgents(role: Role): boolean {
+  return role === "admin" || role === "operator";
 }
 
 /** The avatar letter: the email's, so a `sub:email` row does not read as a digit. */
@@ -345,7 +349,7 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                       return;
                     }
                     void submit(
-                      { entry: saved, role, agents: role === "operator" ? agentTokens(agents) : [] },
+                      { entry: saved, role, agents: roleStoresAgents(role) ? agentTokens(agents) : [] },
                       saved,
                       true,
                     );
@@ -369,7 +373,7 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                       <label htmlFor="user-role" className="text-xs text-muted">Role</label>
                       <RoleSelect id="user-role" value={role} disabled={busy} onChange={setRole} />
                     </div>
-                    {role === "operator"
+                    {roleStoresAgents(role)
                       ? (
                           <div className="flex min-w-0 flex-1 flex-col gap-1">
                             <label htmlFor="user-agents" className="text-xs text-muted">Agents</label>
@@ -494,7 +498,7 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                                   <label htmlFor={`role-${label}`} className="text-xs text-muted">Role for {label}</label>
                                   <RoleSelect id={`role-${label}`} value={editRole} disabled={busy} onChange={setEditRole} />
                                 </div>
-                                {editRole === "operator"
+                                {roleStoresAgents(editRole)
                                   ? (
                                       <div className="flex min-w-0 flex-1 flex-col gap-1">
                                         <label htmlFor={`agents-${label}`} className="text-xs text-muted">Agents for {label}</label>
@@ -514,7 +518,7 @@ export function UsersScreen({ client = api }: { client?: ApiClient }) {
                                   aria-label={`Save ${label}`}
                                   disabled={busy}
                                   onClick={() => void submit(
-                                    { entry: label, role: editRole, agents: editRole === "operator" ? agentTokens(editAgents) : [] },
+                                    { entry: label, role: editRole, agents: roleStoresAgents(editRole) ? agentTokens(editAgents) : [] },
                                     label,
                                   )}
                                   className={saveClass}

@@ -428,7 +428,7 @@ describe("native sign-in verification", () => {
     expect(await bad.json()).toEqual({ error: "unauthorized" });
   });
 
-  it("falls through a cookie that does not open, and keeps room paths public for any bearer", async () => {
+  it("falls through a cookie that does not open, and a session bearer on a room path is the phone", async () => {
     const key = await sessionKey(SECRET);
     const other = await sessionKey(OTHER);
     const bearer = await sealSession(key, { sub: ADA_SUB, email: "ada@example.com" }, NOW);
@@ -449,11 +449,17 @@ describe("native sign-in verification", () => {
       const req = new Request(`https://g.test/api/chat/${kind}?slug=kit`, {
         headers: { Authorization: `Bearer ${bearer}` },
       });
-      expect(await gate(req, env, memoryStore(), NOW)).toEqual({ kind: "public" });
+      expect(await gate(req, env, memoryStore(), NOW)).toMatchObject({
+        kind: "pass",
+        who: { sub: ADA_SUB, email: "ada@example.com", role: "admin" },
+      });
       const withCookie = new Request(`https://g.test/api/chat/${kind}?slug=kit`, {
         headers: { cookie: `${SESSION_COOKIE}=${bearer}`, Authorization: `Bearer ${bearer}` },
       });
-      expect(await gate(withCookie, env, memoryStore(), NOW)).toEqual({ kind: "public" });
+      expect(await gate(withCookie, env, memoryStore(), NOW)).toMatchObject({
+        kind: "pass",
+        who: { sub: ADA_SUB, email: "ada@example.com", role: "admin" },
+      });
     }
   });
 

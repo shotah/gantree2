@@ -20,10 +20,7 @@ export function roomsFor(env: AgentEnv): RoomsFor {
     if (inventory.length === 0) {
       return [];
     }
-    if (who.role === "admin") {
-      return inventory;
-    }
-    if (who.role === "operator") {
+    if (who.role === "admin" || who.role === "operator") {
       const allowed = new Set(who.agents);
       return inventory.filter((slug) => allowed.has(slug));
     }

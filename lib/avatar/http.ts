@@ -160,8 +160,8 @@ export async function readChatUser(
 /**
  * The harness on its own room. `Authorization: Bearer` is the room bearer
  * (`AGENT_BEARERS` map, else the Agent DO row) — the same token the socket
- * dials with. Header only; a bearer that does not match is 401, never a
- * fall-through to the cookie door.
+ * dials with. Header only. A miss is 401 from this function; `admitRoom`
+ * then tries the phone session on that 401.
  */
 async function admitAgent(
   env: RoomEnv,
@@ -186,6 +186,8 @@ async function admitAgent(
 /**
  * Signed-in caller who is on this room's list, or the harness with the room
  * bearer. No `AGENT` binding yet → 503.
+ * A bearer that is not the room token falls through to the phone session
+ * (cookie, or the same JWE on `Authorization`) — the admission the socket uses.
  * TODO: `me()` does not take a slug; the room list on the Agent DO is the second check.
  */
 export async function admitRoom(
@@ -196,7 +198,10 @@ export async function admitRoom(
 ): Promise<{ user: ChatUser; stub: RoomStub } | { response: Response }> {
   const presented = bearerToken(req.headers.get("Authorization"));
   if (presented) {
-    return admitAgent(env, slug, presented);
+    const agent = await admitAgent(env, slug, presented);
+    if (!("response" in agent) || agent.response.status !== 401) {
+      return agent;
+    }
   }
   const who = await readChatUser(req, env, store);
   if ("response" in who) {

@@ -73,7 +73,16 @@ describe("socketAuth", () => {
     })).toBe(true);
   });
 
-  it("admits an admin on an empty room and still rejects strangers", () => {
+  it("admits an admin only when assigned to the slug and still rejects strangers", () => {
+    expect(phone({
+      userId: ada,
+      email: "ada@example.com",
+      emailVerified: true,
+      roomUsers: [],
+      doorRole: "admin",
+      assignedAgents: ["kit"],
+      now: 1_000,
+    })).toBe(true);
     expect(phone({
       userId: ada,
       email: "ada@example.com",
@@ -81,7 +90,7 @@ describe("socketAuth", () => {
       roomUsers: [],
       doorRole: "admin",
       now: 1_000,
-    })).toBe(true);
+    })).toBe(false);
     expect(phone({
       userId: ada,
       email: "ada@example.com",

@@ -58,7 +58,7 @@ export function humanChatPrecheck(
   _session: RoomSession,
 ): HumanChatVerdict {
   if (who.role === "admin") {
-    return "ok";
+    return who.agents.includes(slug) ? "ok" : "forbidden";
   }
   if (who.role === "operator") {
     return who.agents.includes(slug) ? "ok" : "forbidden";

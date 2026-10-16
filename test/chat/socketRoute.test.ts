@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { sealSession, sessionKey, SESSION_COOKIE } from "@/lib/door/session";
+import { memoryStore } from "@/lib/door/users";
 import type { AgentEnv } from "@/lib/chat/env";
 import { routeAgentSocket } from "@/lib/chat/route";
 import { settingsInventory } from "./settingsStub";
@@ -53,6 +54,14 @@ describe("routeAgentSocket", () => {
     expect(res?.status).toBe(503);
   });
 
+  it("404s a spike secret for a slug not in inventory without idFromName", async () => {
+    const { stub, env, idFromName } = binding(async () => new Response(null, { status: 200 }), { CHAT_SECRET: "shared" }, ["kit"]);
+    const res = await routeAgentSocket(new Request("http://127.0.0.1/ws/unknown?role=phone&secret=shared"), env, "unknown");
+    expect(res?.status).toBe(404);
+    expect(stub.fetch).not.toHaveBeenCalled();
+    expect(idFromName).not.toHaveBeenCalled();
+  });
+
   it("stamps a spike phone and forwards the upgrade", async () => {
     const { stub, env } = binding(async (req) => {
       expect(req.headers.get("X-Chat-Role")).toBe("phone");
@@ -88,9 +97,15 @@ describe("routeAgentSocket", () => {
       expect(req.headers.get("X-Chat-Slug")).toBe("kit");
       return new Response(null, { status: 200 });
     }, { GOOGLE_CLIENT_ID: "id", SESSION_SECRET: SECRET, GANTREE_ADMINS: `${ADA}:ada@example.com` });
+    const store = memoryStore([{
+      entry: { sub: ADA, email: "ada@example.com" },
+      role: "admin",
+      agents: ["kit"],
+      locked: false,
+    }]);
     const res = await routeAgentSocket(new Request("https://gantree.example/ws/kit?role=phone", {
       headers: { Cookie: `${SESSION_COOKIE}=${encodeURIComponent(token)}` },
-    }), env, "kit");
+    }), env, "kit", store);
     expect(res?.status).toBe(200);
   });
 
@@ -151,9 +166,15 @@ describe("routeAgentSocket", () => {
       GANTREE_DEV_USER: `${ADA}:ada@example.com`,
       GANTREE_ADMINS: `${ADA}:ada@example.com`,
     });
-    const res = await routeAgentSocket(new Request("http://127.0.0.1/ws/kit?role=phone"), env, "kit");
+    const store = memoryStore([{
+      entry: { sub: ADA, email: "ada@example.com" },
+      role: "admin",
+      agents: ["kit"],
+      locked: false,
+    }]);
+    const res = await routeAgentSocket(new Request("http://127.0.0.1/ws/kit?role=phone"), env, "kit", store);
     expect(res?.status).toBe(200);
-    const remote = await routeAgentSocket(new Request("https://gantree.example/ws/kit?role=phone"), env, "kit");
+    const remote = await routeAgentSocket(new Request("https://gantree.example/ws/kit?role=phone"), env, "kit", store);
     expect(remote?.status).toBe(401);
   });
 

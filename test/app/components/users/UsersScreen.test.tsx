@@ -77,7 +77,7 @@ describe("UsersScreen", () => {
     expect(within(bob).getByText("kit")).toBeTruthy();
     expect(within(bob).getByRole("button", { name: "Remove bob@example.com" })).toBeTruthy();
     expect(screen.getByRole("region", { name: "Audit" }).textContent).toContain("added bob@example.com operator [kit]");
-    expect(screen.getByText("Users, settings, and every agent.")).toBeTruthy();
+    expect(screen.getByText("Users, settings, and every agent; chat only the agents on their row.")).toBeTruthy();
   });
 
   it("adds an operator and keeps a rejected entry in the field", async () => {
@@ -120,10 +120,15 @@ describe("UsersScreen", () => {
   it("saves a role change and confirms a remove", async () => {
     let users = [ADA, BOB];
     let deleted = "";
+    let lastPost = "";
     const client: ApiClient = vi.fn(async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
       const method = init?.method ?? "GET";
       if (method === "POST") {
-        users = users.map((user) => user.entry.email === "bob@example.com" ? { ...user, role: "admin" as const, agents: [] } : user);
+        lastPost = textBody(init?.body);
+        const body = JSON.parse(lastPost) as { entry: string; role: string; agents: string[] };
+        users = users.map((user) => user.entry.email === "bob@example.com"
+          ? { ...user, role: "admin" as const, agents: body.agents }
+          : user);
         return json(200, { user: users[1] });
       }
       if (method === "DELETE") {
@@ -138,8 +143,10 @@ describe("UsersScreen", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Edit bob@example.com" }));
     fireEvent.change(screen.getByLabelText("Role for bob@example.com"), { target: { value: "admin" } });
+    fireEvent.change(screen.getByLabelText("Agents for bob@example.com"), { target: { value: "kit" } });
     fireEvent.click(screen.getByRole("button", { name: "Save bob@example.com" }));
     expect(await screen.findByText("Saved bob@example.com.")).toBeTruthy();
+    expect(JSON.parse(lastPost)).toEqual({ entry: "bob@example.com", role: "admin", agents: ["kit"] });
 
     fireEvent.click(screen.getByRole("button", { name: "Remove bob@example.com" }));
     fireEvent.click(screen.getByRole("button", { name: "Cancel remove bob@example.com" }));

@@ -98,7 +98,7 @@ header is Worker-to-DO glue. It is not an internet route.
 | **Public paths** | Exact list in `PUBLIC_EXACT` plus prefixes `/_vinext/`, `/.well-known/`, `/_next/`, `/assets/` | No session |
 | **Session cookie** `gantree_session` | Non-public pages and `/api/*` except room-bearer bypass | JWE; cookie wins when it opens |
 | **Session bearer** | Same JWE on `Authorization: Bearer` when the cookie does not open | Cab and Helm; same gate read as the cookie |
-| **Room bearer** | `GET`, `POST`, `DELETE` on `/api/chat/avatar`, `/api/chat/backdrop`, `/api/chat/theme` when `Authorization: Bearer` is present | Gate treats the header as public; `admitRoom` checks `AGENT_BEARERS` or the DO row. A mismatch is 401 and does not fall through to the session |
+| **Room bearer** | `GET`, `POST`, `DELETE` on `/api/chat/avatar`, `/api/chat/backdrop`, `/api/chat/theme` when `Authorization: Bearer` is present and does not open as a session | Gate treats that header as public; `admitRoom` checks `AGENT_BEARERS` or the DO row. A session JWE on the same header is the phone door. A token that is neither is 401 |
 | **Native Google proof** | `GET /api/auth/config`, `GET /api/auth/nonce`, `POST /api/auth/token` | Public at the gate; proof is ID token plus server nonce — [access.md](access.md#phones-native-sign-in) |
 | **Catch cookie only** | `GET /api/auth/catch` is public at the gate; the handler opens the session from `gantree_session` via `readCookie` | Admin or room membership, then code exchange |
 | **Mailbox socket** | `GET /ws/{slug}?role=phone`, `crane`, or `agent` | Phone: session cookie or session bearer, then room list. Crane or agent: room bearer in `Authorization`. Origin must match (`upgradeOriginOk`) or 403. OIDC mode ignores query `bearer` |

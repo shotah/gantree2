@@ -40,8 +40,7 @@ There is no second door and no passphrase.
                                      │  role
          /users /settings /agents  admin only
          /chat/<id>        signed in ──┐
-                                       └─ admin: every inventoried agent
-                                          operator: <id> on their row
+                                       └─ admin / operator: <id> on their row
                                           member: room list (and inventory)
                                           `GANTREE_ALLOW` does not open every room
 ```
@@ -58,9 +57,9 @@ check at request time.**
   here at all, and with what role.
 - The agent's room list says whether that agent will talk to you. It
   lives on the Agent DO. Settings edits it. The harness publishes it as
-  an `allow` frame. Nothing else does. Admins may chat with every
-  inventoried agent even when that list is empty. Operators and members
-  need assignment as in the roles table; `GANTREE_ALLOW` only lets
+  an `allow` frame. Nothing else does. Admins and operators chat only
+  for agent ids on their Settings row (inventory ∩ `agents[]`). Members
+  need the room list as in the roles table; `GANTREE_ALLOW` only lets
   someone sign in.
 - A cookie only proves who. Removing a person from a list ends their
   access on the next request, not at cookie expiry.
@@ -103,7 +102,7 @@ frames are always `sub`.
 
 | Role | From | May |
 | --- | --- | --- |
-| `admin` | `GANTREE_ADMINS` (locked) or a Settings row | `/users`, `/settings`, `/agents`, every inventoried agent in chat |
+| `admin` | `GANTREE_ADMINS` (locked) or a Settings row | `/users`, `/settings`, `/agents`; chat only for listed ids in the inventory |
 | `operator` | Settings row with `agents[]` | Chat only for listed ids that exist in the inventory; no agents console |
 | `member` | `GANTREE_ALLOW` (locked) or a Settings row | Sign in via allow; chat only where the room list admits them (inventory only). `/api/auth/me` lists assigned agents |
 
@@ -157,8 +156,9 @@ Public: `/login`, `/api/auth/google`, `/api/auth/callback/google`,
 `/robots.txt`, `/_vinext/*`, `/_next/*`, `/assets/*`, `/.well-known/*`.
 Code: `lib/door/gate.ts`, `lib/door/http.ts`, `middleware.ts`. A cookie
 that opens wins; otherwise the same JWE on `Authorization: Bearer`.
-A bearer on `/api/chat/{avatar,backdrop,theme}` is the room token
-(`isAgentRoomRequest`) and is let through before that read.
+A bearer on `/api/chat/{avatar,backdrop,theme}` that does not open as a
+session is the room token (`isAgentRoomRequest`) and is let through before
+that read. A session JWE on those paths is the phone and follows this door.
 `/api/auth/catch` is on the public list so a missing cookie is a
 plain-text 401. The handler still requires the session cookie.
 
@@ -172,7 +172,7 @@ plain-text 401. The handler still requires the session cookie.
 `agents` for a member is the agent ids whose room list has them (KV
 directory `sub:<sub>` / `email:<email>` → agent ids, written by each Agent
 DO when it stores an `allow` frame). For an operator it is their
-assignment. For an admin it is every agent id. gantree-android and
+assignment. For an admin it is their row's agent ids (inventory ∩ `agents[]`). gantree-android and
 gantree-ios read `agents` and fall back to `cranes`; the alias is
 still written until the Phase 4 wire-name drop. The only identity a stranger sees
 is their own.
@@ -222,8 +222,8 @@ A stranger gets 403 `not_allowed` with only their own `sub` and
 The gate takes the bearer wherever it takes the cookie. A cookie that
 opens wins; a cookie that does not falls through to the bearer.
 `isAgentRoomRequest` still runs first: a bearer on
-`/api/chat/{avatar,backdrop,theme}` is the room token, not a
-session.
+`/api/chat/{avatar,backdrop,theme}` that does not open as a session is
+the room token. A session JWE is the phone.
 
 ### Room admission (`/ws/<agent id>`)
 

@@ -115,7 +115,12 @@ describe("withSlug", () => {
     const next = vi.fn(async () => new Response("ok"));
     const ok = await withSlug(env, new Request("https://gantree.example/api/theme?slug=kit", {
       headers: { Cookie: `${SESSION_COOKIE}=${encodeURIComponent(token)}` },
-    }), next);
+    }), next, memoryStore([{
+      entry: { sub: ADA, email: "ada@example.com" },
+      role: "admin",
+      agents: ["kit"],
+      locked: false,
+    }]));
     expect(ok.status).toBe(200);
     const stranger = await sealSession(await sessionKey(SECRET), { sub: "9999999999", email: null });
     const no = await withSlug(env, new Request("https://gantree.example/api/theme?slug=kit", {
@@ -151,7 +156,12 @@ describe("authorizeSlug", () => {
       GANTREE_DEV_USER: `${ADA}:ada@example.com`,
       GANTREE_ADMINS: `${ADA}:ada@example.com`,
     }, ["kit"]);
-    expect(await authorizeSlug(env, new Request("http://127.0.0.1:3000/api/backdrop?slug=kit"), "kit")).toBeNull();
+    expect(await authorizeSlug(env, new Request("http://127.0.0.1:3000/api/backdrop?slug=kit"), "kit", memoryStore([{
+      entry: { sub: ADA, email: "ada@example.com" },
+      role: "admin",
+      agents: ["kit"],
+      locked: false,
+    }]))).toBeNull();
     const strangerToken = await sealSession(await sessionKey(SECRET), { sub: "9999999999", email: "stranger@example.com" });
     const strangerEnv = invEnv({
       AGENT,

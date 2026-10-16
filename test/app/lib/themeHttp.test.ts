@@ -40,7 +40,12 @@ describe("handleTheme", () => {
       method: "POST",
       headers: { cookie: await cookie(), "Content-Type": "application/json" },
       body: JSON.stringify({ theme: "boom" }),
-    }), env, memoryStore());
+    }), env, memoryStore([{
+      entry: { sub: SUB, email: "ada@example.com" },
+      role: "admin",
+      agents: ["kit"],
+      locked: false,
+    }]));
     expect(res.status).toBe(200);
     expect(body).toBe("sent");
     expect(await res.json()).toEqual({ theme: "boom" });
@@ -83,7 +88,12 @@ describe("handleTheme", () => {
       method: "POST",
       headers: { cookie: await cookie(), "Content-Type": "application/json" },
       body: JSON.stringify({ theme: "nope" }),
-    }), env, memoryStore());
+    }), env, memoryStore([{
+      entry: { sub: SUB, email: "ada@example.com" },
+      role: "admin",
+      agents: ["kit"],
+      locked: false,
+    }]));
     expect(res.status).toBe(400);
   });
 });

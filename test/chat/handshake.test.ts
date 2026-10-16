@@ -369,14 +369,24 @@ describe("handshake room list", () => {
     expect(refused).toEqual({ ok: false, error: "forbidden" });
   });
 
-  it("admits an admin on an empty room list", async () => {
-    const ok = await handshake({
+  it("forbids an admin without assignment and admits when kit is assigned", async () => {
+    const refused = await handshake({
       env,
       slug: "kit",
       role: "phone",
       cookieHeader: await cookie({ sub: ada, email: "ada@example.com" }),
       roomList: [],
       admit: admit("admin"),
+      now,
+    });
+    expect(refused).toEqual({ ok: false, error: "forbidden" });
+    const ok = await handshake({
+      env,
+      slug: "kit",
+      role: "phone",
+      cookieHeader: await cookie({ sub: ada, email: "ada@example.com" }),
+      roomList: [],
+      admit: admit("admin", "kit", ["kit"]),
       now,
     });
     expect(ok.ok && ok.principal.kind === "phone" && ok.principal.sub).toBe(ada);

@@ -30,7 +30,13 @@ function room(handler: (req: Request) => Promise<Response> | Response, slugs: st
   } as unknown as RoomEnv;
 }
 
-const store: UserStore = memoryStore();
+/** Env admin plus a stored row that assigns kit and ada. Chat follows that assignment. */
+const store: UserStore = memoryStore([{
+  entry: { sub: SUB, email: "ada@example.com" },
+  role: "admin",
+  agents: ["ada", "kit"],
+  locked: false,
+}]);
 
 describe("handleAvatar", () => {
   it("rejects a missing session", async () => {
@@ -159,6 +165,46 @@ describe("handleAvatar", () => {
       headers: { Authorization: "Bearer crane-tok" },
     }), env, store);
     expect(other.status).toBe(401);
+  });
+
+  it("admits a phone session bearer when the member is on the room list", async () => {
+    const memberSub = "member-sub";
+    const token = await sealSession(await sessionKey(SECRET), { sub: memberSub, email: "sam@example.com" });
+    const member = memoryStore([{
+      entry: { sub: memberSub, email: "sam@example.com" },
+      role: "member",
+      agents: [],
+      locked: false,
+    }]);
+    const env = room((req) => {
+      const op = req.headers.get("X-Chat-Op");
+      if (op === "bearer") {
+        return Response.json({ bearer: "from-do" });
+      }
+      if (op === "allow") {
+        return Response.json({ users: [{ sub: memberSub, email: "sam@example.com", role: "member" }] });
+      }
+      return new Response(new Uint8Array([0xff, 0xd8, 0xff]), {
+        headers: { "Content-Type": "image/jpeg", "X-Chat-Rev": "11" },
+      });
+    });
+    const ok = await handleAvatar(new Request("https://chat.test/api/chat/avatar?slug=kit", {
+      headers: { Authorization: `Bearer ${token}` },
+    }), env, member);
+    expect(ok.status).toBe(200);
+    expect(ok.headers.get("X-Chat-Rev")).toBe("11");
+
+    const stranger = memoryStore([{
+      entry: { sub: "stranger-sub", email: "eve@example.com" },
+      role: "member",
+      agents: [],
+      locked: false,
+    }]);
+    const eve = await sealSession(await sessionKey(SECRET), { sub: "stranger-sub", email: "eve@example.com" });
+    const denied = await handleAvatar(new Request("https://chat.test/api/chat/avatar?slug=kit", {
+      headers: { Authorization: `Bearer ${eve}` },
+    }), env, stranger);
+    expect(denied.status).toBe(403);
   });
 
   it("puts a JPEG on the room", async () => {

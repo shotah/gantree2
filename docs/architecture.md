@@ -193,9 +193,10 @@ flowchart TD
 ```
 
 A cookie that opens wins; otherwise `Authorization: Bearer` is the
-same session JWE. A bearer on `/api/chat/{avatar,backdrop,theme}` is
-the room token (`isAgentRoomRequest`) and is let through before either
-of those reads. `/api/auth/catch` is on the public list so a missing
+same session JWE. On `/api/chat/{avatar,backdrop,theme}`, a bearer that
+does not open as a session is the room token (`isAgentRoomRequest`) and
+is let through before either of those reads. A session JWE continues
+through the door. `/api/auth/catch` is on the public list so a missing
 cookie is a plain-text 401, not an HTML login redirect. The handler
 still requires that cookie.
 
@@ -481,8 +482,8 @@ Settings is one more actor. Nothing is shared except the KV directory.
 If a task fails one of these, it is later, or it is wrong.
 
 1. **One door.** Google signs you in; one list says whether; a role
-   says what; each agent's room list says who it talks to, except
-   `GANTREE_ADMINS` and `GANTREE_ALLOW` may chat with every agent.
+   says what; each agent's room list says who it talks to. Chat for an
+   admin is the agents on their user row; `GANTREE_ALLOW` is sign-in only.
    Role is computed every request, never read from the cookie. No second
    login. [access.md](access.md).
 2. **The Agent DO is truth.** `config.env`, the room list, and the

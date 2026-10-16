@@ -84,7 +84,12 @@ describe("handlePush", () => {
       method: "PUT",
       headers: { cookie: await cookie(), "Content-Type": "application/json" },
       body: JSON.stringify({ slug: "kit", subscription }),
-    }), env, memoryStore());
+    }), env, memoryStore([{
+      entry: { sub: SUB, email: "ada@example.com" },
+      role: "admin",
+      agents: ["kit"],
+      locked: false,
+    }]));
     expect(res.status).toBe(200);
     expect(sub).toBe(SUB);
     expect(JSON.parse(forwarded)).toMatchObject({ slug: "kit" });

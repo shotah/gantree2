@@ -7,7 +7,7 @@ export type PhoneAdmitEnv = Pick<ChatAuthEnv, "ALLOWED_SUBS">;
 
 export type PhoneAdmitCtx = {
   role: Role;
-  /** Operator assignment from the Settings row; ignored for admin and member. */
+  /** Admin or operator assignment from Settings rows; ignored for member. */
   assignedSlugs: readonly string[];
   slug: string;
   /** Member already indexed for this slug in DIRECTORY KV. */
@@ -21,10 +21,7 @@ export function phoneAdmitted(
   env: PhoneAdmitEnv,
   ctx: PhoneAdmitCtx,
 ): boolean {
-  if (ctx.role === "admin") {
-    return true;
-  }
-  if (ctx.role === "operator") {
+  if (ctx.role === "admin" || ctx.role === "operator") {
     return ctx.assignedSlugs.includes(ctx.slug);
   }
   if (ctx.inDirectory) {

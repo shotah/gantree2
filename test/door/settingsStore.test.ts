@@ -88,16 +88,16 @@ describe("openSettings", () => {
     expect(canRunAgent(resolved, "zed")).toBe(false);
   });
 
-  it("updates in place, keeps added_at, and drops agents unless the role is operator", async () => {
+  it("updates in place, keeps added_at, and persists agents for admin and operator", async () => {
     let now = 1_000;
     const sql = memorySql();
     const store = openSettings(sql, () => now);
     await store.putUser({ entry: "eve@example.com", role: "operator", agents: ["kit"] }, ADA);
     now = 2_000;
     const updated = await store.putUser({ entry: "eve@example.com", role: "admin", agents: ["kit"] }, ADA);
-    expect(updated).toMatchObject({ ok: true, user: { role: "admin", agents: [] } });
+    expect(updated).toMatchObject({ ok: true, user: { role: "admin", agents: ["kit"] } });
     expect(sql.exec("SELECT added_at, role, agents FROM users").toArray()).toEqual([
-      { added_at: 1_000, role: "admin", agents: "[]" },
+      { added_at: 1_000, role: "admin", agents: "[\"kit\"]" },
     ]);
     expect((await store.audit(2)).map((event) => event.action)).toEqual(["user.update", "user.add"]);
   });

@@ -54,6 +54,22 @@ describe("resolveUser", () => {
     expect(canRunAgent(ada, "anything")).toBe(true);
   });
 
+  it("keeps stored admin chat agents even when the env floor row has none", async () => {
+    const store = memoryStore([
+      { entry: { sub: null, email: "ada@example.com" }, role: "admin", agents: ["tim"], locked: false },
+    ]);
+    const ada = await resolveUser(env, store, ADA);
+    expect(ada).toEqual({
+      role: "admin",
+      agents: ["tim"],
+      entry: { sub: null, email: "ada@example.com" },
+    });
+    if (!ada) {
+      return;
+    }
+    expect(canRunAgent(ada, "zed")).toBe(true);
+  });
+
   it("a removed store row is a miss on the next resolve", async () => {
     const rows = [{ entry: { sub: null, email: "eve@example.com" }, role: "member" as const, agents: [], locked: false }];
     const store = memoryStore(rows);

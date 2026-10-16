@@ -159,7 +159,7 @@ export async function routeAgentSocket(
     return configError();
   }
   const authMode = mode.ok ? mode.mode : "oidc";
-  const inventoried = authMode === "spike" ? { slug, name: slug, createdBy: "", createdAt: 0, tags: [], enabled: true } : await inventoriedAgent(env, slug);
+  const inventoried = await inventoriedAgent(env, slug);
   if (!inventoried) {
     return new Response("not found", { status: 404 });
   }
