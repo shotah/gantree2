@@ -2,8 +2,24 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import manifest from "@/app/manifest";
 import { chromeInstallIssues, GANTREE_MANIFEST, swInstallIssues, type WebAppManifest } from "@/app/lib/pwa";
+import { NOTIFY_ICON } from "@/lib/phone/notify";
+import { isPublicPath } from "@/lib/door/gate";
 
 describe("pwa", () => {
+  it("keeps every install and notification icon outside the door", () => {
+    // Chrome fetches manifest icons without cookies before it offers Install; a
+    // 302 to /login there means no beforeinstallprompt and no Install menu item.
+    for (const icon of GANTREE_MANIFEST.icons) {
+      expect(isPublicPath(icon.src), icon.src).toBe(true);
+    }
+    expect(isPublicPath(NOTIFY_ICON)).toBe(true);
+    expect(isPublicPath("/apple-touch-icon.png")).toBe(true);
+    const sw = readFileSync("public/sw.js", "utf8");
+    for (const src of sw.matchAll(/(?:icon|badge):\s*"([^"]+)"/g)) {
+      expect(isPublicPath(src[1] ?? ""), src[1]).toBe(true);
+    }
+  });
+
   it("meets Chrome's installable-manifest rules", () => {
     expect(chromeInstallIssues(GANTREE_MANIFEST)).toEqual([]);
     expect(manifest()).toBe(GANTREE_MANIFEST);

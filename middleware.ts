@@ -25,5 +25,5 @@ export async function middleware(request: Request): Promise<Response> {
 }
 
 export const config = {
-  matcher: ["/((?!_vinext|_next|assets|favicon\\.ico|icon\\.svg|robots\\.txt|sw\\.js|manifest\\.webmanifest).*)"],
+  matcher: ["/((?!_vinext|_next|assets|favicon\\.ico|icon\\.svg|icon-192\\.png|icon-512\\.png|icon-maskable-512\\.png|apple-touch-icon\\.png|robots\\.txt|sw\\.js|manifest\\.webmanifest).*)"],
 };

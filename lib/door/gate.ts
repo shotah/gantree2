@@ -20,7 +20,8 @@ export type Decision
     | { kind: "login"; next: string }
     | { kind: "unauthorized"; status: 401 | 503; reason: string };
 
-const PUBLIC_EXACT = new Set(["/login", "/api/auth/google", "/api/auth/callback/google", "/api/auth/catch", "/api/health", "/api/auth/config", "/api/auth/nonce", "/api/auth/token", "/manifest.webmanifest", "/sw.js", "/icon.svg", "/favicon.ico", "/robots.txt"]);
+/** The PNG icons are what Chrome fetches, without cookies, before it offers Install — and what a push card shows. */
+const PUBLIC_EXACT = new Set(["/login", "/api/auth/google", "/api/auth/callback/google", "/api/auth/catch", "/api/health", "/api/auth/config", "/api/auth/nonce", "/api/auth/token", "/manifest.webmanifest", "/sw.js", "/icon.svg", "/icon-192.png", "/icon-512.png", "/icon-maskable-512.png", "/apple-touch-icon.png", "/favicon.ico", "/robots.txt"]);
 const PUBLIC_PREFIX = ["/_vinext/", "/.well-known/", "/_next/", "/assets/"];
 
 export function isPublicPath(pathname: string): boolean {

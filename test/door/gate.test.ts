@@ -26,6 +26,11 @@ describe("public paths", () => {
     expect(isPublicPath("/.well-known/celld/health")).toBe(true);
     expect(isPublicPath("/_vinext/x")).toBe(true);
     expect(isPublicPath("/manifest.webmanifest")).toBe(true);
+    expect(isPublicPath("/sw.js")).toBe(true);
+    expect(isPublicPath("/icon-192.png")).toBe(true);
+    expect(isPublicPath("/icon-512.png")).toBe(true);
+    expect(isPublicPath("/icon-maskable-512.png")).toBe(true);
+    expect(isPublicPath("/apple-touch-icon.png")).toBe(true);
     expect(isPublicPath("/")).toBe(false);
     expect(isPublicPath("/api/auth/me")).toBe(false);
     expect(isPublicPath("/agents/kit")).toBe(false);

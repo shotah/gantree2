@@ -157,8 +157,12 @@ Authorization Code + PKCE (`S256`), scopes `openid email profile`,
 
 Public: `/login`, `/api/auth/google`, `/api/auth/callback/google`,
 `/api/auth/catch`, `/api/health`, `/api/auth/config`, `/api/auth/nonce`, `/api/auth/token`,
-`/manifest.webmanifest`, `/sw.js`, `/icon.svg`, `/favicon.ico`,
-`/robots.txt`, `/_vinext/*`, `/_next/*`, `/assets/*`, `/.well-known/*`.
+`/manifest.webmanifest`, `/sw.js`, `/icon.svg`, the manifest PNG icons
+(`/icon-192.png`, `/icon-512.png`, `/icon-maskable-512.png`),
+`/apple-touch-icon.png`, `/favicon.ico`, `/robots.txt`, `/_vinext/*`,
+`/_next/*`, `/assets/*`, `/.well-known/*`. The icons must stay public:
+Chrome fetches them without cookies before it offers Install, and a
+push card loads its icon the same way.
 Code: `lib/door/gate.ts`, `lib/door/http.ts`, `middleware.ts`. A cookie
 that opens wins; otherwise the same JWE on `Authorization: Bearer`.
 A bearer on `/api/chat/{avatar,backdrop,theme}` that does not open as a
