@@ -1040,6 +1040,36 @@ describe("PhoneShell", () => {
     expect(FakeSocket.instances).toHaveLength(2);
   });
 
+  it("lets a turn be typed while the line is down and sends it when the socket returns", async () => {
+    const first = await connectSpike();
+    act(() => {
+      first.open();
+    });
+    vi.useFakeTimers();
+    act(() => {
+      first.close();
+    });
+    expect(screen.getByText("down")).toBeTruthy();
+    const box = screen.getByPlaceholderText<HTMLTextAreaElement>(/Message Kit/);
+    expect(box.disabled).toBe(false);
+    fireEvent.change(box, { target: { value: "hello kit" } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Send" }));
+      await Promise.resolve();
+    });
+    expect(screen.getByText("hello kit")).toBeTruthy();
+    expect(screen.getByText("sending")).toBeTruthy();
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    const second = liveSocket();
+    expect(second).not.toBe(first);
+    act(() => {
+      second.open();
+    });
+    expect(sentTurns(second).some((frame) => frame.text === "hello kit")).toBe(true);
+  });
+
   it("keeps a send pending when the socket is not open", async () => {
     await connectSpike();
     expect(liveSocket().readyState).not.toBe(FakeSocket.OPEN);

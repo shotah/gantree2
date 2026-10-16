@@ -218,6 +218,8 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
   const hydratedKey = useRef("");
   const lastSaved = useRef<ChatBubble[]>([]);
   const idSeq = useRef(0);
+  /** Turns typed while the socket is down. Flushed on the next open. */
+  const unsentRef = useRef<ClientFrame[]>([]);
   const pinned = useRef(true);
   const [typing, setTyping] = useState(false);
   const typingTimer = useRef(0);
@@ -534,6 +536,7 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
     lastSeenId.current = undefined;
     lastSeenSeq.current = 0;
     lastSaved.current = [];
+    unsentRef.current = [];
     setMessagesRaw([]);
     setStagedPhoto(null);
   }, [roomSlug]);
@@ -692,6 +695,11 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
         void browserCloseShownNotify();
       } else if (since) {
         sendClientFrame(ws, { kind: "ack", since });
+      }
+      const queued = unsentRef.current;
+      unsentRef.current = [];
+      for (const frame of queued) {
+        sendClientFrame(ws, frame);
       }
     };
     ws.onclose = () => {
@@ -1116,6 +1124,8 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
     };
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       sendClientFrame(wsRef.current, frame);
+    } else if (canSocket && !painting) {
+      unsentRef.current.push(frame);
     }
     if (localEcho && !canSocket && !painting && (trimmed || photo)) {
       const n = echoCount.current;
@@ -1338,7 +1348,7 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
           : null}
         <Compose
           key={`${sampleId ?? "live"}:${draft}:${sampleEmoji ? "emoji" : ""}`}
-          disabled={status !== "up"}
+          disabled={painting && status !== "up"}
           placeholder={phone ? `Message ${title} · / for commands` : "Reply as the agent"}
           gpsHint={phone ? gpsHint : undefined}
           gpsOn={gpsOn}
