@@ -74,11 +74,28 @@ field makes every authorize call return <code>redirect_uri</code> invalid.</p>
 <code>oauth-catch</code> JWE (<code>sealOAuthCatch</code>, 30 minutes) holding
 <code>{ slug, plugin }</code>. Open it, approve, and you land back here
 connected. The room gets a reply: <code>&lt;plugin&gt; connected</code>.</p>
+<p><code>/auth google</code> and the Tools-fold Connect google button start the same
+OAuth URL. A second login adds another Google Workspace mailbox. It
+does not replace the first. The authorization URL asks Google to show
+the account chooser (<code>prompt</code> includes <code>select_account</code> and <code>consent</code>)
+so the second login can pick the other account.</p>
+<p>The room reply stays <code>&lt;plugin&gt; connected</code>. The agent sees addresses
+from the <code>auth_list_accounts</code> tool and passes <code>user_google_email</code> on
+Workspace calls. Workspace is ready when any <code>google:&lt;email&gt;</code> token
+exists.</p>
+<p><code>/auth google-health</code> stores provider id <code>google-health</code>. That token
+is separate. A Health connect does not replace Workspace mailboxes.
+Health is ready only when a <code>google-health</code> token exists.</p>
 <hr>
 <h2 id="connect-on-the-tools-fold">Connect on the Tools fold</h2>
 <p><code>POST /api/agents/:slug/auth/start</code> with <code>{ plugin }</code> returns the same
 URL. The dashboard Connect button uses that route. A plugin that is
 not <code>google</code>, <code>google-health</code>, or <code>strava</code> is <code>400 bad_plugin</code>.</p>
+<p>Connect google starts the same OAuth URL as <code>/auth google</code>. A second
+login adds another Google Workspace mailbox. It does not replace the
+first. Connect google-health stores provider id <code>google-health</code>. That
+token is separate. A Health connect does not replace Workspace
+mailboxes.</p>
 <hr>
 <h2 id="the-catch">The catch</h2>
 <p><code>GET /api/auth/catch?state&amp;code</code> is on the public list
@@ -93,6 +110,14 @@ harness runs <code>authFinish</code> and the DO enqueues
 (400), <code>missing code</code> (400), <code>could not connect</code> (502).</p>
 <p>The code is not written to the log. Refresh tokens land in
 <code>oauth_token</code> in that DO, AES-256-GCM under <code>snapshot.key</code>.</p>
+<p>Workspace refresh tokens are stored in <code>oauth_token</code> with provider id
+<code>google:&lt;email&gt;</code> (lowercase email). Signing in again as the same
+address replaces only that row. An existing provider id <code>google</code> (one
+token, email on the blob) is promoted on next read to <code>google:&lt;email&gt;</code>
+when the email is known, so the current account stays signed in.</p>
+<p><code>google-health</code> is its own row. A Health connect does not replace
+Workspace mailboxes. Health records the email on the token blob. The
+catch page success body stays <code>Connected &lt;plugin&gt;. Go back to chat.</code></p>
 <hr>
 <h2 id="garmin">Garmin</h2>
 <p>Garmin has no public OAuth. Put <code>GARMIN_EMAIL</code> and <code>GARMIN_PASSWORD</code>

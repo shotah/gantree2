@@ -102,10 +102,10 @@ harness and the room. <code>edge/agent.do.ts</code> builds it with <code>openRoo
 
   classDef store fill:#171d22,stroke:#3a4550,color:#f4f0ea
   class SDO,ADO,KV store</pre>
-<p>The twelve tools are in-process modules under <code>harness/plugins</code>, not
-child processes: <code>chat</code>, <code>feeds</code>, <code>flights</code>, <code>garmin</code>, <code>google</code>,
-<code>google-health</code>, <code>image</code>, <code>maps</code>, <code>math</code>, <code>rentals</code>, <code>strava</code>,
-<code>twitter</code>. The model sees <code>{plugin}__{tool}</code> (<code>google__calendar_list_events</code>).
+<p>The tools are in-process modules under <code>harness/plugins</code>, not
+child processes: <code>chat</code>, <code>feeds</code>, <code>math</code>, <code>websearch</code>, <code>twitter</code>,
+<code>image</code>, <code>strava</code>, <code>maps</code>, <code>flights</code>, <code>rentals</code>, <code>google-health</code>,
+<code>google</code>, <code>garmin</code>, <code>atlassian</code>. The model sees <code>{plugin}__{tool}</code> (<code>google__calendar_list_events</code>).
 Schemas stay off until <code>mcp_enable</code>; a brief hold drops after 6 hours
 idle, a short hold after 27. Plugin tools take a set and return a list
 (<code>.cursor/rules/harness-plugins-plural.mdc</code>). <code>GARMIN_TOOL_TIER</code>
@@ -463,7 +463,7 @@ Live eval setup is <a href="eval_setup.html">eval_setup.md</a>.</p>
     CORE[core&lt;br/&gt;Sql · Clock · Logger · Provider]
     LOOP[agent&lt;br/&gt;createBrain]
     ROOM[room&lt;br/&gt;openRoomBrain · catch]
-    PLUG[plugins&lt;br/&gt;twelve modules]
+    PLUG[plugins]
     CORE --&gt; LOOP
     ROOM --&gt; LOOP
     PLUG --&gt; LOOP
@@ -529,7 +529,7 @@ memoised harness and opens a new one. A restart that keeps a ghost
 allowlist is the thing the UI nags.</li>
 <li><strong>Not chat.</strong> Settings never sits in a chat turn. Chat is a PWA on
 the same origin, not a feature of the settings screens.</li>
-<li><strong>Plugins are modules.</strong> The twelve live under <code>harness/plugins</code> and
+<li><strong>Plugins are modules.</strong> They live under <code>harness/plugins</code> and
 load with the Worker. <code>ready()</code> publishes or skips. Grants from
 the Tools fold reach the registry directly: a plugin left off the
 list is not in the catalog. Per-session schemas are <code>mcp_enable</code>.

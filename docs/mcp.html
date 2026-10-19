@@ -41,7 +41,7 @@
     <article class="prose"><h1 id="mcp-host">MCP host</h1>
 <p>How tools are named for the model, how a prefix is turned on, and how
 the host recovers from a bad name.</p>
-<p>On this product the thirteen plugins are in-process modules under
+<p>On this product the plugins are in-process modules under
 <code>harness/plugins</code>. There is no stdio transport and no child process.
 <code>harness/tools</code> is the registry: <code>{plugin}__{tool}</code>, <code>mcp_enable</code>,
 truncation, and the skip list. Builtins (memory, cron, watch,
@@ -139,6 +139,16 @@ tool name, stable verbs, sibling nouns). This section is the <strong>host</stron
 <td><code>maps</code></td>
 <td><code>place_search</code>, <code>route_eta</code></td>
 <td><code>maps__place_search</code></td>
+</tr>
+<tr>
+<td><code>atlassian</code></td>
+<td><code>jira_list_boards</code>, <code>confluence_list_spaces</code>, <code>confluence_search_pages</code></td>
+<td><code>atlassian__jira_list_boards</code></td>
+</tr>
+<tr>
+<td><code>cars</code></td>
+<td><code>listings_search</code>, <code>vin_get</code></td>
+<td><code>cars__listings_search</code></td>
 </tr>
 <tr>
 <td><code>image</code></td>
@@ -416,6 +426,31 @@ as <code>/auth garmin &lt;code&gt;</code>.</p>
 <td>garmin</td>
 <td><code>GARMIN_TOOL_TIER</code></td>
 <td>no — <code>core</code> (default), <code>extended</code>, or <code>complete</code></td>
+</tr>
+<tr>
+<td>atlassian</td>
+<td><code>ATLASSIAN_SITE</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>atlassian</td>
+<td><code>ATLASSIAN_EMAIL</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>atlassian</td>
+<td><code>ATLASSIAN_API_TOKEN</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>cars</td>
+<td><code>MARKETCHECK_API_KEY</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>cars</td>
+<td><code>MARKETCHECK_BASE_URL</code></td>
+<td>no</td>
 </tr>
 </tbody></table>
 <p>The Worker house env may also supply <code>SEARCH_API_KEY</code> and

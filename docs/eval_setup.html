@@ -191,6 +191,14 @@ Sprint's at 2:30 and the scoop is at 2 — I'll keep an eye on it.</code></pre>
 <td>Both called, wrong order (e.g. the tool before <code>mcp_enable</code>).</td>
 </tr>
 <tr>
+<td><code>parallel: X never called</code></td>
+<td>A name in <code>expect.parallel</code> never reached the recorder.</td>
+</tr>
+<tr>
+<td><code>parallel: X round N, Y round M — want one batch</code></td>
+<td>Both called, but not in the same Completer round — they must share one batch; a later round is fine when those names are together on it.</td>
+</tr>
+<tr>
 <td><code>reply should match /re/</code> · <code>should not match</code></td>
 <td>Shape of the reply — a <code>?</code>, a bare &quot;got it&quot;. Never a sentence.</td>
 </tr>
@@ -337,7 +345,7 @@ shape is the Go fixture format; field names stay snake_case.</p>
 </tr>
 <tr>
 <td><code>expect</code></td>
-<td>The shape contract — see the failure table. <code>round_budget</code> is the cost note, not a check. <code>tools_called[].max_calls</code> caps a metered tool. <code>prices_from_tools</code> fails any <code>$N</code> the tools did not return. <code>react</code> / <code>react_only</code> / <code>no_model_call</code> are the reaction gates.</td>
+<td>The shape contract — see the failure table. <code>round_budget</code> is the cost note, not a check. <code>parallel</code>: tool names that must share one Completer round; a later round that holds the whole batch passes, splitting them into one call per round fails. <code>tools_called[].max_calls</code> caps a metered tool. <code>prices_from_tools</code> fails any <code>$N</code> the tools did not return. <code>react</code> / <code>react_only</code> / <code>no_model_call</code> are the reaction gates.</td>
 </tr>
 </tbody></table>
 <h3 id="real-catalogs-toolsfrom">Real catalogs (<code>tools_from</code>)</h3>
@@ -359,7 +367,8 @@ google tools outside the allowlist) stay canned.</p>
 <pre><code class="language-sh">npm test                                              # parses, regexes compile
 EVAL_N=1 EVAL_ONLY=&lt;name&gt; npm run eval                # first live read</code></pre>
 <p>Four kinds of fixture live in the directory. <strong>Single-batch rules</strong> —
-one tool round and a reply, <code>round_budget</code> 2 or 3. <strong>Completion</strong>
+one tool round and a reply, <code>round_budget</code> 2 or 3 (<code>parallel_batch</code> is the
+single-batch rule for two independent lookups sharing one round, not a single tool round). <strong>Completion</strong>
 fixtures (the flight, the gym check-in, the dinner planner): the check
 is that the legwork happened, and the model may take the rounds it
 needs. <strong>Spend</strong> fixtures on real catalogs: a metered API, <code>max_calls</code>

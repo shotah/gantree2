@@ -211,6 +211,11 @@ plugin, and the eval fixtures updated <strong>in the same PR</strong>.
 <td><code>avatar_</code> / <code>backdrop_</code> / <code>theme_</code></td>
 <td>chat (<code>avatar_update</code>, <code>backdrop_update</code>, <code>theme_list</code>; not <code>chat_*</code>, not <code>pendant_*</code>)</td>
 </tr>
+<tr>
+<td>Jira boards / sprints / issues; Confluence spaces / pages</td>
+<td><code>jira_</code> / <code>confluence_</code></td>
+<td>atlassian (<code>jira_list_boards</code>, <code>jira_list_sprints</code>, <code>jira_list_issues</code>, <code>jira_search_issues</code>, <code>jira_get_issues</code>, <code>confluence_list_spaces</code>, <code>confluence_list_pages</code>, <code>confluence_search_pages</code>, <code>confluence_get_pages</code>)</td>
+</tr>
 </tbody></table>
 </li>
 <li><p><strong>Descriptions sell the intent</strong>
@@ -281,7 +286,7 @@ under <code>test/harness/plugins/</code>.</p>
 </tr>
 <tr>
 <td><code>cars</code></td>
-<td><code>listings_search</code>, <code>listings_get</code>, <code>vin_get</code>, <code>markets_get</code>, <code>link_format</code>, <code>account_get</code></td>
+<td><code>listings_search</code>, <code>listings_get</code>, <code>listings_stats</code>, <code>vin_get</code>, <code>dealers_search</code>, <code>price_predict</code>, <code>markets_get</code>, <code>link_format</code>, <code>account_get</code></td>
 <td><code>cars__listings_search</code></td>
 </tr>
 <tr>
@@ -308,6 +313,11 @@ under <code>test/harness/plugins/</code>.</p>
 <td><code>chat</code></td>
 <td><code>avatar_update</code>, <code>backdrop_update</code>, <code>theme_list</code></td>
 <td><code>chat__avatar_update</code></td>
+</tr>
+<tr>
+<td><code>atlassian</code></td>
+<td><code>jira_list_boards</code>, <code>jira_list_sprints</code>, <code>jira_list_issues</code>, <code>jira_search_issues</code>, <code>jira_get_issues</code>, <code>confluence_list_spaces</code>, <code>confluence_list_pages</code>, <code>confluence_search_pages</code>, <code>confluence_get_pages</code></td>
+<td><code>atlassian__jira_list_boards</code></td>
 </tr>
 </tbody></table>
 <p>Hyphenated plugin ids are fine; tool suffixes stay underscores. The
