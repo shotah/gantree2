@@ -17,6 +17,9 @@ export function memoryTokens(initial: OAuthToken | null = null): TokenStore & { 
     async get() {
       return store.token;
     },
+    async list() {
+      return [];
+    },
     async put(_provider, token) {
       store.token = token;
     },

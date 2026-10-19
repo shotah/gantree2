@@ -1,6 +1,6 @@
 /**
- * In-process tools. What used to be twelve MCP servers over stdio is now
- * twelve `Plugin` modules under `harness/plugins/`. The shapes stay MCP-shaped
+ * In-process tools. What used to be MCP servers over stdio is now
+ * `Plugin` modules under `harness/plugins/`. The shapes stay MCP-shaped
  * (`tools/list` entries and `content[]` results) so the agent loop, the Tools
  * grid, and the host-manifest files are unchanged.
  */
@@ -80,6 +80,8 @@ export type TokenStore = {
   get(provider: string): Promise<OAuthToken | null>;
   put(provider: string, token: OAuthToken): Promise<void>;
   delete(provider: string): Promise<void>;
+  /** Ids starting with `prefix` (trimmed), sorted. Empty prefix returns every id. */
+  list(prefix: string): Promise<string[]>;
 };
 
 /** Why a plugin is not published, mirroring the harness `status.skipped[].reason`. */

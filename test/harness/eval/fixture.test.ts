@@ -40,6 +40,7 @@ function bare(partial: Partial<EvalFixture> = {}): EvalFixture {
       toolsCalled: [],
       toolsNotCalled: [],
       order: [],
+      parallel: [],
       replyRegex: "",
       replyNot: "",
       react: "",
@@ -54,7 +55,7 @@ describe("eval fixtures", () => {
   const fixtures = loadEvalFixtures();
 
   it("loads every JSON fixture, each name once, each one well-formed", () => {
-    expect(fixtures.length).toBe(30);
+    expect(fixtures.length).toBe(31);
     const names = fixtures.map((fx) => fx.name);
     expect(new Set(names).size).toBe(names.length);
     const servers = new Set(parseMcpServers(readFileSync(join(fixtureDir, "mcp.toml"), "utf8")).map((server) => server.name));

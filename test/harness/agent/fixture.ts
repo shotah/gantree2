@@ -61,6 +61,7 @@ export function tokens(): TokenStore {
     get: () => Promise.resolve(null),
     put: () => Promise.resolve(),
     delete: () => Promise.resolve(),
+    list: async () => [],
   };
 }
 

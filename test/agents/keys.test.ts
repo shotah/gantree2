@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { keys as atlassianKeys } from "@/harness/plugins/atlassian/keys";
+import { keys as carsKeys } from "@/harness/plugins/cars/keys";
 import { keys as feedsKeys } from "@/harness/plugins/feeds";
 import { keys as flightsKeys } from "@/harness/plugins/flights";
 import { keys as garminKeys } from "@/harness/plugins/garmin";
@@ -26,6 +28,8 @@ const exported = [
   ["google-health", googleHealthKeys],
   ["google", googleKeys],
   ["garmin", garminKeys],
+  ["atlassian", atlassianKeys],
+  ["cars", carsKeys],
 ] as const;
 
 describe("KNOWN_KEYS", () => {

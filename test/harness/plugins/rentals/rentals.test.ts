@@ -64,6 +64,7 @@ function pluginCtx(env: Record<string, string>, fetchFn: typeof fetch = routeFet
       get: () => Promise.resolve(null),
       put: () => Promise.resolve(),
       delete: () => Promise.resolve(),
+      list: async () => [],
     },
   };
 }

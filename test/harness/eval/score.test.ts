@@ -8,6 +8,7 @@ function shape(partial: Partial<EvalExpect> = {}): EvalExpect {
     toolsCalled: [],
     toolsNotCalled: [],
     order: [],
+    parallel: [],
     replyRegex: "",
     replyNot: "",
     react: "",

@@ -54,7 +54,7 @@ const one = (what: string): SingleSpec => ({ kind: "single", why: what });
 
 const SPECS: Record<string, Spec> = {
   auth_generate_url: one("one OAuth consent URL"),
-  auth_list_accounts: one("one signed-in Google account"),
+  auth_list_accounts: one("the signed-in account list"),
   calendar_delete_event: one("one event; calendar_list_events reads a range"),
   calendar_get_event: { kind: "ids", list: "event_ids", single: "event_id" },
   calendar_list_calendars: { kind: "props", props: { ids: strings(`Calendar ids to keep (max ${ID_CAP}). Omit to list calendars. Returns a JSON array when set.`) } },

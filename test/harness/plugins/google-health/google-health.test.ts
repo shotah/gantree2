@@ -59,18 +59,25 @@ function headerValue(init: RequestInit | undefined, name: string): string {
 }
 
 function memoryTokens(initial: OAuthToken | null): TokenStore & { read(): OAuthToken | null } {
-  let current = initial;
+  const saved = new Map<string, OAuthToken>();
+  if (initial) {
+    saved.set("google-health", initial);
+  }
   return {
-    get: () => Promise.resolve(current),
-    put: (_provider, token) => {
-      current = token;
+    get: (provider) => Promise.resolve(saved.get(provider) ?? null),
+    put: (provider, token) => {
+      saved.set(provider, token);
       return Promise.resolve();
     },
-    delete: () => {
-      current = null;
+    delete: (provider) => {
+      saved.delete(provider);
       return Promise.resolve();
     },
-    read: () => current,
+    list: (prefix) => {
+      const needle = prefix.trim();
+      return Promise.resolve([...saved.keys()].filter((id) => id.startsWith(needle)).sort());
+    },
+    read: () => saved.get("google-health") ?? null,
   };
 }
 
@@ -186,13 +193,14 @@ describe("google-health plugin", () => {
     expect(new URL(url).searchParams.get("client_id")).toBe("oauth-cid");
   });
 
-  it("authFinish stores the shared google provider token", async () => {
+  it("authFinish stores the google-health token and keeps a workspace mailbox", async () => {
     if (!googleHealth.authStart || !googleHealth.authFinish) {
       throw new Error("googleHealth auth methods missing");
     }
     const ctx = oauthPluginCtx(creds, routeFetch(() => jsonResponse({})));
+    await ctx.tokens.put("google:ada@work.com", { accessToken: "ya29.workspace" });
     await googleHealth.authStart(ctx, "https://app.example/callback", "state-finish");
-    const pending = ctx.sql.one<{ verifier: string }>("SELECT verifier FROM google_oauth_pending WHERE id = 1");
+    const pending = ctx.sql.one<{ verifier: string }>("SELECT verifier FROM google_oauth_pending WHERE plugin = 'google-health'");
     ctx.fetch = routeFetch((url, init) => {
       if (url.origin + url.pathname === googleTokenURL) {
         const body = new URLSearchParams(typeof init?.body === "string" ? init.body : "");
@@ -212,6 +220,8 @@ describe("google-health plugin", () => {
     });
     await googleHealth.authFinish(ctx, "https://app.example/callback", "health-code");
     expect(ctx.tokens.read()?.accessToken).toBe("ya29.health");
+    expect((await ctx.tokens.get("google-health"))?.accessToken).toBe("ya29.health");
+    expect((await ctx.tokens.get("google:ada@work.com"))?.accessToken).toBe("ya29.workspace");
   });
 
   it("builds civil filters from the injected clock", () => {

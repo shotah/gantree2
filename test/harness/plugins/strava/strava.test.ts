@@ -67,6 +67,9 @@ function harness(opts: {
         token = next;
         puts.push(next);
       },
+      async list() {
+        return [];
+      },
     },
   };
   return { clock, ctx, puts, seen, sink, token: () => token };

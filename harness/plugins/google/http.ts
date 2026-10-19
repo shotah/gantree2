@@ -1,6 +1,6 @@
 import type { OAuthToken, PluginContext } from "@/harness/core/tools";
 import { isRecord } from "@/harness/plugins/google/args";
-import { AuthFailed, canonicalEmail, freshToken, refreshToken } from "@/harness/plugins/google/oauth";
+import { AuthFailed, freshToken, providerForEmail, refreshToken } from "@/harness/plugins/google/oauth";
 
 export type Query = Record<string, string | number | boolean | string[] | undefined>;
 
@@ -32,22 +32,20 @@ export type GoogleClient = {
 };
 
 /**
- * Authenticated JSON client. Refreshes on expiry (and once on 401) and writes
- * the new token back to `ctx.tokens` under `"google"`.
+ * Authenticated JSON client. Loads `google:<email>` (or the sole unnamed legacy
+ * row) and writes a refresh back to that same provider id.
  */
 export async function connect(ctx: PluginContext, email: string, signal?: AbortSignal): Promise<GoogleClient> {
+  let provider: string;
   let tok: OAuthToken;
   try {
-    tok = await freshToken(ctx, signal);
+    provider = await providerForEmail(ctx, email);
+    tok = await freshToken(ctx, provider, signal);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "no credentials";
     throw new Error(`authenticating for ${email}: ${msg}`, { cause: e });
   }
-  const stored = canonicalEmail(tok.extra?.email ?? "");
-  if (stored && stored !== canonicalEmail(email)) {
-    throw new Error(`authenticating for ${email}: no credentials found for ${email}; run: google-mcp auth`);
-  }
-  const holder = { token: tok };
+  const holder = { token: tok, provider };
   const call = async (method: string, url: string, body: unknown, query: Query | undefined): Promise<unknown> => {
     const res = await send(ctx, holder, method, url, body, query, signal, false);
     if (res.status === 204 || (res.status === 200 && isEmptyResponse(res))) {
@@ -93,7 +91,7 @@ function isEmptyResponse(res: Response): boolean {
 
 async function send(
   ctx: PluginContext,
-  holder: { token: OAuthToken },
+  holder: { token: OAuthToken; provider: string },
   method: string,
   url: string,
   body: unknown,
@@ -114,7 +112,7 @@ async function send(
   if (res.status === 401 && !retried && holder.token.refreshToken) {
     await res.text();
     try {
-      holder.token = await refreshToken(ctx, holder.token, signal);
+      holder.token = await refreshToken(ctx, holder.provider, holder.token, signal);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "token refresh failed";
       throw new AuthFailed(msg);

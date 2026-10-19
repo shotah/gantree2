@@ -20,6 +20,10 @@ export function memoryTokens(initial: Record<string, OAuthToken> = {}): TokenSto
     delete: async (provider) => {
       saved.delete(provider);
     },
+    list: async (prefix) => {
+      const needle = prefix.trim();
+      return [...saved.keys()].filter((id) => id.startsWith(needle)).sort();
+    },
   };
 }
 

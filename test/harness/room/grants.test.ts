@@ -18,6 +18,7 @@ function ctx(): PluginContext {
       get: () => Promise.resolve(null),
       put: () => Promise.resolve(),
       delete: () => Promise.resolve(),
+      list: async () => [],
     },
   };
 }

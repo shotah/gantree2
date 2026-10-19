@@ -121,6 +121,19 @@ export class AesTokenStore implements TokenStore {
     return Promise.resolve();
   }
 
+  /** Provider ids only. `startsWith` in JS so a LIKE wildcard cannot widen the match. */
+  list(prefix: string): Promise<string[]> {
+    const needle = prefix.trim();
+    const ids: string[] = [];
+    for (const row of this.sql.exec<{ provider: string }>("SELECT provider FROM oauth_token")) {
+      if (row.provider.startsWith(needle)) {
+        ids.push(row.provider);
+      }
+    }
+    ids.sort();
+    return Promise.resolve(ids);
+  }
+
   private readonly sql: Sql;
   private readonly rawKey: ArrayBuffer;
   private readonly clock: Clock;

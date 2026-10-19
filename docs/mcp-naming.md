@@ -82,6 +82,7 @@ the eval that fails a fixture when a plugin renames a tool
    | Places / Maps share links / leave-by | `place_` / `link_` / `route_` | maps (`place_search`; `link_resolve` not `short_url_*`; `route_eta` is leave-by) |
    | Generated / edited pictures | `photo_` | image (`photo_generate` / `photo_edit`; not `image_*` — double prefix) |
    | Chat face / wallpaper / room mood | `avatar_` / `backdrop_` / `theme_` | chat (`avatar_update`, `backdrop_update`, `theme_list`; not `chat_*`, not `pendant_*`) |
+   | Jira boards / sprints / issues; Confluence spaces / pages | `jira_` / `confluence_` | atlassian (`jira_list_boards`, `jira_list_sprints`, `jira_list_issues`, `jira_search_issues`, `jira_get_issues`, `confluence_list_spaces`, `confluence_list_pages`, `confluence_search_pages`, `confluence_get_pages`) |
 
 6. **Descriptions sell the intent**
    First sentence = what the agent wants ("List recent Strava
@@ -120,12 +121,13 @@ the eval that fails a fixture when a plugin renames a tool
 | `math` | `expression_evaluate`, `units_convert` | `math__expression_evaluate` |
 | `flights` | `offers_search`, `dates_search`, `airports_search`, `returns_search`, `booking_options_get`, `link_format`, `account_get` | `flights__offers_search` |
 | `rentals` | `listings_search`, `listings_get`, `rent_estimate_get`, `markets_get`, `areas_resolve`, `link_format`, `account_get` | `rentals__listings_search` |
-| `cars` | `listings_search`, `listings_get`, `vin_get`, `markets_get`, `link_format`, `account_get` | `cars__listings_search` |
+| `cars` | `listings_search`, `listings_get`, `listings_stats`, `vin_get`, `dealers_search`, `price_predict`, `markets_get`, `link_format`, `account_get` | `cars__listings_search` |
 | `feeds` | `items_list`, `source_resolve` | `feeds__items_list` |
 | `twitter` | `posts_list` | `twitter__posts_list` |
 | `maps` | `link_resolve`, `place_resolve`, `place_search`, `route_eta` | `maps__place_search` |
 | `image` | `photo_generate`, `photo_edit` | `image__photo_generate` |
 | `chat` | `avatar_update`, `backdrop_update`, `theme_list` | `chat__avatar_update` |
+| `atlassian` | `jira_list_boards`, `jira_list_sprints`, `jira_list_issues`, `jira_search_issues`, `jira_get_issues`, `confluence_list_spaces`, `confluence_list_pages`, `confluence_search_pages`, `confluence_get_pages` | `atlassian__jira_list_boards` |
 
 Hyphenated plugin ids are fine; tool suffixes stay underscores. The
 host aliases underscored prefixes (`google_health__…` →

@@ -17,6 +17,7 @@ function shape(partial: Partial<EvalExpect> = {}): EvalExpect {
     toolsCalled: [],
     toolsNotCalled: [],
     order: [],
+    parallel: [],
     replyRegex: "",
     replyNot: "",
     react: "",
@@ -73,6 +74,40 @@ describe("eval expectations", () => {
       given: "under $2400\nunder $2,400/mo by Nov 1\n",
     });
     expect(checkEval(rent, shape({ pricesFromTools: true }))).toEqual([]);
+  });
+
+  it("requires parallel tools in one batch round", () => {
+    const bothRound1 = outcome({
+      calls: [
+        { name: "google__calendar_list_events", args: "{}", round: 1, result: "[]" },
+        { name: "garmin__sleep_summary", args: "{}", round: 1, result: "" },
+      ],
+    });
+    const want = shape({
+      parallel: ["google__calendar_list_events", "garmin__sleep_summary"],
+    });
+    expect(checkEval(bothRound1, want)).toEqual([]);
+    const splitRounds = outcome({
+      calls: [
+        { name: "google__calendar_list_events", args: "{}", round: 1, result: "[]" },
+        { name: "garmin__sleep_summary", args: "{}", round: 2, result: "" },
+      ],
+    });
+    expect(checkEval(splitRounds, want)).toEqual([
+      "parallel: google__calendar_list_events round 1, garmin__sleep_summary round 2 \u2014 want one batch",
+    ]);
+    const bothRound2 = outcome({
+      calls: [
+        { name: "cron_schedule", args: "{}", round: 1, result: "" },
+        { name: "google__calendar_list_events", args: "{}", round: 2, result: "[]" },
+        { name: "garmin__sleep_summary", args: "{}", round: 2, result: "" },
+      ],
+    });
+    expect(checkEval(bothRound2, want)).toEqual([]);
+    const oneMissing = outcome({
+      calls: [{ name: "google__calendar_list_events", args: "{}", round: 1, result: "[]" }],
+    });
+    expect(checkEval(oneMissing, want)).toEqual(["parallel: garmin__sleep_summary never called"]);
   });
 
   it("requires call order and never fails a round budget", () => {

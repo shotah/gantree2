@@ -393,9 +393,11 @@ describe("native sign-in verification", () => {
   });
 
   it("me returns an agents array for the bearer, and 401 for a nonce or a flipped JWE", async () => {
+    // `me` opens the bearer with the wall clock. A session sealed at `NOW` expires after 7 days.
+    const now = Date.now();
     const key = await sessionKey(SECRET);
-    const nonce = await sealNonce(key, NOW);
-    const issued = await redeem(nonce, { sub: ADA_SUB, email: "ada@example.com", email_verified: true, nonce });
+    const nonce = await sealNonce(key, now);
+    const issued = await redeem(nonce, { sub: ADA_SUB, email: "ada@example.com", email_verified: true, nonce }, { now });
     const session = await issued.json<{ token: string }>();
     const ok = await me(
       new Request("https://g.test/api/auth/me", { headers: { Authorization: `Bearer ${session.token}` } }),

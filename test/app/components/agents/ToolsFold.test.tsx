@@ -8,6 +8,7 @@ import {
   draftId,
   envPatchFor,
   GARMIN_AUTH_HINT,
+  GOOGLE_ANOTHER_MAILBOX,
   grantFor,
   KEY_PLACEHOLDER_MISSING,
   KEY_PLACEHOLDER_SET,
@@ -210,6 +211,31 @@ describe("ToolsFold", () => {
     fireEvent.click(screen.getByRole("button", { name: "Connect google" }));
     await vi.waitFor(() => expect(open).toHaveBeenCalledWith(
       "https://accounts.example/auth?redirect_uri=http://127.0.0.1:3000/api/auth/catch",
+      "_blank",
+      "noopener,noreferrer",
+    ));
+    open.mockRestore();
+  });
+
+  it("keeps Connect google after it is connected so another mailbox can be added", async () => {
+    const status: AgentStatus = { ...STATUS, published: ["google"] };
+    expect(oauthLine(status, "google")).toBe("connected");
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+    const client: ApiClient = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      await Promise.resolve();
+      expect(href(input)).toBe("/api/agents/kit/auth/start");
+      expect(JSON.parse(textBody(init?.body))).toEqual({ plugin: "google" });
+      return json(200, { url: "https://accounts.example/auth" });
+    });
+    render(<Harness client={client} tools={[GOOGLE]} start={config()} status={status} />);
+    fireEvent.click(screen.getByRole("button", { name: "Tools" }));
+    expect(screen.getByText("connected")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Connect google" })).toBeTruthy();
+    expect(screen.getByText(GOOGLE_ANOTHER_MAILBOX)).toBeTruthy();
+    expect(screen.getByText(connectChatHint("google"))).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Connect google" }));
+    await vi.waitFor(() => expect(open).toHaveBeenCalledWith(
+      "https://accounts.example/auth",
       "_blank",
       "noopener,noreferrer",
     ));

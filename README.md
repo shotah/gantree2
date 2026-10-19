@@ -37,7 +37,7 @@ it hands you.
   No passphrases, no second login, no role in the cookie.
 - **Real tools, in the Worker.** Maps, Google (mail, calendar, docs,
   drive), Garmin, Strava, Google Health, image generation, feeds, X,
-  rentals, math, websearch — thirteen plugins in the same bundle as the harness. A
+  rentals, math, websearch, Jira boards — plugins in the same bundle as the harness. A
   missing key or login shows up as skipped. Keys live on the assistant,
   not in your repo.
 - **Memory you can open.** SQLite, persona, and `SELF.md` live in the
@@ -95,7 +95,7 @@ flowchart LR
 ```
 
 The Worker is the only thing on the internet. The harness runs inside
-the Agent Durable Object: the turn, the thirteen plugins, persona,
+the Agent Durable Object: the turn, the plugins, persona,
 `SELF.md`, and the alarm that fires cron, watches, and memory
 consolidation. Phones only ever see chat. Diagrams:
 [architecture](docs/architecture.md). The decision:

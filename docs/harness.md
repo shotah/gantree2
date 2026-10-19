@@ -26,7 +26,7 @@ SQLite that outlives the invocation. That is the runtime. A is
 cancelled.
 
 The morning's second step is cancelled with it. That step left the
-twelve MCP servers as processes and moved them onto Streamable HTTP
+MCP servers as processes and moved them onto Streamable HTTP
 behind one shared sleepy container. They are rewritten as in-process
 plugin modules. Each stays its own directory, its own manifest name,
 and its own tools. There is no external process and no MCP transport,
@@ -161,7 +161,7 @@ only one.
 
 ### Plugin, Tool, TokenStore
 
-What was twelve stdio servers is twelve `Plugin` values. A plugin is
+What was stdio MCP servers is `Plugin` values. A plugin is
 built with a `PluginContext`: the agent's env map (read, never
 logged), the shared `Sql` (prefix tables with the plugin name,
 `strava_token`), the `Clock`, the `Logger`, `fetch`, and a
@@ -238,7 +238,7 @@ SQLite are the names those packages used.
 | `watch` | `harness/watch` | 1 |
 | `websearch` | `harness/plugins/websearch` | 1 |
 | `mcp` host and `mcpenable` enable rules | `harness/tools` | 1 |
-| `harness/mcp/<name>`, twelve servers | `harness/plugins/<name>` | 1 |
+| `harness/mcp/<name>` | `harness/plugins/<name>` | 1 |
 | `agent` (the loop) | `harness/agent` | 2 |
 | `channel/chat` and the `cmd/gantry` wiring | `harness/room` | 2 |
 
@@ -274,9 +274,9 @@ check is the comparison the eval already runs: published tools
 against the host-manifest. `mcpenable`'s rules move here. Its process
 supervision does not.
 
-The thirteen plugins, under the names they have today: `chat`, `feeds`,
+The plugins, under the names they have today: `chat`, `feeds`,
 `math`, `websearch`, `twitter`, `image`, `strava`, `maps`, `flights`,
-`rentals`, `google-health`, `google`, `garmin`.
+`rentals`, `google-health`, `google`, `garmin`, `atlassian`.
 
 These do not get a TypeScript folder:
 
@@ -321,7 +321,7 @@ what is still open is [todo.md](todo.md).
 
 | Wave | What lands |
 | --- | --- |
-| **1** | `harness/core` and every wave-1 row in the map, including all twelve plugins. Landed. |
+| **1** | `harness/core` and every wave-1 row in the map, including the plugins. Landed. |
 | **2** | `harness/agent` (the loop), `harness/room` (the DO adapter), and `/auth <plugin>` with the Worker catch. Landed. |
 | **3** | Eval fixtures on Vitest (`harness/eval`, `npm run eval`). Landed. |
 

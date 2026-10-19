@@ -27,7 +27,8 @@
  * - `ledger` — scored events. `day_offset` is calendar days from the turn
  *   in America/Los_Angeles (yesterday is -1). `day` overrides that.
  * - `expect` — the shape contract (`tools_called`, `tools_not_called`,
- *   `order`, `reply_regex`, `reply_not_regex`, `max_questions`,
+ *   `order`, `parallel` (names that must share one round),
+ *   `reply_regex`, `reply_not_regex`, `max_questions`,
  *   `round_budget`, `wait`, `silent`, `react`, `react_only`,
  *   `no_model_call`, `prices_from_tools`, `evidence_from_turn`, `memory`,
  *   `cron_within`, `any_of`). `round_budget` is a cost note, never a fail.
@@ -96,6 +97,7 @@ export type EvalExpect = {
   toolsCalled: EvalCallExpect[];
   toolsNotCalled: string[];
   order: string[];
+  parallel: string[];
   replyRegex: string;
   replyNot: string;
   maxQuestions?: number;
@@ -316,6 +318,14 @@ export function fixtureProblems(fx: EvalFixture, liveServers: ReadonlySet<string
 
 function regexProblems(expect: EvalExpect): string[] {
   const problems: string[] = [];
+  if (expect.parallel.length === 1) {
+    problems.push("parallel needs at least two tools");
+  }
+  for (const name of expect.parallel) {
+    if (name === "") {
+      problems.push("parallel has an empty name");
+    }
+  }
   for (const pattern of [expect.replyRegex, expect.replyNot]) {
     if (pattern === "") {
       continue;
@@ -422,6 +432,7 @@ function parseExpect(value: unknown, label: string): EvalExpect {
     toolsCalled: asArray(raw.tools_called).map((item) => parseCall(item)),
     toolsNotCalled: asStringArray(raw.tools_not_called),
     order: asStringArray(raw.order),
+    parallel: asStringArray(raw.parallel),
     replyRegex: asString(raw.reply_regex),
     replyNot: asString(raw.reply_not_regex),
     ...(optNum(raw.max_questions) !== undefined ? { maxQuestions: optNum(raw.max_questions) } : {}),

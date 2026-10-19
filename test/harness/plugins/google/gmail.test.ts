@@ -196,6 +196,7 @@ describe("auth tools", () => {
     expect(text).toContain("**ACTION REQUIRED: Google Authentication Needed for Gmail for 'test@example.com'**");
     expect(text).toContain("access_type=offline");
     expect(text).toContain("prompt=consent");
+    expect(text).toContain("select_account");
     expect(text).toContain("https://accounts.google.com/o/oauth2/auth?");
   });
 });

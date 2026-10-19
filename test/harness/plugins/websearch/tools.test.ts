@@ -45,7 +45,12 @@ describe("websearchPlugin.ready", () => {
       clock: fixedClock(0, "UTC"),
       log: silentLogger,
       fetch: () => Promise.reject(new Error("no fetch")),
-      tokens: { get: () => Promise.resolve(null), put: () => Promise.resolve(), delete: () => Promise.resolve() },
+      tokens: {
+        get: () => Promise.resolve(null),
+        put: () => Promise.resolve(),
+        delete: () => Promise.resolve(),
+        list: async () => [],
+      },
     };
   }
 

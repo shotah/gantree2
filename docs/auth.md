@@ -49,6 +49,21 @@ Plugin names are the module names: `google`, `strava`,
 `{ slug, plugin }`. Open it, approve, and you land back here
 connected. The room gets a reply: `<plugin> connected`.
 
+`/auth google` and the Tools-fold Connect google button start the same
+OAuth URL. A second login adds another Google Workspace mailbox. It
+does not replace the first. The authorization URL asks Google to show
+the account chooser (`prompt` includes `select_account` and `consent`)
+so the second login can pick the other account.
+
+The room reply stays `<plugin> connected`. The agent sees addresses
+from the `auth_list_accounts` tool and passes `user_google_email` on
+Workspace calls. Workspace is ready when any `google:<email>` token
+exists.
+
+`/auth google-health` stores provider id `google-health`. That token
+is separate. A Health connect does not replace Workspace mailboxes.
+Health is ready only when a `google-health` token exists.
+
 ---
 
 ## Connect on the Tools fold
@@ -56,6 +71,12 @@ connected. The room gets a reply: `<plugin> connected`.
 `POST /api/agents/:slug/auth/start` with `{ plugin }` returns the same
 URL. The dashboard Connect button uses that route. A plugin that is
 not `google`, `google-health`, or `strava` is `400 bad_plugin`.
+
+Connect google starts the same OAuth URL as `/auth google`. A second
+login adds another Google Workspace mailbox. It does not replace the
+first. Connect google-health stores provider id `google-health`. That
+token is separate. A Health connect does not replace Workspace
+mailboxes.
 
 ---
 
@@ -77,6 +98,16 @@ Misses: `login not configured` (503, no `SESSION_SECRET`), `bad state`
 
 The code is not written to the log. Refresh tokens land in
 `oauth_token` in that DO, AES-256-GCM under `snapshot.key`.
+
+Workspace refresh tokens are stored in `oauth_token` with provider id
+`google:<email>` (lowercase email). Signing in again as the same
+address replaces only that row. An existing provider id `google` (one
+token, email on the blob) is promoted on next read to `google:<email>`
+when the email is known, so the current account stays signed in.
+
+`google-health` is its own row. A Health connect does not replace
+Workspace mailboxes. Health records the email on the token blob. The
+catch page success body stays `Connected <plugin>. Go back to chat.`
 
 ---
 

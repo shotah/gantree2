@@ -75,9 +75,8 @@ adapter: it builds the harness from the room's storage, persona, SELF, and
 tokens. `edge/agent.do.ts` fans the frames out. `edge/settings.do.ts` is
 users, agents, and spend.
 
-`harness/plugins/<id>` is one plugin. The twelve ids are chat, feeds,
-flights, garmin, google, google-health, image, maps, math, rentals,
-strava, twitter. `harness/tools` is the registry, the enable rules, the
+`harness/plugins/<id>` is one plugin. The ids are the directory names
+there. `harness/tools` is the registry, the enable rules, the
 manifest drift check, and the token store.
 
 `harness/eval` holds the behavioral fixtures. `npm run eval` runs them

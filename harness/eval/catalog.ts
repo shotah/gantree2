@@ -186,6 +186,7 @@ function catalogContext(db: NodeDatabase): PluginContext {
       get: () => Promise.resolve(null),
       put: () => Promise.resolve(),
       delete: () => Promise.resolve(),
+      list: () => Promise.resolve([]),
     },
   };
 }

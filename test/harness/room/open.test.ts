@@ -34,6 +34,8 @@ const PLUGIN_NAMES = [
   "google-health",
   "google",
   "garmin",
+  "atlassian",
+  "cars",
 ];
 
 function sqlStorage() {

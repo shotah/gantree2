@@ -5,6 +5,8 @@ import { collapseOldToolResults } from "@/harness/agent/bound";
 import { stripHarnessContext } from "@/harness/agent/judgment";
 import type { Message } from "@/harness/core/provider";
 import { filePersona } from "@/harness/persona";
+import type { Plugin } from "@/harness/core/tools";
+import { textResult } from "@/harness/core/tools";
 import { collect, echoPlugin, scriptResult, Scripted, testDeps } from "./fixture";
 
 const USER = { kind: "inbound" as const, user_id: "u1", id: "m1", text: "Hello" };
@@ -84,6 +86,70 @@ describe("createBrain turns", () => {
     const tools = provider.requests[1]?.messages.filter((m) => m.role === "tool") ?? [];
     expect(tools.map((m) => m.toolCallId)).toEqual(["a", "b"]);
     expect(tools.map((m) => m.content)).toEqual(["ONE", "TWO"]);
+  });
+
+  it("runs tool batch concurrently and preserves call order", async () => {
+    const spans = {
+      one: { start: 0, end: 0 },
+      two: { start: 0, end: 0 },
+    };
+    const timingPlugin: Plugin = {
+      name: "demo",
+      ready: () => Promise.resolve(null),
+      tools: () => [
+        {
+          name: "one",
+          description: "one",
+          inputSchema: { type: "object", properties: {} },
+          call: async () => {
+            spans.one.start = Date.now();
+            await new Promise<void>((resolve) => setTimeout(resolve, 80));
+            spans.one.end = Date.now();
+            return textResult("ONE");
+          },
+        },
+        {
+          name: "two",
+          description: "two",
+          inputSchema: { type: "object", properties: {} },
+          call: async () => {
+            spans.two.start = Date.now();
+            await new Promise<void>((resolve) => setTimeout(resolve, 80));
+            spans.two.end = Date.now();
+            return textResult("TWO");
+          },
+        },
+      ],
+    };
+    const provider = new Scripted([
+      scriptResult({
+        content: "",
+        toolCalls: [
+          { id: "a", name: "demo__one", arguments: "{}" },
+          { id: "b", name: "demo__two", arguments: "{}" },
+        ],
+      }),
+      scriptResult({ content: "both", toolCalls: [] }),
+    ]);
+    const harness = createBrain(testDeps({ provider, plugins: [timingPlugin] }));
+    const { emit, frames } = collect();
+    await harness.handleInbound(USER, emit);
+    expect(spans.one.start).toBeGreaterThan(0);
+    expect(spans.one.end).toBeGreaterThan(spans.one.start);
+    expect(spans.two.start).toBeGreaterThan(0);
+    expect(spans.two.end).toBeGreaterThan(spans.two.start);
+    expect(spans.one.start).toBeLessThan(spans.two.end);
+    expect(spans.two.start).toBeLessThan(spans.one.end);
+    const tools = provider.requests[1]?.messages.filter((m) => m.role === "tool") ?? [];
+    expect(tools.map((m) => m.toolCallId)).toEqual(["a", "b"]);
+    expect(tools.map((m) => m.content)).toEqual(["ONE", "TWO"]);
+    expect(frames.find((frame) => frame.kind === "perf")).toMatchObject({
+      kind: "perf",
+      max_batch: 2,
+      tool_calls: 2,
+      iterations: 2,
+      outcome: "ok",
+    });
   });
 
   it("answers /help without a model call or a perf frame", async () => {

@@ -26,7 +26,7 @@ export const defaultBaseURL = "https://health.googleapis.com";
 export const googleTokenURL = "https://oauth2.googleapis.com/token";
 export const wearablesFamily = "users/me/dataSourceFamilies/google-wearables";
 const expiryDeltaMs = 10_000;
-const provider = "google";
+const provider = "google-health";
 
 export const coreScopes = [
   "https://www.googleapis.com/auth/googlehealth.sleep.readonly",

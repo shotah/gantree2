@@ -26,6 +26,7 @@ export function testContext(sql: Sql, clock: Clock, sink: LogSink = memorySink()
       get: () => Promise.resolve(null),
       put: () => Promise.resolve(),
       delete: () => Promise.resolve(),
+      list: async () => [],
     },
   };
 }

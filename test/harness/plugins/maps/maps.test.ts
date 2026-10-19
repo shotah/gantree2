@@ -25,6 +25,9 @@ function ctx(env: Record<string, string>, fetchImpl: typeof fetch, now = Date.pa
       async delete() {
         return undefined;
       },
+      async list() {
+        return [];
+      },
     },
   };
 }

@@ -3,6 +3,8 @@
  * plugin's `keys` export. House rows are the Worker env the harness already
  * reads. `needs` on the tools grid is the required slice of this list.
  */
+import { keys as atlassianKeys } from "@/harness/plugins/atlassian/keys";
+import { keys as carsKeys } from "@/harness/plugins/cars/keys";
 import { keys as feedsKeys } from "@/harness/plugins/feeds/keys";
 import { keys as flightsKeys } from "@/harness/plugins/flights/keys";
 import { keys as garminKeys } from "@/harness/plugins/garmin/keys";
@@ -81,6 +83,8 @@ export const KNOWN_KEYS: readonly KnownKey[] = [
   ...tagged("google-health", googleHealthKeys),
   ...tagged("google", googleKeys),
   ...tagged("garmin", garminKeys),
+  ...tagged("atlassian", atlassianKeys),
+  ...tagged("cars", carsKeys),
 ];
 
 const byName = new Map(KNOWN_KEYS.map((key) => [key.name, key]));

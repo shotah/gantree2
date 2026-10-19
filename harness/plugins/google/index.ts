@@ -13,12 +13,12 @@ import { searchTools } from "@/harness/plugins/google/search";
 import { sheetsTools } from "@/harness/plugins/google/sheets";
 import { slidesTools } from "@/harness/plugins/google/slides";
 import { tasksTools } from "@/harness/plugins/google/tasks";
-import { CLIENT_ID_ENV, CLIENT_SECRET_ENV, authFinish, authStart } from "@/harness/plugins/google/oauth";
+import { CLIENT_ID_ENV, CLIENT_SECRET_ENV, LEGACY_PROVIDER, authFinish, authStart, workspaceEmails } from "@/harness/plugins/google/oauth";
 export { keys } from "./keys";
 
 /**
- * Google Workspace plugin. Owns the shared `"google"` OAuth token
- * (gmail, calendar, and google-health all read it).
+ * Google Workspace plugin. One OAuth token per mailbox (`google:<email>`).
+ * Google Health keeps its own `google-health` token.
  */
 export function googlePlugin(): Plugin {
   return {
@@ -38,11 +38,15 @@ async function ready(ctx: PluginContext): Promise<SkipReason | null> {
   if (!id || !secret) {
     return "no_key";
   }
-  const tok = await ctx.tokens.get("google");
-  if (!tok) {
-    return "no_oauth";
+  const emails = await workspaceEmails(ctx);
+  if (emails.length > 0) {
+    return null;
   }
-  return null;
+  const legacy = await ctx.tokens.get(LEGACY_PROVIDER);
+  if (legacy?.accessToken) {
+    return null;
+  }
+  return "no_oauth";
 }
 
 function tools(ctx: PluginContext): Tool[] {

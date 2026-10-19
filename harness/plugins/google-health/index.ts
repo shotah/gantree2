@@ -179,17 +179,27 @@ export const googleHealth: Plugin = {
     if (!healthCreds(ctx)) {
       return "no_key";
     }
-    const token = await ctx.tokens.get("google");
+    const token = await ctx.tokens.get("google-health");
     if ((token?.accessToken ?? "").trim() === "") {
       return "no_oauth";
     }
     return null;
   },
   async authStart(ctx, redirectUri, state) {
-    return { url: await buildAuthUrl(ctx, redirectUri, state, { scopes: HEALTH_SCOPES, creds: healthCreds(ctx) }) };
+    return {
+      url: await buildAuthUrl(ctx, redirectUri, state, {
+        scopes: HEALTH_SCOPES,
+        creds: healthCreds(ctx),
+        pendingSlot: "google-health",
+      }),
+    };
   },
   async authFinish(ctx, redirectUri, code) {
-    await googleAuthFinish(ctx, redirectUri, code, { creds: healthCreds(ctx) });
+    await googleAuthFinish(ctx, redirectUri, code, {
+      creds: healthCreds(ctx),
+      provider: "google-health",
+      pendingSlot: "google-health",
+    });
   },
   tools(ctx) {
     const sleep: Tool = {

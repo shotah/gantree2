@@ -24,6 +24,7 @@ export function pluginCtx(opts: {
       get: () => Promise.resolve(null),
       put: () => Promise.resolve(),
       delete: () => Promise.resolve(),
+      list: async () => [],
     },
     sink,
   };

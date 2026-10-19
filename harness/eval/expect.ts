@@ -113,6 +113,27 @@ export function checkEval(out: EvalOutcome, want: EvalExpect): string[] {
       last = index;
     }
   }
+  if (expanded.parallel.length > 0) {
+    const found: { name: string; round: number }[] = [];
+    for (const name of expanded.parallel) {
+      const index = firstCall(out.calls, name);
+      if (index < 0) {
+        fails.push(`parallel: ${name} never called`);
+        continue;
+      }
+      const call = out.calls[index];
+      if (call) {
+        found.push({ name, round: call.round });
+      }
+    }
+    if (found.length >= 2) {
+      const rounds = new Set(found.map((item) => item.round));
+      if (rounds.size > 1) {
+        const parts = found.map((item) => `${item.name} round ${String(item.round)}`).join(", ");
+        fails.push(`parallel: ${parts} \u2014 want one batch`);
+      }
+    }
+  }
   if (expanded.replyRegex !== "" && !compileGoRegexp(expanded.replyRegex).test(reply)) {
     fails.push(`reply should match /${expanded.replyRegex}/`);
   }

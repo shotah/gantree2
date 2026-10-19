@@ -70,10 +70,10 @@ flowchart LR
   class SDO,ADO,KV store
 ```
 
-The twelve tools are in-process modules under `harness/plugins`, not
-child processes: `chat`, `feeds`, `flights`, `garmin`, `google`,
-`google-health`, `image`, `maps`, `math`, `rentals`, `strava`,
-`twitter`. The model sees `{plugin}__{tool}` (`google__calendar_list_events`).
+The tools are in-process modules under `harness/plugins`, not
+child processes: `chat`, `feeds`, `math`, `websearch`, `twitter`,
+`image`, `strava`, `maps`, `flights`, `rentals`, `google-health`,
+`google`, `garmin`, `atlassian`. The model sees `{plugin}__{tool}` (`google__calendar_list_events`).
 Schemas stay off until `mcp_enable`; a brief hold drops after 6 hours
 idle, a short hold after 27. Plugin tools take a set and return a list
 (`.cursor/rules/harness-plugins-plural.mdc`). `GARMIN_TOOL_TIER`
@@ -437,7 +437,7 @@ flowchart TB
     CORE[core<br/>Sql · Clock · Logger · Provider]
     LOOP[agent<br/>createBrain]
     ROOM[room<br/>openRoomBrain · catch]
-    PLUG[plugins<br/>twelve modules]
+    PLUG[plugins]
     CORE --> LOOP
     ROOM --> LOOP
     PLUG --> LOOP
@@ -511,7 +511,7 @@ If a task fails one of these, it is later, or it is wrong.
    allowlist is the thing the UI nags.
 9. **Not chat.** Settings never sits in a chat turn. Chat is a PWA on
    the same origin, not a feature of the settings screens.
-10. **Plugins are modules.** The twelve live under `harness/plugins` and
+10. **Plugins are modules.** They live under `harness/plugins` and
     load with the Worker. `ready()` publishes or skips. Grants from
     the Tools fold reach the registry directly: a plugin left off the
     list is not in the catalog. Per-session schemas are `mcp_enable`.

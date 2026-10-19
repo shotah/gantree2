@@ -148,6 +148,8 @@ Sprint's at 2:30 and the scoop is at 2 — I'll keep an eye on it.
 | `invented price $N (in no tool result or input)` | A figure in the reply that no tool result and no seeded input contained. |
 | `fixture tool X is not in the live S catalog (have …)` | Drift: the baked plugin no longer publishes that name. Fails before any model call. |
 | `order: X before …` | Both called, wrong order (e.g. the tool before `mcp_enable`). |
+| `parallel: X never called` | A name in `expect.parallel` never reached the recorder. |
+| `parallel: X round N, Y round M — want one batch` | Both called, but not in the same Completer round — they must share one batch; a later round is fine when those names are together on it. |
 | `reply should match /re/` · `should not match` | Shape of the reply — a `?`, a bare "got it". Never a sentence. |
 | `N questions, max M` | Counted `?` in the reply. |
 | `waiting_for_reply=false, want true` | The model asked but did not put `[wait]` on its own line. |
@@ -244,7 +246,7 @@ shape is the Go fixture format; field names stay snake_case.
 | `tools` | Canned MCP tools: `name` (must be `server__name`), `description`, optional `params` schema, `result` returned every call — `{{+90m}}` in a result expands like `inbound`. |
 | `tools_from` | Servers whose **real** catalog replaces hand-written defs — see below. |
 | `force` | MCP prefixes published without `mcp_enable`. Leave empty to test the off → enable → call path. |
-| `expect` | The shape contract — see the failure table. `round_budget` is the cost note, not a check. `tools_called[].max_calls` caps a metered tool. `prices_from_tools` fails any `$N` the tools did not return. `react` / `react_only` / `no_model_call` are the reaction gates. |
+| `expect` | The shape contract — see the failure table. `round_budget` is the cost note, not a check. `parallel`: tool names that must share one Completer round; a later round that holds the whole batch passes, splitting them into one call per round fails. `tools_called[].max_calls` caps a metered tool. `prices_from_tools` fails any `$N` the tools did not return. `react` / `react_only` / `no_model_call` are the reaction gates. |
 
 ### Real catalogs (`tools_from`)
 
@@ -273,7 +275,8 @@ EVAL_N=1 EVAL_ONLY=<name> npm run eval                # first live read
 ```
 
 Four kinds of fixture live in the directory. **Single-batch rules** —
-one tool round and a reply, `round_budget` 2 or 3. **Completion**
+one tool round and a reply, `round_budget` 2 or 3 (`parallel_batch` is the
+single-batch rule for two independent lookups sharing one round, not a single tool round). **Completion**
 fixtures (the flight, the gym check-in, the dinner planner): the check
 is that the legwork happened, and the model may take the rounds it
 needs. **Spend** fixtures on real catalogs: a metered API, `max_calls`

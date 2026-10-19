@@ -81,4 +81,16 @@ describe("AesTokenStore", () => {
     other[0] = 9;
     await expect(new AesTokenStore(sql, other, clock).get("google")).rejects.toThrow(/decrypt failed/);
   });
+
+  it("lists provider ids by prefix", async () => {
+    const sql = memSql();
+    const clock = testClock();
+    const store = new AesTokenStore(sql, rawKey(), clock);
+    await store.put("google:a@work.com", { accessToken: "a" });
+    await store.put("google:b@home.com", { accessToken: "b" });
+    await store.put("google-health", { accessToken: "h" });
+    expect(await store.list("google:")).toEqual(["google:a@work.com", "google:b@home.com"]);
+    expect(await store.list("google-health")).toEqual(["google-health"]);
+    expect(await store.list("")).toEqual(["google-health", "google:a@work.com", "google:b@home.com"]);
+  });
 });

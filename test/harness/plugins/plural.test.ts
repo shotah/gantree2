@@ -37,6 +37,7 @@ function pluralCtx(): PluginContext {
       get: () => Promise.resolve(null),
       put: () => Promise.resolve(),
       delete: () => Promise.resolve(),
+      list: async () => [],
     },
   };
 }
@@ -94,6 +95,8 @@ function pluginFolders(): string[] {
 
 async function loadModule(name: string): Promise<unknown> {
   switch (name) {
+    case "atlassian": return import("@/harness/plugins/atlassian/index.ts");
+    case "cars": return import("@/harness/plugins/cars/index.ts");
     case "chat": return import("@/harness/plugins/chat/index.ts");
     case "feeds": return import("@/harness/plugins/feeds/index.ts");
     case "flights": return import("@/harness/plugins/flights/index.ts");

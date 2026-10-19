@@ -41,9 +41,23 @@ const REFRESH_SKEW_MS = 60_000;
 
 const MISSING_CLIENT = "OAuth client credentials not found. Please set GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET environment variables";
 
+/** Legacy single-mailbox row. New Workspace tokens use `google:<email>`. */
+export const LEGACY_PROVIDER = "google";
+/**
+ * Prefix for one Workspace mailbox. `list("google:")` does not match
+ * `google-health`; `list("google")` does, so callers must use this prefix.
+ */
+export const WORKSPACE_PREFIX = "google:";
+
+const DEFAULT_PENDING_SLOT = "google";
+
 export type GoogleAuthOptions = {
   scopes?: readonly string[];
   creds?: { id: string; secret: string };
+  /** Exact token id. Health passes `google-health`. Unset writes `google:<email>`. */
+  provider?: string;
+  /** In-flight login slot. Defaults to `google`. Health passes `google-health`. */
+  pendingSlot?: string;
 };
 
 export const EMAIL_REQUIRED_MESSAGE
@@ -97,38 +111,62 @@ function queryEscape(s: string): string {
 }
 
 function ensureSchema(ctx: PluginContext): void {
-  migrate(ctx.sql, [{
-    id: "plugin.google.001",
-    up: [
-      `CREATE TABLE IF NOT EXISTS google_oauth_pending (
-        id INTEGER PRIMARY KEY CHECK (id = 1),
-        state TEXT NOT NULL,
-        verifier TEXT NOT NULL,
-        redirect_uri TEXT NOT NULL,
-        expires_at INTEGER NOT NULL
-      )`,
-    ],
-  }]);
+  migrate(ctx.sql, [
+    {
+      id: "plugin.google.001",
+      up: [
+        `CREATE TABLE IF NOT EXISTS google_oauth_pending (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          state TEXT NOT NULL,
+          verifier TEXT NOT NULL,
+          redirect_uri TEXT NOT NULL,
+          expires_at INTEGER NOT NULL
+        )`,
+      ],
+    },
+    {
+      id: "plugin.google.002",
+      up: [
+        "DROP TABLE IF EXISTS google_oauth_pending",
+        `CREATE TABLE google_oauth_pending (
+          plugin TEXT PRIMARY KEY,
+          state TEXT NOT NULL,
+          verifier TEXT NOT NULL,
+          redirect_uri TEXT NOT NULL,
+          expires_at INTEGER NOT NULL
+        )`,
+      ],
+    },
+  ]);
 }
 
 type PendingRow = { state: string; verifier: string; redirect_uri: string; expires_at: number };
 
-function loadPending(ctx: PluginContext): PendingRow | undefined {
+function pendingSlot(opts: GoogleAuthOptions): string {
+  const slot = opts.pendingSlot?.trim() ?? "";
+  return slot || DEFAULT_PENDING_SLOT;
+}
+
+function loadPending(ctx: PluginContext, slot: string): PendingRow | undefined {
   ensureSchema(ctx);
-  const row = ctx.sql.one<PendingRow>("SELECT state, verifier, redirect_uri, expires_at FROM google_oauth_pending WHERE id = 1");
+  const row = ctx.sql.one<PendingRow>(
+    "SELECT state, verifier, redirect_uri, expires_at FROM google_oauth_pending WHERE plugin = ?",
+    slot,
+  );
   return row ?? undefined;
 }
 
-function savePending(ctx: PluginContext, row: PendingRow): void {
+function savePending(ctx: PluginContext, slot: string, row: PendingRow): void {
   ensureSchema(ctx);
   ctx.sql.exec(
-    `INSERT INTO google_oauth_pending (id, state, verifier, redirect_uri, expires_at)
-     VALUES (1, ?, ?, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET
+    `INSERT INTO google_oauth_pending (plugin, state, verifier, redirect_uri, expires_at)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(plugin) DO UPDATE SET
        state = excluded.state,
        verifier = excluded.verifier,
        redirect_uri = excluded.redirect_uri,
        expires_at = excluded.expires_at`,
+    slot,
     row.state,
     row.verifier,
     row.redirect_uri,
@@ -136,9 +174,9 @@ function savePending(ctx: PluginContext, row: PendingRow): void {
   );
 }
 
-function deletePending(ctx: PluginContext): void {
+function deletePending(ctx: PluginContext, slot: string): void {
   ensureSchema(ctx);
-  ctx.sql.exec("DELETE FROM google_oauth_pending WHERE id = 1");
+  ctx.sql.exec("DELETE FROM google_oauth_pending WHERE plugin = ?", slot);
 }
 
 async function codeChallenge(verifier: string): Promise<string> {
@@ -153,9 +191,9 @@ function newVerifier(): string {
 }
 
 /**
- * Authorization URL: union of DefaultScopes, offline access, consent, PKCE S256.
- * The verifier is stored in `google_oauth_pending` for authFinish (the host
- * does not pass it back). `state` is the host's CSRF token.
+ * Authorization URL: union of DefaultScopes, offline access, consent plus
+ * account chooser, PKCE S256. The verifier is stored in `google_oauth_pending`
+ * under `pendingSlot` (default `google`) for authFinish. `state` is the host's CSRF token.
  */
 export async function buildAuthUrl(
   ctx: PluginContext,
@@ -170,7 +208,7 @@ export async function buildAuthUrl(
   const scopes = opts.scopes ?? GOOGLE_SCOPES;
   const verifier = newVerifier();
   const challenge = await codeChallenge(verifier);
-  savePending(ctx, {
+  savePending(ctx, pendingSlot(opts), {
     state,
     verifier,
     redirect_uri: redirectUri,
@@ -182,7 +220,7 @@ export async function buildAuthUrl(
     code_challenge: challenge,
     code_challenge_method: "S256",
     include_granted_scopes: "true",
-    prompt: "consent",
+    prompt: "consent select_account",
     redirect_uri: redirectUri,
     response_type: "code",
     scope: scopes.join(" "),
@@ -225,12 +263,13 @@ async function finishGoogleAuth(
   if (!code.trim()) {
     throw new AuthFailed("OAuth token exchange: missing code");
   }
-  const pending = loadPending(ctx);
+  const slot = pendingSlot(opts);
+  const pending = loadPending(ctx, slot);
   if (!pending) {
     throw new AuthFailed("no login in progress; click Connect again");
   }
   if (ctx.clock.now() > pending.expires_at) {
-    deletePending(ctx);
+    deletePending(ctx, slot);
     throw new AuthFailed("pending auth session expired; run 'google-mcp auth url' again");
   }
   if (pending.redirect_uri !== redirectUri) {
@@ -251,8 +290,17 @@ async function finishGoogleAuth(
   if (email) {
     tok.extra = { ...tok.extra, email };
   }
-  await ctx.tokens.put("google", tok);
-  deletePending(ctx);
+  const explicit = opts.provider?.trim() ?? "";
+  const id = explicit || (email ? `${WORKSPACE_PREFIX}${email}` : "");
+  if (!id) {
+    throw new AuthFailed("no email in userinfo response");
+  }
+  await ctx.tokens.put(id, tok);
+  await promoteLegacy(ctx);
+  if (!explicit) {
+    await dropUnnamedLegacy(ctx);
+  }
+  deletePending(ctx, slot);
   ctx.log.info("google oauth stored", { email: email || undefined });
 }
 
@@ -310,8 +358,78 @@ export function needsRefresh(tok: OAuthToken, now: number): boolean {
   return now >= tok.expiresAt - REFRESH_SKEW_MS;
 }
 
-export async function freshToken(ctx: PluginContext, signal?: AbortSignal): Promise<OAuthToken> {
-  const tok = await ctx.tokens.get("google");
+/**
+ * Copy a legacy `google` row that carries an email onto `google:<email>` when
+ * that key is empty, then delete `google`. An existing keyed token is left as-is.
+ * A legacy row with no email stays until a Workspace token is stored.
+ */
+export async function promoteLegacy(ctx: PluginContext): Promise<void> {
+  const legacy = await ctx.tokens.get(LEGACY_PROVIDER);
+  if (!legacy) {
+    return;
+  }
+  const email = canonicalEmail(legacy.extra?.email ?? "");
+  if (!email) {
+    return;
+  }
+  const keyed = `${WORKSPACE_PREFIX}${email}`;
+  const existing = await ctx.tokens.get(keyed);
+  if (!existing) {
+    await ctx.tokens.put(keyed, legacy);
+  }
+  await ctx.tokens.delete(LEGACY_PROVIDER);
+}
+
+/** Drop an unnamed legacy row so it cannot authenticate as the wrong mailbox. */
+async function dropUnnamedLegacy(ctx: PluginContext): Promise<void> {
+  const legacy = await ctx.tokens.get(LEGACY_PROVIDER);
+  if (!legacy) {
+    return;
+  }
+  if (canonicalEmail(legacy.extra?.email ?? "")) {
+    return;
+  }
+  await ctx.tokens.delete(LEGACY_PROVIDER);
+}
+
+/** Token id for `email` after legacy promotion. Does not fall through to another mailbox. */
+export async function providerForEmail(ctx: PluginContext, email: string): Promise<string> {
+  await promoteLegacy(ctx);
+  const keyed = `${WORKSPACE_PREFIX}${canonicalEmail(email)}`;
+  const row = await ctx.tokens.get(keyed);
+  if (row) {
+    return keyed;
+  }
+  const accounts = await ctx.tokens.list(WORKSPACE_PREFIX);
+  if (accounts.length === 0) {
+    const legacy = await ctx.tokens.get(LEGACY_PROVIDER);
+    const legacyEmail = canonicalEmail(legacy?.extra?.email ?? "");
+    if (legacy?.accessToken && !legacyEmail) {
+      return LEGACY_PROVIDER;
+    }
+  }
+  throw new AuthFailed(`no credentials found for ${email}; run: google-mcp auth`);
+}
+
+/** Signed-in Workspace addresses (`google:<email>`), after promoting a named legacy row. */
+export async function workspaceEmails(ctx: PluginContext): Promise<string[]> {
+  await promoteLegacy(ctx);
+  const ids = await ctx.tokens.list(WORKSPACE_PREFIX);
+  const emails: string[] = [];
+  for (const id of ids) {
+    if (!id.startsWith(WORKSPACE_PREFIX)) {
+      continue;
+    }
+    const email = id.slice(WORKSPACE_PREFIX.length);
+    if (email) {
+      emails.push(email);
+    }
+  }
+  return emails;
+}
+
+export async function freshToken(ctx: PluginContext, provider: string, signal?: AbortSignal): Promise<OAuthToken> {
+  const tok = await ctx.tokens.get(provider);
   if (!tok?.accessToken) {
     throw new AuthFailed("no credentials found; run: google-mcp auth");
   }
@@ -321,10 +439,10 @@ export async function freshToken(ctx: PluginContext, signal?: AbortSignal): Prom
   if (!tok.refreshToken) {
     return tok;
   }
-  return refreshToken(ctx, tok, signal);
+  return refreshToken(ctx, provider, tok, signal);
 }
 
-export async function refreshToken(ctx: PluginContext, tok: OAuthToken, signal?: AbortSignal): Promise<OAuthToken> {
+export async function refreshToken(ctx: PluginContext, provider: string, tok: OAuthToken, signal?: AbortSignal): Promise<OAuthToken> {
   const creds = clientCreds(ctx);
   if (!creds) {
     throw new AuthFailed(MISSING_CLIENT);
@@ -338,7 +456,7 @@ export async function refreshToken(ctx: PluginContext, tok: OAuthToken, signal?:
     grant_type: "refresh_token",
     refresh_token: tok.refreshToken,
   }, tok, signal);
-  await ctx.tokens.put("google", next);
+  await ctx.tokens.put(provider, next);
   ctx.log.info("google oauth refreshed");
   return next;
 }
@@ -424,8 +542,16 @@ export async function resolveEmail(ctx: PluginContext, args: Record<string, unkn
   if (fromEnv) {
     return fromEnv;
   }
-  const tok = await ctx.tokens.get("google");
-  const fromTok = canonicalEmail(tok?.extra?.email ?? "");
+  const emails = await workspaceEmails(ctx);
+  if (emails.length > 1) {
+    throw new EmailRequired();
+  }
+  const only = emails[0];
+  if (emails.length === 1 && only) {
+    return only;
+  }
+  const legacy = await ctx.tokens.get(LEGACY_PROVIDER);
+  const fromTok = canonicalEmail(legacy?.extra?.email ?? "");
   if (fromTok) {
     return fromTok;
   }

@@ -76,6 +76,9 @@ export function connectChatHint(id: string): string {
   return `or type /auth ${id} in chat`;
 }
 
+/** Under Connect google: a second login adds a mailbox. Health and Strava do not use this. */
+export const GOOGLE_ANOTHER_MAILBOX = "Connect again to add another mailbox.";
+
 /** Host on the authorize URL's `redirect_uri`. Empty when that param is missing or not a URL. */
 export function stravaCallbackHost(authorizeUrl: string): string {
   try {
@@ -389,6 +392,9 @@ export function ToolsFold({
                       <button type="button" disabled={busy} onClick={() => void connect(tool)} className={`${quietClass} mt-2`}>
                         Connect {tool.id}
                       </button>
+                      {tool.id === "google"
+                        ? <p className="mt-1 text-xs text-dim">{GOOGLE_ANOTHER_MAILBOX}</p>
+                        : null}
                       <p className="mt-1 text-xs text-dim">{connectChatHint(tool.id)}</p>
                       {tool.id === "strava"
                         ? <p className="mt-1 text-xs text-dim">{stravaDomainHint(pageHost, stravaReceived)}</p>

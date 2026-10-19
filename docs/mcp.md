@@ -3,7 +3,7 @@
 How tools are named for the model, how a prefix is turned on, and how
 the host recovers from a bad name.
 
-On this product the thirteen plugins are in-process modules under
+On this product the plugins are in-process modules under
 `harness/plugins`. There is no stdio transport and no child process.
 `harness/tools` is the registry: `{plugin}__{tool}`, `mcp_enable`,
 truncation, and the skip list. Builtins (memory, cron, watch,
@@ -61,6 +61,8 @@ Examples:
 | `feeds` | `items_list` | `feeds__items_list` |
 | `twitter` | `posts_list` | `twitter__posts_list` |
 | `maps` | `place_search`, `route_eta` | `maps__place_search` |
+| `atlassian` | `jira_list_boards`, `confluence_list_spaces`, `confluence_search_pages` | `atlassian__jira_list_boards` |
+| `cars` | `listings_search`, `vin_get` | `cars__listings_search` |
 | `image` | `photo_generate`, `photo_edit` | `image__photo_generate` |
 | `chat` | `avatar_update`, `theme_list` | `chat__avatar_update` |
 
@@ -277,6 +279,11 @@ as `/auth garmin <code>`.
 | garmin | `GARMIN_EMAIL` | yes |
 | garmin | `GARMIN_PASSWORD` | yes |
 | garmin | `GARMIN_TOOL_TIER` | no — `core` (default), `extended`, or `complete` |
+| atlassian | `ATLASSIAN_SITE` | yes |
+| atlassian | `ATLASSIAN_EMAIL` | yes |
+| atlassian | `ATLASSIAN_API_TOKEN` | yes |
+| cars | `MARKETCHECK_API_KEY` | yes |
+| cars | `MARKETCHECK_BASE_URL` | no |
 
 The Worker house env may also supply `SEARCH_API_KEY` and
 `SEARCH_PROVIDER` (`HOUSE_KEYS`); the Keys fold documents them under
