@@ -5,6 +5,7 @@ import {
   capThread,
   cursorOf,
   failInThread,
+  latestKitReply,
   mergeThread,
   persistableThread,
   placeInThread,
@@ -12,6 +13,32 @@ import {
   sameThread,
   type ThreadOrder,
 } from "@/app/lib/thread";
+
+describe("latestKitReply", () => {
+  it("skips drafts and pending; uses the newest settled kit text", () => {
+    const messages = [
+      { from: "you", text: "hi" },
+      { from: "kit", text: '{"word":"older"}', kind: "reply" },
+      { from: "kit", text: "typing…", kind: "draft" },
+    ];
+    expect(latestKitReply(messages)).toBe('{"word":"older"}');
+  });
+
+  it("uses a reply kind even when it would be live in the thread model", () => {
+    const messages = [
+      { from: "kit", text: '{"word":"quartz"}', kind: "reply" },
+    ];
+    expect(latestKitReply(messages)).toBe('{"word":"quartz"}');
+  });
+
+  it("skips pending kit messages and empty text", () => {
+    expect(latestKitReply([
+      { from: "kit", text: "", kind: "reply" },
+      { from: "kit", text: "done", pending: true },
+      { from: "kit", text: "ok", kind: "reply" },
+    ])).toBe("ok");
+  });
+});
 
 describe("thread caps", () => {
   it("keeps the newest messages", () => {

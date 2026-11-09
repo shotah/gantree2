@@ -180,6 +180,7 @@ beforeEach(() => {
   window.localStorage.removeItem("gantree.roomTheme");
   window.localStorage.removeItem("gantree.aimsSeen");
   window.localStorage.removeItem("gantree.todoSeen");
+  window.localStorage.removeItem("gantree.game.kit");
   window.localStorage.removeItem("gantree.theme");
   document.documentElement.removeAttribute("data-font");
   document.documentElement.removeAttribute("data-theme");
@@ -201,6 +202,7 @@ afterEach(() => {
   window.localStorage.removeItem("gantree.roomTheme");
   window.localStorage.removeItem("gantree.aimsSeen");
   window.localStorage.removeItem("gantree.todoSeen");
+  window.localStorage.removeItem("gantree.game.kit");
   window.localStorage.removeItem("gantree.theme");
   document.documentElement.removeAttribute("data-font");
   document.documentElement.removeAttribute("data-theme");
@@ -1811,6 +1813,14 @@ describe("PhoneShell", () => {
       ws.deliver(JSON.stringify({ kind: "todo", todo: [] }));
     });
     expect(screen.queryByRole("button", { name: /^tasks/ })).toBeNull();
+  });
+
+  it("opens the game drawer from the header and closes it", async () => {
+    await connectSpike();
+    fireEvent.click(screen.getByRole("button", { name: "game" }));
+    expect(screen.getByRole("dialog", { name: "Game" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Close game" }));
+    expect(screen.queryByRole("dialog", { name: "Game" })).toBeNull();
   });
 
   it("paints Kit's reaction on your bubble, clears it on an empty one, and never moves the cursor", async () => {

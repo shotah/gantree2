@@ -38,6 +38,26 @@ export function isDraftBubble(m: Pick<ThreadOrder, "kind">): boolean {
   return m.kind === "draft";
 }
 
+/** Newest settled Kit bubble text for game drawers (drafts and pending sends do not count). */
+export function latestKitReply(
+  messages: readonly { from: string; text: string; pending?: boolean; kind?: string }[],
+): string {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m.from !== "kit") {
+      continue;
+    }
+    if (m.pending || isDraftBubble(m)) {
+      continue;
+    }
+    if (!m.text) {
+      continue;
+    }
+    return m.text;
+  }
+  return "";
+}
+
 /** Seq first, then mailbox time, then id. Drafts stay last so catch-up cannot leapfrog typing. */
 export function compareThread(a: ThreadOrder, b: ThreadOrder): number {
   const aDraft = isDraftBubble(a);

@@ -86,16 +86,7 @@ describe("InstallApp", () => {
   });
 
   it("hides the control once the page is already a standalone app", () => {
-    window.matchMedia = (q: string) => ({
-      matches: q === "(display-mode: standalone)",
-      media: q,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    });
+    vi.stubGlobal("matchMedia", (q: string) => ({ matches: q === "(display-mode: standalone)" }));
     render(<InstallApp placement="block" />);
     expect(screen.queryByText(/Cast, save and share/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Install app" })).toBeNull();

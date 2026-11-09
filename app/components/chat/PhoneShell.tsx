@@ -16,6 +16,7 @@ import { KitAvatar } from "./KitAvatar";
 import { MicEnable } from "./MicEnable";
 import { NotifyEnable } from "./NotifyEnable";
 import { GoalsButton, GoalsSheet } from "./GoalsBoard";
+import { GameButton, GameSheet } from "./GameBoard";
 import { TasksButton, TasksSheet } from "./TasksBoard";
 import { AgentRoomControls } from "./AgentRoomControls";
 import { agentsMessage, codeOf, getAgentEnabled, setAgentEnabled } from "@/app/lib/agentsHttp";
@@ -28,6 +29,7 @@ import {
   capThread,
   cursorOf,
   failInThread,
+  latestKitReply,
   mergeThread,
   persistableThread,
   placeInThread,
@@ -97,6 +99,8 @@ import { parseReactionText } from "@/lib/chat/react";
 import { connectSeenAck, seenAckForTurn } from "@/lib/chat/seen";
 import { clearsTyping, TYPING_TTL_MS } from "@/lib/chat/typing";
 import { nextMockReply, parseSample, sampleScene, type SampleId } from "@/app/lib/samples";
+import { redactHangmanSecret } from "@/lib/chat/hangman";
+import { redactGhostGraph } from "@/lib/chat/ghost";
 
 function chatLoginHref(slug: string | null | undefined): string {
   const s = slug ? parseSlug(slug) : null;
@@ -188,6 +192,7 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
   const [todo, setTodo] = useState<TodoItem[]>([]);
   const [todoSeen, setTodoSeen] = useState<BoardSeen>({});
   const [tasksOpen, setTasksOpen] = useState(false);
+  const [gameOpen, setGameOpen] = useState(false);
   /** Ids whose `/todo done` went out; ticked in the drawer until the next board says. */
   const [todoPending, setTodoPending] = useState<number[]>([]);
   const [avatarRev, setAvatarRev] = useState(0);
@@ -1300,6 +1305,20 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
     }
   }
 
+  const gameAgentReply = useMemo(() => latestKitReply(messages), [messages]);
+
+  const threadMessages = useMemo(
+    () => messages.map((m) => {
+      if (m.from !== "kit" || !m.text) {
+        return m;
+      }
+      const hiddenWord = redactHangmanSecret(m.text);
+      const text = hiddenWord === m.text ? redactGhostGraph(m.text) : hiddenWord;
+      return { ...m, text };
+    }),
+    [messages],
+  );
+
   const title = useMemo(
     () => waitingForAgent || mailboxGap || !roomSlug ? "Agent" : displaySlug(roomSlug),
     [waitingForAgent, mailboxGap, roomSlug],
@@ -1384,7 +1403,7 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
             onScroll={onThreadScroll}
           >
             <Thread
-              messages={messages}
+              messages={threadMessages}
               onReact={phone ? onReact : undefined}
               empty={(
                 <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
@@ -1494,6 +1513,11 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
                   open={tasksOpen}
                   onToggle={() => setTasksOpen((v) => !v)}
                 />
+              )
+            : null}
+          {phone
+            ? (
+                <GameButton open={gameOpen} onToggle={() => setGameOpen((v) => !v)} />
               )
             : null}
           {phone && cfg?.voice && recognizer
@@ -1685,6 +1709,14 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
             />
           )
         : null}
+      <GameSheet
+        open={gameOpen}
+        agentName={title}
+        roomKey={roomSlug || "phone"}
+        onClose={() => setGameOpen(false)}
+        agentReply={gameAgentReply}
+        onSend={(text) => void sendText(text)}
+      />
       {mouth}
     </div>
   );

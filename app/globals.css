@@ -25,6 +25,7 @@
   --color-you: var(--you);
   --color-kit: var(--kit);
   --animate-drawer: drawer-in 180ms ease-out;
+  --animate-c4-drop: c4-drop 320ms ease-in both;
 
   @keyframes drawer-in {
     from {
@@ -32,6 +33,15 @@
     }
     to {
       transform: translateX(0);
+    }
+  }
+
+  @keyframes c4-drop {
+    from {
+      transform: translateY(calc(var(--c4-rows) * -1 * (100% + 0.25rem)));
+    }
+    to {
+      transform: translateY(0);
     }
   }
 }
