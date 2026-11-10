@@ -41,11 +41,8 @@
     <article class="prose"><h1 id="architecture">Architecture</h1>
 <p>How gantree is put together: the pictures, then the choices that stay
 true as it grows. The reasoning behind the shape is in
-<a href="proposal.html">proposal.md</a> (the morning&#39;s plan) and
 <a href="harness.html">harness.md</a> (the runtime that was built). Who may do what is
-in <a href="access.html">access.md</a>; where it runs is in <a href="install.html">install.md</a>.
-When this file and the proposal disagree about the runtime, this file
-and <a href="harness.html">harness.md</a> win.</p>
+in <a href="access.html">access.md</a>; where it runs is in <a href="install.html">install.md</a>.</p>
 <p>Vocabulary: <strong>settings</strong> (what operators see), <strong>chat</strong> (the PWA a
 member talks through), <strong>agents</strong> (one Durable Object each), <strong>harness</strong>
 (the TypeScript loop inside that object), <strong>users</strong> (one list, three
@@ -561,7 +558,7 @@ TypeScript Vitest can run.</li>
 <code>no-explicit-any</code>; type it or delete the dead write.</li>
 <li>Nothing new is written with the originals&#39; wire names. <code>CHAT_*</code>,
 <code>CHANNEL=chat</code>, <code>agents</code>, <code>chat:&lt;agent id&gt;:&lt;sub&gt;</code>, plugin <code>chat</code> are the
-names (<a href="todo_done.html#0-decide">todo.md</a>). <code>PENDANT_*</code>,
+names. <code>PENDANT_*</code>,
 <code>CHANNEL=pendant</code>, <code>cranes</code> beside <code>agents</code> on <code>/api/auth/me</code> are
 accepted as aliases so cab and helm keep working until the Phase 4
 wire-name drop, then dropped. Marked as aliases wherever they appear.
