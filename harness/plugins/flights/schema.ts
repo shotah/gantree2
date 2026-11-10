@@ -146,6 +146,7 @@ export const LINK_FORMAT_DESCRIPTION = "Build a Google Flights SEARCH URL with r
 export const ACCOUNT_GET_DESCRIPTION = "Check SerpAPI monthly search usage and plan renewal/reset date without running a flight search. "
   + "This account check is free and does not burn quota. Search tools also attach a usage snapshot on their responses.";
 
+/** @internal Test helper: tests pin the published tool names against it. */
 export const TOOL_NAMES = [
   "offers_search",
   "dates_search",

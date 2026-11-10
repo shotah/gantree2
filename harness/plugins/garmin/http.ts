@@ -77,6 +77,7 @@ export async function putSession(tokens: TokenStore, session: Session): Promise<
 let bucket = 8;
 let bucketAt = 0;
 
+/** @internal Test seam: refill the bucket between cases. */
 export function resetRateLimiter(): void {
   bucket = 8;
   bucketAt = 0;

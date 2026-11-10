@@ -4,14 +4,11 @@ import {
   ensureConsolidateAttempts,
   EPISODE_TTL_MS,
   formatHydration,
-  isNotSupported,
   KIND_FACT,
   KIND_INSIGHT,
   KIND_PERSON,
   KIND_PREFERENCE,
   MemoryStore,
-  NotSupportedError,
-  resolvePin,
   SUBJECT_AIM_PREFIX,
   SUBJECT_HOURS,
   SUBJECT_WAITING_PREFIX,
@@ -123,28 +120,11 @@ describe("store", () => {
     for (const e of store.hydrate("sushi", 30)) {
       expect(e.id).not.toBe(old.id);
     }
-    const pin = resolvePin(store, old.id, "");
-    expect(pin?.id).toBe(neu.id);
 
     const ep1 = store.store("episode", "ada", "note one");
     const ep2 = store.store("episode", "ada", "note two");
     expect(ep1.id).not.toBe(ep2.id);
     expect(store.listUnconsolidatedEpisodes(20).length).toBeGreaterThanOrEqual(2);
-  });
-
-  it("resolves a pin by subject and stops on a supersede cycle", () => {
-    const { store } = openMemory();
-    store.store(KIND_PREFERENCE, "pref/food", "tacos");
-    expect(resolvePin(store, 0, "pref/food")?.content).toBe("tacos");
-    expect(resolvePin(store, 999, "pref/food")?.content).toBe("tacos");
-    expect(resolvePin(store, 0, "")).toBeNull();
-    expect(resolvePin(null, 1, "pref/food")).toBeNull();
-
-    const a = store.store(KIND_FACT, "cycle/a", "one");
-    const b = store.store(KIND_FACT, "cycle/b", "two");
-    store.supersede(a.id, b.id);
-    store.supersede(b.id, a.id);
-    expect(resolvePin(store, a.id, "")).not.toBeNull();
   });
 
   it("lists live rows by subject prefix", () => {
@@ -204,10 +184,5 @@ describe("store", () => {
     expect(snap.superseded).toBe(0);
     expect(snap.backlog).toBe(0);
     expect(snap.dbBytes).toBeGreaterThan(0);
-  });
-
-  it("names the not-supported sentinel", () => {
-    expect(isNotSupported(new NotSupportedError())).toBe(true);
-    expect(isNotSupported(new Error("memory: id 1 not found"))).toBe(false);
   });
 });

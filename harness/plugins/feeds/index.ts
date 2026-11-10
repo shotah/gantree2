@@ -11,8 +11,6 @@ import {
   type FeedItem,
 } from "./parse";
 
-export { keys } from "./keys";
-
 const itemsDescription = "List items from RSS, Atom, or JSON Feed URLs (id, title, url, summary). Use for “what’s new on this feed” and as the watch poller tool. Not a web crawl — needs a feed URL. Discover one with source_resolve. Not X/Twitter. urls accepts up to 8 feeds; url still works for one. One bad feed is an error row.";
 const resolveDescription = "Find RSS/Atom/JSON Feed URLs from pages, GitHub repos, NWS zones, or YouTube channels. Use before watch_add when the human named a site, not a feed. Returns candidate URLs — then items_list or watch_add with the pick. Not a general web search. urls accepts up to 8 pages; query still works for one. One miss is an error row.";
 

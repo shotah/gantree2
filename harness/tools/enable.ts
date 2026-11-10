@@ -45,18 +45,6 @@ type EnableSqlRow = {
   last_used: SqlValue;
 };
 
-/** `MCP_ENABLE_FORCE`: comma-separated prefixes, blanks dropped. */
-export function parseForceCsv(raw: string): string[] {
-  const out: string[] = [];
-  for (const part of raw.split(",")) {
-    const prefix = part.trim();
-    if (prefix) {
-      out.push(prefix);
-    }
-  }
-  return out;
-}
-
 /**
  * Segment-aware cover. `google` matches `google__*`.
  * `google__calendar` matches `google__calendar_*`.
@@ -129,15 +117,6 @@ export function enableIndex(defs: readonly { name: string }[]): string[] {
   return out;
 }
 
-/** True when `key` is a bare server that has family keys in `index`. */
-export function hasSubprefixes(key: string, index: readonly string[]): boolean {
-  if (key.includes("__")) {
-    return false;
-  }
-  const want = `${key}__`;
-  return index.some((entry) => entry.startsWith(want));
-}
-
 /** Longest enabled prefix that matches `name`. */
 export function longestKey(name: string, keys: readonly string[]): string | null {
   let best = "";
@@ -168,12 +147,6 @@ export function enableHint(name: string, index: readonly string[]): string {
     key = cut >= 0 ? name.slice(0, cut) : name;
   }
   return `not enabled — call mcp_enable with prefixes=[${key}] then retry`;
-}
-
-/** Filter a catalog to builtins, `mcp_enable`, force prefixes, and enabled rows. Order is kept. */
-export function publishTools(defs: readonly ToolDef[], rows: readonly EnableRow[], force: Force): ToolDef[] {
-  const keys = rows.map((row) => row.prefix);
-  return defs.filter((def) => allowed(def.name, keys, force));
 }
 
 /**

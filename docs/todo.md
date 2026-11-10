@@ -218,13 +218,6 @@ product.
 - [ ] **gated** A `gantree` CLI, TypeScript, only if `npm` scripts
       are not enough. First slice, if it starts: one command. The
       rest waits.
-- [ ] **easy** Battery and network on the phone context.
-      `browserBattery` (`app/lib/battery.ts`) and `browserNet`
-      (`app/lib/net.ts`) are written and tested, and `buildContext`
-      takes both, but `PhoneShell` sends only `geo` and `surface`, and
-      the harness does not read either. First slice: send both from
-      `PhoneShell`. A harness stamp that uses them waits.
-
 ## Other checkouts
 
 Not this repo; listed so they are not forgotten.

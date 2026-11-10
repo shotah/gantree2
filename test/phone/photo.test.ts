@@ -4,7 +4,6 @@ import { parseFrame } from "@/lib/chat/frame";
 import {
   CHAT_PHOTO_EDGE,
   DEFAULT_PHOTO_SIZE,
-  parsePhotoFile,
   parsePhotoSize,
   PHOTO_JPEG_BYTES_MAX,
   PHOTO_SIZES,
@@ -30,10 +29,6 @@ describe("photo", () => {
     expect(photoErr(photoDataUrl({ mime: "image/jpeg", bytes: new Uint8Array() }))).toBe("bad photo");
     expect(photoErr(photoDataUrl({ mime: "text/plain", bytes: new Uint8Array([1]) }))).toBe("bad photo");
     expect(photoErr(photoDataUrl({ mime: "image/jpeg", bytes: new Uint8Array(IMAGE_BYTES_MAX + 1) }))).toBe("too large");
-    expect(parsePhotoFile({ type: "image/png", size: 10 })).toEqual({ ok: true });
-    expect(parsePhotoFile({ type: "application/pdf", size: 10 }).ok).toBe(false);
-    expect(parsePhotoFile({ type: "image/jpeg", size: 0 }).ok).toBe(false);
-    expect(photoErr(parsePhotoFile({ type: "image/jpeg", size: IMAGE_BYTES_MAX + 1 }))).toBe("too large");
   });
 
   it("budgets raw jpeg bytes so the data URL the mailbox measures fits IMAGE_BYTES_MAX", () => {

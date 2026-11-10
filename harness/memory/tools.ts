@@ -56,10 +56,6 @@ export function memoryToolDefs(): ToolDef[] {
   ];
 }
 
-export function isMemoryTool(name: string): boolean {
-  return name === TOOL_STORE || name === TOOL_RECALL || name === TOOL_FORGET;
-}
-
 /**
  * The three builtin memory tools. A null backend still publishes them; calls
  * fail with `memory: backend not configured`.

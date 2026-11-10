@@ -207,12 +207,3 @@ export async function admittedAgents(opts: {
   }));
   return [...out].sort();
 }
-
-/**
- * `/api/auth/me` room list. `agents` is the name; `cranes` is the alias copy
- * cab and helm still read. Same slugs, two fields, until the cutover.
- */
-export function roomMembership(slugs: readonly string[]): { agents: string[]; cranes: string[] } {
-  const agents = [...slugs];
-  return { agents, cranes: [...agents] };
-}

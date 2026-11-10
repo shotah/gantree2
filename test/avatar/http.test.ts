@@ -1,13 +1,7 @@
 import { describe, expect, it } from "vitest";
-import {
-  avatarRequestPath,
-  blobEtag,
-  blobResponse,
-  conditionalHeaders,
-  etagMatches,
-  mailboxToAvatarUrl,
-  readAvatarUpload,
-} from "@/lib/avatar/http";
+import { conditionalHeaders, readAvatarUpload } from "@/lib/avatar/http";
+import { avatarRequestPath } from "@/lib/avatar/path";
+import { blobEtag, blobResponse, etagMatches } from "@/lib/chat/blob";
 
 describe("blobResponse", () => {
   const hit = { jpeg: new Uint8Array([0xff, 0xd8, 0xff, 1]).buffer, rev: 1700 };
@@ -66,21 +60,6 @@ describe("avatarRequestPath", () => {
     expect(avatarRequestPath({ slug: "kit", rev: 9, secret: "s", bearer: "b" })).toBe(
       "/api/chat/avatar?slug=kit&v=9&secret=s&bearer=b",
     );
-  });
-});
-
-describe("mailboxToAvatarUrl", () => {
-  it("turns the crane wss mailbox into an https face POST", () => {
-    expect(mailboxToAvatarUrl("wss://gantry-pendant.example.workers.dev/ws/kit")).toBe(
-      "https://gantry-pendant.example.workers.dev/api/chat/avatar?slug=kit",
-    );
-    expect(mailboxToAvatarUrl("ws://127.0.0.1:3000/ws/kit")).toBe(
-      "http://127.0.0.1:3000/api/chat/avatar?slug=kit",
-    );
-    expect(mailboxToAvatarUrl("not a url")).toBeNull();
-    expect(mailboxToAvatarUrl("wss://x.example/ws/1bad")).toBeNull();
-    expect(mailboxToAvatarUrl("ftp://x.example/ws/kit")).toBeNull();
-    expect(mailboxToAvatarUrl("https://x.example/nope")).toBeNull();
   });
 });
 

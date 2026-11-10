@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_INTERVAL_SEC,
-  FEEDS_DEFAULT_SEC,
-  FEEDS_FLOOR_SEC,
   GRID_MS,
   TWITTER_DEFAULT_SEC,
   TWITTER_FLOOR_SEC,
@@ -31,16 +29,14 @@ describe("parseInterval", () => {
 
 describe("kind intervals", () => {
   it("defaults feeds to 60m, twitter to 6h, and everything else to 60m", () => {
-    expect(defaultIntervalSec("feeds__items_list")).toBe(FEEDS_DEFAULT_SEC);
-    expect(FEEDS_DEFAULT_SEC).toBe(60 * 60);
+    expect(defaultIntervalSec("feeds__items_list")).toBe(60 * 60);
     expect(defaultIntervalSec("twitter__posts_list")).toBe(TWITTER_DEFAULT_SEC);
     expect(TWITTER_DEFAULT_SEC).toBe(6 * 60 * 60);
     expect(defaultIntervalSec("rentals__listings_search")).toBe(60 * 60);
   });
 
   it("floors feeds and other tools at 15m and twitter at 1h", () => {
-    expect(kindFloorSec("feeds__items_list")).toBe(FEEDS_FLOOR_SEC);
-    expect(FEEDS_FLOOR_SEC).toBe(15 * 60);
+    expect(kindFloorSec("feeds__items_list")).toBe(15 * 60);
     expect(kindFloorSec("twitter__posts_list")).toBe(TWITTER_FLOOR_SEC);
     expect(TWITTER_FLOOR_SEC).toBe(60 * 60);
     expect(kindFloorSec("rentals__listings_search")).toBe(15 * 60);

@@ -13,11 +13,6 @@ const HORIZON_CLIP = 72;
 /** An open loop untouched this long gets a resolve-or-forget cue. */
 const LOOP_STALE_MS = 21 * DAY_MS;
 
-/** Per-turn `[aims]` line. Empty when there are no live `aim/` rows. `now` 0 omits ages. */
-export function formatAims(entries: readonly Entry[] | null | undefined, now = 0): string {
-  return formatAimsNoted(entries, now);
-}
-
 /**
  * `[aims]` with an optional rating suffix per area (`notes[area]`).
  * The five-aim cap still holds.

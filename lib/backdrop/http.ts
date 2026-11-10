@@ -11,8 +11,6 @@ import { fromStub } from "@/lib/chat/slugRoute";
 import type { UserStore } from "@/lib/door/users";
 import { BACKDROP_MAX_BYTES, BACKDROP_TOO_LARGE } from "./store";
 
-export { backdropRequestPath } from "./path";
-
 export async function readBackdropUpload(req: Request): Promise<UploadResult> {
   return readJpegUpload(req, { maxBytes: BACKDROP_MAX_BYTES, tooLarge: BACKDROP_TOO_LARGE });
 }

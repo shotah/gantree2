@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyReason, driftReason, toolErrorText, unavailableMessage } from "@/harness/tools/errors";
+import { classifyReason, toolErrorText, unavailableMessage } from "@/harness/tools/errors";
 
 describe("classifyReason", () => {
   it("maps boot and tool text onto stable codes", () => {
@@ -20,16 +20,6 @@ describe("classifyReason", () => {
     for (const [input, want] of cases) {
       expect(classifyReason(input), input).toBe(want);
     }
-  });
-});
-
-describe("driftReason", () => {
-  it("re-reads a connect failure against stderr and keeps a specific reason", () => {
-    expect(driftReason("connect", "", "mcp server error: RENTCAST_API_KEY is required")).toBe("no_key");
-    expect(driftReason("connect", "", "STRAVA_CLIENT_ID environment variable is required")).toBe("no_key");
-    expect(driftReason("connect", "", "not logged in, run: garmin login")).toBe("connect");
-    expect(driftReason("no_oauth", "api key", "")).toBe("no_oauth");
-    expect(driftReason("", "", "oauth: not authenticated")).toBe("no_oauth");
   });
 });
 

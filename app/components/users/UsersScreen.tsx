@@ -98,7 +98,35 @@ function formatWhen(at: number): string {
 function summary(event: AuditEvent): string {
   const verb = VERB[event.action] ?? event.action;
   try {
-    const detail = JSON.parse(event.detail) as { entry?: unknown; role?: unknown; agents?: unknown };
+    const detail = JSON.parse(event.detail) as {
+      entry?: unknown;
+      role?: unknown;
+      agents?: unknown;
+      slug?: unknown;
+      enabled?: unknown;
+    };
+    if (event.action === "user.add" || event.action === "user.update" || event.action === "user.remove") {
+      const entry = typeof detail.entry === "string" ? detail.entry : "";
+      const role = typeof detail.role === "string" ? detail.role : "";
+      const agents = Array.isArray(detail.agents) ? detail.agents.filter((item): item is string => typeof item === "string") : [];
+      const core = [entry, role].filter(Boolean).join(" ");
+      const tail = agents.length > 0 ? ` [${agents.join(", ")}]` : "";
+      return `${verb} ${core}${tail}`.trim();
+    }
+    if (event.action === "agent.enabled" || event.action === "agent.add" || event.action === "agent.remove") {
+      const slug = typeof detail.slug === "string" ? detail.slug : "";
+      if (event.action === "agent.enabled") {
+        if (typeof detail.enabled === "boolean") {
+          const toggle = detail.enabled ? "enabled" : "disabled";
+          return slug ? `${toggle} ${slug}` : toggle;
+        }
+        return slug ? `enabled ${slug}` : "enabled";
+      }
+      if (event.action === "agent.add") {
+        return slug ? `added ${slug}` : "added";
+      }
+      return slug ? `removed ${slug}` : "removed";
+    }
     const entry = typeof detail.entry === "string" ? detail.entry : "";
     const role = typeof detail.role === "string" ? detail.role : "";
     const agents = Array.isArray(detail.agents) ? detail.agents.filter((item): item is string => typeof item === "string") : [];

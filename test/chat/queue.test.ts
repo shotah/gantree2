@@ -9,7 +9,6 @@ import {
   newQueueId,
   peekFor,
   phoneMayDeleteQueued,
-  dropAcked,
   pruneQueue,
   queuedFromList,
   queueIdentity,
@@ -171,12 +170,6 @@ describe("queue", () => {
     expect(phoneMayDeleteQueued(msg({ to: "phone", userId: "ada" }), "ada")).toBe(true);
     expect(phoneMayDeleteQueued(msg({ to: "phone", userId: "" }), "ada")).toBe(false);
     expect(phoneMayDeleteQueued(msg({ to: "crane", userId: "ada" }), "ada")).toBe(false);
-    const items = [
-      msg({ id: "ada-1", userId: "ada", seq: 1, at: 1 }),
-      msg({ id: "all", userId: "", seq: 2, at: 2 }),
-      msg({ id: "bob-1", userId: "bob", seq: 3, at: 3 }),
-    ];
-    expect(dropAcked(items, { since: "ada-1", userId: "ada" }).map((m) => m.id)).toEqual(["all", "bob-1"]);
   });
 
   it("peeks by seq, not lexical id", () => {

@@ -267,12 +267,10 @@ tool-first nudge on live-data jobs stay with the loop that `fireDue`
 calls, which is `harness/agent`. The schedule tables and the due
 calculation landed with wave 1; the loop runs the job.
 
-`harness/tools` is the registry, the enable rules, the manifest drift
-check, and the `TokenStore` implementation. Plugins register. The
-registry is what `ready` and the tool catalog consult. The drift
-check is the comparison the eval already runs: published tools
-against the host-manifest. `mcpenable`'s rules move here. Its process
-supervision does not.
+`harness/tools` is the registry, the enable rules, and the
+`TokenStore` implementation. Plugins register. The registry is what
+`ready` and the tool catalog consult. `mcpenable`'s rules move here.
+Its process supervision does not.
 
 The plugins, under the names they have today: `chat`, `feeds`,
 `math`, `websearch`, `twitter`, `image`, `strava`, `maps`, `flights`,
@@ -285,7 +283,7 @@ These do not get a TypeScript folder:
 | `doctor`, `drain`, `heartbeat`, `logfwd` | They supervise a process: a one-shot boot report, a SIGTERM drain, a healthcheck row, a log forwarder. The isolate has no process to supervise. |
 | `snapshot` | DO SQLite is durable on its own. |
 | `config` | Env is the DO's config map. There is no process environment to load. |
-| `mcp` transport, `mcpenable` process half | Spawn, stdio, and any HTTP MCP client. Enable rules and the drift check are the `harness/tools` row above. |
+| `mcp` transport, `mcpenable` process half | Spawn, stdio, and any HTTP MCP client. Enable rules are the `harness/tools` row above. |
 | `channel/telegram`, `channel/discord`, `channel/slack`, `channel/stdio` | Not ported. An open item ([channels.md](channels.md)). |
 
 The entrypoint is the Agent DO. The wiring that turns a room message

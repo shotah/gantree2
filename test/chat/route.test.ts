@@ -4,7 +4,6 @@ import {
   exceptSender,
   persistInboundForPhone,
   persistRole,
-  phoneKindAllowed,
   resolvePhoneKind,
   routeTag,
   siblingPhoneTag,
@@ -48,7 +47,6 @@ describe("route", () => {
     expect(resolvePhoneKind({ text: "hi" })).toBe("inbound");
     expect(resolvePhoneKind({ images: [{ url: "data:image/jpeg;base64,aa" }] })).toBe("inbound");
     expect(resolvePhoneKind({ context: { geo: { lat: 1, lon: 2 } } })).toBe("pin");
-    expect(phoneKindAllowed({})).toBe(false);
     const banned: WireFrame[] = [
       { kind: "reply" },
       { kind: "push" },
@@ -58,7 +56,6 @@ describe("route", () => {
       { kind: "draft" },
     ];
     for (const frame of banned) {
-      expect(phoneKindAllowed(frame)).toBe(false);
       expect(resolvePhoneKind(frame)).toBeUndefined();
     }
   });

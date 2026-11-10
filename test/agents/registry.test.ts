@@ -70,6 +70,22 @@ describe("agents table", () => {
     expect(on).toMatchObject({ ok: true, agent: { enabled: true } });
   });
 
+  it("audits agent.enabled only on a real transition", async () => {
+    const sql = memorySql();
+    let at = 1;
+    const registry = openRegistry(sql, () => at++);
+    await registry.create({ slug: "kit" }, ADA);
+    expect(await registry.setEnabled("kit", false, ADA)).toMatchObject({ ok: true, agent: { enabled: false } });
+    expect(await registry.setEnabled("kit", false, "idle")).toMatchObject({ ok: true, agent: { enabled: false } });
+    expect(await registry.setEnabled("kit", true, ADA)).toMatchObject({ ok: true, agent: { enabled: true } });
+    expect(await registry.setEnabled("kit", true, ADA)).toMatchObject({ ok: true, agent: { enabled: true } });
+    expect(await registry.get("kit")).toMatchObject({ enabled: true });
+    const events = sql.exec("SELECT action, detail FROM audit WHERE action = 'agent.enabled' ORDER BY id ASC").toArray();
+    expect(events).toHaveLength(2);
+    expect(JSON.parse(String(events[0]?.detail))).toEqual({ slug: "kit", enabled: false });
+    expect(JSON.parse(String(events[1]?.detail))).toEqual({ slug: "kit", enabled: true });
+  });
+
   it("skips corrupt rows and reads a bigint timestamp", async () => {
     const all = [
       { slug: "kit", name: "Kit", created_by: ADA, created_at: 9n, tags: "[\"a\"]" },

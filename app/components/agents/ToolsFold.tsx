@@ -24,29 +24,6 @@ export function withGrant(grants: readonly Grant[], tool: ToolEntry, on: boolean
   return on ? [...rest, grantFor(tool)] : rest;
 }
 
-export function missingNeeds(
-  grants: readonly Grant[],
-  tools: readonly ToolEntry[],
-  envKeys: readonly string[],
-  house: readonly string[] = [],
-): string[] {
-  const have = new Set([...envKeys, ...house]);
-  const notes: string[] = [];
-  for (const grant of grants) {
-    const tool = tools.find((item) => item.id === grant.name);
-    const keys = tool?.needs ?? grant.env ?? [];
-    for (const key of keys) {
-      if (googlePlatformToolId(grant.name) && !usesOwnGoogleClient(grant.name, envKeys)) {
-        continue;
-      }
-      if (!have.has(key)) {
-        notes.push(`${grant.name} needs ${key}`);
-      }
-    }
-  }
-  return notes;
-}
-
 /** One draft slot per (tool, key); a key shared by two tools is still one env key. */
 export function draftId(toolId: string, key: string): string {
   return `${toolId}\0${key}`;

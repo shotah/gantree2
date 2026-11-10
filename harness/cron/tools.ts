@@ -62,10 +62,6 @@ export function cronToolDefs(): ToolDef[] {
   ];
 }
 
-export function isCronTool(name: string): boolean {
-  return name === ToolSchedule || name === ToolList || name === ToolCancel;
-}
-
 export type CronToolOptions = {
   store: Store;
   /** IANA name from `CRON_TZ`. */

@@ -38,16 +38,6 @@ export function temporalAnchor(nowMs: number, zone: string, tzName: string): str
   ].join("\n");
 }
 
-/** `{{+120m}}` → local `2:00PM`. The eval harness expands fixtures with this. */
-export function expandEvalClock(text: string, nowMs: number, zone: string): string {
-  return text.replace(/\{\{([+-]\d+)m\}\}/gu, (whole, raw: string) => {
-    const n = Number(raw);
-    if (!Number.isFinite(n)) return whole;
-    const p = parts(nowMs + n * 60_000, zone);
-    return format12(p.hour, p.minute, false);
-  });
-}
-
 function parts(ms: number, zone: string): Day & { hour: number; minute: number } {
   const p = localParts(ms, zone);
   const hour = p.hour === 24 ? 0 : p.hour;

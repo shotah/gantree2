@@ -3,7 +3,6 @@ import { me } from "@/lib/door/http";
 import { memoryStore } from "@/lib/door/users";
 import { roomsFor } from "@/lib/chat/membership";
 import { routeAgentSocket } from "@/lib/chat/route";
-import { authorizeSlug } from "@/lib/chat/slugRoute";
 import { sealSession, sessionKey, SESSION_COOKIE } from "@/lib/door/session";
 import { settingsInventory } from "./settingsStub";
 
@@ -76,24 +75,6 @@ describe("assignment and inventory", () => {
   });
 });
 
-function fakeAgentForMember(users: unknown[] = []) {
-  const idFromName = vi.fn((name: string) => name);
-  const stub = {
-    fetch: vi.fn(async (input: RequestInfo | URL) => {
-      const req = input instanceof Request ? input : new Request(input);
-      if (req.headers.get("X-Chat-Op") === "allow") {
-        return Response.json({ users });
-      }
-      return new Response(null, { status: 404 });
-    }),
-  };
-  const AGENT = {
-    idFromName,
-    get: () => stub,
-  } as unknown as DurableObjectNamespace;
-  return { AGENT, idFromName };
-}
-
 /** KV still indexes MEM on kit by sub and email — the room list is the only door. */
 function staleDirectory() {
   const rows: Record<string, string> = {
@@ -153,30 +134,6 @@ describe("a stale DIRECTORY entry is not the door", () => {
   it("opens for a member the room list matches by sub", async () => {
     const { res } = await dial([{ sub: MEM }]);
     expect(res?.status).toBe(200);
-  });
-
-  async function slugRoute(users: unknown[]) {
-    const token = await sealSession(await sessionKey(SECRET), { sub: MEM, email: "member@example.com" });
-    const { AGENT } = fakeAgentForMember(users);
-    const env = {
-      GOOGLE_CLIENT_ID: "id",
-      SESSION_SECRET: SECRET,
-      GANTREE_ALLOW: "member@example.com",
-      AGENT,
-      SETTINGS: settingsInventory(["kit"]),
-      DIRECTORY: staleDirectory(),
-    };
-    return authorizeSlug(env, new Request("https://g.test/api/theme?slug=kit", {
-      headers: { Cookie: `${SESSION_COOKIE}=${encodeURIComponent(token)}` },
-    }), "kit", memoryStore());
-  }
-
-  it("403s authorizeSlug for a member the room list dropped", async () => {
-    expect((await slugRoute([]))?.status).toBe(403);
-  });
-
-  it("allows authorizeSlug for a verified email on the room list", async () => {
-    expect(await slugRoute([{ email: "member@example.com" }])).toBeNull();
   });
 });
 
@@ -331,58 +288,5 @@ describe("email-only env admin on Who can chat", () => {
     expect(listed.agents).toEqual(["kit"]);
     const ada = await routeAgentSocket(new Request("https://g.test/ws/ada?role=phone", { headers }), env, "ada", store);
     expect(ada?.status).toBe(403);
-  });
-});
-
-describe("member room list when DIRECTORY is unset", () => {
-  it("allows authorizeSlug when the room lists the member and may call agentStub", async () => {
-    const token = await sealSession(await sessionKey(SECRET), { sub: MEM, email: "member@example.com" });
-    const { AGENT, idFromName } = fakeAgentForMember([{ sub: MEM, email: "member@example.com" }]);
-    const env = {
-      GOOGLE_CLIENT_ID: "id",
-      SESSION_SECRET: SECRET,
-      GANTREE_ALLOW: "member@example.com",
-      AGENT,
-      SETTINGS: settingsInventory(["kit"]),
-    };
-    const res = await authorizeSlug(env, new Request("https://g.test/api/theme?slug=kit", {
-      headers: { Cookie: `${SESSION_COOKIE}=${encodeURIComponent(token)}` },
-    }), "kit", memoryStore());
-    expect(res).toBeNull();
-    expect(idFromName).toHaveBeenCalled();
-  });
-
-  it("403s when the room does not list the member", async () => {
-    const token = await sealSession(await sessionKey(SECRET), { sub: MEM, email: "member@example.com" });
-    const { AGENT, idFromName } = fakeAgentForMember([]);
-    const env = {
-      GOOGLE_CLIENT_ID: "id",
-      SESSION_SECRET: SECRET,
-      GANTREE_ALLOW: "member@example.com",
-      AGENT,
-      SETTINGS: settingsInventory(["kit"]),
-    };
-    const res = await authorizeSlug(env, new Request("https://g.test/api/theme?slug=kit", {
-      headers: { Cookie: `${SESSION_COOKIE}=${encodeURIComponent(token)}` },
-    }), "kit", memoryStore());
-    expect(res?.status).toBe(403);
-    expect(idFromName).toHaveBeenCalled();
-  });
-
-  it("404s an unknown inventory slug without idFromName", async () => {
-    const token = await sealSession(await sessionKey(SECRET), { sub: MEM, email: "member@example.com" });
-    const { AGENT, idFromName } = fakeAgentForMember([{ sub: MEM }]);
-    const env = {
-      GOOGLE_CLIENT_ID: "id",
-      SESSION_SECRET: SECRET,
-      GANTREE_ALLOW: "member@example.com",
-      AGENT,
-      SETTINGS: settingsInventory(["ada"]),
-    };
-    const res = await authorizeSlug(env, new Request("https://g.test/api/theme?slug=kit", {
-      headers: { Cookie: `${SESSION_COOKIE}=${encodeURIComponent(token)}` },
-    }), "kit", memoryStore());
-    expect(res?.status).toBe(404);
-    expect(idFromName).not.toHaveBeenCalled();
   });
 });

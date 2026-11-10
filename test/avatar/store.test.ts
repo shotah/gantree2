@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { displaySlug, encodeFaceNotice, faceRevFromUnknown, packAvatar } from "@/lib/avatar/store";
+import { displaySlug, faceRevFromUnknown } from "@/lib/avatar/store";
+import { encodeFaceNotice, packAvatar } from "@/lib/chat/face";
 
 function fakeJpeg(n = 64): Uint8Array {
   const b = new Uint8Array(n);

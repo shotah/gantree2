@@ -177,6 +177,23 @@ describe("UsersScreen", () => {
     expect(screen.getByText("No changes yet.")).toBeTruthy();
   });
 
+  it("summarizes agent.enabled audit rows with slug and enabled", async () => {
+    const client = clientWith({
+      users: [ADA],
+      audit: [{
+        id: 2,
+        at: Date.UTC(2026, 10, 10, 5, 34),
+        who: "idle",
+        action: "agent.enabled",
+        detail: JSON.stringify({ slug: "kit", enabled: false }),
+      }],
+    });
+    render(<UsersScreen client={client} />);
+    const audit = await screen.findByRole("region", { name: "Audit" });
+    expect(audit.textContent).toContain("disabled kit");
+    expect(within(audit).getByText("idle").tagName).toBe("SPAN");
+  });
+
   it("shows a non-JSON failure and a raw audit detail", async () => {
     const client: ApiClient = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
       if ((init?.method ?? "GET") === "GET") {

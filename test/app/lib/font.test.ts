@@ -8,7 +8,6 @@ import {
   FONTS,
   fontCss,
   fontFromQuery,
-  fontOf,
   parseFont,
 } from "@/app/lib/font";
 
@@ -36,11 +35,11 @@ describe("font", () => {
     expect(css).toContain("--chat-font:1.5rem");
     expect(css).toContain(".text-chat{font-size:var(--chat-font);line-height:1.625}");
     expect(FONT_BOOT).toContain("gantree.font");
-    expect(fontOf("sm").size).toBe("0.875rem");
-    expect(fontOf("md").size).toBe("1rem");
-    expect(fontOf("lg").size).toBe("1.25rem");
-    expect(fontOf("xl").size).toBe("1.5rem");
-    expect(fontOf("nope" as "sm").id).toBe("sm");
+    expect(FONTS.find((f) => f.id === "sm")?.size).toBe("0.875rem");
+    expect(FONTS.find((f) => f.id === "md")?.size).toBe("1rem");
+    expect(FONTS.find((f) => f.id === "lg")?.size).toBe("1.25rem");
+    expect(FONTS.find((f) => f.id === "xl")?.size).toBe("1.5rem");
+    expect(FONTS.find((f) => f.id === "nope" as "sm") ?? FONTS[0]).toEqual(FONTS[0]);
   });
 
   it("applies a size on the document", () => {

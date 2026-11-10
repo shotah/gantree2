@@ -53,11 +53,3 @@ export function roomAllows(
   }
   return false;
 }
-
-export function phonesToClose<T extends RoomSession>(
-  phones: readonly T[],
-  list: readonly RoomUser[],
-  extra?: string,
-): T[] {
-  return phones.filter((phone) => !roomAllows(list, phone, extra));
-}

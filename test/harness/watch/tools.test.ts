@@ -10,7 +10,6 @@ import {
   TOOL_LIST,
   WatchStore,
   callWatchTool,
-  isWatchTool,
   toolDefs,
   watchTools,
 } from "@/harness/watch";
@@ -46,10 +45,6 @@ describe("watch tools", () => {
   it("publishes watch_add, watch_list, and watch_cancel", () => {
     const defs = toolDefs();
     expect(defs.map((def) => def.name)).toEqual([TOOL_ADD, TOOL_LIST, TOOL_CANCEL]);
-    for (const name of [TOOL_ADD, TOOL_LIST, TOOL_CANCEL]) {
-      expect(isWatchTool(name)).toBe(true);
-    }
-    expect(isWatchTool("nope")).toBe(false);
     expect(defs[0]?.description).toContain("feeds__items_list");
   });
 

@@ -12,8 +12,6 @@ import { authFinish, authStart, ensureSchema } from "./oauth.ts";
 import { uploadsCreateError } from "./uploads.ts";
 import { apiPath, resolveStravaUrl } from "./urls.ts";
 
-export { keys } from "./keys";
-
 const streamTypes = [
   "time",
   "latlng",

@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { type ToolDef } from "@/harness/core/tools";
 import { agentSession } from "@/harness/session/types";
 import {
   alwaysOn,
@@ -11,14 +10,11 @@ import {
   EnableStore,
   formatIndex,
   formatIndexStatus,
-  hasSubprefixes,
   HOLD_BRIEF,
   HOLD_SHORT,
   matches,
   MAX_ENABLE_LIST,
   parseEnableHoldCommand,
-  parseForceCsv,
-  publishTools,
   runEnableTool,
   SHORT_IDLE_MS,
   SOURCE_AGENT,
@@ -56,8 +52,6 @@ describe("enableIndex", () => {
     ];
     const got = enableIndex(defs);
     expect(got).toEqual(["flights", "garmin", "google", "google__calendar", "google__gmail"]);
-    expect(hasSubprefixes("google", got)).toBe(true);
-    expect(hasSubprefixes("flights", got)).toBe(false);
   });
 });
 
@@ -68,31 +62,6 @@ describe("alwaysOn", () => {
     expect(alwaysOn("self_note")).toBe(true);
     expect(alwaysOn("web_search")).toBe(true);
     expect(alwaysOn("google__calendar_list_events")).toBe(false);
-  });
-});
-
-describe("publishTools", () => {
-  const defs: ToolDef[] = [
-    { name: "memory_store", description: "", inputSchema: {} },
-    { name: "mcp_enable", description: "", inputSchema: {} },
-    { name: "google__calendar_list_events", description: "", inputSchema: {} },
-    { name: "google__gmail_search_messages", description: "", inputSchema: {} },
-    { name: "flights__offers_search", description: "", inputSchema: {} },
-  ];
-
-  it("keeps builtins, the enable tool, and the enabled family", () => {
-    const names = publishTools(defs, [{ prefix: "google__calendar", hold: HOLD_SHORT, source: SOURCE_AGENT, sessionId: "s", lastUsed: 0 }], { prefixes: [] })
-      .map((def) => def.name);
-    expect(names).toContain("memory_store");
-    expect(names).toContain("mcp_enable");
-    expect(names).toContain("google__calendar_list_events");
-    expect(names.join(",")).not.toContain("gmail");
-    expect(names.join(",")).not.toContain("flights");
-  });
-
-  it("publishes a force prefix with no session rows", () => {
-    const names = publishTools(defs, [], { prefixes: ["flights"] }).map((def) => def.name);
-    expect(names).toContain("flights__offers_search");
   });
 });
 
@@ -142,13 +111,6 @@ describe("formatIndex", () => {
     expect(formatIndexStatus([{ ...sample, lastUsed: now - 29_000 }], index, { prefixes: [] }, now)).toContain("0s ago");
     expect(formatIndexStatus([{ ...sample, lastUsed: now - 30_000 }], index, { prefixes: [] }, now)).toContain("1m0s ago");
     expect(formatIndexStatus([{ ...sample, lastUsed: now + 60_000 }], index, { prefixes: [] }, now)).toContain("0s ago");
-  });
-});
-
-describe("parseForceCsv", () => {
-  it("drops blanks", () => {
-    expect(parseForceCsv(" garmin , ,flights ")).toEqual(["garmin", "flights"]);
-    expect(parseForceCsv("")).toEqual([]);
   });
 });
 

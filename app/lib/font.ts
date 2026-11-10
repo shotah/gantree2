@@ -15,10 +15,6 @@ export const DEFAULT_FONT: FontId = "sm";
 
 const FONT_IDS: readonly string[] = FONTS.map((f) => f.id);
 
-export function fontOf(id: FontId = DEFAULT_FONT) {
-  return FONTS.find((f) => f.id === id) ?? FONTS[0];
-}
-
 export function parseFont(v: unknown): FontId {
   return typeof v === "string" && FONT_IDS.includes(v) ? (v as FontId) : DEFAULT_FONT;
 }

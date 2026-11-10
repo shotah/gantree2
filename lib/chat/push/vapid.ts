@@ -87,6 +87,7 @@ export function readVapid(env: {
   };
 }
 
+/** @internal Test helper: mint ephemeral VAPID key pairs. */
 export async function generateVapidKeys(): Promise<{ publicKey: string; privateJwk: JsonWebKey }> {
   const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
   const privateJwk = await crypto.subtle.exportKey("jwk", pair.privateKey);

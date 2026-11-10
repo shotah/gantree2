@@ -83,45 +83,6 @@ export async function handshake(input: HandshakeInput): Promise<HandshakeResult>
   return oidcHandshake(input, now);
 }
 
-export type HandshakeSlugInput = Omit<HandshakeInput, "role">;
-
-/** Phone socket: session (or spike) first, then load the room. Does not wake a DO on a missing cookie. */
-export async function handshakePhone(
-  input: HandshakeSlugInput & { loadRoom: () => Promise<RoomUser[]> },
-): Promise<HandshakeResult> {
-  const mode = resolveAuthMode(input.env, input.host);
-  if (!mode.ok) {
-    return { ok: false, error: "config" };
-  }
-  const now = input.now ?? Date.now();
-  if (mode.mode === "spike") {
-    return spikeHandshake(input.env, "phone", { ...input, role: "phone" });
-  }
-  const session = await phoneFromRequest({ ...input, role: "phone" }, now);
-  if (!session) {
-    return { ok: false, error: "unauthorized" };
-  }
-  const roomList = await input.loadRoom();
-  return oidcHandshake({ ...input, role: "phone", roomList }, now);
-}
-
-/** HTTP face: phone cookie or harness bearer (or the spike secret). */
-export async function handshakeSlug(input: HandshakeSlugInput): Promise<HandshakeResult> {
-  const mode = resolveAuthMode(input.env, input.host);
-  if (!mode.ok) {
-    return { ok: false, error: "config" };
-  }
-  const now = input.now ?? Date.now();
-  if (mode.mode === "spike") {
-    return spikeHandshake(input.env, "phone", { ...input, role: "phone" });
-  }
-  const phone = await oidcHandshake({ ...input, role: "phone" }, now);
-  if (phone.ok || phone.error === "forbidden") {
-    return phone;
-  }
-  return oidcHandshake({ ...input, role: "crane" }, now);
-}
-
 function spikeHandshake(env: ChatAuthEnv, role: Role, input: HandshakeInput): HandshakeResult {
   const want = env.CHAT_SECRET?.trim() ?? "";
   const presented = bearerFrom(input.authorization, input.querySecret, true);

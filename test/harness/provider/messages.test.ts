@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Message } from "@/harness/core/provider";
-import { wireMessages, wireMessagesMode } from "@/harness/provider";
+import { wireMessagesMode } from "@/harness/provider";
 
 const kit: Message[] = [
   { role: "system", content: "You are Kit." },
@@ -8,9 +8,9 @@ const kit: Message[] = [
   { role: "system", content: "[harness]\n[location] 47.6\n[current time] NOW" },
 ];
 
-describe("wireMessages", () => {
+describe("wireMessagesMode", () => {
   it("keeps a trailing harness block for OpenAI", () => {
-    const got = wireMessages("gpt-5.4", kit);
+    const got = wireMessagesMode("auto", "gpt-5.4", kit);
     expect(got).toHaveLength(3);
     expect(got[2]?.role).toBe("system");
     expect(got[2]?.content).toContain("[harness]");
@@ -28,7 +28,7 @@ describe("wireMessages", () => {
       { role: "system", content: "[harness]\n[location] 47.6, -122.3\n[current time] NOW" },
       { role: "system", content: "[system] wait note" },
     ];
-    const got = wireMessages("gemini-3.6-flash", input);
+    const got = wireMessagesMode("auto", "gemini-3.6-flash", input);
     expect(got).toHaveLength(4);
     expect(got[0]?.role).toBe("system");
     const sys = got[0]?.content ?? "";

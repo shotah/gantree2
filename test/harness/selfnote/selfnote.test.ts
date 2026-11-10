@@ -4,7 +4,7 @@ import { fixedClock } from "@/harness/core/clock";
 import { silentLogger } from "@/harness/core/log";
 import { nodeSql, type NodeDatabase, type Sql } from "@/harness/core/sql";
 import { type CallContext } from "@/harness/core/tools";
-import { maxChars, SelfNoteStore, SelfTools, selfRowId, toolNote } from "@/harness/selfnote";
+import { maxChars, selfNoteTool, SelfNoteStore, selfRowId } from "@/harness/selfnote";
 import { utf8Length } from "@/harness/selfnote/stamp";
 
 const ctx: CallContext = { userId: "u", sessionId: "s" };
@@ -71,12 +71,11 @@ describe("SelfNoteStore", () => {
 });
 
 describe("self_note tool", () => {
-  it("appends a note and rejects an unknown name", async () => {
+  it("appends a note", async () => {
     const store = new SelfNoteStore(sql(), fixedClock(1), silentLogger);
-    const tools = new SelfTools(store);
-    const out = await tools.call(toolNote, { note: "calls the human Boss" }, ctx);
+    const tool = selfNoteTool(store);
+    const out = await tool.call({ note: "calls the human Boss" }, ctx);
     expect(textOf(out)).toContain("appended");
     expect(store.read()).toContain("- calls the human Boss");
-    await expect(tools.call("self_bogus", {}, ctx)).rejects.toThrow(/unknown tool/);
   });
 });

@@ -424,7 +424,20 @@ function mapAudit(row: Record<string, unknown>): AuditEvent | null {
 function readAudit(sql: Sql, limit: number | undefined): AuditEvent[] {
   const found = rows(
     sql,
-    "SELECT id, at, who, action, detail FROM audit ORDER BY id DESC LIMIT ?",
+    `SELECT id, at, who, action, detail FROM (
+      SELECT id, at, who, action, detail,
+             LAG(action) OVER (ORDER BY id DESC) AS prev_action,
+             LAG(detail) OVER (ORDER BY id DESC) AS prev_detail
+      FROM audit
+    )
+    WHERE NOT (
+      action = 'agent.enabled'
+      AND prev_action = 'agent.enabled'
+      AND prev_detail IS NOT NULL
+      AND detail = prev_detail
+    )
+    ORDER BY id DESC
+    LIMIT ?`,
     clampLimit(limit),
   );
   const out: AuditEvent[] = [];

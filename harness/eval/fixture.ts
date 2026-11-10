@@ -268,7 +268,7 @@ export function compileGoRegexp(pattern: string): RegExp {
   return new RegExp(source, flags);
 }
 
-/** Problems that should fail before any model call. Empty means well-formed. */
+/** @internal Test helper: validate eval fixtures before any model call. */
 export function fixtureProblems(fx: EvalFixture, liveServers: ReadonlySet<string>): string[] {
   const problems: string[] = [];
   if (fx.why === "") {

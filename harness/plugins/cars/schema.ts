@@ -145,6 +145,7 @@ export const linkFormatSchema = objectSchema({
   links: objs("Up to 8 link specs (same fields as this tool). Flat fields still describe one link."),
 });
 
+/** @internal Test helper: tests pin the published tool names against it. */
 export const TOOL_NAMES = [
   "listings_search",
   "listings_get",

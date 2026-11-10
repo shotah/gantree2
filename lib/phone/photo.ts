@@ -50,17 +50,6 @@ export function photoDataUrl(opts: { mime: string; bytes: Uint8Array }): PhotoRe
   return { ok: true, url: `data:${mime};base64,${b64}` };
 }
 
-export function parsePhotoFile(file: { type: string; size: number }): PhotoErr | { ok: true } {
-  const mime = file.type.toLowerCase();
-  if (!ALLOWED.has(mime)) {
-    return { ok: false, error: "bad photo" };
-  }
-  if (file.size <= 0 || file.size > IMAGE_BYTES_MAX) {
-    return { ok: false, error: file.size <= 0 ? "bad photo" : "too large" };
-  }
-  return { ok: true };
-}
-
 function bytesToB64(bytes: Uint8Array): string {
   let bin = "";
   for (const b of bytes) {

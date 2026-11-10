@@ -276,18 +276,25 @@ function setAgentEnabled(sql: Sql, slug: string, enabled: boolean, actor: string
   if (typeof enabled !== "boolean") {
     return { ok: false, error: "bad_enabled" };
   }
-  const existing = rows(sql, "SELECT slug FROM agents WHERE slug = ?", key);
+  const existing = rows(sql, "SELECT slug, enabled FROM agents WHERE slug = ?", key);
   if (existing.length === 0) {
     return { ok: false, error: "not_found" };
   }
-  sql.exec("UPDATE agents SET enabled = ? WHERE slug = ?", enabled ? 1 : 0, key);
   const row = readAgent(sql, key);
   if (!row) {
     return { ok: false, error: "not_found" };
   }
+  if (asEnabled(existing[0]?.enabled) === enabled) {
+    return { ok: true, agent: row };
+  }
+  sql.exec("UPDATE agents SET enabled = ? WHERE slug = ?", enabled ? 1 : 0, key);
+  const updated = readAgent(sql, key);
+  if (!updated) {
+    return { ok: false, error: "not_found" };
+  }
   const who = typeof actor === "string" ? actor : "";
   insertAudit(sql, at, who, "agent.enabled", { slug: key, enabled });
-  return { ok: true, agent: row };
+  return { ok: true, agent: updated };
 }
 
 function removeAgent(sql: Sql, slug: string, actor: string, at: number): AgentDelete {

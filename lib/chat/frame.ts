@@ -383,12 +383,3 @@ export function hasImages(frame: WireFrame): boolean {
 export function hasGeo(frame: WireFrame): boolean {
   return frame.context?.geo != null;
 }
-
-/** Bare pin: geo only, no text, no photo. Crane should update here and stay silent. */
-export function isBareGeo(frame: WireFrame): boolean {
-  return hasGeo(frame) && !hasText(frame) && !hasImages(frame);
-}
-
-export function peerOf(role: Role): Role {
-  return role === "phone" ? "crane" : "phone";
-}

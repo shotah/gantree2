@@ -74,23 +74,6 @@ export function afterCursor(item: Queued, opts: { since?: string; sinceSeq?: num
   return true;
 }
 
-export function dropAcked(items: Queued[], opts: { since?: string; userId?: string }): Queued[] {
-  const uid = opts.userId ?? "";
-  const sinceSeq = seqForSince(items, opts.since);
-  return items.filter((m) => {
-    if (!phoneMayDeleteQueued(m, uid)) {
-      return true;
-    }
-    if (sinceSeq != null && m.seq != null) {
-      return m.seq > sinceSeq;
-    }
-    if (opts.since) {
-      return m.id > opts.since;
-    }
-    return true;
-  });
-}
-
 export function shouldQueue(kind?: string): boolean {
   return kind !== "pin" && kind !== "ack" && kind !== "cmds" && kind !== "typing" && kind !== "draft" && kind !== "react" && kind !== "aims" && kind !== "todo";
 }

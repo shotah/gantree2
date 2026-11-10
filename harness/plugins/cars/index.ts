@@ -38,8 +38,6 @@ import {
 import { usageJSON } from "@/harness/plugins/cars/usage";
 import { goJSON, sortedRecord } from "@/harness/plugins/cars/wire";
 
-export { keys } from "./keys";
-
 const maxBatch = 8;
 
 function argString(args: Record<string, unknown>, key: string): string {

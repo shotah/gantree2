@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  finalTranscript,
   listen,
   LISTEN_END_MS,
   recognitionCtor,
@@ -47,15 +46,6 @@ describe("recognitionCtor", () => {
     expect(recognitionCtor({})).toBeNull();
     expect(recognitionCtor(undefined)).toBeNull();
     expect(recognitionCtor(null)).toBeNull();
-  });
-});
-
-describe("finalTranscript", () => {
-  it("joins final alternatives and skips interim ones", () => {
-    expect(finalTranscript([result("turn left", true), result("maybe", false), result(" at the light ", true)]))
-      .toBe("turn left at the light");
-    expect(finalTranscript([result("guess", false)])).toBe("");
-    expect(finalTranscript([])).toBe("");
   });
 });
 

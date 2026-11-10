@@ -16,6 +16,7 @@ export function ensureImageOutput(sql: Sql): void {
   migrate(sql, [imageOutputMigration]);
 }
 
+/** @internal Test helper: tests seed an output file. */
 export function putOutputFile(sql: Sql, filePath: string, bytes: Uint8Array): void {
   const full = canonicalPath(filePath);
   if (!full) throw new Error("bad path");

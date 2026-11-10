@@ -38,19 +38,6 @@ export function recognitionCtor(win: unknown): RecognizerCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
-/** Final alternatives only, in order; interim guesses are not words yet. */
-export function finalTranscript(results: ArrayLike<RecognizerResult>): string {
-  const parts: string[] = [];
-  for (let i = 0; i < results.length; i += 1) {
-    const r = results[i];
-    const best = r?.isFinal ? r[0]?.transcript?.trim() : "";
-    if (best) {
-      foldSpoken(parts, best);
-    }
-  }
-  return parts.join(" ").replace(/\s+/g, " ").trim();
-}
-
 /**
  * Chrome/Gecko `continuous` often reports each longer hypothesis as a *new*
  * final (`well`, then `well I`, then `well I can send`…). Joining those is a

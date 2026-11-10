@@ -5,26 +5,6 @@ import type { Plugin, PluginContext, Tool } from "@/harness/core/tools";
 import { WebSearch } from "./search";
 import { ENV_PROVIDER, resolveProvider, resolveSearchApiKey } from "./tools";
 
-export { keys } from "./keys";
-export { WebSearch } from "./search";
-export type { WebSearchDeps } from "./search";
-export {
-  BRAVE_DEFAULT_ENDPOINT,
-  DEFAULT_COUNT,
-  ENV_PROVIDER,
-  ENV_SEARCH_KEY,
-  HTTP_TIMEOUT_MS,
-  MAX_QUERIES,
-  SERPAPI_DEFAULT_ENDPOINT,
-  TAVILY_DEFAULT_ENDPOINT,
-  TOOL_NAME,
-  isReplacedMcp,
-  isSearchTool,
-  resolveProvider,
-  resolveSearchApiKey,
-  toolDefs,
-} from "./tools";
-
 function webSearchTool(ctx: PluginContext): Tool {
   const client = new WebSearch({ env: ctx.env, fetch: ctx.fetch });
   return client.tool();

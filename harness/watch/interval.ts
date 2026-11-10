@@ -1,9 +1,5 @@
 import { goQuote } from "./quote";
 
-/** `feeds__items_list` — default poll and the floor under it. */
-export const FEEDS_DEFAULT_SEC = 60 * 60;
-export const FEEDS_FLOOR_SEC = 15 * 60;
-
 /** `twitter__posts_list` — default poll and the floor under it. */
 export const TWITTER_TOOL = "twitter__posts_list";
 export const TWITTER_DEFAULT_SEC = 6 * 60 * 60;

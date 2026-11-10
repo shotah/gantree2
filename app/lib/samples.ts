@@ -3,6 +3,7 @@ import type { SlashCommand } from "@/lib/chat/cmds";
 import type { Role } from "@/lib/chat/frame";
 import type { TodoItem } from "@/lib/chat/todo";
 
+/** @internal Test helper: fixed dev principal for sample scenes. */
 export const DEV_USER = {
   sub: "118212345678901234567",
   email: "ada@example.com",

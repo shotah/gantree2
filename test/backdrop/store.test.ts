@@ -1,12 +1,7 @@
 import { describe, expect, it } from "vitest";
-import {
-  BACKDROP_MAX_BYTES,
-  BACKDROP_STORE_KEY,
-  backdropRevFromUnknown,
-  encodeBackdropNotice,
-  packBackdrop,
-} from "@/lib/backdrop/store";
-import { AVATAR_STORE_KEY } from "@/lib/avatar/store";
+import { BACKDROP_MAX_BYTES, backdropRevFromUnknown } from "@/lib/backdrop/store";
+import { BACKDROP_STORE_KEY, encodeBackdropNotice, packBackdrop } from "@/lib/chat/backdrop";
+import { AVATAR_STORE_KEY } from "@/lib/chat/face";
 import { parseFrame } from "@/lib/chat/frame";
 
 function fakeJpeg(n = 64): Uint8Array {

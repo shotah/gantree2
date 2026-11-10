@@ -75,10 +75,7 @@ export type StatsSnapshot = {
   dbBytes: number;
 };
 
-/**
- * Swappable memory surface the tools and the turn stamps call.
- * A backend that cannot answer `activeByKindSubject` throws `NotSupportedError`.
- */
+/** Swappable memory surface the tools and the turn stamps call. */
 export type MemoryBackend = {
   store(kind: string, subject: string, content: string): Entry;
   recall(query: string, limit: number): Entry[];
@@ -89,18 +86,6 @@ export type MemoryBackend = {
   activeByKindSubject(kind: string, subject: string): Entry | null;
   listBySubjectPrefix(kind: string, prefix: string, limit: number): Entry[];
 };
-
-/** MCP-style backends have no live row by subject. Callers skip the stamp. */
-export class NotSupportedError extends Error {
-  constructor() {
-    super("memory: not supported on this backend");
-    this.name = "NotSupportedError";
-  }
-}
-
-export function isNotSupported(err: unknown): boolean {
-  return err instanceof NotSupportedError;
-}
 
 /** Canonical kind, or throws. The quoted text is the argument as passed. */
 export function validateKind(kind: string): string {

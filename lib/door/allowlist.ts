@@ -87,10 +87,6 @@ export function parseAllowlist(raw: string | string[] | null | undefined): Allow
   return out;
 }
 
-export function formatAllowlist(entries: AllowEntry[]): string {
-  return entries.map(formatEntry).filter(Boolean).join(",");
-}
-
 /**
  * Admission. `sub` matches exactly. Email matches only when Google says it is
  * verified, exact after lowercasing. No Gmail-dot or +tag normalization.
@@ -103,8 +99,4 @@ export function entryMatches(entry: AllowEntry, who: Identity): boolean {
     return true;
   }
   return false;
-}
-
-export function onList(entries: AllowEntry[], who: Identity): boolean {
-  return entries.some((e) => entryMatches(e, who));
 }

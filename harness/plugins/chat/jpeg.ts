@@ -23,6 +23,7 @@ function defaultEncode(img: Rgba, quality: number): Uint8Array {
 
 let encoder: JpegEncoder = defaultEncode;
 
+/** @internal Test helper: tests swap the encoder. */
 export function setJpegEncoder(next: JpegEncoder | null): void {
   encoder = next ?? defaultEncode;
 }

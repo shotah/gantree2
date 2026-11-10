@@ -1,5 +1,5 @@
 import { KindOnce, ToolCancel, ToolList, ToolSchedule } from "@/harness/cron/constants";
-import { cronToolDefs, CronTools, isCronTool } from "@/harness/cron/tools";
+import { cronToolDefs, CronTools } from "@/harness/cron/tools";
 import { describe, expect, it } from "vitest";
 import { fakeMemory, openCron } from "./fixture";
 
@@ -10,9 +10,7 @@ describe("cron tools", () => {
     const names = new Set(defs.map((def) => def.name));
     for (const name of [ToolSchedule, ToolList, ToolCancel]) {
       expect(names.has(name)).toBe(true);
-      expect(isCronTool(name)).toBe(true);
     }
-    expect(isCronTool("nope")).toBe(false);
   });
 
   it("schedules, lists, and cancels", async () => {

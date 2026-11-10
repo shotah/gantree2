@@ -81,10 +81,6 @@ export function toolDefs(): ToolDef[] {
   ];
 }
 
-export function isWatchTool(name: string): boolean {
-  return name === TOOL_ADD || name === TOOL_LIST || name === TOOL_CANCEL;
-}
-
 /**
  * The three builtin watch tools. A null store still publishes them; calls
  * fail with `watch: store not configured` so the model sees the error.

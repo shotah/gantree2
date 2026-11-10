@@ -47,11 +47,6 @@ export function toolDefs(): ToolDef[] {
   }];
 }
 
-/** Leftover google-search MCP grants that the builtin replaces. */
-export function isReplacedMcp(name: string, command: string): boolean {
-  return name.trim() === "google-search" || command.trim() === "mcp-gemini-google-search";
-}
-
 /** The builtin name and leftover MCP / invented aliases. */
 export function isSearchTool(name: string): boolean {
   switch (name.trim()) {

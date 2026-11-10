@@ -1,7 +1,6 @@
 import { me, type DoorEnv } from "@/lib/door/http";
 import type { UserStore } from "@/lib/door/users";
 import { bearerForSlug, bearerMatches, fetchRoomBearer, parseBearers } from "@/lib/chat/bearer";
-import { blobEtag, blobResponse, etagMatches } from "@/lib/chat/blob";
 import { headerSaysTooLarge } from "@/lib/chat/caps";
 import { configError, forbidden, unauthorized } from "@/lib/chat/deny";
 import {
@@ -18,43 +17,10 @@ import { parseSlug } from "@/lib/chat/slug";
 import { fromStub } from "@/lib/chat/slugRoute";
 import { acceptJpeg, AVATAR_MAX_BYTES } from "./jpeg";
 
-export { blobEtag, blobResponse, etagMatches };
-export { avatarRequestPath } from "./path";
-
 /** Forward the browser's validator to the Durable Object so it can answer 304. */
 export function conditionalHeaders(req: Request): Record<string, string> {
   const tag = req.headers.get("If-None-Match");
   return tag ? { "If-None-Match": tag } : {};
-}
-
-/**
- * Harness `.env` `CHAT_MAILBOX_URL` (`wss://…/ws/kit`) → Worker face POST.
- * Same job as Telegram `setMyProfilePhoto`, different mouth.
- */
-export function mailboxToAvatarUrl(raw: string): string | null {
-  let u: URL;
-  try {
-    u = new URL(raw.trim());
-  } catch {
-    return null;
-  }
-  if (u.protocol === "wss:") {
-    u.protocol = "https:";
-  } else if (u.protocol === "ws:") {
-    u.protocol = "http:";
-  } else if (u.protocol !== "http:" && u.protocol !== "https:") {
-    return null;
-  }
-  const parts = u.pathname.split("/").filter(Boolean);
-  const slug = parts[0] === "ws" ? parseSlug(parts[1] ?? "") : parseSlug(u.searchParams.get("slug") ?? "");
-  if (!slug) {
-    return null;
-  }
-  u.pathname = "/api/chat/avatar";
-  u.search = "";
-  u.hash = "";
-  u.searchParams.set("slug", slug);
-  return u.toString();
 }
 
 export type UploadCap = { maxBytes: number; tooLarge: string };

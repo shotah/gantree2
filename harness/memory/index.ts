@@ -1,10 +1,9 @@
 export { buildConsolidatePrompt, Consolidator } from "./consolidate";
 export type { ConsolidatorOptions } from "./consolidate";
 export { formatHydration, PERSONA_PRECEDENCE_NOTE } from "./format";
-export { formatAims, formatAimsEmpty, formatAimsNoted, formatLoops, formatTodo, horizonAge, HORIZON_MAX } from "./horizon";
+export { formatAimsEmpty, formatAimsNoted, formatLoops, formatTodo, horizonAge, HORIZON_MAX } from "./horizon";
 export { parseHours } from "./hours";
 export type { Hours } from "./hours";
-export { resolvePin } from "./pin";
 export { ensureConsolidateAttempts, memoryMigrations } from "./schema";
 export { entryAt, sortOldestFirst } from "./sort";
 export { MemoryStore } from "./store";
@@ -21,7 +20,6 @@ export {
 } from "./todo";
 export {
   callMemoryTool,
-  isMemoryTool,
   memoryToolDefs,
   memoryTools,
   TOOL_FORGET,
@@ -36,14 +34,12 @@ export {
   EPISODE_TTL_MS,
   goQuote,
   HORIZON_FETCH,
-  isNotSupported,
   KIND_EPISODE,
   KIND_FACT,
   KIND_INSIGHT,
   KIND_PERSON,
   KIND_PREFERENCE,
   MAX_CONSOLIDATE_ATTEMPTS,
-  NotSupportedError,
   SOURCE_CHAT,
   SOURCE_CONSOLIDATION,
   SUBJECT_AIM_BOOTSTRAP,

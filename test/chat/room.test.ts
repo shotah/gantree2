@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { phonesToClose, roomAllows } from "@/lib/chat/room";
+import { roomAllows } from "@/lib/chat/room";
 
 const ada = "118212345678901234567";
 
@@ -48,13 +48,5 @@ describe("roomAllows", () => {
   it("fails closed on an empty list", () => {
     expect(roomAllows([], { sub: ada, email: "ada@example.com", emailVerified: true })).toBe(false);
     expect(roomAllows(undefined, { sub: ada })).toBe(false);
-  });
-
-  it("lists phones to close after a new allow", () => {
-    const phones = [
-      { sub: ada, email: "ada@example.com", emailVerified: true },
-      { sub: "9999999999", email: "bob@example.com", emailVerified: true },
-    ];
-    expect(phonesToClose(phones, [{ email: "ada@example.com" }])).toEqual([phones[1]]);
   });
 });

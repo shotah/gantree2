@@ -1,8 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { expandEvalClock } from "@/harness/agent/temporal";
 import { createBrain } from "@/harness/agent";
-import { fixtureDir } from "@/harness/eval/fixture";
+import { expandEvalClock, fixtureDir } from "@/harness/eval/fixture";
 import { loadEvalPersona } from "@/harness/eval/seed";
 import { filePersona } from "@/harness/persona";
 import type { Plugin } from "@/harness/core/tools";

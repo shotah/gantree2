@@ -5,6 +5,8 @@
     "app/**/{page,layout,route,manifest}.{ts,tsx}!",
     "scripts/*.{ts,mjs}!",
     "harness/eval/live.ts!",
+    "lib/pwa/iconPng.ts!",
+    "lib/theme/contrast.ts!",
     "test/**/*.test.{ts,tsx}",
     "vitest.eval.config.ts"
   ],

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { backdropRequestPath, readBackdropUpload } from "@/lib/backdrop/http";
+import { readBackdropUpload } from "@/lib/backdrop/http";
+import { backdropRequestPath } from "@/lib/backdrop/path";
 import { BACKDROP_MAX_BYTES } from "@/lib/backdrop/store";
 
 describe("backdropRequestPath", () => {

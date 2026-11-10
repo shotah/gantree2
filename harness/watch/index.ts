@@ -7,8 +7,6 @@ export {
   BACKOFF_CAP_SEC,
   DEFAULT_INTERVAL_SEC,
   DEFAULT_MAX_WATCHES,
-  FEEDS_DEFAULT_SEC,
-  FEEDS_FLOOR_SEC,
   GRID_MS,
   MAX_INTERVAL_SEC,
   MAX_SEEN_IDS,
@@ -34,5 +32,5 @@ export type { CallTool, OnNewItems, WatchWake } from "./poll";
 export { quietResumeAt } from "./quiet";
 export { WatchStore, watchMigrations } from "./store";
 export type { QuietHours, Watch, WatchDelivery } from "./store";
-export { TOOL_ADD, TOOL_CANCEL, TOOL_LIST, callWatchTool, isWatchTool, toolDefs, watchTools } from "./tools";
+export { TOOL_ADD, TOOL_CANCEL, TOOL_LIST, callWatchTool, toolDefs, watchTools } from "./tools";
 export type { IntervalFloor } from "./tools";

@@ -75,6 +75,14 @@ describe("handleAvatar", () => {
     expect(res.headers.get("X-Chat-Rev")).toBe("3");
   });
 
+  it("404s a slug that is not in the inventory", async () => {
+    const env = room(() => new Response(null, { status: 500 }), ["ada"]);
+    const res = await handleAvatar(new Request("https://chat.test/api/chat/avatar?slug=kit", {
+      headers: { cookie: await cookie() },
+    }), env, store);
+    expect(res.status).toBe(404);
+  });
+
   it("forbids a room that does not list the person", async () => {
     const env = {
       ...room((req) => {

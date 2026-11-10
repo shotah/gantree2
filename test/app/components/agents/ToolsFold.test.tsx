@@ -12,7 +12,6 @@ import {
   grantFor,
   KEY_PLACEHOLDER_MISSING,
   KEY_PLACEHOLDER_SET,
-  missingNeeds,
   oauthLine,
   stravaCallbackHost,
   stravaDomainHint,
@@ -38,10 +37,6 @@ describe("tool grants", () => {
     expect(withGrant([], MAPS, true)).toEqual([grantFor(MAPS)]);
     expect(withGrant([grantFor(MAPS)], { ...MAPS, binary: "next" }, true)).toEqual([grantFor({ ...MAPS, binary: "next" })]);
     expect(withGrant([grantFor(MAPS)], MAPS, false)).toEqual([]);
-    expect(missingNeeds([grantFor(MAPS)], [MAPS], [])).toEqual(["maps needs MAPS_KEY"]);
-    expect(missingNeeds([grantFor(MAPS)], [MAPS], ["MAPS_KEY"])).toEqual([]);
-    expect(missingNeeds([{ name: "x", command: "c", env: ["Z"] }], [], [])).toEqual(["x needs Z"]);
-    expect(missingNeeds([{ name: "x", command: "c" }], [], [])).toEqual([]);
   });
 
   it("builds an env patch from only the keys that were typed", () => {

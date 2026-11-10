@@ -29,8 +29,6 @@ import {
 import { usageJSON } from "@/harness/plugins/rentals/usage";
 import { goJSON, queryEscape, sortedRecord } from "@/harness/plugins/rentals/wire";
 
-export { keys } from "./keys";
-
 function argString(args: Record<string, unknown>, key: string): string {
   const value = args[key];
   return typeof value === "string" ? value : "";

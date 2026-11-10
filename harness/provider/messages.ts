@@ -1,10 +1,5 @@
 import type { Message } from "@/harness/core/provider";
 
-/** How system blocks reach the OpenAI-compat body. Empty or unknown is `auto`. */
-export function wireMessages(model: string, messages: Message[]): Message[] {
-  return wireMessagesMode("auto", model, messages);
-}
-
 /**
  * Gemini's compatibility layer keeps one system instruction: extra system
  * turns (especially after a user) overwrite the persona or vanish. Fold those

@@ -1437,6 +1437,13 @@ describe("Agent native runtime", () => {
     expect(roomMock.harness.alarm).not.toHaveBeenCalled();
     expect(state.storage.alarmAt).toBeNull();
     expect(roomMock.dropRoomBrain).toHaveBeenCalled();
+    expect(await state.storage.get("agent.paused")).toBe(true);
+    const opensAfterStop = roomMock.openRoomBrain.mock.calls.length;
+    const enabledAfterStop = enabledCalls.length;
+    await box.fetch(new Request("https://agent/status", { headers: { "X-Chat-Op": "status" } }));
+    expect(roomMock.openRoomBrain.mock.calls.length).toBe(opensAfterStop);
+    expect(enabledCalls.length).toBe(enabledAfterStop);
+    expect(state.storage.alarmAt).toBeNull();
     delete roomMock.harness.idle;
   });
 
@@ -1642,6 +1649,21 @@ describe("Agent native runtime", () => {
     expect(roomMock.harness.announce).toHaveBeenCalledTimes(2);
   });
 
+  it("clears agent.paused on restart so the harness can boot again", async () => {
+    const { state, box } = room();
+    await state.storage.put("slug", "kit");
+    await state.storage.put(CONFIG_STORE_KEY, nativeConfig());
+    await state.storage.put("agent.paused", true);
+    const opensBefore = roomMock.openRoomBrain.mock.calls.length;
+    const restarted = await box.fetch(new Request("https://agent/restart", {
+      method: "POST",
+      headers: { "X-Chat-Op": "restart" },
+    }));
+    expect(restarted.status).toBe(200);
+    expect(await state.storage.get("agent.paused")).toBeUndefined();
+    expect(roomMock.openRoomBrain.mock.calls.length).toBeGreaterThan(opensBefore);
+  });
+
   it("idle_reset stores the anchor without opening the harness", async () => {
     const { state, box } = room();
     const opensBefore = roomMock.openRoomBrain.mock.calls.length;
@@ -1652,6 +1674,13 @@ describe("Agent native runtime", () => {
     expect(res.status).toBe(204);
     expect(typeof await state.storage.get("agent.idleAnchor")).toBe("number");
     expect(roomMock.openRoomBrain.mock.calls.length).toBe(opensBefore);
+    await state.storage.put("agent.paused", true);
+    const cleared = await box.fetch(new Request("https://agent/idle-reset", {
+      method: "POST",
+      headers: { "X-Chat-Op": "idle_reset" },
+    }));
+    expect(cleared.status).toBe(204);
+    expect(await state.storage.get("agent.paused")).toBeUndefined();
   });
 
   it("pauses by dropping the harness and alarm without wiping storage", async () => {
@@ -1666,6 +1695,10 @@ describe("Agent native runtime", () => {
     expect(await state.storage.get("chat.keep")).toBe("stay");
     expect(state.storage.alarmAt).toBeNull();
     expect(roomMock.dropRoomBrain).toHaveBeenCalled();
+    expect(await state.storage.get("agent.paused")).toBe(true);
+    const opensAfterPause = roomMock.openRoomBrain.mock.calls.length;
+    await box.fetch(new Request("https://agent/status", { headers: { "X-Chat-Op": "status" } }));
+    expect(roomMock.openRoomBrain.mock.calls.length).toBe(opensAfterPause);
   });
 
   it("destroys by wiping storage and not reopening the harness", async () => {

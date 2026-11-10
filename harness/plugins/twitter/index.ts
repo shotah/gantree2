@@ -3,8 +3,6 @@ import { errorResult, textResult } from "@/harness/core/tools";
 import { budgetMessage, consumeRead, monthlyReadLimit } from "./budget";
 import { clientFromEnv, isAPIError, listTweets, lookupUser, missingTokenError, type XClient } from "./client";
 
-export { keys } from "./keys";
-
 const defaultLimit = 25;
 const maxLimit = 50;
 

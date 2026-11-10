@@ -28,6 +28,7 @@ export function toolDef(name: string): ToolDef {
   return { name: row.name, description: row.description, inputSchema };
 }
 
+/** @internal Test helper: tests read the catalog names. */
 export function catalogNames(): string[] {
   return raw.map((row) => row.name);
 }

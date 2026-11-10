@@ -109,6 +109,7 @@ export const weightSchema = objectSchema({
   ...dayFields,
 });
 
+/** @internal Test helper: tests pin the published tool names against it. */
 export const TOOL_NAMES = [
   "sleep_get",
   "activities_list",

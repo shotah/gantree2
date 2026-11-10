@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FRAME_BYTES_MAX, RATE_BYTES_BURST, RATE_BYTES_PER_MIN, RATE_FRAMES_PER_MIN } from "@/lib/chat/caps";
-import { principalKey, pruneDualLimits, takeFrame, takeTokens } from "@/lib/chat/rate";
+import { pruneDualLimits, takeFrame, takeTokens } from "@/lib/chat/rate";
 
 describe("rate", () => {
   it("allows a burst then 429s", () => {
@@ -28,7 +28,6 @@ describe("rate", () => {
     expect(limits.ok).toBe(false);
     const fat = takeFrame(undefined, 0, RATE_BYTES_BURST + 1);
     expect(fat.ok).toBe(false);
-    expect(principalKey("sub", "abc")).toBe("sub:abc");
   });
 
   it("lets two full photo frames through back to back, then refills at the sustained rate", () => {

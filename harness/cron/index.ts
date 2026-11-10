@@ -10,7 +10,7 @@ export { isSilentReply } from "./silent";
 export { formatSpread, onceParsed, parseQty, parseSpread, parseSpreadSchedule, planSpreadNext, planSpreadTimes, type Spread } from "./spread";
 export { CronError, migrations, openStore, Store } from "./store";
 export { addCalendarDays, atZone, canonicalZone, formatCronTime, formatDuration, formatRfc3339, formatRfc3339Nano, parseCronTime, parseDuration, zoneOrUtc } from "./time";
-export { cronToolDefs, CronTools, isCronTool, type CronToolOptions } from "./tools";
+export { cronToolDefs, CronTools, type CronToolOptions } from "./tools";
 export type { Delivery, ExamplePromptBuilder, FireOutcome, FireOutcomeName, Job, JobHandler, JobTurn, MemoryLookup, MemoryPin, Parsed, PushMessage, Pusher, RecentUserActivity, TalkState, TalkStore } from "./types";
 export { followUpParsed, followUpPrefix, hasNoWaitToken, hasWaitToken, isFollowUpTurn, nextFollowUpDelay, stripWaitTokens, stripWaitTokensLive } from "./wait";
 export { WaitService, type WaitOptions } from "./waitctl";

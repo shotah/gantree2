@@ -8,11 +8,8 @@ import {
   errNeedMailbox,
   lookupAlias,
   mailboxToAPI,
-  nextAvatarGet,
   nextAvatarUpdate,
-  nextBackdropDelete,
   nextBackdropUpdate,
-  nextThemeDelete,
   nextThemeList,
   resolveServerConfig,
 } from "@/harness/plugins/chat/config";
@@ -197,7 +194,7 @@ describe("chat theme cache", () => {
 
   it("keeps teach-in text free of catalog card ids", () => {
     const re = new RegExp(`\\b(?:${catalogIds.join("|")})\\b`, "i");
-    for (const blob of [nextAvatarUpdate, nextAvatarGet, nextBackdropUpdate, nextBackdropDelete, nextThemeList, nextThemeDelete]) {
+    for (const blob of [nextAvatarUpdate, nextBackdropUpdate, nextThemeList]) {
       expect(blob).not.toMatch(re);
     }
   });

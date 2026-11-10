@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 import { sealSession, sessionKey, SESSION_COOKIE } from "@/lib/door/session";
 import {
   handshake,
-  handshakePhone,
-  handshakeSlug,
   rateId,
   roleFromQuery,
   stampEmail,
@@ -241,75 +239,6 @@ describe("handshake", () => {
   });
 });
 
-describe("handshakeSlug", () => {
-  it("accepts the spike secret without a role", async () => {
-    const env = { CHAT_SECRET: "shared" };
-    const ok = await handshakeSlug({ env, slug: "kit", querySecret: "shared" });
-    expect(ok.ok && ok.principal.kind).toBe("spike");
-    const bad = await handshakeSlug({ env, slug: "kit", querySecret: "nope" });
-    expect(bad).toEqual({ ok: false, error: "unauthorized" });
-  });
-
-  it("accepts a phone cookie or a harness bearer", async () => {
-    const env = {
-      GOOGLE_CLIENT_ID: "id",
-      ALLOWED_SUBS: "1182:ada@x.com",
-      SESSION_SECRET: SECRET,
-      AGENT_BEARERS: "kit:crane-tok",
-    };
-    const session = await token({ sub: "1182", email: "ada@x.com" });
-    const phone = await handshakeSlug({
-      env,
-      slug: "kit",
-      cookieHeader: `${SESSION_COOKIE}=${encodeURIComponent(session)}`,
-      admit: admit("member"),
-      now,
-    });
-    expect(phone.ok && phone.principal.kind === "phone" && phone.principal.sub).toBe("1182");
-    expect(phone.ok && phone.principal.kind === "phone" && phone.principal.exp).toBeDefined();
-    const crane = await handshakeSlug({
-      env,
-      slug: "kit",
-      authorization: "Bearer crane-tok",
-      now,
-    });
-    expect(crane).toEqual({ ok: true, principal: { kind: "agent", slug: "kit" } });
-    const phoneHeader = await handshakeSlug({
-      env,
-      slug: "kit",
-      authorization: `Bearer ${session}`,
-      admit: admit("member"),
-      now,
-    });
-    expect(phoneHeader.ok && phoneHeader.principal.kind === "phone" && phoneHeader.principal.sub).toBe("1182");
-    const queryCrane = await handshakeSlug({
-      env,
-      slug: "kit",
-      queryBearer: "crane-tok",
-      now,
-    });
-    expect(queryCrane).toEqual({ ok: false, error: "unauthorized" });
-  });
-
-  it("does not try the harness bearer after a signed-in phone is refused the room", async () => {
-    const env = {
-      GOOGLE_CLIENT_ID: "id",
-      SESSION_SECRET: SECRET,
-      AGENT_BEARERS: "kit:crane-tok",
-    };
-    const session = await token({ sub: "1182", email: "ada@x.com" });
-    const phone = await handshakeSlug({
-      env,
-      slug: "kit",
-      cookieHeader: `${SESSION_COOKIE}=${encodeURIComponent(session)}`,
-      authorization: "Bearer crane-tok",
-      admit: admit("member"),
-      now,
-    });
-    expect(phone).toEqual({ ok: false, error: "forbidden" });
-  });
-});
-
 describe("handshake room list", () => {
   const env = {
     GOOGLE_CLIENT_ID: "id",
@@ -416,72 +345,5 @@ describe("handshake room list", () => {
       now,
     });
     expect(refused).toEqual({ ok: false, error: "forbidden" });
-  });
-});
-
-describe("handshakePhone", () => {
-  it("does not load the room when the session is missing", async () => {
-    const env = {
-      GOOGLE_CLIENT_ID: "id",
-      SESSION_SECRET: SECRET,
-      AGENT_BEARERS: "kit:crane-tok",
-    };
-    let loaded = false;
-    const r = await handshakePhone({
-      env,
-      slug: "kit",
-      loadRoom: async () => {
-        loaded = true;
-        return [];
-      },
-    });
-    expect(r).toEqual({ ok: false, error: "unauthorized" });
-    expect(loaded).toBe(false);
-  });
-
-  it("does not load the room for the spike secret", async () => {
-    let loaded = false;
-    const r = await handshakePhone({
-      env: { CHAT_SECRET: "shared" },
-      slug: "kit",
-      authorization: "Bearer shared",
-      loadRoom: async () => {
-        loaded = true;
-        return [];
-      },
-    });
-    expect(r.ok && r.principal.kind).toBe("spike");
-    expect(loaded).toBe(false);
-  });
-
-  it("loads the room after a session exists", async () => {
-    const env = {
-      GOOGLE_CLIENT_ID: "id",
-      SESSION_SECRET: SECRET,
-    };
-    const ada = "118212345678901234567";
-    let loaded = 0;
-    const r = await handshakePhone({
-      env,
-      slug: "kit",
-      cookieHeader: await cookie({ sub: ada, email: "ada@example.com" }),
-      admit: admit("member"),
-      now,
-      loadRoom: async () => {
-        loaded += 1;
-        return [{ sub: ada }];
-      },
-    });
-    expect(loaded).toBe(1);
-    expect(r.ok && r.principal.kind === "phone" && r.principal.sub).toBe(ada);
-  });
-
-  it("is config when Google is on and the session secret is missing", async () => {
-    const r = await handshakePhone({
-      env: { GOOGLE_CLIENT_ID: "id" },
-      slug: "kit",
-      loadRoom: async () => [],
-    });
-    expect(r).toEqual({ ok: false, error: "config" });
   });
 });

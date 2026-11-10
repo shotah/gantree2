@@ -29,8 +29,6 @@ import {
   type AtlassianClient,
 } from "./client";
 
-export { keys } from "./keys";
-
 const boardTypes = new Set(["scrum", "kanban", "simple"]);
 const sprintStates = new Set(["active", "future", "closed"]);
 

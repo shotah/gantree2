@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  formatAims,
   formatAimsEmpty,
   formatAimsNoted,
   formatLoops,
@@ -11,9 +10,9 @@ import { entry } from "./fixture";
 
 describe("horizon", () => {
   it("formats aims and interleaved loops", () => {
-    expect(formatAims(null)).toBe("");
+    expect(formatAimsNoted(null)).toBe("");
     expect(formatLoops(null, null)).toBe("");
-    const aims = formatAims([
+    const aims = formatAimsNoted([
       entry({ subject: "aim/training", content: "3x gym this month" }),
       entry({ subject: "aim/spanish", content: "B1 by summer" }),
     ]);
@@ -49,14 +48,14 @@ describe("horizon", () => {
   });
 
   it("clips a long aim and counts the overflow", () => {
-    const clipped = formatAims([entry({ subject: "aim/x", content: "x".repeat(90) })]);
+    const clipped = formatAimsNoted([entry({ subject: "aim/x", content: "x".repeat(90) })]);
     expect(clipped.startsWith("[aims] x: ")).toBe(true);
     expect(clipped.endsWith("\u2026")).toBe(true);
     const many = Array.from({ length: 8 }, (_, i) => entry({
       subject: `aim/${String.fromCharCode(97 + i)}`,
       content: "n",
     }));
-    const got = formatAims(many);
+    const got = formatAimsNoted(many);
     expect(got.split(" · ").length - 1).toBe(HORIZON_MAX - 1);
     expect(got.endsWith(" (+3 more — memory_recall aim/)")).toBe(true);
   });
@@ -77,7 +76,7 @@ describe("horizon", () => {
     const day = 24 * 60 * 60 * 1000;
     const fresh = entry({ subject: "aim/a", content: "n", updatedAt: now - 3 * 60 * 60 * 1000 });
     const old = entry({ subject: "aim/b", content: "n", updatedAt: now - 12 * day });
-    expect(formatAims([fresh, old], now)).toBe("[aims] a: n · b: n (12d ago)");
+    expect(formatAimsNoted([fresh, old], now)).toBe("[aims] a: n · b: n (12d ago)");
     const stale = entry({ subject: "waiting/dentist", content: "book", createdAt: now - 35 * day });
     expect(formatLoops([stale], null, now)).toBe("[loops] waiting/dentist: book (35d ago — resolve or memory_forget)");
     const live = entry({ subject: "follow/visa", content: "packet", updatedAt: now - 2 * day });

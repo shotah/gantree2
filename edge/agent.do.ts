@@ -141,6 +141,7 @@ const RATE_KEY = "rate";
 /** Alarms at or before now are dropped; schedule at least this far ahead. */
 const ALARM_MIN_LEAD_MS = 1000;
 const IDLE_ANCHOR_KEY = "agent.idleAnchor";
+const PAUSED_KEY = "agent.paused";
 const IDLE_RETRY_MS = 15 * 60 * 1000;
 
 const ALARM_FAIL_KEY = "alarm-fail";
@@ -342,6 +343,7 @@ export class Agent extends DurableObject<AgentEnv> {
             await this.armAlarm(now + IDLE_RETRY_MS);
             return;
           }
+          await this.ctx.storage.put(PAUSED_KEY, true);
           this.forgetBrain();
           await this.ctx.storage.deleteAlarm();
           return;
@@ -1502,6 +1504,9 @@ export class Agent extends DurableObject<AgentEnv> {
     if (request.method !== "GET") {
       return new Response("method", { status: 405 });
     }
+    if (await this.ctx.storage.get(PAUSED_KEY) === true) {
+      return Response.json(await this.loadStatus());
+    }
     await this.ensureBrain();
     return Response.json(await this.loadStatus());
   }
@@ -1510,6 +1515,7 @@ export class Agent extends DurableObject<AgentEnv> {
     if (request.method !== "POST") {
       return new Response("method", { status: 405 });
     }
+    await this.ctx.storage.delete(PAUSED_KEY);
     this.forgetBrain();
     await this.ensureBrain();
     return Response.json(await this.loadStatus());
@@ -1519,6 +1525,7 @@ export class Agent extends DurableObject<AgentEnv> {
     if (request.method !== "POST") {
       return new Response("method", { status: 405 });
     }
+    await this.ctx.storage.put(PAUSED_KEY, true);
     this.forgetBrain();
     await this.ctx.storage.deleteAlarm();
     return new Response(null, { status: 204 });
@@ -1528,6 +1535,7 @@ export class Agent extends DurableObject<AgentEnv> {
     if (request.method !== "POST") {
       return new Response("method", { status: 405 });
     }
+    await this.ctx.storage.delete(PAUSED_KEY);
     await this.ctx.storage.put(IDLE_ANCHOR_KEY, Date.now());
     return new Response(null, { status: 204 });
   }

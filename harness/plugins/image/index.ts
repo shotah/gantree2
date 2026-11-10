@@ -232,8 +232,3 @@ export const imagePlugin: Plugin = {
     ];
   },
 };
-
-export { keys } from "./keys";
-export { buildBody, parseGeminiResponse } from "./gemini";
-export { isEnabled, loadImageConfig } from "./config";
-export { extForMime, mimeFromPath, putOutputFile, writeOutputFile } from "./files";

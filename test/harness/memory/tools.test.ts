@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { type CallContext } from "@/harness/core/tools";
 import {
   callMemoryTool,
-  isMemoryTool,
   KIND_FACT,
   KIND_INSIGHT,
   memoryToolDefs,
@@ -56,8 +55,6 @@ describe("tools", () => {
   });
 
   it("publishes the three memory tools", async () => {
-    expect(isMemoryTool(TOOL_STORE)).toBe(true);
-    expect(isMemoryTool("x")).toBe(false);
     expect(memoryToolDefs()).toHaveLength(3);
     const { store } = openMemory();
     const tools = memoryTools(store);

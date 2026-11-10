@@ -26,10 +26,6 @@ export const selfNoteDef: ToolDef = {
   },
 };
 
-export function isSelfTool(name: string): boolean {
-  return name === toolNote;
-}
-
 const appended = "appended one line to SELF.md (append-only; /new distill merges later). Skip next time if already listed.";
 
 function noteArg(args: Record<string, unknown>): string {
@@ -50,23 +46,4 @@ export function selfNoteTool(store: SelfNoteStore): Tool {
       return Promise.resolve(textResult(appended));
     },
   };
-}
-
-/** Routes `self_note` at the store. Any other name is an error. */
-export class SelfTools {
-  constructor(readonly store: SelfNoteStore | null) {}
-
-  defs(): ToolDef[] {
-    return [{ ...selfNoteDef, inputSchema: { ...selfNoteDef.inputSchema } }];
-  }
-
-  call(name: string, args: Record<string, unknown>, ctx: CallContext): Promise<ToolResult> {
-    if (!isSelfTool(name)) {
-      return Promise.reject(new Error(`selfnote: unknown tool ${JSON.stringify(name)}`));
-    }
-    if (!this.store) {
-      return Promise.reject(new Error("selfnote: store not configured"));
-    }
-    return selfNoteTool(this.store).call(args, ctx);
-  }
 }

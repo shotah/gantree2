@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  ENV_SEARCH_KEY,
-  TOOL_NAME,
-  WebSearch,
-} from "@/harness/plugins/websearch";
+import { ENV_SEARCH_KEY, TOOL_NAME } from "@/harness/plugins/websearch/tools";
+import { WebSearch } from "@/harness/plugins/websearch/search";
 
 type Captured = { url: URL; method: string; token: string; accept: string; body: string };
 

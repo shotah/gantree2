@@ -9,7 +9,6 @@ import {
   directoryRemember,
   directorySubKey,
   parseSlugSet,
-  roomMembership,
   type DirectoryKv,
 } from "@/lib/chat/directory";
 
@@ -168,12 +167,5 @@ describe("directory", () => {
       [{ email: "ada@example.com" }],
     )).toBe(true);
     expect(directoryIdle([], [{ email: "ada@example.com" }])).toBe(false);
-  });
-
-  it("emits agents and a cranes alias copy", () => {
-    const body = roomMembership(["ada", "kit"]);
-    expect(body).toEqual({ agents: ["ada", "kit"], cranes: ["ada", "kit"] });
-    body.agents.push("nope");
-    expect(body.cranes).toEqual(["ada", "kit"]);
   });
 });

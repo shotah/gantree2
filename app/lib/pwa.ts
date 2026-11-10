@@ -70,7 +70,10 @@ function hasPngSize(icons: readonly ManifestIcon[] | undefined, size: string): b
   });
 }
 
-/** Gaps that stop Chromium firing `beforeinstallprompt` / showing Install. */
+/**
+ * Gaps that stop Chromium firing `beforeinstallprompt` / showing Install.
+ * @internal Test helper: assert shipped manifest installability.
+ */
 export function chromeInstallIssues(manifest: WebAppManifest): string[] {
   const issues: string[] = [];
   if (!manifest.name && !manifest.short_name) {
@@ -94,7 +97,10 @@ export function chromeInstallIssues(manifest: WebAppManifest): string[] {
   return issues;
 }
 
-/** Chromium still treats a no-op / missing fetch listener as "not a PWA" on some builds. */
+/**
+ * Chromium still treats a no-op / missing fetch listener as "not a PWA" on some builds.
+ * @internal Test helper: assert shipped service worker shape.
+ */
 export function swInstallIssues(source: string): string[] {
   const issues: string[] = [];
   if (!/\.addEventListener\(\s*["']fetch["']/.test(source)) {

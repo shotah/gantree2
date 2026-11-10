@@ -136,6 +136,38 @@ describe("openSettings", () => {
     expect(JSON.parse(events[0]?.detail ?? "{}")).toEqual({ entry: "eve@example.com" });
   });
 
+  it("collapses consecutive duplicate agent.enabled rows before the limit", async () => {
+    const sql = memorySql();
+    const store = openSettings(sql, () => 1);
+    const detailOff = JSON.stringify({ slug: "kit", enabled: false });
+    const detailOn = JSON.stringify({ slug: "kit", enabled: true });
+    const insert = (at: number, who: string, action: string, detail: string) => {
+      sql.exec(
+        "INSERT INTO audit (at, who, action, detail) VALUES (?, ?, ?, ?)",
+        at,
+        who,
+        action,
+        detail,
+      );
+    };
+    insert(1, "ada", "user.add", JSON.stringify({ entry: "bob@example.com", role: "member", agents: [] }));
+    for (let at = 2; at <= 5; at++) {
+      insert(at, "idle", "agent.enabled", detailOff);
+    }
+    insert(6, "ada", "agent.enabled", detailOn);
+    for (let at = 7; at <= 11; at++) {
+      insert(at, "idle", "agent.enabled", detailOff);
+    }
+    const events = await store.audit(3);
+    expect(events).toHaveLength(3);
+    expect(events.map((event) => event.action)).toEqual(["agent.enabled", "agent.enabled", "agent.enabled"]);
+    expect(JSON.parse(events[0]?.detail ?? "{}")).toEqual({ slug: "kit", enabled: false });
+    expect(JSON.parse(events[1]?.detail ?? "{}")).toEqual({ slug: "kit", enabled: true });
+    expect(JSON.parse(events[2]?.detail ?? "{}")).toEqual({ slug: "kit", enabled: false });
+    expect((await store.audit(4))[3]).toMatchObject({ action: "user.add" });
+    expect(sql.exec("SELECT COUNT(*) AS n FROM audit").toArray()[0]?.n).toBe(11);
+  });
+
   it("clamps the audit window", async () => {
     const store = openSettings(memorySql(), () => 1);
     await store.putUser({ entry: "a@example.com", role: "member" }, ADA);

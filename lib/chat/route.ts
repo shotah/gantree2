@@ -31,10 +31,6 @@ export function resolvePhoneKind(frame: WireFrame): FrameKind | undefined {
   return undefined;
 }
 
-export function phoneKindAllowed(frame: WireFrame): boolean {
-  return resolvePhoneKind(frame) != null;
-}
-
 /**
  * A `reply` with no words and no photo is not a turn. Refuse it so no mouth
  * paints an empty bubble, drops its draft, or replays a blank on hydrate.

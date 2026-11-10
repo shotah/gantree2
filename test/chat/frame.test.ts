@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CONTEXT_JSON_MAX, FRAME_BYTES_MAX, TEXT_MAX } from "@/lib/chat/caps";
-import { encodeError, encodeFrame, hasGeo, isBareGeo, parseFrame, peerOf, stampOrderOnBody, stampReplayOnBody, stripClientOrder, type ParseResult } from "@/lib/chat/frame";
+import { encodeError, encodeFrame, hasGeo, parseFrame, stampOrderOnBody, stampReplayOnBody, stripClientOrder, type ParseResult } from "@/lib/chat/frame";
 
 function failMsg(r: ParseResult): string {
   return r.ok ? "ok" : r.error;
@@ -44,13 +44,7 @@ describe("frame", () => {
       });
       expect(got.frame.context?.surface).toBe("android_auto");
       expect(hasGeo(got.frame)).toBe(true);
-      expect(isBareGeo(got.frame)).toBe(false);
     }
-  });
-
-  it("treats geo-only as a silent pin", () => {
-    const got = parseFrame(JSON.stringify({ context: { geo: { lat: 1, lon: 2 } } }));
-    expect(got.ok && isBareGeo(got.frame)).toBe(true);
   });
 
   it("keeps FE surface names and drops the rest", () => {
@@ -120,8 +114,6 @@ describe("frame", () => {
     expect(badGeo.ok && badGeo.frame.context?.geo).toBeUndefined();
     const img = parseFrame(JSON.stringify({ images: [{ url: "data:image/jpeg;base64,aa" }] }));
     expect(img.ok).toBe(true);
-    expect(peerOf("phone")).toBe("crane");
-    expect(peerOf("crane")).toBe("phone");
     const fromBuf = parseFrame(new TextEncoder().encode('{"text":"buf"}'));
     expect(fromBuf.ok && fromBuf.frame.text).toBe("buf");
   });

@@ -152,7 +152,7 @@ export function addCalendarDays(ms: number, zone: string, days: number): number 
   return utc - zoneOffsetMs(guess, zone);
 }
 
-/** Epoch ms for a wall clock in `zone`. */
+/** @internal Test helper: build wall-clock instants in a zone. */
 export function atZone(
   year: number,
   month: number,

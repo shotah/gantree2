@@ -58,7 +58,3 @@ export function pruneDualLimits(
   }
   return next;
 }
-
-export function principalKey(kind: string, id: string): string {
-  return `${kind}:${id}`;
-}

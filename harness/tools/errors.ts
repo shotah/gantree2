@@ -57,20 +57,6 @@ export function classifyReason(message: string): string {
   return "connect";
 }
 
-/**
- * A connect failure is re-read against the note and stderr so
- * "API_KEY is required" stays `no_key` when the transport error itself
- * does not mention the key. A reason that is already specific is kept.
- */
-export function driftReason(reason: string, note: string, stderr: string): string {
-  const current = reason || "connect";
-  if (current !== "connect") {
-    return current;
-  }
-  const again = classifyReason(`${note}\n${stderr}`);
-  return again === "connect" ? "connect" : again;
-}
-
 /** Model-facing text for a boot-skipped plugin. */
 export function unavailableMessage(server: string, reason: string, note?: string): string {
   const code = reason || "connect";

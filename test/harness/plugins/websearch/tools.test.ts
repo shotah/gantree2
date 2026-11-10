@@ -1,13 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   TOOL_NAME,
-  WebSearch,
-  isReplacedMcp,
   isSearchTool,
   resolveProvider,
   resolveSearchApiKey,
   toolDefs,
-} from "@/harness/plugins/websearch";
+} from "@/harness/plugins/websearch/tools";
+import { WebSearch } from "@/harness/plugins/websearch/search";
 import { websearchPlugin } from "@/harness/plugins/websearch";
 import { fixedClock } from "@/harness/core/clock";
 import { silentLogger } from "@/harness/core/log";
@@ -15,12 +14,6 @@ import { nodeSql, type NodeDatabase } from "@/harness/core/sql";
 import { DatabaseSync } from "node:sqlite";
 
 describe("websearch tools metadata", () => {
-  it("replaces the leftover google-search MCP grant", () => {
-    expect(isReplacedMcp("google-search", "unused")).toBe(true);
-    expect(isReplacedMcp("x", "mcp-gemini-google-search")).toBe(true);
-    expect(isReplacedMcp("maps", "maps-bin")).toBe(false);
-  });
-
   it("recognizes search tool aliases", () => {
     for (const name of [TOOL_NAME, "google_search", "google-search__web_search", "google_search__web_search"]) {
       expect(isSearchTool(name)).toBe(true);

@@ -11,11 +11,8 @@ export const envPendantImageDir = "PENDANT_IMAGE_DIR";
 export const defaultChatAPIPrefix = "/api/chat";
 
 export const nextAvatarUpdate = "Next: avatar_update(source_path=\"<IMAGE_OUTPUT_DIR/file.png>\")";
-export const nextAvatarGet = "Next: avatar_get()";
 export const nextBackdropUpdate = "Next: backdrop_update(source_path=\"<IMAGE_OUTPUT_DIR/file.png>\")";
-export const nextBackdropDelete = "Next: backdrop_delete()";
 export const nextThemeList = "Next: theme_list()";
-export const nextThemeDelete = "Next: theme_delete()";
 
 const slugRE = /^[a-z][a-z0-9-]{0,31}$/;
 

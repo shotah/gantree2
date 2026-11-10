@@ -3,7 +3,7 @@ import { localDay } from "./time";
 import { entryAt, sortOldestFirst } from "./sort";
 import { SUBJECT_TODO_PREFIX, type Entry } from "./types";
 
-/** `!!` urgent, `!` high, bare words normal. Three or more bangs read as urgent. */
+/** @internal Test helper: normal-priority marker in the priority set. */
 export const TODO_PRIORITY_NORMAL = 0;
 export const TODO_PRIORITY_HIGH = 1;
 export const TODO_PRIORITY_URGENT = 2;

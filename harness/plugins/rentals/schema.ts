@@ -136,6 +136,7 @@ export const linkFormatSchema = objectSchema({
   locations: objs("Up to 8 places. Each object uses the same fields as this tool (city, state, zip_code, neighborhood, intent, …). Flat fields still describe one place."),
 });
 
+/** @internal Test helper: tests pin the published tool names against it. */
 export const TOOL_NAMES = [
   "listings_search",
   "listings_get",

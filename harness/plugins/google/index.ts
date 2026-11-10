@@ -14,8 +14,6 @@ import { sheetsTools } from "@/harness/plugins/google/sheets";
 import { slidesTools } from "@/harness/plugins/google/slides";
 import { tasksTools } from "@/harness/plugins/google/tasks";
 import { CLIENT_ID_ENV, CLIENT_SECRET_ENV, LEGACY_PROVIDER, authFinish, authStart, workspaceEmails } from "@/harness/plugins/google/oauth";
-export { keys } from "./keys";
-
 /**
  * Google Workspace plugin. One OAuth token per mailbox (`google:<email>`).
  * Google Health keeps its own `google-health` token.
