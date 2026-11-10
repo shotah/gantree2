@@ -66,6 +66,7 @@ const CLOSING = 2;
 class FakeSocket {
   readyState = OPEN;
   sent: string[] = [];
+  closeCode?: number;
 
   send(body: string): void {
     if (this.readyState !== OPEN) {
@@ -74,7 +75,8 @@ class FakeSocket {
     this.sent.push(body);
   }
 
-  close(): void {
+  close(code?: number): void {
+    this.closeCode = code;
     this.readyState = CLOSING;
   }
 
@@ -915,6 +917,7 @@ describe("Agent room ops", () => {
     await say(crane, { kind: "allow", users: [{ sub: ada, email: "Ada@Example.com" }] });
     expect(kept.readyState).toBe(OPEN);
     expect(dropped.readyState).toBe(CLOSING);
+    expect(dropped.closeCode).toBe(4403);
     const listed = await box.fetch(new Request("https://agent/allow", {
       headers: { "X-Chat-Op": "allow" },
     }));
@@ -949,6 +952,52 @@ describe("Agent room ops", () => {
     const untagged = dial();
     await box.webSocketMessage(untagged as unknown as WebSocket, JSON.stringify({ kind: "ack" }));
     expect(untagged.readyState).toBe(CLOSING);
+  });
+
+  /** A phone accepted before the deploy, still carrying the retired `dir:1` tag. */
+  function indexedPhone(state: FakeState, sub: string, email: string, expMs?: number): FakeSocket {
+    const ws = new FakeSocket();
+    state.acceptWebSocket(ws, [...socketTags({
+      role: "phone",
+      rateId: `sub:${sub}`,
+      userId: sub,
+      email,
+      emailVerified: true,
+      expMs,
+      doorRole: "member",
+      chatSlug: "kit",
+    }), "dir:1"]);
+    return ws;
+  }
+
+  it("closes a dir:1 phone 4403 when a shorter allow drops it, and keeps one matched by email", async () => {
+    const ada = "118212345678901234567";
+    const sam = "118212345678901234568";
+    const { state, crane, say } = room({ GOOGLE_CLIENT_ID: "id" });
+    await state.storage.put("allow", [{ sub: ada }, { email: "sam@example.com" }]);
+    const dropped = indexedPhone(state, ada, "ada@example.com");
+    const kept = indexedPhone(state, sam, "sam@example.com");
+    await say(crane, { kind: "allow", users: [{ email: "sam@example.com" }] });
+    expect(dropped.readyState).toBe(CLOSING);
+    expect(dropped.closeCode).toBe(4403);
+    expect(kept.readyState).toBe(OPEN);
+  });
+
+  it("re-checks every dir:1 phone frame: 4403 off the room list, 4401 once the session expired", async () => {
+    const ada = "118212345678901234567";
+    const sam = "118212345678901234568";
+    const { state, box } = room({ GOOGLE_CLIENT_ID: "id" });
+    await state.storage.put("allow", [{ email: "sam@example.com" }]);
+    const ack = (ws: FakeSocket) => box.webSocketMessage(ws as unknown as WebSocket, JSON.stringify({ kind: "ack" }));
+    const gone = indexedPhone(state, ada, "ada@example.com");
+    await ack(gone);
+    expect(gone.closeCode).toBe(4403);
+    const listed = indexedPhone(state, sam, "sam@example.com", Date.now() + 60_000);
+    await ack(listed);
+    expect(listed.readyState).toBe(OPEN);
+    const expired = indexedPhone(state, sam, "sam@example.com", Date.now() - 1);
+    await ack(expired);
+    expect(expired.closeCode).toBe(4401);
   });
 
   it("serves a face and clears a backdrop", async () => {

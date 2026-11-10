@@ -6,7 +6,6 @@ import { headerSaysTooLarge } from "@/lib/chat/caps";
 import { configError, forbidden, unauthorized } from "@/lib/chat/deny";
 import {
   humanChatPrecheck,
-  memberInDirectory,
   memberRoomUsersWhenNeeded,
   slugInInventory,
 } from "@/lib/chat/admission";
@@ -220,17 +219,15 @@ export async function admitRoom(
   if (pre === "forbidden") {
     return { response: forbidden() };
   }
-  const inDirectory = await memberInDirectory(env, session, slug);
   const stub = agentStub(env, slug);
   if (!stub) {
     return { response: configError() };
   }
-  const list = await memberRoomUsersWhenNeeded(env, slug, doorRole, inDirectory);
+  const list = await memberRoomUsersWhenNeeded(env, slug, doorRole);
   const allowed = phoneAdmitted(list, session, env, {
     role: doorRole,
     assignedSlugs: who.user.agents,
     slug,
-    inDirectory,
   });
   if (!allowed) {
     return { response: forbidden() };

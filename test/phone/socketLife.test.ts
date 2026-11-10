@@ -40,4 +40,25 @@ describe("mailbox socket life", () => {
       stopped: true,
     })).toBe(false);
   });
+
+  it("stops redialing a room that closed 4403 and keeps redialing after 4401 or a drop", () => {
+    expect(shouldReconnectMailbox({
+      role: "phone",
+      visibilityState: "visible",
+      stopped: false,
+      code: 4403,
+    })).toBe(false);
+    expect(shouldReconnectMailbox({
+      role: "phone",
+      visibilityState: "visible",
+      stopped: false,
+      code: 4401,
+    })).toBe(true);
+    expect(shouldReconnectMailbox({
+      role: "phone",
+      visibilityState: "visible",
+      stopped: false,
+      code: 1006,
+    })).toBe(true);
+  });
 });

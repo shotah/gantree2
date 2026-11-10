@@ -5,9 +5,8 @@
  * sees it (docs/voice.md). Never log the text.
  */
 
-import { readChatUser } from "@/lib/avatar/http";
+import { admitRoom, slugFromRequest, type RoomEnv } from "@/lib/avatar/http";
 import { headerSaysTooLarge, utf8Bytes } from "@/lib/chat/caps";
-import type { DoorEnv } from "@/lib/door/http";
 import type { UserStore } from "@/lib/door/users";
 import { langIdOf, ttsLocale, type LangId } from "../phone/lang";
 import { SPEAK_BYTES_MAX } from "../phone/speakable";
@@ -187,10 +186,10 @@ function badFrame(): Response {
   return Response.json({ error: "bad frame" }, { status: 400 });
 }
 
-/** GET says whether pocket voice is offered. POST speaks `{ text, lang? }` for a signed-in person. */
+/** GET says whether pocket voice is offered. POST speaks `{ text, lang? }` for a person in the `slug` room. */
 export async function handleTts(
   req: Request,
-  env: DoorEnv & TtsEnv,
+  env: RoomEnv & TtsEnv,
   store: UserStore,
   fetchFn: typeof fetch = fetch,
 ): Promise<Response> {
@@ -207,9 +206,13 @@ export async function handleTts(
   if (!cfg) {
     return new Response(null, { status: 404 });
   }
-  const who = await readChatUser(req, env, store);
-  if ("response" in who) {
-    return who.response;
+  const slug = slugFromRequest(req);
+  if (!slug) {
+    return Response.json({ error: "bad slug" }, { status: 400 });
+  }
+  const admitted = await admitRoom(req, env, store, slug);
+  if ("response" in admitted) {
+    return admitted.response;
   }
   if (headerSaysTooLarge(req.headers.get("content-length"), TTS_JSON_MAX)) {
     return tooLarge();

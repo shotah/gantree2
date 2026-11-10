@@ -1,11 +1,12 @@
-import { createStore, del, get, set } from "idb-keyval";
+import { clear, createStore, del, get, set } from "idb-keyval";
 
 /**
  * On-device key/value for what the socket would otherwise repaint from blank on
  * every load: the room's face and wallpaper bytes, and the last thread. IndexedDB,
- * not localStorage — photos and JPEGs do not fit a 5 MB string quota. Every call
- * swallows failure (no `indexedDB`, private mode, quota): a miss just means the
- * mailbox paints it, same as before.
+ * not localStorage — photos and JPEGs do not fit a 5 MB string quota. Get, set, and
+ * delete swallow failure (no `indexedDB`, private mode, quota): a miss just means the
+ * mailbox paints it, same as before. Clear rejects on a thrown write so logout can
+ * still post.
  */
 
 const DB = "gantree";
@@ -61,4 +62,13 @@ export async function kvDel(key: string): Promise<void> {
   } catch {
     // nothing to drop
   }
+}
+
+/** Drop every row. A missing `indexedDB` resolves; a thrown clear rejects. */
+export async function kvClear(): Promise<void> {
+  const t = open();
+  if (!t) {
+    return;
+  }
+  await clear(t);
 }

@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
+import { scriptNonce } from "@/lib/door/headers";
 import { RegisterSW } from "./components/shared/RegisterSW";
 import { DEFAULT_THEME, THEME_BOOT, themeCss, themeOf } from "./lib/theme";
 import "./globals.css";
@@ -21,12 +23,13 @@ export const viewport: Viewport = {
   themeColor: themeOf(DEFAULT_THEME).tokens.canvas,
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const nonce = scriptNonce(await headers());
   return (
     <html lang="en" data-theme={DEFAULT_THEME} suppressHydrationWarning>
       <head>
         <style dangerouslySetInnerHTML={{ __html: themeCss() }} />
-        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
       </head>
       <body className="min-h-screen min-w-0 overflow-x-clip bg-canvas text-body antialiased">
         <RegisterSW />

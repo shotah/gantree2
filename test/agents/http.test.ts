@@ -588,6 +588,63 @@ describe("agents http", () => {
     expect(await agents.get("kit")).toBeNull();
   });
 
+  it("forbids a member the room list dropped while DIRECTORY still lists them, and admits a listed email", async () => {
+    const { agents, users } = world();
+    await agents.create({ slug: "kit", name: "Kit" }, ADA);
+    await agents.create({ slug: "ada", name: "Ada" }, ADA);
+    const calls: { op: string | null }[] = [];
+    const directory: Record<string, string> = {
+      [`sub:${MEM}`]: "[\"ada\",\"kit\"]",
+      "email:member@example.com": "[\"ada\",\"kit\"]",
+    };
+    const env = {
+      GANTREE_ALLOW: "member@example.com",
+      DIRECTORY: {
+        get: async (key: string) => directory[key] ?? null,
+        put: async () => {},
+        delete: async () => {},
+      },
+      SETTINGS: {
+        getByName: () => ({
+          listAgents: () => agents.list(),
+          getAgent: (slug: string) => agents.get(slug),
+          createAgent: agents.create.bind(agents),
+          deleteAgent: agents.remove.bind(agents),
+          setAgentEnabled: agents.setEnabled.bind(agents),
+          deleteSamplesForAgent: (agent: string) => users.deleteSamplesForAgent(agent),
+          removeSlugFromOperators: (slug: string) => users.removeSlugFromOperators(slug),
+          listSamples: users.listSamples.bind(users),
+        }),
+      },
+      AGENT: {
+        idFromName: (name: string) => ({ toString: () => name }),
+        get: (id: { toString(): string }) => ({
+          fetch: async (req: Request) => {
+            const op = req.headers.get("X-Chat-Op");
+            calls.push({ op });
+            if (op === "allow") {
+              return Response.json({ users: id.toString() === "kit" ? [{ email: "member@example.com" }] : [] });
+            }
+            return new Response(null, { status: 204 });
+          },
+        }),
+      },
+    } as unknown as AgentsHttpEnv;
+    const memberHeaders = {
+      "x-gantree-sub": MEM,
+      "x-gantree-email": "member@example.com",
+      "x-gantree-role": "member",
+      "x-gantree-agents": "",
+    };
+    const denied = await deleteAgent(new Request("https://g.test/api/agents/ada", { method: "DELETE", headers: memberHeaders }), env, "ada");
+    expect(denied.status).toBe(403);
+    expect(calls.some((c) => c.op === "destroy")).toBe(false);
+    expect(await agents.get("ada")).not.toBeNull();
+    const removed = await deleteAgent(new Request("https://g.test/api/agents/kit", { method: "DELETE", headers: memberHeaders }), env, "kit");
+    expect(removed.status).toBe(204);
+    expect(calls.some((c) => c.op === "destroy")).toBe(true);
+  });
+
   it("turns off, keeps the row, and blocks restart with off", async () => {
     const { env, agents, calls } = world();
     await agents.create({ slug: "kit", name: "Kit" }, ADA);

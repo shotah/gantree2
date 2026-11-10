@@ -20,9 +20,9 @@ Shape: [architecture.md](architecture.md). Reporting a hole:
 | The chat thread | Agent DO: the room queue and the session rows | Users on that agent's room |
 | The room bearer | Agent DO. Also the token on face / wallpaper / theme | The Worker |
 | Model and tool keys (`LLM_API_KEY`, `GOOGLE_MAPS_API_KEY`, …) | Agent DO `config.env`, in plaintext. House `LLM_*` on the Worker | Admins write. The harness reads |
-| OAuth refresh tokens for tools (Google Workspace, Strava, Google Health, Garmin) | `oauth_token` in the Agent DO, AES-256-GCM under `snapshot.key` | The plugin, for the call |
+| OAuth refresh tokens for tools (Google Workspace, Strava, Google Health, Garmin) | `oauth_token` in the Agent DO, AES-256-GCM under `token.key` | The plugin, for the call |
 | The harness | DO SQLite (`persona_file`, `selfnote`, sessions, memory, cron) | That agent only |
-| `SESSION_SECRET`, `GOOGLE_CLIENT_SECRET`, `CLOUDFLARE_API_TOKEN` | GitHub Actions secrets → Worker secrets; `.dev.vars` locally; `CELLD_VARS_FILE` at home | The operator |
+| `SESSION_SECRET`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_TTS_API_KEY`, `CLOUDFLARE_API_TOKEN` | GitHub Actions secrets → Worker secrets; `.dev.vars` locally; `CELLD_VARS_FILE` at home | The operator |
 
 The failures that matter: a stranger reads a thread, a member gains
 admin, a key leaves the box, a stolen phone keeps talking, a plugin we
@@ -115,10 +115,60 @@ Client copies of those names are stripped first.
 | `POST` and `DELETE /api/agents` | **admin** |
 | `GET /api/tools`, `GET /api/auth/me` | Any signed-in role |
 | `GET /api/agents/{slug}/bearer` | **admin**, and only when `GANTREE_DEV_USER` is honored (set and loopback host); every other host is 404 |
-| Chat HTTP (session): push, TTS, and other `/api/chat/*` not in the room-bearer trio | Session from the gate, then the agent room list (`admitRoom` / `readChatUser`). Env floor `GANTREE_ADMINS` ∪ `GANTREE_ALLOW` matches the socket rule in [access.md](access.md#room-admission-wsagent-id) |
+| Chat HTTP (session): push and TTS | Session from the gate. `POST /api/chat/tts` requires a `slug` query parameter and `admitRoom` before it spends the key. `GET /api/chat/tts` only says whether voice is on. Push `PUT`, `POST`, and `DELETE` use `admitRoom`. `GET /api/chat/push` uses `readChatUser` and returns the public key. Env floor `GANTREE_ADMINS` ∪ `GANTREE_ALLOW` matches the socket rule in [access.md](access.md#room-admission-wsagent-id) |
 
 Principal headers carry `sub`, email, role, and assigned agents. Role is
 recomputed every request and is not stored in the cookie.
+
+---
+
+## Response headers
+
+The Worker entry (`worker/index.ts`) wraps every response with
+`withSecurityHeaders` (`lib/door/headers.ts`). Cloudflare adds none of
+these by itself. A WebSocket `101` is returned unchanged.
+
+| Header | Value | On |
+| --- | --- | --- |
+| `Content-Security-Policy` | see below | HTML documents, when `NODE_ENV` is `production` |
+| `X-Frame-Options` | `DENY` | HTML documents |
+| `X-Content-Type-Options` | `nosniff` | every Worker response except the `101`, and static assets through `public/_headers` |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | every Worker response except the `101` |
+| `Strict-Transport-Security` | `max-age=31536000` | https responses only, except the `101` |
+
+HSTS carries no `includeSubDomains` and no `preload`: the parent domain
+hosts other things. It is never sent on plain http.
+
+### Content Security Policy
+
+```text
+default-src 'self'; script-src 'self' 'nonce-<per response>';
+style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:;
+font-src 'self'; connect-src 'self' wss://<this host>;
+media-src 'self' blob:; worker-src 'self'; manifest-src 'self';
+frame-ancestors 'none'; base-uri 'self'; object-src 'none';
+form-action 'self'
+```
+
+On plain http the socket source is `ws://<this host>`.
+
+The policy is enforced, not report-only. Each response gets a fresh
+nonce. The Worker puts the policy on the request; Vinext reads the
+nonce from it and stamps its own inline scripts, and the layouts read
+it with `scriptNonce` for `THEME_BOOT` and `FONT_BOOT`. A new inline
+script must carry that nonce. A `Content-Security-Policy` or
+`Content-Security-Policy-Report-Only` header sent by a client is
+dropped.
+
+Known loose ends: `style-src` allows inline styles (the theme and font
+`<style>` blocks and React `style` attributes), and `img-src` allows
+any `https:` host because agent messages may carry remote images.
+
+`npm run dev` sends no policy (`NODE_ENV` is not `production`): Vite's
+dev server injects inline scripts and uses eval for hot reload. The
+other headers are still sent. Static assets are served by Cloudflare
+before the Worker runs, so they get `nosniff` from `public/_headers`
+and nothing else.
 
 ---
 
@@ -130,12 +180,33 @@ recomputed every request and is not stored in the cookie.
 | Phones authenticate with the **session JWE** (the PWA's cookie; the apps carry the same token on `Authorization`, minted by `POST /api/auth/token` — [access.md](access.md#phones-native-sign-in)) | A phone session is not an agent credential | The room bearer on face / wallpaper / theme is a separate token |
 | Payload caps, per-socket rate limit, slug validation (`lib/chat/caps.ts`, `rate.ts`, `slug.ts`) | A member cannot fill storage or flood the room | Slow phone drops oldest and says so |
 | Backlog bounded; avatar and backdrop are blobs on the DO | Storage is per agent | — |
-| Theme and typing notices are broadcast; **text is only sent to sockets on the room list** | A dropped member stops seeing new turns immediately | They keep what their phone already cached |
+| Theme and typing notices are broadcast; **text is only sent to sockets on the room list**. A removed member's open socket is closed (`4403`) when that list changes | A dropped member stops seeing new turns immediately | They keep what their phone already cached |
 
 OAuth tokens are ciphertext in that DO's SQLite (`oauth_token`),
-AES-256-GCM under `snapshot.key` (`AesTokenStore` in `harness/tools`).
+AES-256-GCM under `token.key` (`AesTokenStore` in `harness/tools`).
 The plugin sees plaintext for the call. The key stays on the DO. A bug
 in a plugin is that agent's env and tokens, not another agent's.
+
+---
+
+## Outbound fetches
+
+Tools that fetch a URL the model chose (the feeds plugin) refuse a host
+that is loopback, private (RFC 1918), link-local (including
+`169.254.169.254`), carrier-grade NAT / Tailscale (`100.64.0.0/10`),
+IPv6 unique-local or link-local, unspecified, multicast, or reserved.
+They also refuse IPv4-mapped IPv6 forms of those addresses, and the
+names `localhost`, `*.localhost`, `*.local`, and `*.internal`. Any
+other IP address that is not public unicast is refused too. The check
+runs on the host as the URL parser normalises it, on the first request
+and on every redirect (`harness/core/egress.ts`, `validateURL` in
+`harness/plugins/feeds/http.ts`).
+
+DNS rebinding is a risk accepted: a public name that resolves to a
+private address is not caught, because neither the Worker nor celld
+lets the harness pin a connection to a checked address.
+
+Maps and Strava link resolvers allow only their own vendor hosts.
 
 ---
 
@@ -186,10 +257,10 @@ the platform client on Tools.
 | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | — | Actions **secret** | — | the Worker's env |
 | Per-agent keys (`LLM_API_KEY`, tool keys) | Agent DO (config record) | Agent DO | Agent DO | env of the Worker; a plugin's log |
 | `VAPID_*` (push) | `.dev.vars` | Actions secret | `CELLD_VARS_FILE` | — |
+| `GOOGLE_TTS_API_KEY` | `.dev.vars` | Actions **secret** → Worker secret | `CELLD_VARS_FILE` | a var, a commit, a log |
 
 `.dev.vars` is gitignored. `.dev.vars.example` carries names, never
-values. CI fails if a test fixture contains a string that looks like a
-live Google secret.
+values.
 
 ---
 
@@ -216,7 +287,7 @@ are the heavy part.
 | --- | --- | --- |
 | `config` | **Every secret pasted on the Keys or Tools fold, in plaintext**: `LLM_API_KEY`, `GOOGLE_OAUTH_CLIENT_ID` / `_SECRET`, `RENTCAST_API_KEY`, `STRAVA_CLIENT_SECRET`, … plus the persona seed and the grant list | until changed or the agent is retired |
 | `bearer` | the token on `/api/chat/{avatar,backdrop,theme}` | until retire |
-| `snapshot.key` | the 32-byte key that decrypts `oauth_token` in this DO | until retire |
+| `token.key` | the 32-byte key that decrypts `oauth_token` in this DO | until retire |
 | `persona_file`, `selfnote` | `PERSONA.md` and `SELF.md` | until edited |
 | `oauth_token` | OAuth access and refresh tokens, AES-256-GCM, nonce prefixed. Providers `google`, `strava`, `garmin`, and the same shape for any plugin that stores one | until deleted |
 | sessions, memory, cron, watches | the chat the model saw, memories, jobs, watch cursors | until the agent is retired |
@@ -229,9 +300,10 @@ are the heavy part.
 
 ### KV `DIRECTORY`
 
-`sub → [slugs]`: which rooms each person may enter, mirrored from the
-Agent DOs so `/api/auth/me` answers without waking them. No names, no
-text.
+`sub → [slugs]` and `email → [slugs]`: which rooms list each person,
+mirrored from the Agent DOs so `/api/auth/me` can name an indexed room
+without waking that DO. It admits nobody; every admission reads the
+room list on the Agent DO. No names, no text.
 
 ### In flight and on the box
 
@@ -274,7 +346,7 @@ responsible for them.
 | --- | --- |
 | npm | `package-lock.json`; `npm ci` in CI; ncu is a deliberate PR, not a bot |
 | GitHub Pages | `pages.yml` and `ci.yml` write `gh-pages`, each to its own paths |
-| Actions | Pinned major versions; `persist-credentials: false`; `contents: write` only where a push is needed |
+| Actions | Pinned to commit SHAs, version in a comment; `persist-credentials: false`; `contents: write` only where a push is needed |
 
 ---
 
@@ -295,7 +367,7 @@ Settings DO and are readable by admins only. Not a SIEM.
 | 1 | Stolen phone with a live session | Medium | Member reads their own rooms for ≤7 days | Role recomputed per request, so **removal on `/users` ends it at the next request**; no per-device revoke | Per-device sessions list — later |
 | 2 | `GANTREE_ADMINS` empty on deploy | Medium (first deploy) | None — 503 | Fail closed | No |
 | 3 | Admin adds the wrong email | Medium | Stranger with that address can sign in | Allowlist is exact-match; audit row; `/users` shows last sign-in | Confirm-scary on add — §2 todo |
-| 4 | OAuth refresh tokens | Low | That agent's tool tokens, if `snapshot.key` is also taken | Ciphertext in the Agent DO (`oauth_token`), AES-256-GCM. The DO decrypts for the plugin | No |
+| 4 | OAuth refresh tokens | Low | That agent's tool tokens, if `token.key` is also taken | Ciphertext in the Agent DO (`oauth_token`), AES-256-GCM. The DO decrypts for the plugin | No |
 | 5 | Malicious or vulnerable npm dependency in a plugin | Low–Medium | Keys of that agent | `package-lock.json`, `npm ci` | Review dependency diffs |
 | 6 | Room bearer leaked | Low | Someone fetches that agent's face, wallpaper, or theme on `/api/chat/avatar`, `/api/chat/backdrop`, or `/api/chat/theme` | Bearer is per agent. It is not a phone session | No |
 | 7 | OAuth code used outside the room | Low | Code is one-time and useless without the plugin's client secret | Catch requires the session cookie and admin or room membership | No |

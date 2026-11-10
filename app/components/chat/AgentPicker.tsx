@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { LogoutForm } from "@/app/components/shared/LogoutForm";
 import { cardClass, PageHeader } from "@/app/components/shared/PageHeader";
 import { api } from "@/app/lib/api";
 import { displaySlug } from "@/lib/chat/slug";
@@ -99,11 +100,11 @@ export function AgentPicker({ client = api }: { client?: ApiClient }) {
         ? (
             <div className={`${cardClass} flex flex-col items-start gap-4`}>
               <p className="text-sm text-body" role={error ? "alert" : undefined}>{error ?? EMPTY}</p>
-              <form action="/api/auth/logout" method="post">
+              <LogoutForm>
                 <button type="submit" className="rounded-xl border border-line bg-canvas/60 px-3 py-1.5 text-sm text-body hover:border-accent-line hover:text-fg">
                   Log out
                 </button>
-              </form>
+              </LogoutForm>
             </div>
           )
         : null}

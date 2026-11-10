@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { LogoutForm } from "@/app/components/shared/LogoutForm";
 import { cardClass, chipClass, PageHeader } from "@/app/components/shared/PageHeader";
 import { TreeMark } from "@/app/components/shared/TreeMark";
 import { api } from "@/app/lib/api";
@@ -152,11 +153,11 @@ export function ProfileCard({ client = api }: { client?: ApiClient }) {
           )
         : null}
 
-      <form action="/api/auth/logout" method="post">
+      <LogoutForm>
         <button type="submit" className="rounded-xl border border-line px-4 py-2 text-sm text-muted hover:bg-track hover:text-body">
           Log out
         </button>
-      </form>
+      </LogoutForm>
     </main>
   );
 }

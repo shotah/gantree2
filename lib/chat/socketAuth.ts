@@ -31,7 +31,6 @@ export type SocketAuthInput = {
   doorRole?: DoorRole;
   assignedAgents?: readonly string[];
   slug?: string;
-  inDirectory?: boolean;
   /** Google is on — empty room + no extra admits nobody. Spike skips. */
   enforce?: boolean;
   now: number;
@@ -51,30 +50,35 @@ function phoneSession(input: SocketAuthInput): RoomSession | null {
   };
 }
 
+/** `unauthorized` closes 4401 (session no good); `forbidden` closes 4403 (not on the room list). */
+export type SocketVerdict = "ok" | "unauthorized" | "forbidden";
+
 /**
  * Phone sockets re-check floor env, room list, and optional static extra on
  * every frame when Google is on. Spike and crane skip. Does not log sub.
  */
-export function socketMessageAllowed(input: SocketAuthInput): boolean {
+export function socketMessageAllowed(input: SocketAuthInput): SocketVerdict {
   if (input.role !== "phone") {
-    return true;
+    return "ok";
   }
   if (!input.enforce) {
-    return true;
+    return "ok";
   }
   const session = phoneSession(input);
-  if (!session || !input.doorRole || !input.slug || !phoneAdmitted(input.roomUsers, session, {
+  if (!session || !input.doorRole || !input.slug) {
+    return "unauthorized";
+  }
+  if (input.expMs != null && input.expMs > 0 && input.now > input.expMs) {
+    return "unauthorized";
+  }
+  if (!phoneAdmitted(input.roomUsers, session, {
     ALLOWED_SUBS: input.allowedSubs,
   }, {
     role: input.doorRole,
     assignedSlugs: input.assignedAgents ?? [],
     slug: input.slug,
-    inDirectory: input.inDirectory,
   })) {
-    return false;
+    return "forbidden";
   }
-  if (input.expMs != null && input.expMs > 0 && input.now > input.expMs) {
-    return false;
-  }
-  return true;
+  return "ok";
 }

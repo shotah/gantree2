@@ -570,6 +570,22 @@ describe("PhoneShell", () => {
     expect(FakeSocket.instances).toHaveLength(2);
   });
 
+  it("does not redial when the room closes 4403", async () => {
+    const first = await connectSpike();
+    vi.useFakeTimers();
+    act(() => {
+      const ev = new Event("close");
+      Object.defineProperty(ev, "code", { value: 4403 });
+      first.onclose?.(ev);
+    });
+    expect(FakeSocket.instances).toHaveLength(1);
+    expect(screen.getByText("down")).toBeTruthy();
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+    expect(FakeSocket.instances).toHaveLength(1);
+  });
+
   it("reconnects on visibilitychange when the socket is not open", async () => {
     const first = await connectSpike();
     vi.useFakeTimers();

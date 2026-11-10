@@ -10,12 +10,17 @@ export function shouldRedialMailboxOnVisible(role: Role, visibilityState: string
   return role === "phone" && visibilityState === "visible";
 }
 
+/** The room list dropped this person. Redialing only meets a 403; the session is still good. */
+const CLOSE_NOT_IN_ROOM = 4403;
+
 export function shouldReconnectMailbox(opts: {
   role: Role;
   visibilityState: string;
   stopped: boolean;
+  /** `CloseEvent.code`. */
+  code?: number;
 }): boolean {
-  if (opts.stopped) {
+  if (opts.stopped || opts.code === CLOSE_NOT_IN_ROOM) {
     return false;
   }
   if (shouldDropMailboxOnHide(opts.role, opts.visibilityState)) {

@@ -4,7 +4,6 @@ import type { UserStore } from "@/lib/door/users";
 import {
   doorUserForRequest,
   humanChatPrecheck,
-  memberInDirectory,
   memberRoomUsersWhenNeeded,
   inventoriedAgent,
 } from "./admission";
@@ -189,13 +188,11 @@ export async function routeAgentSocket(
     if (pre === "forbidden") {
       return forbidden();
     }
-    const inDirectory = await memberInDirectory(env, session, slug);
-    roomList = await memberRoomUsersWhenNeeded(env, slug, doorUser.role, inDirectory);
+    roomList = await memberRoomUsersWhenNeeded(env, slug, doorUser.role);
     if (!phoneAdmitted(roomList, session, env, {
       role: doorUser.role,
       assignedSlugs: doorUser.agents,
       slug,
-      inDirectory,
     })) {
       return forbidden();
     }
@@ -212,7 +209,6 @@ export async function routeAgentSocket(
       emailVerified: session.emailVerified,
       doorRole: doorUser.role,
       assignedAgents: doorUser.agents,
-      inDirectory,
     });
     return stub.fetch(new Request(req, { headers }));
   }
@@ -229,9 +225,8 @@ export async function routeAgentSocket(
       if (pre === "forbidden") {
         return forbidden();
       }
-      const inDirectory = await memberInDirectory(env, session, slug);
-      roomList = await memberRoomUsersWhenNeeded(env, slug, doorUser.role, inDirectory);
-      admit = { role: doorUser.role, assignedSlugs: doorUser.agents, slug, inDirectory };
+      roomList = await memberRoomUsersWhenNeeded(env, slug, doorUser.role);
+      admit = { role: doorUser.role, assignedSlugs: doorUser.agents, slug };
     }
   }
 
@@ -293,7 +288,6 @@ export async function routeAgentSocket(
     exp: auth.principal.kind === "phone" ? auth.principal.exp : undefined,
     doorRole: doorUser?.role,
     assignedAgents: doorUser?.agents,
-    inDirectory: admit?.inDirectory,
   });
   return stub.fetch(new Request(req, { headers }));
 }

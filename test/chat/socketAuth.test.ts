@@ -24,7 +24,7 @@ describe("socketAuth", () => {
       userId: "9999999999",
       allowedSubs: extra,
       now: 1_000,
-    })).toBe(false);
+    })).toBe("forbidden");
   });
 
   it("closes when exp has passed", () => {
@@ -33,14 +33,23 @@ describe("socketAuth", () => {
       allowedSubs: extra,
       expMs: 1_000,
       now: 1_001,
-    })).toBe(false);
+    })).toBe("unauthorized");
+  });
+
+  it("calls an expired session unauthorized even when the room list dropped it too", () => {
+    expect(phone({
+      userId: ada,
+      roomUsers: [],
+      expMs: 1_000,
+      now: 1_001,
+    })).toBe("unauthorized");
   });
 
   it("closes when the phone sub is missing", () => {
     expect(phone({
       allowedSubs: extra,
       now: 1_000,
-    })).toBe(false);
+    })).toBe("unauthorized");
   });
 
   it("skips the check in spike mode and for crane sockets", () => {
@@ -49,14 +58,14 @@ describe("socketAuth", () => {
       userId: "anyone",
       allowedSubs: "",
       now: 1_000,
-    })).toBe(true);
+    })).toBe("ok");
     expect(socketMessageAllowed({
       role: "crane",
       userId: "not-a-human",
       allowedSubs: extra,
       enforce: true,
       now: 1_000,
-    })).toBe(true);
+    })).toBe("ok");
   });
 
   it("allows a listed sub before expiry", () => {
@@ -65,12 +74,12 @@ describe("socketAuth", () => {
       allowedSubs: extra,
       expMs: 2_000,
       now: 1_000,
-    })).toBe(true);
+    })).toBe("ok");
     expect(phone({
       userId: ada,
       allowedSubs: extra,
       now: 1_000,
-    })).toBe(true);
+    })).toBe("ok");
   });
 
   it("admits an admin only from Who can chat and still rejects strangers", () => {
@@ -81,7 +90,7 @@ describe("socketAuth", () => {
       roomUsers: [{ email: "ada@example.com" }],
       doorRole: "admin",
       now: 1_000,
-    })).toBe(true);
+    })).toBe("ok");
     expect(phone({
       userId: ada,
       email: "ada@example.com",
@@ -90,14 +99,14 @@ describe("socketAuth", () => {
       doorRole: "admin",
       assignedAgents: ["kit"],
       now: 1_000,
-    })).toBe(false);
+    })).toBe("forbidden");
     expect(phone({
       userId: ada,
       email: "ada@example.com",
       emailVerified: true,
       roomUsers: [],
       now: 1_000,
-    })).toBe(false);
+    })).toBe("forbidden");
   });
 
   it("keeps an email-listed phone when the verified flag was dropped", () => {
@@ -107,19 +116,19 @@ describe("socketAuth", () => {
       roomUsers: [{ email: "ada@example.com" }],
       doorRole: "admin",
       now: 1_000,
-    })).toBe(true);
+    })).toBe("ok");
     expect(phone({
       userId: ada,
       roomUsers: [{ email: "ada@example.com" }],
       doorRole: "admin",
       now: 1_000,
-    })).toBe(false);
+    })).toBe("forbidden");
     expect(phone({
       userId: ada,
       roomUsers: [{ sub: ada }],
       doorRole: "admin",
       now: 1_000,
-    })).toBe(true);
+    })).toBe("ok");
   });
 
   it("admits a verified email on the room list and closes a removed socket", () => {
@@ -130,14 +139,14 @@ describe("socketAuth", () => {
       emailVerified: true,
       roomUsers: room,
       now: 1_000,
-    })).toBe(true);
+    })).toBe("ok");
     expect(phone({
       userId: ada,
       email: "ada@example.com",
       emailVerified: true,
       roomUsers: [],
       now: 1_000,
-    })).toBe(false);
+    })).toBe("forbidden");
   });
 
   it("parses decimal millisecond exp tags and the verified flag", () => {

@@ -173,6 +173,9 @@ if a workflow grows a new `vars.X` or `secrets.X`, it is added here.
 | Variable | `VAPID_SUBJECT` | `deploy-cloudflare` | `mailto:you@example.com` | only with push |
 | Secret | `VAPID_PUBLIC_KEY` | `deploy-cloudflare` | `npx web-push generate-vapid-keys` | only with push |
 | Secret | `VAPID_PRIVATE_KEY` | `deploy-cloudflare` | same pair | only with push |
+| Secret | `GOOGLE_TTS_API_KEY` | `deploy-cloudflare` | Google Cloud Text-to-Speech API key; enable that API | only with pocket voice |
+| Variable | `TTS_VOICE` | `deploy-cloudflare` | Chirp voice name; empty keeps the default | no |
+| Variable | `VOICE` | `deploy-cloudflare` | `on` or `off`; empty follows the key | no |
 | Secret | `LLM_BASE_URL` | `eval` | the model the eval drives, e.g. `https://generativelanguage.googleapis.com/v1beta/openai` | eval skips without all three |
 | Secret | `LLM_API_KEY` | `eval` | | eval skips without all three |
 | Secret | `LLM_MODEL` | `eval` | e.g. `gemini-3.8-flash` | eval skips without all three |

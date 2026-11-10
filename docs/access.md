@@ -16,7 +16,7 @@ Setup by place: [install.md](install.md). Open walks: [todo.md](todo.md).
 | Who | Wants | Needs |
 | --- | --- | --- |
 | **Operators** | to *touch* an agent — config, tools, recreate, users | a Google account on the list with role `admin` or `operator` |
-| **Members** | the agent to *answer* | a Google account on the list; chat also needs the room list (or directory index). `GANTREE_ALLOW` is sign-in only. |
+| **Members** | the agent to *answer* | a Google account on the list; chat also needs the room list. `GANTREE_ALLOW` is sign-in only. |
 
 Bob can operate Ada and never message her. Sam can message Ada from
 a phone, open Ada's own page, and never see the rest of settings.
@@ -180,7 +180,8 @@ plain-text 401. The handler still requires the session cookie.
 
 `agents` for a member is the agent ids whose room list has them (KV
 directory `sub:<sub>` / `email:<email>` → agent ids, written by each Agent
-DO when it stores an `allow` frame). For an operator it is their
+DO when it stores an `allow` frame). The directory only lists rooms; it
+admits nobody. A stale entry lists a room that then refuses. For an operator it is their
 assignment. For an admin it is their row's agent ids (inventory ∩ `agents[]`). gantree-android and
 gantree-ios read `agents` and fall back to `cranes`; the alias is
 still written until the Phase 4 wire-name drop. The only identity a stranger sees
@@ -241,8 +242,10 @@ the room token. A session JWE is the phone.
 | phone: session opens (cookie, else the same JWE on `Authorization`) and the person is on the app list | handshake, every frame | `4401` |
 | phone: `sub` ∈ room list **or** (`email_verified` ∧ `email` ∈ room list) | handshake, every frame | `4403` |
 
-Room list = last `allow` frame stored on that agent's Durable Object. New
-`allow` → re-check every phone socket; close the ones no longer on it.
+Room list = last `allow` frame stored on that agent's Durable Object.
+Every admission reads it there — the handshake, the room's HTTP routes,
+and a member's agent controls — never the KV directory. New `allow` →
+re-check every phone socket; close the ones no longer on it `4403`.
 Admins are **not** exempt from the room list: operating Ada and
 talking to Ada are different grants.
 

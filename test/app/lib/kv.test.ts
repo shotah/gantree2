@@ -2,7 +2,7 @@
 
 import "fake-indexeddb/auto";
 import { describe, expect, it } from "vitest";
-import { kvDel, kvGet, kvSet } from "@/app/lib/kv";
+import { kvClear, kvDel, kvGet, kvSet } from "@/app/lib/kv";
 
 describe("kv", () => {
   it("round-trips a structured value and forgets it on del", async () => {
@@ -12,6 +12,16 @@ describe("kv", () => {
     expect(await kvGet(key)).toEqual({ rev: "7", n: [1, 2] });
     await kvDel(key);
     expect(await kvGet(key)).toBeUndefined();
+  });
+
+  it("clears every row", async () => {
+    const thread = `thread:kit:${Math.random()}`;
+    const avatar = `look:avatar:${Math.random()}`;
+    await kvSet(thread, [{ id: "a", from: "you", text: "hi", at: 1 }]);
+    await kvSet(avatar, { rev: 1, type: "image/jpeg", bytes: new Uint8Array([1]).buffer });
+    await kvClear();
+    expect(await kvGet(thread)).toBeUndefined();
+    expect(await kvGet(avatar)).toBeUndefined();
   });
 
   it("keeps binary bytes", async () => {

@@ -143,7 +143,9 @@ describe("feeds fetch", () => {
 describe("feeds http", () => {
   it("accepts http(s) and rejects the rest", () => {
     expect(validateURL("https://example.com/rss.xml")).toBeNull();
-    expect(validateURL("http://localhost/feed")).toBeNull();
+    expect(validateURL("http://example.com/rss")).toBeNull();
+    expect(validateURL("http://localhost/feed")).toBe("url host is not a public name");
+    expect(validateURL("http://169.254.169.254/latest/meta-data/")).toBe("url host is not a public address");
     expect(validateURL("ftp://example.com/feed")).not.toBeNull();
     expect(validateURL("https://")).not.toBeNull();
     expect(validateURL("://bad")).not.toBeNull();
@@ -203,6 +205,22 @@ describe("feeds http", () => {
       url: "https://example.com/start",
       fetch: async () => new Response(null, { status: 302, headers: { location: "ftp://example.com/x" } }),
     })).rejects.toThrow();
+  });
+
+  it("refuses a private first URL and a redirect hop to a private host before fetching it", async () => {
+    const seen: string[] = [];
+    const fetch = async (input: RequestInfo | URL) => {
+      const href = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      seen.push(href);
+      if (href.startsWith("https://example.com/")) {
+        return new Response(null, { status: 302, headers: { location: "http://[::ffff:7f00:1]:8080/admin" } });
+      }
+      return textResponse("secret");
+    };
+    await expect(httpGet({ url: "http://0x7f.1:8080/admin", fetch })).rejects.toThrow("url host is not a public address");
+    expect(seen).toEqual([]);
+    await expect(httpGet({ url: "https://example.com/feed", fetch })).rejects.toThrow("url host is not a public address");
+    expect(seen).toEqual(["https://example.com/feed"]);
   });
 
   it("reads FEEDS_USER_AGENT and falls back, and honors a canceled call", async () => {
@@ -475,5 +493,28 @@ describe("feeds plugin", () => {
     }))) as { candidates?: { url: string }[] }[];
     expect(resolved[0]?.candidates?.[0]?.url).toContain("rss.xml");
     expect(resolved[1]?.candidates?.[0]?.url).toContain("CAZ513");
+  });
+
+  it("returns a private url as an error row without fetching it", async () => {
+    const seen: string[] = [];
+    const ctx = pluginCtx({
+      env,
+      fetch: async (input) => {
+        seen.push(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
+        return new Response(null, { status: 302, headers: { location: "http://192.168.1.1/" } });
+      },
+    });
+    const listed = await callTool(feedsPlugin, ctx, "items_list", {
+      urls: ["http://127.0.0.1:8080/rss", "https://example.com/rss.xml"],
+    });
+    expect(listed.isError).toBeUndefined();
+    expect(JSON.parse(textOf(listed))).toEqual([
+      { url: "http://127.0.0.1:8080/rss", error: "url host is not a public address" },
+      { url: "https://example.com/rss.xml", error: "url host is not a public address" },
+    ]);
+    const resolved = await callTool(feedsPlugin, ctx, "source_resolve", { query: "http://db.internal/" });
+    expect(resolved.isError).toBeUndefined();
+    expect(JSON.parse(textOf(resolved))).toEqual([{ query: "http://db.internal/", error: "url host is not a public name" }]);
+    expect(seen).toEqual(["https://example.com/rss.xml"]);
   });
 });

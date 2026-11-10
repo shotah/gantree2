@@ -26,6 +26,12 @@ VAPID_PUBLIC_KEY=
 VAPID_PRIVATE_KEY=
 VAPID_SUBJECT=mailto:you@example.com
 
+# Pocket voice. Google Cloud Text-to-Speech API key. Enable that API for the key.
+# TTS_VOICE picks the Chirp speaker. VOICE is `on` or `off`; empty follows the key.
+GOOGLE_TTS_API_KEY=
+TTS_VOICE=
+VOICE=
+
 # Optional. Fakes a signed-in user on 127.0.0.1 / localhost only. Refused on any other host.
 # GANTREE_DEV_USER=118212345678901234567:you@example.com
 

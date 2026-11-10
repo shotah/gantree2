@@ -3,7 +3,6 @@ import type { AgentRow } from "@/lib/agents/types";
 import { devIdentity, principalFromHeaders, type GateEnv } from "@/lib/door/gate";
 import { resolveUser, type Resolved, type Role, type UserStore } from "@/lib/door/users";
 import { fetchRoomUsers, type RoomUser } from "./allow";
-import { agentsFor } from "./directory";
 import type { AgentEnv } from "./env";
 import { agentStub } from "./location";
 import { readChatSession } from "./session";
@@ -40,14 +39,6 @@ export async function inventorySlugs(env: AgentEnv): Promise<string[]> {
   }
 }
 
-export async function memberInDirectory(env: AgentEnv, session: RoomSession, slug: string): Promise<boolean> {
-  if (!env.DIRECTORY) {
-    return false;
-  }
-  const slugs = await agentsFor(env.DIRECTORY, session.sub, session.email);
-  return slugs.includes(slug);
-}
-
 export type HumanChatVerdict = "ok" | "forbidden";
 
 /** Whether this human may chat with the slug before loading the Agent DO room list. */
@@ -60,16 +51,12 @@ export function humanChatPrecheck(
   return "ok";
 }
 
-/** Member assignment when DIRECTORY missed: read the Agent DO allow list (inventory already checked). */
+/** The Agent DO allow list (inventory already checked). DIRECTORY KV is never the door. */
 export async function memberRoomUsersWhenNeeded(
   env: AgentEnv,
   slug: string,
   _role: Role,
-  inDirectory: boolean,
 ): Promise<readonly RoomUser[]> {
-  if (inDirectory) {
-    return [];
-  }
   const stub = agentStub(env, slug);
   if (!stub) {
     return [];

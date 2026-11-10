@@ -4,7 +4,6 @@ import type { UserStore } from "@/lib/door/users";
 import {
   doorUserForRequest,
   humanChatPrecheck,
-  memberInDirectory,
   memberRoomUsersWhenNeeded,
   inventoriedAgent,
 } from "./admission";
@@ -65,9 +64,8 @@ export async function authorizeSlug(
     if (pre === "forbidden") {
       return forbidden();
     }
-    const inDirectory = await memberInDirectory(env, session, slug);
-    roomList = await memberRoomUsersWhenNeeded(env, slug, who.role, inDirectory);
-    admit = { role: who.role, assignedSlugs: who.agents, slug, inDirectory };
+    roomList = await memberRoomUsersWhenNeeded(env, slug, who.role);
+    admit = { role: who.role, assignedSlugs: who.agents, slug };
   }
 
   if (devIdentity(env, url) && who) {
@@ -80,7 +78,6 @@ export async function authorizeSlug(
       role: who.role,
       assignedSlugs: who.agents,
       slug,
-      inDirectory: await memberInDirectory(env, session, slug),
     };
     return phoneAdmitted(roomList, session, env, ctx) ? null : forbidden();
   }

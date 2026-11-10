@@ -17,7 +17,6 @@ export type SocketMeta = {
   doorRole?: DoorRole;
   assignedAgents?: string[];
   chatSlug?: string;
-  inDirectory?: boolean;
 };
 
 export function roleTag(role: Role): string {
@@ -113,9 +112,6 @@ export function socketTags(meta: SocketMeta): string[] {
   if (meta.chatSlug) {
     tags.push(`slug:${meta.chatSlug}`);
   }
-  if (meta.inDirectory) {
-    tags.push("dir:1");
-  }
   return tags;
 }
 
@@ -146,7 +142,7 @@ export function parseSocketTags(tags: readonly string[]): SocketMeta {
   let doorRole: DoorRole | undefined;
   let assignedAgents: string[] | undefined;
   let chatSlug: string | undefined;
-  let inDirectory = false;
+  // Unknown tags fall through: a socket hibernated before the deploy may still carry `dir:1`.
   for (const tag of tags) {
     if (tag === ROLE_AGENT) {
       role = "crane";
@@ -171,8 +167,6 @@ export function parseSocketTags(tags: readonly string[]): SocketMeta {
       assignedAgents = tag.slice(7).split(",").filter(Boolean);
     } else if (tag.startsWith("slug:")) {
       chatSlug = tag.slice(5) || undefined;
-    } else if (tag === "dir:1") {
-      inDirectory = true;
     }
   }
   return {
@@ -185,6 +179,5 @@ export function parseSocketTags(tags: readonly string[]): SocketMeta {
     doorRole,
     assignedAgents,
     chatSlug,
-    inDirectory,
   };
 }

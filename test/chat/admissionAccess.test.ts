@@ -94,6 +94,92 @@ function fakeAgentForMember(users: unknown[] = []) {
   return { AGENT, idFromName };
 }
 
+/** KV still indexes MEM on kit by sub and email — the room list is the only door. */
+function staleDirectory() {
+  const rows: Record<string, string> = {
+    [`sub:${MEM}`]: "[\"kit\"]",
+    "email:member@example.com": "[\"kit\"]",
+  };
+  return {
+    get: async (key: string) => rows[key] ?? null,
+    put: async () => {},
+    delete: async () => {},
+  };
+}
+
+describe("a stale DIRECTORY entry is not the door", () => {
+  async function dial(users: unknown[]) {
+    const token = await sealSession(await sessionKey(SECRET), { sub: MEM, email: "member@example.com" });
+    const stub = {
+      fetch: vi.fn(async (input: RequestInfo | URL) => {
+        const req = input instanceof Request ? input : new Request(input);
+        if (req.headers.get("X-Chat-Op") === "allow") {
+          return Response.json({ users });
+        }
+        return new Response(null, { status: 200 });
+      }),
+    };
+    const env = {
+      GOOGLE_CLIENT_ID: "id",
+      SESSION_SECRET: SECRET,
+      GANTREE_ALLOW: "member@example.com",
+      AGENT: { idFromName: (name: string) => name, get: () => stub } as unknown as DurableObjectNamespace,
+      SETTINGS: settingsInventory(["kit"]),
+      DIRECTORY: staleDirectory(),
+    };
+    const res = await routeAgentSocket(new Request("https://g.test/ws/kit?role=phone", {
+      headers: { Cookie: `${SESSION_COOKIE}=${encodeURIComponent(token)}` },
+    }), env, "kit", memoryStore());
+    const upgrade = stub.fetch.mock.calls.map((call) => call[0]).find((input) => {
+      const req = input instanceof Request ? input : new Request(input);
+      return req.headers.get("X-Chat-Role") === "phone";
+    });
+    return { res, upgrade: upgrade instanceof Request ? upgrade : null };
+  }
+
+  it("403s a member the room list dropped", async () => {
+    const { res, upgrade } = await dial([{ sub: "118200000000000000009" }]);
+    expect(res?.status).toBe(403);
+    expect(upgrade).toBeNull();
+  });
+
+  it("opens for a member the room list matches by verified email, with no directory stamp", async () => {
+    const { res, upgrade } = await dial([{ email: "member@example.com" }]);
+    expect(res?.status).toBe(200);
+    expect(upgrade?.headers.get("X-Chat-Sub")).toBe(MEM);
+    expect(upgrade?.headers.get("X-Chat-Dir")).toBeNull();
+  });
+
+  it("opens for a member the room list matches by sub", async () => {
+    const { res } = await dial([{ sub: MEM }]);
+    expect(res?.status).toBe(200);
+  });
+
+  async function slugRoute(users: unknown[]) {
+    const token = await sealSession(await sessionKey(SECRET), { sub: MEM, email: "member@example.com" });
+    const { AGENT } = fakeAgentForMember(users);
+    const env = {
+      GOOGLE_CLIENT_ID: "id",
+      SESSION_SECRET: SECRET,
+      GANTREE_ALLOW: "member@example.com",
+      AGENT,
+      SETTINGS: settingsInventory(["kit"]),
+      DIRECTORY: staleDirectory(),
+    };
+    return authorizeSlug(env, new Request("https://g.test/api/theme?slug=kit", {
+      headers: { Cookie: `${SESSION_COOKIE}=${encodeURIComponent(token)}` },
+    }), "kit", memoryStore());
+  }
+
+  it("403s authorizeSlug for a member the room list dropped", async () => {
+    expect((await slugRoute([]))?.status).toBe(403);
+  });
+
+  it("allows authorizeSlug for a verified email on the room list", async () => {
+    expect(await slugRoute([{ email: "member@example.com" }])).toBeNull();
+  });
+});
+
 describe("email-only env admin on Who can chat", () => {
   const SUB = "118212345678901234567";
   const EMAIL = "ada@example.com";

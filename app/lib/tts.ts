@@ -40,6 +40,8 @@ export type SpeakDeps = {
   onPhase?: (ev: SpeakEvent) => void;
   /** Settings → Language. The Worker swaps Chirp's locale; unset keeps its `TTS_VOICE`. */
   lang?: LangId;
+  /** Room this reply belongs to. Sent as `?slug=` so the Worker can admit the caller. */
+  slug?: string;
 };
 
 /**
@@ -57,9 +59,11 @@ export async function browserSpeak(markdown: string, deps: SpeakDeps = {}): Prom
   }
   tell({ phase: "fetching" });
   const fetchFn = deps.fetch ?? fetch;
+  const slug = deps.slug?.trim();
+  const path = slug ? `${TTS_PATH}?slug=${encodeURIComponent(slug)}` : TTS_PATH;
   let res: Response;
   try {
-    res = await fetchFn(TTS_PATH, {
+    res = await fetchFn(path, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },

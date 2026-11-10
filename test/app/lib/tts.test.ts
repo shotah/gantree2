@@ -65,11 +65,11 @@ describe("browserSpeak", () => {
   it("strips markdown, posts the words with cookies, and plays what comes back", async () => {
     const fetchFn = vi.fn(async () => mp3());
     const a = audio();
-    const ok = await browserSpeak("**On my way.** See you in `10`. 🚗", { fetch: fetchFn as unknown as typeof fetch, audio: a });
+    const ok = await browserSpeak("**On my way.** See you in `10`. 🚗", { fetch: fetchFn as unknown as typeof fetch, audio: a, slug: "kit" });
     expect(ok).toBe(true);
     expect(fetchFn).toHaveBeenCalledOnce();
     const [path, init] = fetchFn.mock.calls[0] as unknown as [string, RequestInit];
-    expect(path).toBe(TTS_PATH);
+    expect(path).toBe(`${TTS_PATH}?slug=kit`);
     expect(init.method).toBe("POST");
     expect(init.credentials).toBe("include");
     expect(JSON.parse(textBody(init.body))).toEqual({ text: "On my way. See you in 10." });
@@ -82,8 +82,9 @@ describe("browserSpeak", () => {
 
   it("tells the Worker which language to speak when Settings picked one", async () => {
     const fetchFn = vi.fn(async () => mp3());
-    await browserSpeak("今夜は**雨**です。", { fetch: fetchFn as unknown as typeof fetch, audio: audio(), lang: "ja" });
-    const [, init] = fetchFn.mock.calls[0] as unknown as [string, RequestInit];
+    await browserSpeak("今夜は**雨**です。", { fetch: fetchFn as unknown as typeof fetch, audio: audio(), lang: "ja", slug: "kit" });
+    const [path, init] = fetchFn.mock.calls[0] as unknown as [string, RequestInit];
+    expect(path).toBe(`${TTS_PATH}?slug=kit`);
     expect(JSON.parse(textBody(init.body))).toEqual({ text: "今夜は雨です。", lang: "ja" });
   });
 

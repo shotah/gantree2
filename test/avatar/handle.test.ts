@@ -97,6 +97,38 @@ describe("handleAvatar", () => {
     expect(res.status).toBe(403);
   });
 
+  it("forbids a member the room list dropped while DIRECTORY still lists them, and admits a listed email", async () => {
+    const member = memoryStore([{
+      entry: { sub: SUB, email: "ada@example.com" },
+      role: "member",
+      agents: [],
+      locked: false,
+    }]);
+    const directory: Record<string, string> = {
+      [`sub:${SUB}`]: "[\"kit\"]",
+      "email:ada@example.com": "[\"kit\"]",
+    };
+    const withRoom = (users: unknown[]) => ({
+      ...room((req) => {
+        if (req.headers.get("X-Chat-Op") === "allow") {
+          return Response.json({ users });
+        }
+        return new Response(new Uint8Array([0xff, 0xd8, 0xff]), { headers: { "Content-Type": "image/jpeg" } });
+      }),
+      GANTREE_ADMINS: "other@example.com",
+      DIRECTORY: {
+        get: async (key: string) => directory[key] ?? null,
+        put: async () => {},
+        delete: async () => {},
+      },
+    } as RoomEnv);
+    const ask = async (env: RoomEnv) => handleAvatar(new Request("https://chat.test/api/chat/avatar?slug=kit", {
+      headers: { cookie: await cookie() },
+    }), env, member);
+    expect((await ask(withRoom([{ sub: "118200000000000000009" }]))).status).toBe(403);
+    expect((await ask(withRoom([{ email: "ada@example.com" }]))).status).toBe(200);
+  });
+
   it("refuses a deployment admin when Who can chat lists someone else", async () => {
     const env = room((req) => {
       if (req.headers.get("X-Chat-Op") === "allow") {

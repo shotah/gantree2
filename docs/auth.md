@@ -97,7 +97,7 @@ Misses: `login not configured` (503, no `SESSION_SECRET`), `bad state`
 (400), `missing code` (400), `could not connect` (502).
 
 The code is not written to the log. Refresh tokens land in
-`oauth_token` in that DO, AES-256-GCM under `snapshot.key`.
+`oauth_token` in that DO, AES-256-GCM under `token.key`.
 
 Workspace refresh tokens are stored in `oauth_token` with provider id
 `google:<email>` (lowercase email). Signing in again as the same

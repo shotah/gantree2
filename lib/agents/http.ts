@@ -16,7 +16,7 @@ import { fetchRoomBearer } from "@/lib/chat/bearer";
 import { fetchRoomUsers } from "@/lib/chat/allow";
 import { directoryApply } from "@/lib/chat/directory";
 import { randomToken } from "@/lib/door/google";
-import { memberInDirectory, memberRoomUsersWhenNeeded } from "@/lib/chat/admission";
+import { memberRoomUsersWhenNeeded } from "@/lib/chat/admission";
 import { phoneAdmitted } from "@/lib/chat/floor";
 import { agentStub } from "@/lib/chat/location";
 import { fromStub } from "@/lib/chat/slugRoute";
@@ -125,13 +125,11 @@ async function requireAgentControl(env: AgentsHttpEnv, who: Principal, slug: str
     email: who.email ?? undefined,
     emailVerified: Boolean(who.email),
   };
-  const inDirectory = await memberInDirectory(env, session, slug);
-  const roomList = await memberRoomUsersWhenNeeded(env, slug, "member", inDirectory);
+  const roomList = await memberRoomUsersWhenNeeded(env, slug, "member");
   if (phoneAdmitted(roomList, session, env, {
     role: "member",
     assignedSlugs: who.agents,
     slug,
-    inDirectory,
   })) {
     return null;
   }

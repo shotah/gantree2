@@ -24,7 +24,7 @@ The Agent DO is the disk. The harness reads that DO.
 | `SELF.md` | `selfnote` | the agent, and the operator on the self fold |
 | Grants | the registry | admin / operator, Tools fold. A plugin left off the list is not in the catalog |
 | `config.env` | DO config | admin / operator. A change drops the memoised harness and opens a new one |
-| OAuth tokens | `oauth_token`, AES-256-GCM | the plugin, via `authFinish`. Key is `snapshot.key` |
+| OAuth tokens | `oauth_token`, AES-256-GCM | the plugin, via `authFinish`. Key is `token.key` |
 
 Routes: `GET` / `PUT` / `DELETE /api/agents/:slug/persona` and
 `GET` / `PUT /api/agents/:slug/self`.

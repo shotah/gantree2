@@ -297,7 +297,6 @@ export class Agent extends DurableObject<AgentEnv> {
       doorRole,
       assignedAgents,
       chatSlug: slug ?? undefined,
-      inDirectory: request.headers.get("X-Chat-Dir") === "1",
     }));
     if (role === "crane") {
       await this.sendConfig(pair[1]);
@@ -383,7 +382,7 @@ export class Agent extends DurableObject<AgentEnv> {
     }
     const now = Date.now();
     const roomUsers = this.enforce() ? await this.roomUsers() : undefined;
-    if (!socketMessageAllowed({
+    const verdict = socketMessageAllowed({
       role: meta.role,
       userId: meta.userId,
       email: meta.email,
@@ -394,11 +393,11 @@ export class Agent extends DurableObject<AgentEnv> {
       doorRole: meta.doorRole,
       assignedAgents: meta.assignedAgents,
       slug: meta.chatSlug,
-      inDirectory: meta.inDirectory,
       enforce: this.enforce(),
       now,
-    })) {
-      ws?.close(4401, "unauthorized");
+    });
+    if (verdict !== "ok") {
+      ws?.close(verdict === "forbidden" ? 4403 : 4401, verdict);
       return;
     }
     const parsed = parseFrame(message, { role: meta.role });
@@ -801,7 +800,7 @@ export class Agent extends DurableObject<AgentEnv> {
     }
     for (const p of this.peers(roleTag("phone"))) {
       const phone = this.meta(p);
-      if (!socketMessageAllowed({
+      const verdict = socketMessageAllowed({
         role: "phone",
         userId: phone.userId,
         email: phone.email,
@@ -812,11 +811,11 @@ export class Agent extends DurableObject<AgentEnv> {
         doorRole: phone.doorRole,
         assignedAgents: phone.assignedAgents,
         slug: phone.chatSlug,
-        inDirectory: phone.inDirectory,
         enforce: this.enforce(),
         now,
-      })) {
-        p.close(4401, "unauthorized");
+      });
+      if (verdict !== "ok") {
+        p.close(verdict === "forbidden" ? 4403 : 4401, verdict);
       }
     }
     if (this.enforce()) {

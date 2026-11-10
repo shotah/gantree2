@@ -190,7 +190,7 @@ access token, optional refresh token, expiry in epoch ms, scope,
 token type, and a string map of provider extras (Garmin consumer
 secrets, an athlete id). The implementation is in `harness/tools`, not
 on the interface. It stores the token AES-256-GCM in SQLite. The key
-is the Agent DO's `snapshot.key`, 32 bytes, base64
+is the Agent DO's `token.key`, 32 bytes, base64
 ([security.md](security.md)).
 
 A plugin with a provider login also implements `authStart` (the URL

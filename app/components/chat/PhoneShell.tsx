@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { FontSelect } from "../shared/FontSelect";
 import { SettingsSelect } from "../shared/SettingsSelect";
 import { ThemeSelect } from "../shared/ThemeSelect";
+import { LogoutForm } from "../shared/LogoutForm";
 import type { SlashCommand } from "@/app/lib/slash";
 import type { AimLink, AimRow } from "@/lib/chat/aims";
 import { todoDoneCommand, type TodoItem } from "@/lib/chat/todo";
@@ -714,7 +715,7 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
         sendClientFrame(ws, frame);
       }
     };
-    ws.onclose = () => {
+    ws.onclose = (ev) => {
       if (gen !== connectGen.current || stoppedRef.current) {
         return;
       }
@@ -732,6 +733,7 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
         role,
         visibilityState: document.visibilityState,
         stopped: stoppedRef.current,
+        code: ev.code,
       })) {
         return;
       }
@@ -933,6 +935,7 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
             awaitingVoice.current = false;
             void browserSpeak(frame.text ?? "", {
               lang: langRef.current,
+              slug: roomSlug,
               onPhase: (ev) => {
                 setSpeakPhase(speakPhaseAfter(ev));
                 if (ev.phase === "failed") {
@@ -1668,9 +1671,9 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
                         ? (
                             me
                               ? (
-                                  <form action="/api/auth/logout" method="post">
+                                  <LogoutForm>
                                     <button type="submit" className="text-xs text-dim underline">sign out</button>
-                                  </form>
+                                  </LogoutForm>
                                 )
                               : <a className="text-xs text-mark underline" href="/login">sign in</a>
                           )

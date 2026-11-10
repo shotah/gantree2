@@ -2,6 +2,7 @@
  * Size-capped GET. Redirects are followed by hand so a hop to a non-http URL
  * stops the same way the Go client did.
  */
+import { refusedHost } from "@/harness/core/egress";
 import { version } from "@/package.json";
 
 export const defaultTimeoutMs = 15_000;
@@ -26,7 +27,7 @@ export function validateURL(raw: string): string | null {
   }
   if (u.protocol !== "http:" && u.protocol !== "https:") return "url must be http or https";
   if (!u.host) return "url host is required";
-  return null;
+  return refusedHost(u);
 }
 
 export type Got = {

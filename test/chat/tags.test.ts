@@ -68,6 +68,12 @@ describe("socket tags", () => {
     });
   });
 
+  it("ignores the retired dir:1 tag on a socket accepted before the deploy", () => {
+    const tags = socketTags({ role: "phone", rateId: "sub:1182", userId: "1182", doorRole: "member", chatSlug: "kit" });
+    expect(tags).not.toContain("dir:1");
+    expect(parseSocketTags([...tags, "dir:1"])).toEqual(parseSocketTags(tags));
+  });
+
   it("looks up both prefixed and leftover names", () => {
     expect(tagAliases(roleTag("phone"))).toEqual(["role:phone", "phone"]);
     expect(tagAliases(subTag("ada"))).toEqual(["sub:ada", "ada"]);
