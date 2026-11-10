@@ -109,7 +109,7 @@ harness runs <code>authFinish</code> and the DO enqueues
 <p>Misses: <code>login not configured</code> (503, no <code>SESSION_SECRET</code>), <code>bad state</code>
 (400), <code>missing code</code> (400), <code>could not connect</code> (502).</p>
 <p>The code is not written to the log. Refresh tokens land in
-<code>oauth_token</code> in that DO, AES-256-GCM under <code>snapshot.key</code>.</p>
+<code>oauth_token</code> in that DO, AES-256-GCM under <code>token.key</code>.</p>
 <p>Workspace refresh tokens are stored in <code>oauth_token</code> with provider id
 <code>google:&lt;email&gt;</code> (lowercase email). Signing in again as the same
 address replaces only that row. An existing provider id <code>google</code> (one

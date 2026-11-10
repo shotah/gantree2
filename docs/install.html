@@ -391,6 +391,27 @@ if a workflow grows a new <code>vars.X</code> or <code>secrets.X</code>, it is a
 </tr>
 <tr>
 <td>Secret</td>
+<td><code>GOOGLE_TTS_API_KEY</code></td>
+<td><code>deploy-cloudflare</code></td>
+<td>Google Cloud Text-to-Speech API key; enable that API</td>
+<td>only with pocket voice</td>
+</tr>
+<tr>
+<td>Variable</td>
+<td><code>TTS_VOICE</code></td>
+<td><code>deploy-cloudflare</code></td>
+<td>Chirp voice name; empty keeps the default</td>
+<td>no</td>
+</tr>
+<tr>
+<td>Variable</td>
+<td><code>VOICE</code></td>
+<td><code>deploy-cloudflare</code></td>
+<td><code>on</code> or <code>off</code>; empty follows the key</td>
+<td>no</td>
+</tr>
+<tr>
+<td>Secret</td>
 <td><code>LLM_BASE_URL</code></td>
 <td><code>eval</code></td>
 <td>the model the eval drives, e.g. <code>https://generativelanguage.googleapis.com/v1beta/openai</code></td>

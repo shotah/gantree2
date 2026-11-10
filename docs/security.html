@@ -83,7 +83,7 @@ Shape: <a href="architecture.html">architecture.md</a>. Reporting a hole:
 </tr>
 <tr>
 <td>OAuth refresh tokens for tools (Google Workspace, Strava, Google Health, Garmin)</td>
-<td><code>oauth_token</code> in the Agent DO, AES-256-GCM under <code>snapshot.key</code></td>
+<td><code>oauth_token</code> in the Agent DO, AES-256-GCM under <code>token.key</code></td>
 <td>The plugin, for the call</td>
 </tr>
 <tr>
@@ -92,7 +92,7 @@ Shape: <a href="architecture.html">architecture.md</a>. Reporting a hole:
 <td>That agent only</td>
 </tr>
 <tr>
-<td><code>SESSION_SECRET</code>, <code>GOOGLE_CLIENT_SECRET</code>, <code>CLOUDFLARE_API_TOKEN</code></td>
+<td><code>SESSION_SECRET</code>, <code>GOOGLE_CLIENT_SECRET</code>, <code>GOOGLE_TTS_API_KEY</code>, <code>CLOUDFLARE_API_TOKEN</code></td>
 <td>GitHub Actions secrets → Worker secrets; <code>.dev.vars</code> locally; <code>CELLD_VARS_FILE</code> at home</td>
 <td>The operator</td>
 </tr>
@@ -298,12 +298,76 @@ Client copies of those names are stripped first.</p>
 <td><strong>admin</strong>, and only when <code>GANTREE_DEV_USER</code> is honored (set and loopback host); every other host is 404</td>
 </tr>
 <tr>
-<td>Chat HTTP (session): push, TTS, and other <code>/api/chat/*</code> not in the room-bearer trio</td>
-<td>Session from the gate, then the agent room list (<code>admitRoom</code> / <code>readChatUser</code>). Env floor <code>GANTREE_ADMINS</code> ∪ <code>GANTREE_ALLOW</code> matches the socket rule in <a href="access.html#room-admission-wsagent-id">access.md</a></td>
+<td>Chat HTTP (session): push and TTS</td>
+<td>Session from the gate. <code>POST /api/chat/tts</code> requires a <code>slug</code> query parameter and <code>admitRoom</code> before it spends the key. <code>GET /api/chat/tts</code> only says whether voice is on. Push <code>PUT</code>, <code>POST</code>, and <code>DELETE</code> use <code>admitRoom</code>. <code>GET /api/chat/push</code> uses <code>readChatUser</code> and returns the public key. Env floor <code>GANTREE_ADMINS</code> ∪ <code>GANTREE_ALLOW</code> matches the socket rule in <a href="access.html#room-admission-wsagent-id">access.md</a></td>
 </tr>
 </tbody></table>
 <p>Principal headers carry <code>sub</code>, email, role, and assigned agents. Role is
 recomputed every request and is not stored in the cookie.</p>
+<hr>
+<h2 id="response-headers">Response headers</h2>
+<p>The Worker entry (<code>worker/index.ts</code>) wraps every response with
+<code>withSecurityHeaders</code> (<code>lib/door/headers.ts</code>). Cloudflare adds none of
+these by itself. A WebSocket <code>101</code> is returned unchanged.</p>
+<table>
+<thead>
+<tr>
+<th>Header</th>
+<th>Value</th>
+<th>On</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Content-Security-Policy</code></td>
+<td>see below</td>
+<td>HTML documents, when <code>NODE_ENV</code> is <code>production</code></td>
+</tr>
+<tr>
+<td><code>X-Frame-Options</code></td>
+<td><code>DENY</code></td>
+<td>HTML documents</td>
+</tr>
+<tr>
+<td><code>X-Content-Type-Options</code></td>
+<td><code>nosniff</code></td>
+<td>every Worker response except the <code>101</code>, and static assets through <code>public/_headers</code></td>
+</tr>
+<tr>
+<td><code>Referrer-Policy</code></td>
+<td><code>strict-origin-when-cross-origin</code></td>
+<td>every Worker response except the <code>101</code></td>
+</tr>
+<tr>
+<td><code>Strict-Transport-Security</code></td>
+<td><code>max-age=31536000</code></td>
+<td>https responses only, except the <code>101</code></td>
+</tr>
+</tbody></table>
+<p>HSTS carries no <code>includeSubDomains</code> and no <code>preload</code>: the parent domain
+hosts other things. It is never sent on plain http.</p>
+<h3 id="content-security-policy">Content Security Policy</h3>
+<pre><code class="language-text">default-src 'self'; script-src 'self' 'nonce-&lt;per response&gt;';
+style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:;
+font-src 'self'; connect-src 'self' wss://&lt;this host&gt;;
+media-src 'self' blob:; worker-src 'self'; manifest-src 'self';
+frame-ancestors 'none'; base-uri 'self'; object-src 'none';
+form-action 'self'</code></pre>
+<p>On plain http the socket source is <code>ws://&lt;this host&gt;</code>.</p>
+<p>The policy is enforced, not report-only. Each response gets a fresh
+nonce. The Worker puts the policy on the request; Vinext reads the
+nonce from it and stamps its own inline scripts, and the layouts read
+it with <code>scriptNonce</code> for <code>THEME_BOOT</code> and <code>FONT_BOOT</code>. A new inline
+script must carry that nonce. A <code>Content-Security-Policy</code> or
+<code>Content-Security-Policy-Report-Only</code> header sent by a client is
+dropped.</p>
+<p>Known loose ends: <code>style-src</code> allows inline styles (the theme and font
+<code>&lt;style&gt;</code> blocks and React <code>style</code> attributes), and <code>img-src</code> allows
+any <code>https:</code> host because agent messages may carry remote images.</p>
+<p><code>npm run dev</code> sends no policy (<code>NODE_ENV</code> is not <code>production</code>): Vite&#39;s
+dev server injects inline scripts and uses eval for hot reload. The
+other headers are still sent. Static assets are served by Cloudflare
+before the Worker runs, so they get <code>nosniff</code> from <code>public/_headers</code>
+and nothing else.</p>
 <hr>
 <h2 id="the-room-agent-durable-object">The room (Agent Durable Object)</h2>
 <table>
@@ -335,15 +399,31 @@ recomputed every request and is not stored in the cookie.</p>
 <td>—</td>
 </tr>
 <tr>
-<td>Theme and typing notices are broadcast; <strong>text is only sent to sockets on the room list</strong></td>
+<td>Theme and typing notices are broadcast; <strong>text is only sent to sockets on the room list</strong>. A removed member&#39;s open socket is closed (<code>4403</code>) when that list changes</td>
 <td>A dropped member stops seeing new turns immediately</td>
 <td>They keep what their phone already cached</td>
 </tr>
 </tbody></table>
 <p>OAuth tokens are ciphertext in that DO&#39;s SQLite (<code>oauth_token</code>),
-AES-256-GCM under <code>snapshot.key</code> (<code>AesTokenStore</code> in <code>harness/tools</code>).
+AES-256-GCM under <code>token.key</code> (<code>AesTokenStore</code> in <code>harness/tools</code>).
 The plugin sees plaintext for the call. The key stays on the DO. A bug
 in a plugin is that agent&#39;s env and tokens, not another agent&#39;s.</p>
+<hr>
+<h2 id="outbound-fetches">Outbound fetches</h2>
+<p>Tools that fetch a URL the model chose (the feeds plugin) refuse a host
+that is loopback, private (RFC 1918), link-local (including
+<code>169.254.169.254</code>), carrier-grade NAT / Tailscale (<code>100.64.0.0/10</code>),
+IPv6 unique-local or link-local, unspecified, multicast, or reserved.
+They also refuse IPv4-mapped IPv6 forms of those addresses, and the
+names <code>localhost</code>, <code>*.localhost</code>, <code>*.local</code>, and <code>*.internal</code>. Any
+other IP address that is not public unicast is refused too. The check
+runs on the host as the URL parser normalises it, on the first request
+and on every redirect (<code>harness/core/egress.ts</code>, <code>validateURL</code> in
+<code>harness/plugins/feeds/http.ts</code>).</p>
+<p>DNS rebinding is a risk accepted: a public name that resolves to a
+private address is not caught, because neither the Worker nor celld
+lets the harness pin a connection to a checked address.</p>
+<p>Maps and Strava link resolvers allow only their own vendor hosts.</p>
 <hr>
 <h2 id="oauth-for-tools-google-workspace-strava-google-health">OAuth for tools (Google Workspace, Strava, Google Health, …)</h2>
 <p><code>/auth &lt;plugin&gt;</code> and the Tools-fold Connect button return the provider
@@ -445,10 +525,16 @@ the platform client on Tools.</p>
 <td><code>CELLD_VARS_FILE</code></td>
 <td>—</td>
 </tr>
+<tr>
+<td><code>GOOGLE_TTS_API_KEY</code></td>
+<td><code>.dev.vars</code></td>
+<td>Actions <strong>secret</strong> → Worker secret</td>
+<td><code>CELLD_VARS_FILE</code></td>
+<td>a var, a commit, a log</td>
+</tr>
 </tbody></table>
 <p><code>.dev.vars</code> is gitignored. <code>.dev.vars.example</code> carries names, never
-values. CI fails if a test fixture contains a string that looks like a
-live Google secret.</p>
+values.</p>
 <hr>
 <h2 id="what-the-service-holds-the-inventory">What the service holds — the inventory</h2>
 <p>Everything a deployment stores about the people and agents on it, read
@@ -506,7 +592,7 @@ are the heavy part.</p>
 <td>until retire</td>
 </tr>
 <tr>
-<td><code>snapshot.key</code></td>
+<td><code>token.key</code></td>
 <td>the 32-byte key that decrypts <code>oauth_token</code> in this DO</td>
 <td>until retire</td>
 </tr>
@@ -557,9 +643,10 @@ are the heavy part.</p>
 </tr>
 </tbody></table>
 <h3 id="kv-directory">KV <code>DIRECTORY</code></h3>
-<p><code>sub → [slugs]</code>: which rooms each person may enter, mirrored from the
-Agent DOs so <code>/api/auth/me</code> answers without waking them. No names, no
-text.</p>
+<p><code>sub → [slugs]</code> and <code>email → [slugs]</code>: which rooms list each person,
+mirrored from the Agent DOs so <code>/api/auth/me</code> can name an indexed room
+without waking that DO. It admits nobody; every admission reads the
+room list on the Agent DO. No names, no text.</p>
 <h3 id="in-flight-and-on-the-box">In flight and on the box</h3>
 <ul>
 <li><strong>Session cookie</strong>: an encrypted token carrying <code>sub</code> and email, 7
@@ -608,7 +695,7 @@ responsible for them.</p>
 </tr>
 <tr>
 <td>Actions</td>
-<td>Pinned major versions; <code>persist-credentials: false</code>; <code>contents: write</code> only where a push is needed</td>
+<td>Pinned to commit SHAs, version in a comment; <code>persist-credentials: false</code>; <code>contents: write</code> only where a push is needed</td>
 </tr>
 </tbody></table>
 <hr>
@@ -659,7 +746,7 @@ Settings DO and are readable by admins only. Not a SIEM.</p>
 <td>4</td>
 <td>OAuth refresh tokens</td>
 <td>Low</td>
-<td>That agent&#39;s tool tokens, if <code>snapshot.key</code> is also taken</td>
+<td>That agent&#39;s tool tokens, if <code>token.key</code> is also taken</td>
 <td>Ciphertext in the Agent DO (<code>oauth_token</code>), AES-256-GCM. The DO decrypts for the plugin</td>
 <td>No</td>
 </tr>

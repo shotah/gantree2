@@ -64,7 +64,7 @@ Setup by place: <a href="install.html">install.md</a>. Open walks: <a href="todo
 <tr>
 <td><strong>Members</strong></td>
 <td>the agent to <em>answer</em></td>
-<td>a Google account on the list; chat also needs the room list (or directory index). <code>GANTREE_ALLOW</code> is sign-in only.</td>
+<td>a Google account on the list; chat also needs the room list. <code>GANTREE_ALLOW</code> is sign-in only.</td>
 </tr>
 </tbody></table>
 <p>Bob can operate Ada and never message her. Sam can message Ada from
@@ -288,7 +288,8 @@ plain-text 401. The handler still requires the session cookie.</p>
   &quot;role&quot;: &quot;member&quot;, &quot;agents&quot;: [&quot;ada&quot;] }</code></pre>
 <p><code>agents</code> for a member is the agent ids whose room list has them (KV
 directory <code>sub:&lt;sub&gt;</code> / <code>email:&lt;email&gt;</code> → agent ids, written by each Agent
-DO when it stores an <code>allow</code> frame). For an operator it is their
+DO when it stores an <code>allow</code> frame). The directory only lists rooms; it
+admits nobody. A stale entry lists a room that then refuses. For an operator it is their
 assignment. For an admin it is their row&#39;s agent ids (inventory ∩ <code>agents[]</code>). gantree-android and
 gantree-ios read <code>agents</code> and fall back to <code>cranes</code>; the alias is
 still written until the Phase 4 wire-name drop. The only identity a stranger sees
@@ -396,8 +397,10 @@ the room token. A session JWE is the phone.</p>
 <td><code>4403</code></td>
 </tr>
 </tbody></table>
-<p>Room list = last <code>allow</code> frame stored on that agent&#39;s Durable Object. New
-<code>allow</code> → re-check every phone socket; close the ones no longer on it.
+<p>Room list = last <code>allow</code> frame stored on that agent&#39;s Durable Object.
+Every admission reads it there — the handshake, the room&#39;s HTTP routes,
+and a member&#39;s agent controls — never the KV directory. New <code>allow</code> →
+re-check every phone socket; close the ones no longer on it <code>4403</code>.
 Admins are <strong>not</strong> exempt from the room list: operating Ada and
 talking to Ada are different grants.</p>
 <h3 id="frames-harness-room">Frames (harness ↔ room)</h3>
