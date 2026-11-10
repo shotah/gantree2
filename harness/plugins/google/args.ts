@@ -46,27 +46,6 @@ export function getInt(args: Record<string, unknown>, key: string, fallback: num
   return fallback;
 }
 
-/** strconv.ParseBool plus numeric nonzero, matching mcp-go GetBool. */
-export function getBool(args: Record<string, unknown>, key: string, fallback: boolean): boolean {
-  const v = args[key];
-  if (typeof v === "boolean") {
-    return v;
-  }
-  if (typeof v === "number") {
-    return v !== 0;
-  }
-  if (typeof v === "string") {
-    const s = v.trim().toLowerCase();
-    if (s === "1" || s === "t" || s === "true") {
-      return true;
-    }
-    if (s === "0" || s === "f" || s === "false") {
-      return false;
-    }
-  }
-  return fallback;
-}
-
 /** drive.getBool: only a real boolean overrides the default. Strings stay at the fallback. */
 export function getBoolOnly(args: Record<string, unknown>, key: string, fallback: boolean): boolean {
   if (!hasKey(args, key) || args[key] == null) {

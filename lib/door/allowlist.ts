@@ -22,10 +22,6 @@ export type Identity = {
 const SUB_RE = /^\d{10,32}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/;
 
-export function isSub(value: string): boolean {
-  return SUB_RE.test(value);
-}
-
 export function parseEntry(raw: string): AllowEntry | null {
   const t = raw.trim();
   if (!t) {

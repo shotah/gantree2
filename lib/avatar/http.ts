@@ -19,8 +19,7 @@ import { fromStub } from "@/lib/chat/slugRoute";
 import { acceptJpeg, AVATAR_MAX_BYTES } from "./jpeg";
 
 export { blobEtag, blobResponse, etagMatches };
-export { avatarRequestPath, blobRequestPath } from "./path";
-export type { BlobRequestOpts } from "./path";
+export { avatarRequestPath } from "./path";
 
 /** Forward the browser's validator to the Durable Object so it can answer 304. */
 export function conditionalHeaders(req: Request): Record<string, string> {

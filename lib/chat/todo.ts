@@ -16,7 +16,6 @@ import type { Role } from "./frame";
 export const TODO_STORE_KEY = "todo";
 /** The crane does not cap the frame (the stamp is what is capped). This is the phone's tolerance. */
 export const TODO_MAX = 100;
-export const TODO_SLUG_MAX = 32;
 export const TODO_TEXT_MAX = 240;
 
 /** `!!` urgent, `!` high, bare words normal — the crane's marker, and `[todo]`'s sort. */

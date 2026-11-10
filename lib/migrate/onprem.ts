@@ -65,27 +65,6 @@ export type OnPremBundle = {
   selfnote: { rows: SelfnoteRow[] };
 };
 
-export const EXPORT_TABLE_NAMES = [
-  "memory",
-  "aim_event",
-  "aim_score",
-  "aim_block",
-  "persona_file",
-  "selfnote",
-] as const;
-
-export type ExportTableName = (typeof EXPORT_TABLE_NAMES)[number];
-
-/** Tables that must never appear in an export bundle. */
-export const FORBIDDEN_EXPORT_TABLES = [
-  "oauth_token",
-  "garmin_mfa_pending",
-  "google_oauth_pending",
-  "strava_oauth_pending",
-  "session_message",
-  "session",
-] as const;
-
 export function emptyBundle(): OnPremBundle {
   return {
     version: ONPREM_BUNDLE_VERSION,

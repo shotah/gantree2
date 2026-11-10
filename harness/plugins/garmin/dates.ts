@@ -98,12 +98,6 @@ export function resolveRange(args: Record<string, unknown>, clock: Clock): { sta
   return { start, end };
 }
 
-export function resolveDate(args: Record<string, unknown>, name: string, clock: Clock): string {
-  const v = args[name];
-  if (typeof v === "string" && v !== "") return parseYmd(v, name);
-  return todayYmd(clock);
-}
-
 /** Inclusive day list cap. One call cannot pull an unbounded history. */
 export const DAY_CAP = 31;
 

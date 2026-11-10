@@ -47,10 +47,6 @@ export function processWarner(log: Logger): Warner {
   return processWarnerState.warner;
 }
 
-export function resetProcessWarner(): void {
-  processWarnerState.warner = undefined;
-}
-
 export function loadChatConfig(env: Readonly<Record<string, string>>, log: Logger): ServerConfig {
   return resolveServerConfig(env, processWarner(log));
 }

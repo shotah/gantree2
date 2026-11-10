@@ -28,11 +28,7 @@
  *
  * Errors are `{ error: string }` with the status. `401` = door (see app/lib/api.ts), `403` = role.
  */
-import type { RoomUser } from "@/lib/chat/allow";
-import type { SampleRow } from "@/lib/door/settingsStore";
 import type { HouseEnv } from "./house";
-
-export type { RoomUser, SampleRow };
 
 /** One slug grammar everywhere: letter first, then letters, digits, hyphen, max 32 (`lib/chat/slug.ts`, `/ws/<slug>`). */
 export const AGENT_SLUG = /^[a-z][a-z0-9-]{0,31}$/;

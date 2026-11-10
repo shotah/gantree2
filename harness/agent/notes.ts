@@ -7,8 +7,6 @@ export const TOOL_TRACE_FULL = "full";
 export const TOOL_TRACE_COMPACT = "compact";
 export const TOOL_TRACE_OFF = "off";
 
-export const COMPACT_CALLS_HEADER = "Making Calls:";
-
 export const BUDGET_EXHAUSTED_REPLY = "I ran out of tool calls for this turn before I could finish. Ask again and I'll pick up where I left off.";
 
 export const HANDLE_FAILED = "sorry — something went wrong handling that message";
@@ -71,8 +69,6 @@ export function budgetExhaustedNote(maxIters: number): string {
 export function budgetWarnNote(used: number, maxIters: number): string {
   return `[system] Tool budget: ${String(used)} of ${String(maxIters)} tool rounds used this turn; ${String(maxIters - used)} remain before you must answer. Batch remaining independent calls, or wrap up now.`;
 }
-
-export const HARNESS_NUDGE_PREFIX = "[system] ";
 
 export const SELF_DISTILL_MIN_MESSAGES = 6;
 

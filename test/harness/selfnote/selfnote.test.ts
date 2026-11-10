@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { fixedClock } from "@/harness/core/clock";
 import { silentLogger } from "@/harness/core/log";
 import { nodeSql, type NodeDatabase, type Sql } from "@/harness/core/sql";
-import { textResult, type CallContext, type Tool } from "@/harness/core/tools";
-import { maxChars, SelfNoteStore, SelfTools, selfRowId, ToolComposite, toolNote } from "@/harness/selfnote";
+import { type CallContext } from "@/harness/core/tools";
+import { maxChars, SelfNoteStore, SelfTools, selfRowId, toolNote } from "@/harness/selfnote";
 import { utf8Length } from "@/harness/selfnote/stamp";
 
 const ctx: CallContext = { userId: "u", sessionId: "s" };
@@ -78,24 +78,5 @@ describe("self_note tool", () => {
     expect(textOf(out)).toContain("appended");
     expect(store.read()).toContain("- calls the human Boss");
     await expect(tools.call("self_bogus", {}, ctx)).rejects.toThrow(/unknown tool/);
-  });
-
-  it("merges the builtin tool ahead of the others and routes calls", async () => {
-    const store = new SelfNoteStore(sql(), fixedClock(1), silentLogger);
-    const other: Tool = {
-      name: "demo__echo",
-      description: "echo",
-      inputSchema: { type: "object" },
-      call: () => Promise.resolve(textResult("other-ok")),
-    };
-    const composite = new ToolComposite(new SelfTools(store), [other]);
-    const defs = composite.tools();
-    expect(defs).toHaveLength(2);
-    expect(defs[0]?.name).toBe(toolNote);
-    expect(defs[1]?.name).toBe("demo__echo");
-    expect(composite.toolCount()).toBe(2);
-    expect(textOf(await composite.call("demo__echo", {}, ctx))).toBe("other-ok");
-    await composite.call(toolNote, { note: "n" }, ctx);
-    expect(store.read()).toContain("- n");
   });
 });

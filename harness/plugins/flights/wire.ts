@@ -62,12 +62,6 @@ export function round0(value: number): string {
   return negative ? `-${String(rounded)}` : String(rounded);
 }
 
-export function mathRound(value: number): number {
-  const negative = value < 0;
-  const rounded = Math.floor(Math.abs(value) + 0.5);
-  return negative ? -rounded : rounded;
-}
-
 export function parseJSON(text: string): unknown {
   const parsed: unknown = JSON.parse(text);
   return parsed;

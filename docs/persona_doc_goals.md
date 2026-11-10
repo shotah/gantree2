@@ -239,9 +239,8 @@ bullet (quote the joke), not an example. The daily planner is kernel.
 ## Scenario checks
 
 What “pinned” means. Each row is a fixture under `harness/eval/fixtures/`,
-replayed against the live model with the shipped seed by `npm run eval`
-— how it works is in
-[evaluation_fable.md](evaluation_fable.md#the-behavior-contract). The check
+replayed against the live model with the shipped seed by `npm run eval`.
+The check
 is shape (tools called, `[wait]` armed, a row stored, a job on the board),
 never the sentence. Setup: [eval_setup.md](eval_setup.md).
 

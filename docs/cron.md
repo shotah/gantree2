@@ -99,8 +99,6 @@ On boot, one `daily_planner` job is bound to the agent conversation (`agent`).
 Jobs do not store a chat or user id. Push delivers to the room.
 `/planner off` opts out.
 
-Chat and settings follow-ups: [planner-siblings.md](planner-siblings.md).
-
 Chat controls (persist on the agent, like `/examples`):
 
 | Command | Effect |

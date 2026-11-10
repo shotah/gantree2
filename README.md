@@ -99,8 +99,7 @@ the Agent Durable Object: the turn, the plugins, persona,
 `SELF.md`, and the alarm that fires cron, watches, and memory
 consolidation. Phones only ever see chat. Diagrams:
 [architecture](docs/architecture.md). The decision:
-[harness](docs/harness.md). The morning's plan, kept as history:
-[proposal](docs/proposal.md).
+[harness](docs/harness.md).
 
 ## Run it
 
@@ -155,6 +154,8 @@ run with `npm test` and are not in that include.
 ```sh
 npm run test:coverage     # Worker, with the threshold gate
 npm run eval              # live-model behaviour eval, Vitest (docs/eval_setup.md)
+npm run deadcode          # knip: files, exports, and packages nothing uses
+npm run deadcode:prod     # knip: what only the tests still use
 ```
 
 ESLint is type-aware (`no-explicit-any`, `no-unsafe-*`, `no-deprecated`,
@@ -168,10 +169,9 @@ Same files under [`docs/`](docs/):
 
 | Running it | The assistant | The rules |
 | --- | --- | --- |
-| [install](docs/install.md) · [access](docs/access.md) · [security](docs/security.md) · [openapi](docs/openapi.yaml) · [troubleshooting](docs/troubleshooting.md) — door, keys, and the failures | [persona](docs/persona.md) · [channels](docs/channels.md) · [cron](docs/cron.md) · [cron architecture](docs/cron_architecture.md) · [reactions](docs/reactions.md) · [planner-siblings](docs/planner-siblings.md) · [connecting accounts](docs/auth.md) — what one assistant does | [architecture](docs/architecture.md) · [runtime](docs/runtime.md) · [harness](docs/harness.md) · [contract](docs/contract.md) · [mcp](docs/mcp.md) · [custom-mcp](docs/custom-mcp.md) · [mcp-naming](docs/mcp-naming.md) · [evals](docs/eval_setup.md) · [evaluation fable](docs/evaluation_fable.md) — the harness and the rules |
+| [install](docs/install.md) · [access](docs/access.md) · [security](docs/security.md) · [openapi](docs/openapi.yaml) · [troubleshooting](docs/troubleshooting.md) — door, keys, and the failures | [persona](docs/persona.md) · [channels](docs/channels.md) · [cron](docs/cron.md) · [cron architecture](docs/cron_architecture.md) · [reactions](docs/reactions.md) · [connecting accounts](docs/auth.md) — what one assistant does | [architecture](docs/architecture.md) · [runtime](docs/runtime.md) · [harness](docs/harness.md) · [contract](docs/contract.md) · [mcp](docs/mcp.md) · [custom-mcp](docs/custom-mcp.md) · [mcp-naming](docs/mcp-naming.md) · [evals](docs/eval_setup.md) — the harness and the rules |
 
-Plan and backlog: [proposal](docs/proposal.md) · [todo](docs/todo.md) ·
-[done](docs/todo_done.md). Contributing: [CONTRIBUTING.md](CONTRIBUTING.md).
+Backlog: [todo](docs/todo.md). Contributing: [CONTRIBUTING.md](CONTRIBUTING.md).
 Found a hole: [SECURITY.md](SECURITY.md). Useful to you:
 [sponsor](https://github.com/sponsors/shotah) — one person, nights.
 

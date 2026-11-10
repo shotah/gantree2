@@ -11,7 +11,6 @@ export const KIND_INSIGHT = "insight";
 
 export const SOURCE_CHAT = "chat";
 export const SOURCE_CONSOLIDATION = "consolidation";
-export const SOURCE_OPERATOR = "operator";
 
 /** Sleep / work / quiet windows. */
 export const SUBJECT_HOURS = "pref/hours";
@@ -30,7 +29,6 @@ export const HORIZON_FETCH = 30;
 export const EPISODE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 export const MAX_CONSOLIDATE_ATTEMPTS = 3;
-export const CONSOLIDATED_DONE = 1;
 export const CONSOLIDATED_QUARANTINE = 2;
 
 const KIND_SET = new Set<string>([
@@ -102,10 +100,6 @@ export class NotSupportedError extends Error {
 
 export function isNotSupported(err: unknown): boolean {
   return err instanceof NotSupportedError;
-}
-
-export function isMemoryKind(kind: string): boolean {
-  return KIND_SET.has(kind.trim().toLowerCase());
 }
 
 /** Canonical kind, or throws. The quoted text is the argument as passed. */

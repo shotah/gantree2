@@ -1,14 +1,12 @@
 # Work
 
-The plan is [proposal.md](proposal.md); the pictures are
-[architecture.md](architecture.md); what has shipped is
-[todo_done.md](todo_done.md) (same section numbers, so "§5" means the
-same thing in both). This is what is left, in the order to do it.
+The pictures are [architecture.md](architecture.md). This is what is
+left, in the order to do it.
 
 **State today (2026-10-12):** every screen, the door, the chat PWA,
 the agent registry, the mark, the docs site on
 `github.bldhosting.com`, release tooling. The Workers-native harness
-is the only runtime ([todo_done.md](todo_done.md) §10). The runtime
+is the only runtime. The runtime
 directory is `harness/`. There is no container. The Durable Object
 class named Harness was deleted in migration v3 and stays deleted.
 `wrangler.jsonc` is Settings and Agent (SQLite) plus KV `DIRECTORY`.
@@ -26,8 +24,7 @@ stranger's README walk, and the one-week soak.
 
 Legend: `[ ]` open · **owner** needs a human with a console · **gated**
 waits on the note in the line · tags are `easy` / `medium` / `hard`
-for effort. Each list is ordered easiest first. Decisions (**D**) that are settled live in
-[todo_done.md](todo_done.md#0-decide); the one still open is hosted
+for effort. Each list is ordered easiest first. The one decision (**D**) still open is hosted
 pricing, in the Hosted section.
 
 ---
@@ -66,7 +63,6 @@ from the repo.
 
 ## Next — still open on the harness
 
-What has landed is in [todo_done.md](todo_done.md) §10.
 88 tools are ported; the catalog has 139.
 
 - [ ] **easy** Weekly: `npm audit` for `braces`. Checked 2026-10-12:
@@ -222,6 +218,12 @@ product.
 - [ ] **gated** A `gantree` CLI, TypeScript, only if `npm` scripts
       are not enough. First slice, if it starts: one command. The
       rest waits.
+- [ ] **easy** Battery and network on the phone context.
+      `browserBattery` (`app/lib/battery.ts`) and `browserNet`
+      (`app/lib/net.ts`) are written and tested, and `buildContext`
+      takes both, but `PhoneShell` sends only `geo` and `surface`, and
+      the harness does not read either. First slice: send both from
+      `PhoneShell`. A harness stamp that uses them waits.
 
 ## Other checkouts
 

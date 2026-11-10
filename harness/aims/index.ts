@@ -20,4 +20,4 @@ export { effect, pearson, stampCorr, weekSlope } from "./math";
 export { RUBRIC_TEXT } from "./rubric";
 export { formatLine, progress, suffix } from "./text";
 export { AimStore, aimsFrame, openAims } from "./store";
-export { AIM_HISTORY, AIM_LOG, aimToolDefs, aimTools, callAim, isAimTool } from "./tools";
+export { AIM_HISTORY, AIM_LOG, aimToolDefs, aimTools, callAim } from "./tools";

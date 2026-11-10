@@ -29,13 +29,6 @@ export const NOTIFY_TEST: NotifyPayload = {
   body: "Notifications are on.",
 };
 
-/** What the Worker pushes for `POST /api/chat/push` — proves the whole pipe, not just the toast. */
-export const NOTIFY_PUSH_TEST: NotifyPayload = {
-  title: "gantree",
-  body: "Lock-screen push is on.",
-  test: true,
-};
-
 const BODY_MAX = 140;
 
 export function readNotifyPermission(api: NotifyApi | null | undefined): NotifyPermission {

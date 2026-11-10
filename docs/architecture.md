@@ -2,11 +2,8 @@
 
 How gantree is put together: the pictures, then the choices that stay
 true as it grows. The reasoning behind the shape is in
-[proposal.md](proposal.md) (the morning's plan) and
 [harness.md](harness.md) (the runtime that was built). Who may do what is
 in [access.md](access.md); where it runs is in [install.md](install.md).
-When this file and the proposal disagree about the runtime, this file
-and [harness.md](harness.md) win.
 
 Vocabulary: **settings** (what operators see), **chat** (the PWA a
 member talks through), **agents** (one Durable Object each), **harness**
@@ -543,7 +540,7 @@ If a task fails one of these, it is later, or it is wrong.
   `no-explicit-any`; type it or delete the dead write.
 - Nothing new is written with the originals' wire names. `CHAT_*`,
   `CHANNEL=chat`, `agents`, `chat:<agent id>:<sub>`, plugin `chat` are the
-  names ([todo.md](todo_done.md#0-decide)). `PENDANT_*`,
+  names. `PENDANT_*`,
   `CHANNEL=pendant`, `cranes` beside `agents` on `/api/auth/me` are
   accepted as aliases so cab and helm keep working until the Phase 4
   wire-name drop, then dropped. Marked as aliases wherever they appear.

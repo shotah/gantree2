@@ -1,7 +1,7 @@
 # Paying for it
 
-Decided 2026-10-10: gantree is sold, not only given away
-([todo_done.md](todo_done.md#0-decide)). This page is the why and the
+Decided 2026-10-10: gantree is sold, not only given away.
+This page is the why and the
 numbers; the ordered work is the Hosted section of
 [todo.md](todo.md#hosted-phase-5--the-paid-door). Every rate below is
 from a Cloudflare or GitHub pricing page read on 2026-10-10, linked

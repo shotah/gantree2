@@ -5,8 +5,7 @@ up across settings, chat, and the agent: the Google sign-in, the list
 that says whether you may be here, the role that says what you may
 touch, and the room list each agent obeys.
 
-Pictures: [architecture.md](architecture.md) §2–§4 and §6. Why the
-door is Google and not a passphrase: [proposal.md](proposal.md#auth-one-door).
+Pictures: [architecture.md](architecture.md) §2–§4 and §6.
 Setup by place: [install.md](install.md). Open walks: [todo.md](todo.md).
 
 ---

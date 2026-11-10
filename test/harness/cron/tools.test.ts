@@ -1,5 +1,4 @@
 import { KindOnce, ToolCancel, ToolList, ToolSchedule } from "@/harness/cron/constants";
-import { Composite } from "@/harness/cron/composite";
 import { cronToolDefs, CronTools, isCronTool } from "@/harness/cron/tools";
 import { describe, expect, it } from "vitest";
 import { fakeMemory, openCron } from "./fixture";
@@ -69,23 +68,6 @@ describe("cron tools", () => {
       when: "in 1h",
       memory_id: 99999,
     }, delivery)).rejects.toThrow(/memory_id 99999 not found/);
-  });
-
-  it("routes cron names to cron and everything else to the other runner", async () => {
-    const { store } = openCron(10);
-    let calls = 0;
-    const other = {
-      tools: () => [{ name: "x__y", description: "x", inputSchema: { type: "object" } }],
-      call: () => {
-        calls += 1;
-        return "ok";
-      },
-    };
-    const composite = new Composite(new CronTools({ store, zone: "UTC" }), other);
-    expect(composite.toolCount()).toBeGreaterThanOrEqual(4);
-    await composite.call(ToolList, null, { sessionId: "s", userId: "u" });
-    await composite.call("x__y", null);
-    expect(calls).toBe(1);
   });
 
   it("lists and cancels across sessions", async () => {

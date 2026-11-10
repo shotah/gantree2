@@ -2,7 +2,6 @@ import { knownTheme, themeCards, type ThemeCard, type ThemeId } from "./catalog"
 
 export const THEME_STORE_KEY = "theme";
 
-export type ThemeWrite = { theme: ThemeId };
 export type ThemeRead = { theme: ThemeId | null; themes: ThemeCard[] };
 
 export function parseThemeWrite(raw: unknown): { ok: true; theme: ThemeId } | { ok: false; detail: string } {

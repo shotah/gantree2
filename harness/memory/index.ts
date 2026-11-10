@@ -30,14 +30,12 @@ export {
 } from "./tools";
 export type { ForgetAim } from "./tools";
 export {
-  CONSOLIDATED_DONE,
   CONSOLIDATED_QUARANTINE,
   DEFAULT_HYDRATE_LIMIT,
   DEFAULT_RECALL_LIMIT,
   EPISODE_TTL_MS,
   goQuote,
   HORIZON_FETCH,
-  isMemoryKind,
   isNotSupported,
   KIND_EPISODE,
   KIND_FACT,
@@ -48,7 +46,6 @@ export {
   NotSupportedError,
   SOURCE_CHAT,
   SOURCE_CONSOLIDATION,
-  SOURCE_OPERATOR,
   SUBJECT_AIM_BOOTSTRAP,
   SUBJECT_AIM_PREFIX,
   SUBJECT_FOLLOW_PREFIX,

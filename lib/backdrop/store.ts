@@ -5,8 +5,6 @@ import { acceptJpeg } from "../avatar/jpeg";
 export const BACKDROP_STORE_KEY = "backdrop";
 /** SQLite-backed Durable Object rows cap at 2 MB (key + value). Same budget as one chat photo. */
 export const BACKDROP_MAX_BYTES = 1_500_000;
-/** Long edge a writer should encode to. Phones cover-fit, so aspect is free. */
-export const BACKDROP_EDGE = 1600;
 export const BACKDROP_TOO_LARGE = "image too large (max 1.5MB)";
 
 export type StoredBackdrop = { jpeg: ArrayBuffer; rev: number };

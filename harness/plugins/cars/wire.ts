@@ -1,11 +1,5 @@
 /** Query encoding and JSON text matching Go's `url.Values` and `encoding/json`. */
 
-export function queryEscape(value: string): string {
-  return encodeURIComponent(value)
-    .replace(/[!'()~*]/g, (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase()}`)
-    .replace(/%20/g, "+");
-}
-
 export function goJSON(value: unknown): string {
   const text = JSON.stringify(value);
   if (text === undefined) {

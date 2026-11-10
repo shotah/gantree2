@@ -3,12 +3,8 @@
  * numbers, and tell a reaction from a question. Cue lists match the Go agent.
  */
 import { parseToolCallTextHinted, prefixedToolNames } from "@/harness/provider/toolcalltext";
-import { SilentToken } from "@/harness/cron/constants";
-import { isSilentReply } from "@/harness/cron/silent";
 import type { Message, ToolCall } from "@/harness/core/provider";
 import { SOURCE_CRON, SOURCE_REACTION, SOURCE_USER, SOURCE_WATCH } from "./notes";
-
-export { isSilentReply };
 
 const TOOLS_FOOTER_PREFIX = "— tools:";
 
@@ -258,10 +254,6 @@ export function inPalette(emoji: string): boolean {
   return PALETTE.some((p) => e === p || e === p.replace("\uFE0F", ""));
 }
 
-export function isSilentToken(s: string): boolean {
-  return s.trim().toLowerCase() === SilentToken.toLowerCase();
-}
-
 const HARNESS_TAGS: { tag: string; word: string }[] = [
   { tag: "[location", word: "location" },
   { tag: "[current time]", word: "clock" },
@@ -335,14 +327,4 @@ function stripTrailingHarnessLines(s: string): string {
     return lines.slice(0, i).join("\n");
   }
   return s;
-}
-
-export function parseCommand(text: string): string | null {
-  const fields = text.trim().split(/\s+/u).filter((part) => part !== "");
-  if (fields.length !== 1) return null;
-  let cmd = fields[0] ?? "";
-  if (!cmd.startsWith("/")) return null;
-  const at = cmd.indexOf("@");
-  if (at >= 0) cmd = cmd.slice(0, at);
-  return cmd.toLowerCase();
 }

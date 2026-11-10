@@ -11,12 +11,9 @@ import { FOLLOW_THEME_PREF_KEY } from "@/app/lib/prefs";
 
 export {
   DEFAULT_THEME,
-  knownTheme,
   parseTheme,
-  themeCards,
   themeOf,
   THEMES,
-  type ThemeCard,
   type ThemeId,
 } from "@/lib/theme/catalog";
 

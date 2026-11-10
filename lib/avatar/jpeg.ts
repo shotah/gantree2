@@ -1,6 +1,5 @@
 /** Same JPEG gate as gantree `lib/yard/host/avatar.ts`. */
 
-export const AVATAR_FILE = "avatar.jpg";
 export const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
 export const AVATAR_EDGE = 1280;
 

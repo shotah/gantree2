@@ -348,10 +348,6 @@ export async function putPersona(slug: string, text: string, client: ApiClient =
   return asPersona(await send(client, personaUrl(slug), jsonInit("PUT", { name: PERSONA_FILE, text })));
 }
 
-export async function deletePersona(slug: string, client: ApiClient = api): Promise<PersonaPage> {
-  return asPersona(await send(client, personaUrl(slug), jsonInit("DELETE", { name: PERSONA_FILE })));
-}
-
 export async function getStatus(slug: string, client: ApiClient = api): Promise<AgentStatus> {
   return asStatus(await send(client, statusUrl(slug), { method: "GET" }));
 }

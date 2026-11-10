@@ -62,10 +62,6 @@ export function aimToolDefs(): AimToolDef[] {
   ];
 }
 
-export function isAimTool(name: string): boolean {
-  return name === AIM_LOG || name === AIM_HISTORY;
-}
-
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }

@@ -1,4 +1,3 @@
-import { KindExamples } from "./constants";
 import type { Parsed } from "./types";
 import { addCalendarDays, atLocalHour, canonicalZone, formatRfc3339Nano, pad2 } from "./time";
 
@@ -163,10 +162,6 @@ export function parseSpreadSchedule(
 
 export function onceParsed(kind: string, at: number, tz: string): Parsed {
   return { kind, expr: formatRfc3339Nano(at), nextRun: at, timezone: tz };
-}
-
-export function examplesParsed(when: string, startHour: number, endHour: number, zone: string, now: number): Parsed {
-  return parseSpreadSchedule(KindExamples, when, startHour, endHour, zone, now);
 }
 
 function strictInt(s: string): number | null {
