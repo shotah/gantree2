@@ -11,7 +11,23 @@ export function shouldRedialMailboxOnVisible(role: Role, visibilityState: string
 }
 
 /** The room list dropped this person. Redialing only meets a 403; the session is still good. */
-const CLOSE_NOT_IN_ROOM = 4403;
+export const CLOSE_NOT_IN_ROOM = 4403;
+
+/** Never opened: refused over HTTP or never arrived; the browser cannot tell which. */
+export function shouldProbeMailbox(opts: { role: Role; opened: boolean; code?: number }): boolean {
+  if (opts.role !== "phone" || opts.opened) {
+    return false;
+  }
+  if (opts.code === CLOSE_NOT_IN_ROOM || opts.code === 4401) {
+    return false;
+  }
+  return true;
+}
+
+/** Plain GET on the mailbox route: 403 means not on the room list. */
+export function mailboxRefusedAccess(httpStatus: number | null): boolean {
+  return httpStatus === 403;
+}
 
 export function shouldReconnectMailbox(opts: {
   role: Role;

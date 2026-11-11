@@ -579,11 +579,115 @@ describe("PhoneShell", () => {
       first.onclose?.(ev);
     });
     expect(FakeSocket.instances).toHaveLength(1);
-    expect(screen.getByText("down")).toBeTruthy();
+    expect(screen.getByText("inaccessible")).toBeTruthy();
     act(() => {
       vi.advanceTimersByTime(60_000);
     });
     expect(FakeSocket.instances).toHaveLength(1);
+  });
+
+  it("shows inaccessible and stops redialing when the probe sees HTTP 403", async () => {
+    vi.stubGlobal("fetch", async (input: RequestInfo) => {
+      const url = requestUrl(input);
+      if (url.includes("/api/auth/config")) {
+        return Response.json({ mode: "spike", google: false, dev: true });
+      }
+      if (url.includes("/api/auth/me")) {
+        return Response.json(DEV_USER);
+      }
+      if (url.includes("/ws/")) {
+        return new Response(null, { status: 403 });
+      }
+      return new Response(null, { status: 404 });
+    });
+    stubSocket();
+    render(<PhoneShell slug="kit" />);
+    expect(await screen.findByText("live")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "settings" }));
+    fireEvent.change(screen.getByLabelText("Agent access secret"), { target: { value: "s" } });
+    fireEvent.click(screen.getByRole("button", { name: "settings" }));
+    const first = liveSocket();
+    act(() => {
+      first.close();
+    });
+    expect(await screen.findByText("inaccessible")).toBeTruthy();
+    vi.useFakeTimers();
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+    expect(FakeSocket.instances).toHaveLength(1);
+  });
+
+  it("keeps down and redials when the probe sees HTTP 426", async () => {
+    vi.stubGlobal("fetch", async (input: RequestInfo) => {
+      const url = requestUrl(input);
+      if (url.includes("/api/auth/config")) {
+        return Response.json({ mode: "spike", google: false, dev: true });
+      }
+      if (url.includes("/api/auth/me")) {
+        return Response.json(DEV_USER);
+      }
+      if (url.includes("/ws/")) {
+        return new Response(null, { status: 426 });
+      }
+      return new Response(null, { status: 404 });
+    });
+    stubSocket();
+    render(<PhoneShell slug="kit" />);
+    expect(await screen.findByText("live")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "settings" }));
+    fireEvent.change(screen.getByLabelText("Agent access secret"), { target: { value: "s" } });
+    fireEvent.click(screen.getByRole("button", { name: "settings" }));
+    const first = liveSocket();
+    vi.useFakeTimers();
+    await act(async () => {
+      first.close();
+      await Promise.resolve();
+    });
+    expect(screen.getByText("down")).toBeTruthy();
+    act(() => {
+      vi.advanceTimersByTime(999);
+    });
+    expect(FakeSocket.instances).toHaveLength(1);
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(FakeSocket.instances).toHaveLength(2);
+  });
+
+  it("does not probe after an opened socket drops", async () => {
+    const wsFetches: string[] = [];
+    vi.stubGlobal("fetch", async (input: RequestInfo) => {
+      const url = requestUrl(input);
+      if (url.includes("/ws/")) {
+        wsFetches.push(url);
+      }
+      if (url.includes("/api/auth/config")) {
+        return Response.json({ mode: "spike", google: false, dev: true });
+      }
+      if (url.includes("/api/auth/me")) {
+        return Response.json(DEV_USER);
+      }
+      return new Response(null, { status: 404 });
+    });
+    stubSocket();
+    render(<PhoneShell slug="kit" />);
+    expect(await screen.findByText("live")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "settings" }));
+    fireEvent.change(screen.getByLabelText("Agent access secret"), { target: { value: "s" } });
+    fireEvent.click(screen.getByRole("button", { name: "settings" }));
+    const first = liveSocket();
+    act(() => {
+      first.open();
+    });
+    act(() => {
+      first.close();
+    });
+    expect(screen.getByText("down")).toBeTruthy();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(wsFetches).toHaveLength(0);
   });
 
   it("reconnects on visibilitychange when the socket is not open", async () => {
@@ -1942,6 +2046,26 @@ describe("PhoneShell", () => {
     expect(FakeSocket.instances.some((s) => s.url.includes("/ws/kit"))).toBe(false);
   });
 
+  it("maps door google mode onto oidc room listing", async () => {
+    vi.stubGlobal("fetch", async (input: RequestInfo) => {
+      const url = requestUrl(input);
+      if (url.includes("/api/auth/config")) {
+        return Response.json({ mode: "google", google: true, dev: false });
+      }
+      if (url.includes("/api/auth/me")) {
+        return Response.json({ sub: DEV_USER.sub, email: DEV_USER.email, agents: ["tim"] });
+      }
+      return new Response(null, { status: 404 });
+    });
+    stubSocket();
+    render(<PhoneShell slug="ava" />);
+    expect(await screen.findByText("Tim")).toBeTruthy();
+    await waitFor(() => {
+      expect(FakeSocket.instances.some((s) => s.url.includes("/ws/tim"))).toBe(true);
+    });
+    expect(FakeSocket.instances.some((s) => s.url.includes("/ws/ava"))).toBe(false);
+  });
+
   it("shows email and sub when the directory is empty", async () => {
     const write = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
@@ -1990,7 +2114,7 @@ describe("PhoneShell", () => {
         const url = requestUrl(input);
         const method = init?.method ?? "GET";
         if (url.includes("/api/auth/config")) {
-          return Response.json({ mode: "oidc", google: true, dev: false });
+          return Response.json({ mode: "google", google: true, dev: false });
         }
         if (url.includes("/api/auth/me")) {
           return Response.json(me);
@@ -2074,7 +2198,7 @@ describe("PhoneShell", () => {
     vi.stubGlobal("fetch", async (input: RequestInfo) => {
       const url = requestUrl(input);
       if (url.includes("/api/auth/config")) {
-        return Response.json({ mode: "oidc", google: true, dev: false });
+        return Response.json({ mode: "google", google: true, dev: false });
       }
       if (url.includes("/api/auth/me")) {
         meCalls += 1;
@@ -2107,7 +2231,7 @@ function stubOidc(me: { sub: string; email?: string; cranes: string[] } | null) 
   vi.stubGlobal("fetch", async (input: RequestInfo) => {
     const url = requestUrl(input);
     if (url.includes("/api/auth/config")) {
-      return Response.json({ mode: "oidc", google: true, dev: false });
+      return Response.json({ mode: "google", google: true, dev: false });
     }
     if (url.includes("/api/auth/me")) {
       return me ? Response.json(me) : new Response(null, { status: 401 });

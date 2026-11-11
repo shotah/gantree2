@@ -33,7 +33,7 @@ function stubAuth(mode: "spike" | "oidc", cranes: string[] = ["kit"]) {
     if (url.includes("/api/auth/config")) {
       return mode === "spike"
         ? Response.json({ mode: "spike", google: false, dev: true })
-        : Response.json({ mode: "oidc", google: true, dev: false });
+        : Response.json({ mode: "google", google: true, dev: false });
     }
     if (url.includes("/api/auth/me")) {
       return Response.json({ sub: DEV_USER.sub, email: DEV_USER.email, cranes });

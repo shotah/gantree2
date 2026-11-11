@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  mailboxRefusedAccess,
   shouldDropMailboxOnHide,
+  shouldProbeMailbox,
   shouldReconnectMailbox,
   shouldRedialMailboxOnVisible,
 } from "@/lib/phone/socketLife";
@@ -39,6 +41,25 @@ describe("mailbox socket life", () => {
       visibilityState: "visible",
       stopped: true,
     })).toBe(false);
+  });
+
+  it("probes only a phone dial that never opened", () => {
+    expect(shouldProbeMailbox({ role: "phone", opened: false, code: 1006 })).toBe(true);
+    expect(shouldProbeMailbox({ role: "phone", opened: false })).toBe(true);
+    expect(shouldProbeMailbox({ role: "phone", opened: true, code: 1006 })).toBe(false);
+    expect(shouldProbeMailbox({ role: "phone", opened: false, code: 4403 })).toBe(false);
+    expect(shouldProbeMailbox({ role: "phone", opened: false, code: 4401 })).toBe(false);
+    expect(shouldProbeMailbox({ role: "crane", opened: false, code: 1006 })).toBe(false);
+  });
+
+  it("treats HTTP 403 as mailbox access refused", () => {
+    expect(mailboxRefusedAccess(403)).toBe(true);
+    expect(mailboxRefusedAccess(401)).toBe(false);
+    expect(mailboxRefusedAccess(404)).toBe(false);
+    expect(mailboxRefusedAccess(409)).toBe(false);
+    expect(mailboxRefusedAccess(426)).toBe(false);
+    expect(mailboxRefusedAccess(503)).toBe(false);
+    expect(mailboxRefusedAccess(null)).toBe(false);
   });
 
   it("stops redialing a room that closed 4403 and keeps redialing after 4401 or a drop", () => {

@@ -23,7 +23,7 @@ import { AgentRoomControls } from "./AgentRoomControls";
 import { agentsMessage, codeOf, getAgentEnabled, setAgentEnabled } from "@/app/lib/agentsHttp";
 import { SettingsMenu } from "./SettingsMenu";
 import { bubbleFrom, Thread, type ChatBubble } from "./Thread";
-import { mailboxUrl, parseIncoming } from "@/app/lib/socket";
+import { mailboxUrl, parseIncoming, probeMailbox } from "@/app/lib/socket";
 import {
   ackSince,
   advanceCursor,
@@ -88,7 +88,10 @@ import { describePhotoError, describeSendError } from "@/lib/phone/sendError";
 import { speakFailHint, speakPhaseAfter, speakStatus, type SpeakPhase } from "@/lib/phone/speaker";
 import { stripHarnessContext } from "@/lib/phone/text";
 import {
+  CLOSE_NOT_IN_ROOM,
+  mailboxRefusedAccess,
   shouldDropMailboxOnHide,
+  shouldProbeMailbox,
   shouldReconnectMailbox,
   shouldRedialMailboxOnVisible,
 } from "@/lib/phone/socketLife";
@@ -116,6 +119,16 @@ type AuthCfg = {
   /** Worker publishes pocket voice (header mic + `/api/chat/tts`). Additive; missing is off. */
   voice?: boolean;
 };
+type AuthCfgWire = Omit<AuthCfg, "mode"> & { mode: AuthCfg["mode"] | "google" };
+
+/** Door wire is `google`; this shell calls the same signed-in mode `oidc`. */
+function authCfgFromDoor(raw: AuthCfgWire): AuthCfg {
+  if (raw.mode === "google") {
+    return { ...raw, mode: "oidc" };
+  }
+  return raw as AuthCfg;
+}
+
 /** Door sends `agents`. `cranes` is only so older fixtures still list rooms. */
 type Me = { sub: string; email?: string; role?: string; agents?: string[]; cranes?: string[] } | null;
 
@@ -173,7 +186,7 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
   const [cfg, setCfg] = useState<AuthCfg | null>(null);
   const [me, setMe] = useState<Me>(null);
   const [sampleId, setSampleId] = useState<SampleId | null>(null);
-  const [status, setStatus] = useState<"idle" | "up" | "down">("idle");
+  const [status, setStatus] = useState<"idle" | "up" | "down" | "inaccessible">("idle");
   const [agentOn, setAgentOn] = useState<boolean | null>(null);
   const [agentHint, setAgentHint] = useState("");
   const [startBusy, setStartBusy] = useState(false);
@@ -221,7 +234,7 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
   const connectGen = useRef(0);
   const backoffRef = useRef(BACKOFF_MS);
   const enabledFetchGen = useRef(0);
-  const prevStatusRef = useRef<"idle" | "up" | "down">("idle");
+  const prevStatusRef = useRef<"idle" | "up" | "down" | "inaccessible">("idle");
   const reconnectTimer = useRef(0);
   const lastSeenId = useRef<string | undefined>(undefined);
   const lastSeenSeq = useRef(0);
@@ -329,12 +342,12 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
   useEffect(() => {
     void (async () => {
       const [c, m, voiceUp] = await Promise.all([
-        fetch("/api/auth/config").then(async (r) => r.ok ? r.json<AuthCfg>() : null).catch(() => null),
+        fetch("/api/auth/config").then(async (r) => r.ok ? r.json<AuthCfgWire>() : null).catch(() => null),
         fetch("/api/auth/me").then(async (r) => r.ok ? r.json<Me>() : null).catch(() => null),
         fetch("/api/chat/tts", { method: "GET" }).then((r) => r.ok).catch(() => false),
       ]);
       // No pendant config route on this origin: a door session is oidc.
-      setCfg(c ?? { mode: "oidc", google: true, dev: false, gap: null, voice: voiceUp });
+      setCfg(c ? authCfgFromDoor(c) : { mode: "oidc", google: true, dev: false, gap: null, voice: voiceUp });
       setMe(m);
     })();
   }, []);
@@ -683,6 +696,7 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
     });
     const ws = new WebSocket(url);
     wsRef.current = ws;
+    let opened = false;
     const disarmDraft = () => {
       window.clearTimeout(draftTimer.current);
       draftTimer.current = 0;
@@ -699,6 +713,7 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
       if (gen !== connectGen.current || stoppedRef.current) {
         return;
       }
+      opened = true;
       backoffRef.current = BACKOFF_MS;
       setStatus("up");
       const since = ackSince({ id: lastSeenId.current, seq: lastSeenSeq.current });
@@ -719,7 +734,14 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
       if (gen !== connectGen.current || stoppedRef.current) {
         return;
       }
-      setStatus("down");
+      const probe = shouldProbeMailbox({ role, opened, code: ev.code });
+      if (ev.code === CLOSE_NOT_IN_ROOM) {
+        setStatus("inaccessible");
+      } else if (probe) {
+        setStatus((cur) => (cur === "inaccessible" ? "inaccessible" : "down"));
+      } else {
+        setStatus("down");
+      }
       setTyping(false);
       // The draft stays: `reply` replaces it, the connect flush refreshes it,
       // a blank clears it, `draftTimer` expires it. Same as Cab `setUp(false)`.
@@ -729,22 +751,36 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
       wakeRef.current = null;
       window.clearTimeout(reconnectTimer.current);
       reconnectTimer.current = 0;
-      if (!shouldReconnectMailbox({
+      const reconnect = shouldReconnectMailbox({
         role,
         visibilityState: document.visibilityState,
         stopped: stoppedRef.current,
         code: ev.code,
-      })) {
-        return;
+      });
+      if (reconnect) {
+        const delay = backoffRef.current;
+        backoffRef.current = Math.min(delay * 2, BACKOFF_MAX);
+        reconnectTimer.current = window.setTimeout(() => {
+          if (stoppedRef.current) {
+            return;
+          }
+          connect();
+        }, delay);
       }
-      const delay = backoffRef.current;
-      backoffRef.current = Math.min(delay * 2, BACKOFF_MAX);
-      reconnectTimer.current = window.setTimeout(() => {
-        if (stoppedRef.current) {
-          return;
-        }
-        connect();
-      }, delay);
+      if (probe) {
+        void probeMailbox(url).then((httpStatus) => {
+          if (gen !== connectGen.current || stoppedRef.current) {
+            return;
+          }
+          if (mailboxRefusedAccess(httpStatus)) {
+            window.clearTimeout(reconnectTimer.current);
+            reconnectTimer.current = 0;
+            setStatus("inaccessible");
+          } else {
+            setStatus("down");
+          }
+        });
+      }
     };
     ws.onmessage = (ev) => {
       if (gen !== connectGen.current || stoppedRef.current) {
@@ -1482,7 +1518,13 @@ export function PhoneShell({ role = "phone", slug: routeSlug }: { role?: Role; s
               <span className={status === "up" ? "text-ok" : "text-dim"}>
                 {agentOn === false
                   ? "stopped"
-                  : status === "up" ? "live" : status === "down" ? "down" : "idle"}
+                  : status === "up"
+                    ? "live"
+                    : status === "inaccessible"
+                      ? "inaccessible"
+                      : status === "down"
+                        ? "down"
+                        : "idle"}
               </span>
               {status === "up" && typing ? " · typing…" : null}
               {speakStatus(speakPhase)
