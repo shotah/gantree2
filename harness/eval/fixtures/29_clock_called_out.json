@@ -1,0 +1,19 @@
+{
+  "name": "clock_called_out",
+  "why": "Called out on the day: reread NOW, say Saturday, own it in a line — no story about yesterday.",
+  "now": "2026-11-14T08:18:00-08:00",
+  "history": [
+    {
+      "role": "assistant",
+      "text": "Road report: SR-20 North Cascades Hwy closed Saturday Nov 14 to Sunday Nov 15 for avalanche control. I-90 Snoqualmie roadwork starting Sunday Nov 15 — single lane overnight."
+    },
+    { "role": "user", "text": "climbed this morning, finally sent the project" },
+    { "role": "assistant", "text": "Huge send — all before noon on a Sunday." }
+  ],
+  "inbound": "Sunday?! what day is it?",
+  "expect": {
+    "round_budget": 1,
+    "reply_regex": "(?i)saturday",
+    "reply_not_regex": "(?i)(today is|it'?s|it is) sunday|yesterday was (your )?saturday"
+  }
+}

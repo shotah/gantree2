@@ -1,0 +1,17 @@
+{
+  "name": "clock_what_day",
+  "why": "Asked the day: read [current time] NOW (Saturday), not the Sunday on the road feed above.",
+  "now": "2026-11-14T08:18:00-08:00",
+  "history": [
+    {
+      "role": "assistant",
+      "text": "Road report: SR-20 North Cascades Hwy closed Saturday Nov 14 to Sunday Nov 15 for avalanche control. I-90 Snoqualmie roadwork starting Sunday Nov 15 — single lane overnight."
+    }
+  ],
+  "inbound": "wait, what day is it today?",
+  "expect": {
+    "round_budget": 1,
+    "reply_regex": "(?i)saturday",
+    "reply_not_regex": "(?i)(today is|it'?s|it is) sunday"
+  }
+}

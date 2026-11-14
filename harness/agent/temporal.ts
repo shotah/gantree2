@@ -35,6 +35,7 @@ export function temporalAnchor(nowMs: number, zone: string, tzName: string): str
     `this week: ${formatWeek(p)}`,
     `next week starts ${iso(shift(sunday(p), 7))} — weekday-only notes (e.g. "Monday") are not this week`,
     `Relative words in earlier turns, summary, and memory are stale. NOW is the split: before = past, after = upcoming. Tool date args: this timezone, offset ${formatOffset(nowMs, zone)} — never Z / UTC unless the schema requires it.`,
+    `Check NOW before any weekday, date, or part of day in the reply — filler ("on a Sunday", "this evening") included. Dates in tool results, feeds, and earlier turns belong to those items, not to today. Told the day is wrong → reread NOW and fix it in one line; no story.`,
   ].join("\n");
 }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   checkEval,
+  clockSlips,
   describeBatches,
   describeCost,
   emptyOutcome,
@@ -219,5 +220,27 @@ describe("eval expectations", () => {
       "3 runs, mean 2.00 rounds, mean 10.7k prompt / 259 completion tokens per turn, 1 over round budget",
     );
     expect(sameMorningLine("Quiet morning.\n[wait]", "  quiet   morning. ")).toBe(true);
+  });
+
+  it("flags weekday and greeting slips against the turn clock", () => {
+    const started = Date.parse("2026-11-14T08:18:00-08:00");
+    const slip = (rawReply: string) => clockSlips(outcome({ started, rawReply, reply: rawReply }));
+
+    expect(slip("Huge send, all before noon on a Sunday.")).toHaveLength(1);
+    expect(slip("Huge send, all before noon on a Sunday.")[0]).toMatch(/^clock: reply says "on a Sunday"/);
+
+    expect(slip("Today is Sunday the 15th")).toHaveLength(1);
+    expect(slip("Today is Sunday the 15th")[0]).toMatch(/^clock: reply says "Today is Sunday"/);
+
+    expect(slip("It's Saturday — my mistake.")).toEqual([]);
+    expect(slip("Roadwork starts Sunday Nov 15.")).toEqual([]);
+    expect(slip("Once upon a Sunday")).toEqual([]);
+    expect(slip("Tomorrow is Sunday")).toEqual([]);
+
+    expect(slip("Yesterday was Saturday")).toHaveLength(1);
+    expect(slip("Yesterday was Saturday")[0]).toMatch(/^clock: reply says "Yesterday was Saturday"/);
+
+    expect(slip("Good evening!")).toHaveLength(1);
+    expect(slip("Good morning!")).toEqual([]);
   });
 });

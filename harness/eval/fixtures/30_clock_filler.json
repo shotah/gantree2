@@ -1,0 +1,16 @@
+{
+  "name": "clock_filler",
+  "why": "Casual reply after a Sunday-dated feed: no day filler borrowed from the feed, no evening greeting at 8 AM.",
+  "now": "2026-11-14T08:18:00-08:00",
+  "history": [
+    {
+      "role": "assistant",
+      "text": "Road report: SR-20 North Cascades Hwy closed Saturday Nov 14 to Sunday Nov 15 for avalanche control. I-90 Snoqualmie roadwork starting Sunday Nov 15 — single lane overnight."
+    }
+  ],
+  "inbound": "back from the climb, feeling good. what's the move for the rest of the day?",
+  "expect": {
+    "round_budget": 2,
+    "reply_not_regex": "(?i)(on a|today is|it'?s|it is|happy) sunday|good (afternoon|evening)"
+  }
+}

@@ -6,6 +6,7 @@
 import {
   addTotals,
   checkEval,
+  clockSlips,
   describeBatches,
   describeCost,
   describeEval,
@@ -62,6 +63,7 @@ export async function scoreFixtures(opts: ScoreOptions): Promise<{ failed: numbe
           fails.push(`turn error: ${morning.error}`);
         }
         fails.push(...checkEval(morning.out, morning.expect));
+        fails.push(...clockSlips(morning.out));
         if (morning.differ && sameMorningLine(morning.prevLine, morningReply(morning.out))) {
           fails.push("same line as the previous morning");
         }

@@ -160,6 +160,7 @@ Sprint's at 2:30 and the scoop is at 2 — I'll keep an eye on it.
 | `expected memory row kind subject` | No live `memory_store` row with that subject after the turn. |
 | `no cron job A–B min out (have …)` | Nothing on the board in the window; `followup`-kind wait pokes do not count. |
 | `none of any_of held — alt 1: … \| alt 2: …` | Every alternative failed; each is listed with its own reason. |
+| `clock: reply says "…" — NOW is …` | The reply named a weekday or greeting that disagrees with the turn's clock (checked on every run, no fixture field). |
 
 A rule that holds two runs in three is a rule the persona is not
 carrying — that is why every run must pass.
@@ -286,3 +287,5 @@ agent's `[react 👍]` where a sentence would be noise, and the human's
 👍 / 👎 on the agent's message — free when idle, an answer when the
 agent was waiting, never nothing when negative.
 `planner_weight_on_pace` pins `now` to Wednesday 2026-10-07 08:00 Pacific, same as `planner_midweek_quiet`, so `[progress]` has no `weeks:` line.
+
+The `clock_*` fixtures pin `now` to Saturday 2026-11-14 08:18 Pacific with Sunday-dated road items in history, so a reply that borrows the feed's day fails.

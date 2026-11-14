@@ -7,9 +7,13 @@
 import { KindFollowUp } from "@/harness/cron/constants";
 import { isSilentReply } from "@/harness/cron/silent";
 import { stripWaitTokens } from "@/harness/cron/wait";
+import { localParts } from "@/harness/core/clock";
 import {
   compileGoRegexp,
+  EVAL_TZ,
   expandEvalExpect,
+  formatClock,
+  shiftLocalDay,
   type EvalCallExpect,
   type EvalExpect,
   type EvalWindow,
@@ -198,6 +202,71 @@ export function checkEval(out: EvalOutcome, want: EvalExpect): string[] {
     }
     if (alts.length > 0) {
       fails.push(`none of any_of held — ${alts.join(" | ")}`);
+    }
+  }
+  return fails;
+}
+
+const WEEKDAYS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+] as const;
+
+const TODAY_DAY_SLIP = new RegExp(
+  String.raw`\b(?:today is|today's|\bit['\u2019]?s\b|it is|happy|on a)\s+(${WEEKDAYS.join("|")})\b`,
+  "gi",
+);
+
+const YESTERDAY_DAY_SLIP = new RegExp(
+  String.raw`(?:yesterday was|yesterday is)\s+(${WEEKDAYS.join("|")})\b`,
+  "gi",
+);
+
+const TOMORROW_DAY_SLIP = new RegExp(
+  String.raw`(?:tomorrow is|tomorrow's)\s+(${WEEKDAYS.join("|")})\b`,
+  "gi",
+);
+
+/** Weekday and greeting slips against the turn clock — every eval run, no fixture field. */
+export function clockSlips(out: EvalOutcome, zone = EVAL_TZ): string[] {
+  const reply = out.rawReply !== "" ? out.rawReply : out.reply;
+  const parts = localParts(out.started, zone);
+  const hour = parts.hour === 24 ? 0 : parts.hour;
+  const today = parts.weekday;
+  const yesterday = (today + 6) % 7;
+  const tomorrow = (today + 1) % 7;
+  const nowLabel = `${WEEKDAYS[today]} ${shiftLocalDay(out.started, zone, 0)} ${formatClock(out.started, zone)}`;
+  const fails: string[] = [];
+
+  const daySlip = (matched: string): string =>
+    `clock: reply says "${matched}" — NOW is ${nowLabel}`;
+
+  const namedDaySlips = (re: RegExp, want: number): void => {
+    for (const match of reply.matchAll(re)) {
+      const name = match[1] ?? "";
+      const index = WEEKDAYS.findIndex((item) => item.toLowerCase() === name.toLowerCase());
+      if (index >= 0 && index !== want) {
+        fails.push(daySlip(match[0]));
+      }
+    }
+  };
+  namedDaySlips(TODAY_DAY_SLIP, today);
+  namedDaySlips(YESTERDAY_DAY_SLIP, yesterday);
+  namedDaySlips(TOMORROW_DAY_SLIP, tomorrow);
+
+  const greetingSlips: [RegExp, string, boolean][] = [
+    [/\bgood morning\b/i, "good morning", hour >= 12],
+    [/\bgood afternoon\b/i, "good afternoon", hour < 12 || hour >= 18],
+    [/\bgood evening\b/i, "good evening", hour >= 4 && hour < 16],
+  ];
+  for (const [re, label, bad] of greetingSlips) {
+    if (bad && re.test(reply)) {
+      fails.push(daySlip(reply.match(re)?.[0] ?? label));
     }
   }
   return fails;
