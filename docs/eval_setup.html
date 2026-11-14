@@ -238,6 +238,10 @@ Sprint's at 2:30 and the scoop is at 2 — I'll keep an eye on it.</code></pre>
 <td><code>none of any_of held — alt 1: … | alt 2: …</code></td>
 <td>Every alternative failed; each is listed with its own reason.</td>
 </tr>
+<tr>
+<td><code>clock: reply says &quot;…&quot; — NOW is …</code></td>
+<td>The reply named a weekday or greeting that disagrees with the turn&#39;s clock (checked on every run, no fixture field).</td>
+</tr>
 </tbody></table>
 <p>A rule that holds two runs in three is a rule the persona is not
 carrying — that is why every run must pass.</p>
@@ -378,6 +382,7 @@ agent&#39;s <code>[react 👍]</code> where a sentence would be noise, and the h
 👍 / 👎 on the agent&#39;s message — free when idle, an answer when the
 agent was waiting, never nothing when negative.
 <code>planner_weight_on_pace</code> pins <code>now</code> to Wednesday 2026-10-07 08:00 Pacific, same as <code>planner_midweek_quiet</code>, so <code>[progress]</code> has no <code>weeks:</code> line.</p>
+<p>The <code>clock_*</code> fixtures pin <code>now</code> to Saturday 2026-11-14 08:18 Pacific with Sunday-dated road items in history, so a reply that borrows the feed&#39;s day fails.</p>
 </article>
   </main>
   <footer class="foot">
